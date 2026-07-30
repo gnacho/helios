@@ -1,0 +1,63 @@
+<svg width="480" height="360" viewBox="0 0 480 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sin datos solares">
+  <defs>
+    <linearGradient id="sun-g" x1="150" y1="60" x2="260" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+    <linearGradient id="panel-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E3A8A"/>
+      <stop offset="1" stop-color="#12275A"/>
+    </linearGradient>
+  </defs>
+  <!-- sun rays -->
+  <g stroke="#F59E0B" stroke-width="7" stroke-linecap="round" opacity="0.9">
+    <line x1="205" y1="52" x2="205" y2="76"/>
+    <line x1="138" y1="80" x2="155" y2="97"/>
+    <line x1="272" y1="80" x2="255" y2="97"/>
+    <line x1="118" y1="140" x2="142" y2="140"/>
+    <line x1="292" y1="140" x2="268" y2="140"/>
+  </g>
+  <!-- smiling sun -->
+  <circle cx="205" cy="150" r="62" fill="url(#sun-g)"/>
+  <circle cx="184" cy="140" r="6" fill="#7C2D12"/>
+  <circle cx="226" cy="140" r="6" fill="#7C2D12"/>
+  <path d="M184 166 Q205 182 226 166" stroke="#7C2D12" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <!-- cloud -->
+  <g fill="#E7EDF6">
+    <ellipse cx="300" cy="176" rx="58" ry="30"/>
+    <ellipse cx="256" cy="188" rx="44" ry="24"/>
+    <ellipse cx="340" cy="190" rx="40" ry="22"/>
+    <rect x="252" y="176" width="104" height="34" rx="17"/>
+  </g>
+  <ellipse cx="300" cy="206" rx="86" ry="8" fill="#0B1220" opacity="0.05"/>
+  <!-- tilted solar panels -->
+  <g>
+    <path d="M96 268 L188 244 L224 292 L132 316 Z" fill="url(#panel-g)"/>
+    <g stroke="#3B5BA9" stroke-width="2" opacity="0.9">
+      <line x1="127" y1="259" x2="163" y2="307"/>
+      <line x1="158" y1="251" x2="194" y2="299"/>
+      <line x1="112" y1="286" x2="204" y2="262"/>
+    </g>
+    <line x1="160" y1="310" x2="160" y2="330" stroke="#64748B" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g>
+    <path d="M206 256 L298 232 L334 280 L242 304 Z" fill="url(#panel-g)"/>
+    <g stroke="#3B5BA9" stroke-width="2" opacity="0.9">
+      <line x1="237" y1="247" x2="273" y2="295"/>
+      <line x1="268" y1="239" x2="304" y2="287"/>
+      <line x1="222" y1="274" x2="314" y2="250"/>
+    </g>
+    <line x1="270" y1="298" x2="270" y2="320" stroke="#64748B" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g>
+    <path d="M316 268 L408 244 L444 292 L352 316 Z" fill="url(#panel-g)"/>
+    <g stroke="#3B5BA9" stroke-width="2" opacity="0.9">
+      <line x1="347" y1="259" x2="383" y2="307"/>
+      <line x1="378" y1="251" x2="414" y2="299"/>
+      <line x1="332" y1="286" x2="424" y2="262"/>
+    </g>
+    <line x1="380" y1="310" x2="380" y2="330" stroke="#64748B" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <!-- soft ground shadows -->
+  <ellipse cx="240" cy="336" rx="200" ry="10" fill="#0B1220" opacity="0.05"/>
+</svg>

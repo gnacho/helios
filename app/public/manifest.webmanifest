@@ -1,0 +1,20 @@
+{
+  "name": "Helios · Monitor Solar",
+  "short_name": "Helios",
+  "description": "Monitor solar doméstico unificado: inversores Solis y Fox, batería Soluna y red. Datos locales vía Home Assistant.",
+  "lang": "es-ES",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B1220",
+  "theme_color": "#F4F6FA",
+  "icons": [
+    {
+      "src": "pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

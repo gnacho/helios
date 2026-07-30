@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Helios · tema claro (día) ─────────────────────────── */
+    --bg: #F4F6FA;
+    --surface: #FFFFFF;
+    --surface-2: #EEF1F6;
+    --line: #E3E8F0;
+    --text: #0C1425;
+    --text-muted: #5B6B84;
+    --text-faint: #94A3B8;
+
+    /* Colores semánticos de energía (claro) */
+    --c-solar: #F59E0B;
+    --c-consumo: #3B82F6;
+    --c-bateria: #10B981;
+    --c-red-compra: #F43F5E;
+    --c-red-vertido: #06B6D4;
+    --c-solis: #0EA5E9;
+    --c-fox: #8B5CF6;
+
+    /* shadcn/ui (HSL triplets) alineados con la paleta clara */
+    --background: 220 33% 97%;
+    --foreground: 222 52% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 52% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 52% 10%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 222 52% 10%;
+    --muted: 220 20% 94%;
+    --muted-foreground: 217 19% 44%;
+    --accent: 220 20% 94%;
+    --accent-foreground: 222 52% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 216 26% 92%;
+    --input: 216 26% 92%;
+    --ring: 38 92% 50%;
+    --radius: 1rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 52% 10%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 94%;
+    --sidebar-accent-foreground: 222 52% 10%;
+    --sidebar-border: 216 26% 92%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  .dark {
+    /* ── Helios · tema oscuro (noche) ──────────────────────── */
+    --bg: #080D1A;
+    --surface: #101828;
+    --surface-2: #182338;
+    --line: #1E2B42;
+    --text: #E9EEF7;
+    --text-muted: #93A1B8;
+    --text-faint: #5C6B85;
+
+    /* Colores semánticos de energía (oscuro) */
+    --c-solar: #FBBF24;
+    --c-consumo: #60A5FA;
+    --c-bateria: #34D399;
+    --c-red-compra: #FB7185;
+    --c-red-vertido: #22D3EE;
+    --c-solis: #38BDF8;
+    --c-fox: #A78BFA;
+
+    /* shadcn/ui alineados con la paleta oscura */
+    --background: 222 55% 7%;
+    --foreground: 214 32% 94%;
+    --card: 219 39% 11%;
+    --card-foreground: 214 32% 94%;
+    --popover: 219 39% 11%;
+    --popover-foreground: 214 32% 94%;
+    --primary: 43 96% 56%;
+    --primary-foreground: 222 55% 7%;
+    --secondary: 218 35% 16%;
+    --secondary-foreground: 214 32% 94%;
+    --muted: 218 35% 16%;
+    --muted-foreground: 216 20% 65%;
+    --accent: 218 35% 16%;
+    --accent-foreground: 214 32% 94%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217 38% 19%;
+    --input: 217 38% 19%;
+    --ring: 43 96% 56%;
+    --sidebar-background: 219 39% 11%;
+    --sidebar-foreground: 214 32% 94%;
+    --sidebar-primary: 43 96% 56%;
+    --sidebar-primary-foreground: 222 55% 7%;
+    --sidebar-accent: 218 35% 16%;
+    --sidebar-accent-foreground: 214 32% 94%;
+    --sidebar-border: 217 38% 19%;
+    --sidebar-ring: 43 96% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+  }
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-feature-settings: "tnum";
+    transition: background-color 0.45s ease, color 0.45s ease;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background-color: rgb(245 158 11 / 0.25);
+  }
+}
+
+/* ── Tokens Helios como utilidades (bg-app, text-app, …) ───── */
+@layer utilities {
+  .bg-app {
+    background-color: var(--bg);
+    transition: background-color 0.45s ease;
+  }
+  .bg-surface {
+    background-color: var(--surface);
+    transition: background-color 0.45s ease;
+  }
+  .bg-surface-2 {
+    background-color: var(--surface-2);
+    transition: background-color 0.45s ease;
+  }
+  .border-app {
+    border-color: var(--line);
+    transition: border-color 0.45s ease;
+  }
+  .text-app {
+    color: var(--text);
+    transition: color 0.45s ease;
+  }
+  .text-muted {
+    color: var(--text-muted);
+    transition: color 0.45s ease;
+  }
+  .text-faint {
+    color: var(--text-faint);
+    transition: color 0.45s ease;
+  }
+  .font-display {
+    font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+    font-feature-settings: "tnum";
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer components {
+  /* Tarjeta base de la app */
+  .helios-card {
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    transition: background-color 0.45s ease, border-color 0.45s ease,
+      transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  /* Gradiente de marca: logo, botón primario, marcador "ahora" */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, #F59E0B, #F97316);
+  }
+}

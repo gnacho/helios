@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Helios · Monitor Solar</title>
+    <meta name="description" content="Monitor solar doméstico unificado: inversores Solis y Fox, batería Soluna y red." />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="apple-touch-icon" href="/pwa-icon-512.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#F4F6FA" id="meta-theme-color" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // Tema inicial antes del primer pintado (evita flash). Modos: auto | light | dark.
+      // Auto: claro entre 06:50 y 21:40 (mock julio, España).
+      (function () {
+        try {
+          var mode = localStorage.getItem('helios-theme') || 'auto';
+          var dark;
+          if (mode === 'auto') {
+            var now = new Date();
+            var mins = now.getHours() * 60 + now.getMinutes();
+            dark = !(mins >= 410 && mins < 1300);
+          } else {
+            dark = mode === 'dark';
+          }
+          if (dark) document.documentElement.classList.add('dark');
+          var meta = document.getElementById('meta-theme-color');
+          if (meta) meta.setAttribute('content', dark ? '#080D1A' : '#F4F6FA');
+        } catch (e) {}
+      })();
+      (function () {
+        function show(msg) {
+          try {
+            var el = document.getElementById('helios-err') || document.createElement('pre');
+            el.id = 'helios-err';
+            el.style.cssText =
+              'position:fixed;bottom:0;left:0;right:0;z-index:99999;max-height:40vh;overflow:auto;margin:0;padding:10px;background:#7f1d1d;color:#fee2e2;font:12px/1.4 monospace;white-space:pre-wrap;';
+            el.textContent += msg + '\n';
+            document.body.appendChild(el);
+          } catch (e) {}
+        }
+        window.addEventListener('error', function (e) {
+          show(
+            '[error] ' +
+              (e.message || e.type) +
+              (e.filename ? ' @ ' + e.filename + ':' + e.lineno : '') +
+              (e.error && e.error.stack ? '\n' + e.error.stack : ''),
+          );
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          show('[promesa] ' + (e.reason && (e.reason.stack || e.reason.message) ? e.reason.stack || e.reason.message : String(e.reason)));
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

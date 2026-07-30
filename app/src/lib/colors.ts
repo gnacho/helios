@@ -1,0 +1,44 @@
+import { useTheme } from '@/theme/ThemeProvider';
+
+/**
+ * Colores semánticos de energía (sección 3.2 de design.md).
+ * INVARIABLES en toda la app: cada tipo de energía siempre el mismo color.
+ */
+export const ENERGY_COLORS = {
+  solar: { light: '#F59E0B', dark: '#FBBF24' },
+  consumo: { light: '#3B82F6', dark: '#60A5FA' },
+  bateria: { light: '#10B981', dark: '#34D399' },
+  redCompra: { light: '#F43F5E', dark: '#FB7185' },
+  redVertido: { light: '#06B6D4', dark: '#22D3EE' },
+  solis: { light: '#0EA5E9', dark: '#38BDF8' },
+  fox: { light: '#8B5CF6', dark: '#A78BFA' },
+} as const;
+
+export type EnergyColorKey = keyof typeof ENERGY_COLORS;
+
+export const ESTADO_COLORS = {
+  exito: '#10B981',
+  aviso: '#F59E0B',
+  error: '#EF4444',
+  online: '#22C55E',
+} as const;
+
+export function energyColor(key: EnergyColorKey, isDark: boolean): string {
+  return isDark ? ENERGY_COLORS[key].dark : ENERGY_COLORS[key].light;
+}
+
+export type EnergyPalette = Record<EnergyColorKey, string>;
+
+/** Paleta semántica resuelta según el tema efectivo actual. */
+export function useEnergyColors(): EnergyPalette {
+  const { isDark } = useTheme();
+  return {
+    solar: energyColor('solar', isDark),
+    consumo: energyColor('consumo', isDark),
+    bateria: energyColor('bateria', isDark),
+    redCompra: energyColor('redCompra', isDark),
+    redVertido: energyColor('redVertido', isDark),
+    solis: energyColor('solis', isDark),
+    fox: energyColor('fox', isDark),
+  };
+}
