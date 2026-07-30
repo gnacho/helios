@@ -102,18 +102,18 @@ const loginSchema = z.object({
 })
 
 app.post('/api/auth/login', async (c) => {
-  if (auth.loginRateLimited(c)) return c.json({ error: 'demasiados intentos, espera 5 minutos' }, 429)
+  if (auth.loginRateLimited(db, c)) return c.json({ error: 'demasiados intentos, espera 5 minutos' }, 429)
   const body = await c.req.json().catch(() => null)
   const parsed = loginSchema.safeParse(body)
   if (!parsed.success) {
     return c.json({ error: 'formato inválido' }, 400)
   }
-  const res = auth.handleLogin(db, c, parsed.data)
+  const res = await auth.handleLogin(db, c, parsed.data)
   if (!res) {
-    auth.registerLoginFail(c)
+    auth.registerLoginFail(db, c)
     return c.json({ error: 'usuario o contraseña incorrectos' }, 401)
   }
-  auth.loginOk(c)
+  auth.loginOk(db, c)
   return c.json({ ok: true, user: res.user })
 })
 

@@ -5,7 +5,6 @@ import { createSession, getSession, deleteSession } from './db.js'
 import { config } from './config.js'
 
 const COOKIE_NAME = 'helios_session'
-const loginAttempts = new Map()
 
 // Hash password on first run
 export async function ensurePasswordHash(db) {
@@ -42,26 +41,31 @@ function clientIp(c) {
   return c.req.header('x-forwarded-for')?.split(',')[0].trim() || c.env?.incoming?.socket?.remoteAddress || 'unknown'
 }
 
-export function loginRateLimited(c) {
+export function loginRateLimited(db, c) {
   const ip = clientIp(c)
-  const rec = loginAttempts.get(ip)
-  if (rec && rec.until > Date.now()) return true
+  const row = db.prepare('SELECT * FROM login_attempts WHERE ip = ?').get(ip)
+  if (!row) return false
+  if (row.locked_until > Date.now()) return true
   return false
 }
 
-export function registerLoginFail(c) {
+export function registerLoginFail(db, c) {
   const ip = clientIp(c)
-  const rec = loginAttempts.get(ip) || { fails: 0, until: 0 }
-  rec.fails += 1
-  if (rec.fails >= 5) {
-    rec.until = Date.now() + 5 * 60 * 1000
-    rec.fails = 0
-  }
-  loginAttempts.set(ip, rec)
+  db.prepare(`
+    INSERT INTO login_attempts (ip, attempts, locked_until)
+    VALUES (?, 1, 0)
+    ON CONFLICT(ip) DO UPDATE SET
+      attempts = attempts + 1,
+      locked_until = CASE
+        WHEN attempts >= 5 THEN ?
+        ELSE locked_until
+      END
+  `).run(ip, Date.now() + 5 * 60 * 1000) // 5 min lock
 }
 
-export function loginOk(c) {
-  loginAttempts.delete(clientIp(c))
+export function loginOk(db, c) {
+  const ip = clientIp(c)
+  db.prepare('DELETE FROM login_attempts WHERE ip = ?').run(ip)
 }
 
 export async function handleLogin(db, c, body) {
