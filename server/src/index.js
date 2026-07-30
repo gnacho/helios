@@ -255,7 +255,28 @@ function scheduleNightly() {
     } catch (err) {
       console.error('[helios] consolidación nocturna error:', err.message)
     }
-    scheduleNightly()
+scheduleNightly()
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('[helios] SIGTERM recibido, cerrando...')
+  ha.stop()
+  db.close()
+  for (const client of sseClients) {
+    try { client.write('event: shutdown\ndata: {}\n\n') } catch {}
+  }
+  process.exit(0)
+})
+
+process.on('SIGINT', async () => {
+  console.log('[helios] SIGINT recibido, cerrando...')
+  ha.stop()
+  db.close()
+  for (const client of sseClients) {
+    try { client.write('event: shutdown\ndata: {}\n\n') } catch {}
+  }
+  process.exit(0)
+})
   }, next.getTime() - now.getTime()).unref()
 }
 scheduleNightly()
