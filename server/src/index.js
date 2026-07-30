@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { z } from 'zod'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const envPath = path.join(dirname, '..', '.env')
@@ -93,10 +94,21 @@ ha.on('entity', () => {
   }
 })
 
+// Validation schemas
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
+const loginSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1)
+})
+
 app.post('/api/auth/login', async (c) => {
   if (auth.loginRateLimited(c)) return c.json({ error: 'demasiados intentos, espera 5 minutos' }, 429)
   const body = await c.req.json().catch(() => null)
-  const res = auth.handleLogin(db, c, body)
+  const parsed = loginSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json({ error: 'formato inválido' }, 400)
+  }
+  const res = auth.handleLogin(db, c, parsed.data)
   if (!res) {
     auth.registerLoginFail(c)
     return c.json({ error: 'usuario o contraseña incorrectos' }, 401)
@@ -126,8 +138,12 @@ guarded.get('/solar/live', (c) => {
 guarded.get('/solar/day', async (c) => {
   try {
     const date = c.req.query('date')
-    const result = await solar.getDaySeries(ha, date, db)
-    return c.json({ date: date || solar.todayStr(), points: result.points, estimated: result.estimated })
+    const parsed = dateSchema.safeParse(date)
+    if (!parsed.success) {
+      return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
+    }
+    const result = await solar.getDaySeries(ha, parsed.data, db)
+    return c.json({ date: parsed.data || solar.todayStr(), points: result.points, estimated: result.estimated })
   } catch (err) {
     return c.json({ error: err.message }, 400)
   }
@@ -136,17 +152,28 @@ guarded.get('/solar/day', async (c) => {
 guarded.get('/solar/kpis', async (c) => {
   try {
     const date = c.req.query('date')
-    const kpis = await solar.getKpis(ha, date, db)
-    return c.json({ date: date || solar.todayStr(), ...kpis })
+    const parsed = dateSchema.safeParse(date)
+    if (!parsed.success) {
+      return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
+    }
+    const kpis = await solar.getKpis(ha, parsed.data, db)
+    return c.json({ date: parsed.data || solar.todayStr(), ...kpis })
   } catch (err) {
     return c.json({ error: err.message }, 400)
   }
 })
 
 guarded.get('/solar/history', (c) => {
-  const to = c.req.query('to') || solar.todayStr()
-  const from = c.req.query('from') || shiftDays(to, -364)
-  const rows = dailyRange(db, from, to)
+  const to = c.req.query('to')
+  const from = c.req.query('from')
+  const toParsed = dateSchema.safeParse(to)
+  const fromParsed = dateSchema.safeParse(from)
+  if (!toParsed.success || !fromParsed.success) {
+    return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
+  }
+  const toFinal = toParsed.data || solar.todayStr()
+  const fromFinal = fromParsed.data || shiftDays(toFinal, -364)
+  const rows = dailyRange(db, fromFinal, toFinal)
   const days = rows.map((r) => ({
     date: r.date,
     productionKwh: r.production_kwh,
@@ -160,7 +187,7 @@ guarded.get('/solar/history', (c) => {
     autoconsumoPct:
       r.production_kwh > 0 ? Math.min(100, ((r.production_kwh - r.grid_export_kwh) / r.production_kwh) * 100) : 0,
   }))
-  return c.json({ from, to, backfill: backfillState, days })
+  return c.json({ from: fromFinal, to: toFinal, backfill: backfillState, days })
 })
 
 guarded.post('/solar/history/refresh', async (c) => {
