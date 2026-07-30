@@ -1,10 +1,22 @@
 import crypto from 'node:crypto'
+import bcrypt from 'bcrypt'
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import { createSession, getSession, deleteSession } from './db.js'
 import { config } from './config.js'
 
 const COOKIE_NAME = 'helios_session'
 const loginAttempts = new Map()
+
+// Hash password on first run
+export async function ensurePasswordHash(db) {
+  const stored = db.prepare('SELECT value FROM kv WHERE key = ?').get('auth_pass_hash')
+  if (stored && stored.value.startsWith('$2b$')) {
+    return stored.value
+  }
+  const hash = await bcrypt.hash(config.authPass, 10)
+  db.prepare('INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('auth_pass_hash', hash)
+  return hash
+}
 
 function secret(db) {
   if (config.sessionSecret) return config.sessionSecret
@@ -52,10 +64,13 @@ export function loginOk(c) {
   loginAttempts.delete(clientIp(c))
 }
 
-export function handleLogin(db, c, body) {
+export async function handleLogin(db, c, body) {
   const { username, password } = body || {}
   if (!username || !password) return null
-  if (!safeEqual(username, config.authUser) || !safeEqual(password, config.authPass)) return null
+  if (!safeEqual(username, config.authUser)) return null
+  const hash = await ensurePasswordHash(db)
+  const valid = await bcrypt.compare(password, hash)
+  if (!valid) return null
   const id = createSession(db, config.sessionTtlMs, c.req.header('user-agent'))
   const value = `${id}.${sign(db, id)}`
   const isHttps =
