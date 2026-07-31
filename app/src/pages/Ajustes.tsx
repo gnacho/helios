@@ -11,9 +11,11 @@ import {
   MapPin,
   Moon,
   RefreshCw,
+  ShieldCheck,
   Smartphone,
   Sun,
   Sunrise,
+  Trash2,
   User,
   UserPlus,
   Zap,
@@ -628,11 +630,15 @@ function DataSection() {
 function UsersSection() {
   const { t } = useTranslation();
   const [users, setUsers] = useState<any[]>([]);
+  const [meId, setMeId] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [language, setLanguage] = useState('es');
+  const [role, setRole] = useState<'user' | 'admin'>('user');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pwdFor, setPwdFor] = useState<string | null>(null);
+  const [newPwd, setNewPwd] = useState('');
 
   const languages = [
     { code: 'es', name: 'Español', flag: '🇪🇸' },
@@ -640,11 +646,21 @@ function UsersSection() {
     { code: 'zh-CN', name: '简体中文', flag: '🇨🇳' },
   ];
 
-  useEffect(() => {
+  const reload = () => {
     fetch('/api/auth/users', { credentials: 'same-origin' })
       .then((res) => res.json())
       .then((data) => setUsers(data.users || []))
       .catch(() => setUsers([]));
+  };
+
+  useEffect(() => {
+    reload();
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user) setMeId(data.user.id);
+      })
+      .catch(() => setMeId(null));
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -657,7 +673,7 @@ function UsersSection() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ username, password, language }),
+        body: JSON.stringify({ username, password, language, role }),
       });
       const body = (await res.json()) as { error?: string; ok?: boolean; user?: unknown };
       if (!res.ok) {
@@ -668,14 +684,70 @@ function UsersSection() {
       setUsername('');
       setPassword('');
       setLanguage('es');
-      // Recargar lista de usuarios
-      const res2 = await fetch('/api/auth/users', { credentials: 'same-origin' });
-      const data2 = await res2.json();
-      setUsers(data2.users || []);
+      setRole('user');
+      reload();
     } catch {
       setError(t('common.error'));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const changePassword = async (userId: string) => {
+    if (newPwd.length < 6) return;
+    const res = await fetch(`/api/auth/users/${userId}/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ password: newPwd }),
+    });
+    if (res.ok) {
+      heliosToast(t('admin.users.passwordChanged'), { tone: 'success' });
+      setPwdFor(null);
+      setNewPwd('');
+    } else {
+      heliosToast(t('common.error'), { tone: 'warning' });
+    }
+  };
+
+  const changeLanguage = async (userId: string, lang: string) => {
+    const res = await fetch(`/api/auth/users/${userId}/language`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ language: lang }),
+    });
+    if (res.ok) {
+      heliosToast(t('admin.users.languageChanged'), { tone: 'success' });
+      setUsers((us) => us.map((u) => (u.id === userId ? { ...u, language: lang } : u)));
+    } else {
+      heliosToast(t('common.error'), { tone: 'warning' });
+    }
+  };
+
+  const changeRole = async (userId: string, newRole: string) => {
+    const res = await fetch(`/api/auth/users/${userId}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (res.ok) {
+      heliosToast(t('admin.users.roleChanged'), { tone: 'success' });
+      setUsers((us) => us.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+    } else {
+      heliosToast(t('common.error'), { tone: 'warning' });
+    }
+  };
+
+  const deleteUser = async (userId: string, name: string) => {
+    if (!window.confirm(t('admin.users.deleteConfirm', { username: name }))) return;
+    const res = await fetch(`/api/auth/users/${userId}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (res.ok) {
+      heliosToast(t('admin.users.deleted'), { tone: 'success' });
+      setUsers((us) => us.filter((u) => u.id !== userId));
+    } else {
+      heliosToast(t('common.error'), { tone: 'warning' });
     }
   };
 
@@ -691,16 +763,97 @@ function UsersSection() {
           <p className="text-sm text-faint">{t('admin.users.empty')}</p>
         ) : (
           users.map((user) => (
-            <div key={user.id} className="flex items-center justify-between rounded-lg border border-app bg-surface px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2">
+            <div key={user.id} className="rounded-lg border border-app bg-surface px-4 py-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2">
                   <User size={16} />
                 </span>
-                <div>
-                  <p className="text-sm font-medium text-app">{user.username}</p>
-                  <p className="text-xs text-faint">{user.role} · {user.language}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-app">
+                    {user.username}
+                    {user.id === meId && <span className="ml-1.5 text-xs font-normal text-faint">({t('admin.users.you')})</span>}
+                  </p>
+                  <p className="text-xs text-faint">{user.role === 'admin' ? t('admin.users.roleAdmin') : t('admin.users.roleUser')}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Idioma */}
+                  <Select value={user.language} onValueChange={(v) => changeLanguage(user.id, v)}>
+                    <SelectTrigger className="h-8 w-[130px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languages.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          <span className="flex items-center gap-2">
+                            <span>{lang.flag}</span>
+                            <span>{lang.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {/* Rol (no editable sobre uno mismo) */}
+                  {user.id !== meId && (
+                    <Select value={user.role} onValueChange={(v) => changeRole(user.id, v)}>
+                      <SelectTrigger className="h-8 w-[120px] text-xs">
+                        <ShieldCheck size={13} className="mr-1 shrink-0" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">{t('admin.users.roleUser')}</SelectItem>
+                        <SelectItem value="admin">{t('admin.users.roleAdmin')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {/* Contraseña */}
+                  <button
+                    onClick={() => {
+                      setPwdFor(pwdFor === user.id ? null : user.id);
+                      setNewPwd('');
+                    }}
+                    title={t('admin.users.changePassword')}
+                    aria-label={t('admin.users.changePassword')}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-app text-muted transition-colors hover:bg-surface-2 hover:text-app"
+                  >
+                    <KeyRound size={14} />
+                  </button>
+                  {/* Eliminar (no sobre uno mismo) */}
+                  {user.id !== meId && (
+                    <button
+                      onClick={() => deleteUser(user.id, user.username)}
+                      title={t('admin.users.delete')}
+                      aria-label={t('admin.users.delete')}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/30 text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
+              {/* Form inline cambio de contraseña */}
+              {pwdFor === user.id && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-3 flex items-center gap-2 overflow-hidden border-t border-app pt-3"
+                >
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={t('admin.users.newPassword')}
+                    value={newPwd}
+                    onChange={(e) => setNewPwd(e.target.value)}
+                    className="h-8 flex-1 text-sm"
+                  />
+                  <button
+                    onClick={() => changePassword(user.id)}
+                    disabled={newPwd.length < 6}
+                    className="bg-brand-gradient h-8 rounded-full px-4 text-xs font-semibold text-white transition-transform hover:scale-[1.03] active:scale-95 disabled:opacity-60"
+                  >
+                    {t('common.save')}
+                  </button>
+                </motion.div>
+              )}
             </div>
           ))
         )}
@@ -742,25 +895,41 @@ function UsersSection() {
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="admin-lang" className="mb-1.5 block text-[13px] font-medium text-muted">
-            {t('admin.users.language')}
-          </Label>
-          <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger id="admin-lang" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {languages.map((lang) => (
-                <SelectItem key={lang.code} value={lang.code}>
-                  <span className="flex items-center gap-2">
-                    <span>{lang.flag}</span>
-                    <span>{lang.name}</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="admin-lang" className="mb-1.5 block text-[13px] font-medium text-muted">
+              {t('admin.users.language')}
+            </Label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger id="admin-lang" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {languages.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code}>
+                    <span className="flex items-center gap-2">
+                      <span>{lang.flag}</span>
+                      <span>{lang.name}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="admin-role" className="mb-1.5 block text-[13px] font-medium text-muted">
+              {t('admin.users.role')}
+            </Label>
+            <Select value={role} onValueChange={(v) => setRole(v as 'user' | 'admin')}>
+              <SelectTrigger id="admin-role" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">{t('admin.users.roleUser')}</SelectItem>
+                <SelectItem value="admin">{t('admin.users.roleAdmin')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {error && (

@@ -103,7 +103,8 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(6),
-  language: z.string().regex(/^(es|en|zh-CN)$/).optional()
+  language: z.string().regex(/^(es|en|zh-CN)$/).optional(),
+  role: z.enum(['user', 'admin']).optional()
 })
 const profileSchema = z.object({
   email: z.string().email().optional().nullable(),
@@ -141,7 +142,7 @@ app.post('/api/auth/register', async (c) => {
   if (!parsed.success) {
     return c.json({ error: 'formato inválido' }, 400)
   }
-  const res = await auth.registerUser(db, parsed.data.username, parsed.data.password, parsed.data.language || 'es')
+  const res = await auth.registerUser(db, parsed.data.username, parsed.data.password, parsed.data.language || 'es', parsed.data.role || 'user')
   if (!res) {
     return c.json({ error: 'usuario ya existe' }, 409)
   }
@@ -237,6 +238,9 @@ app.put('/api/auth/users/:id/role', async (c) => {
   }
   
   const userId = c.req.param('id')
+  if (userId === session.userId) {
+    return c.json({ error: 'no puedes cambiar tu propio rol' }, 400)
+  }
   const body = await c.req.json().catch(() => null)
   const parsed = z.object({ role: z.enum(['user', 'admin']) }).safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)

@@ -70,7 +70,7 @@ export function dailyEmpty(db) {
   return db.prepare('SELECT COUNT(*) AS n FROM daily').get().n === 0
 }
 
-export function createUser(db, username, passwordHash, language = 'es') {
+export function createUser(db, username, passwordHash, language = 'es', role = 'user') {
   const id = cryptoRandomId()
   const now = Date.now()
   db.prepare('INSERT INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
@@ -78,10 +78,10 @@ export function createUser(db, username, passwordHash, language = 'es') {
     username,
     passwordHash,
     language,
-    'user',
+    role,
     now
   )
-  return { id, username, language, role: 'user' }
+  return { id, username, language, role }
 }
 
 export function getUserByUsername(db, username) {

@@ -57,12 +57,12 @@ export function loginOk(db, c) {
   db.prepare('DELETE FROM login_attempts WHERE ip = ?').run(ip)
 }
 
-export async function registerUser(db, username, password, language = 'es') {
+export async function registerUser(db, username, password, language = 'es', role = 'user') {
   if (!username || !password) return null
   const existing = getUserByUsername(db, username)
   if (existing) return null
   const hash = await bcrypt.hash(password, 10)
-  return createUser(db, username, hash, language)
+  return createUser(db, username, hash, language, role)
 }
 
 export async function handleLogin(db, c, body) {
