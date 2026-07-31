@@ -1,21 +1,10 @@
 import crypto from 'node:crypto'
 import bcrypt from 'bcrypt'
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
-import { createSession, getSession, deleteSession } from './db.js'
+import { createSession, getSession, deleteSession, createUser, getUserByUsername, getUserById, updateUser } from './db.js'
 import { config } from './config.js'
 
 const COOKIE_NAME = 'helios_session'
-
-// Hash password on first run
-export async function ensurePasswordHash(db) {
-  const stored = db.prepare('SELECT value FROM kv WHERE key = ?').get('auth_pass_hash')
-  if (stored && stored.value.startsWith('$2b$')) {
-    return stored.value
-  }
-  const hash = await bcrypt.hash(config.authPass, 10)
-  db.prepare('INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('auth_pass_hash', hash)
-  return hash
-}
 
 function secret(db) {
   if (config.sessionSecret) return config.sessionSecret
@@ -60,7 +49,7 @@ export function registerLoginFail(db, c) {
         WHEN attempts >= 5 THEN ?
         ELSE locked_until
       END
-  `).run(ip, Date.now() + 5 * 60 * 1000) // 5 min lock
+  `).run(ip, Date.now() + 5 * 60 * 1000)
 }
 
 export function loginOk(db, c) {
@@ -68,17 +57,27 @@ export function loginOk(db, c) {
   db.prepare('DELETE FROM login_attempts WHERE ip = ?').run(ip)
 }
 
+export async function registerUser(db, username, password, language = 'es') {
+  if (!username || !password) return null
+  const existing = getUserByUsername(db, username)
+  if (existing) return null
+  const hash = await bcrypt.hash(password, 10)
+  return createUser(db, username, hash, language)
+}
+
 export async function handleLogin(db, c, body) {
   const { username, password } = body || {}
   if (!username || !password) return null
-  if (!safeEqual(username, config.authUser)) return null
-  const hash = await ensurePasswordHash(db)
-  const valid = await bcrypt.compare(password, hash)
+  
+  const user = getUserByUsername(db, username)
+  if (!user) return null
+  
+  const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) return null
-  const id = createSession(db, config.sessionTtlMs, c.req.header('user-agent'))
+  
+  const id = createSession(db, user.id, config.sessionTtlMs, c.req.header('user-agent'))
   const value = `${id}.${sign(db, id)}`
-  const isHttps =
-    c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https://')
+  const isHttps = c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https://')
   setCookie(c, COOKIE_NAME, value, {
     httpOnly: true,
     sameSite: 'Lax',
@@ -86,12 +85,12 @@ export async function handleLogin(db, c, body) {
     maxAge: Math.floor(config.sessionTtlMs / 1000),
     path: '/',
   })
-  return { user: config.authUser }
+  return { user: { id: user.id, username: user.username, email: user.email, phone: user.phone, language: user.language, role: user.role } }
 }
 
 export function handleLogout(db, c) {
-  const id = sessionIdFromCookie(db, c)
-  if (id) deleteSession(db, id)
+  const session = sessionIdFromCookie(db, c)
+  if (session) deleteSession(db, session.id)
   deleteCookie(c, COOKIE_NAME, { path: '/' })
 }
 
@@ -103,14 +102,18 @@ export function sessionIdFromCookie(db, c) {
   const id = raw.slice(0, dot)
   const sig = raw.slice(dot + 1)
   if (!safeEqual(sig, sign(db, id))) return null
-  if (!getSession(db, id)) return null
-  return id
+  const session = getSession(db, id)
+  if (!session) return null
+  return { id: session.id, userId: session.user_id }
 }
 
 export function requireAuth(db) {
   return async (c, next) => {
-    const id = sessionIdFromCookie(db, c)
-    if (!id) return c.json({ error: 'no autorizado' }, 401)
+    const session = sessionIdFromCookie(db, c)
+    if (!session) return c.json({ error: 'no autorizado' }, 401)
+    c.set('userId', session.userId)
     return next()
   }
 }
+
+export { updateUser }

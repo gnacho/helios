@@ -100,6 +100,16 @@ const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1)
 })
+const registerSchema = z.object({
+  username: z.string().min(3).max(50),
+  password: z.string().min(6),
+  language: z.string().regex(/^(es|en|zh-CN)$/).optional()
+})
+const profileSchema = z.object({
+  email: z.string().email().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  language: z.string().regex(/^(es|en|zh-CN)$/).optional()
+})
 
 app.post('/api/auth/login', async (c) => {
   if (auth.loginRateLimited(db, c)) return c.json({ error: 'demasiados intentos, espera 5 minutos' }, 429)
@@ -117,15 +127,59 @@ app.post('/api/auth/login', async (c) => {
   return c.json({ ok: true, user: res.user })
 })
 
+app.post('/api/auth/register', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  
+  const currentUser = dbModule.getUserById(db, session.userId)
+  if (!currentUser || currentUser.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden crear usuarios' }, 403)
+  }
+  
+  const body = await c.req.json().catch(() => null)
+  const parsed = registerSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json({ error: 'formato inválido' }, 400)
+  }
+  const res = await auth.registerUser(db, parsed.data.username, parsed.data.password, parsed.data.language || 'es')
+  if (!res) {
+    return c.json({ error: 'usuario ya existe' }, 409)
+  }
+  return c.json({ ok: true, user: res })
+})
+
 app.post('/api/auth/logout', (c) => {
   auth.handleLogout(db, c)
   return c.json({ ok: true })
 })
 
 app.get('/api/auth/me', (c) => {
-  const id = auth.sessionIdFromCookie(db, c)
-  if (!id) return c.json({ authenticated: false }, 401)
-  return c.json({ authenticated: true, user: config.authUser })
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user) return c.json({ authenticated: false }, 401)
+  return c.json({ authenticated: true, user })
+})
+
+app.get('/api/auth/profile', (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user) return c.json({ authenticated: false }, 401)
+  return c.json({ user })
+})
+
+app.put('/api/auth/profile', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const body = await c.req.json().catch(() => null)
+  const parsed = profileSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json({ error: 'formato inválido' }, 400)
+  }
+  const updated = auth.updateUser(db, session.userId, parsed.data)
+  if (!updated) return c.json({ error: 'no se pudo actualizar' }, 500)
+  return c.json({ ok: true, user: updated })
 })
 
 const guarded = new Hono()
@@ -188,15 +242,6 @@ guarded.get('/solar/history', (c) => {
       r.production_kwh > 0 ? Math.min(100, ((r.production_kwh - r.grid_export_kwh) / r.production_kwh) * 100) : 0,
   }))
   return c.json({ from: fromFinal, to: toFinal, backfill: backfillState, days })
-})
-
-guarded.post('/solar/history/refresh', async (c) => {
-  try {
-    const n = await solar.backfillHistory(ha, db)
-    return c.json({ ok: true, rows: n })
-  } catch (err) {
-    return c.json({ error: err.message }, 500)
-  }
 })
 
 guarded.get('/solar/stream', (c) => {

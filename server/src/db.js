@@ -16,8 +16,19 @@ export function openDb(dataDir) {
       battery_charged_kwh REAL,
       battery_discharged_kwh REAL
     );
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      language TEXT DEFAULT 'es',
+      role TEXT DEFAULT 'user',
+      created_at INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       expires_at INTEGER NOT NULL,
       ua TEXT
@@ -59,11 +70,55 @@ export function dailyEmpty(db) {
   return db.prepare('SELECT COUNT(*) AS n FROM daily').get().n === 0
 }
 
-export function createSession(db, ttlMs, ua) {
+export function createUser(db, username, passwordHash, language = 'es') {
   const id = cryptoRandomId()
   const now = Date.now()
-  db.prepare('INSERT INTO sessions (id, created_at, expires_at, ua) VALUES (?, ?, ?, ?)').run(
+  db.prepare('INSERT INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
     id,
+    username,
+    passwordHash,
+    language,
+    'user',
+    now
+  )
+  return { id, username, language, role: 'user' }
+}
+
+export function getUserByUsername(db, username) {
+  return db.prepare('SELECT * FROM users WHERE username = ?').get(username)
+}
+
+export function getUserById(db, id) {
+  return db.prepare('SELECT id, username, email, phone, language, role, created_at FROM users WHERE id = ?').get(id)
+}
+
+export function updateUser(db, id, updates) {
+  const fields = []
+  const values = []
+  if (updates.email !== undefined) {
+    fields.push('email = ?')
+    values.push(updates.email)
+  }
+  if (updates.phone !== undefined) {
+    fields.push('phone = ?')
+    values.push(updates.phone)
+  }
+  if (updates.language !== undefined) {
+    fields.push('language = ?')
+    values.push(updates.language)
+  }
+  if (fields.length === 0) return null
+  values.push(id)
+  db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values)
+  return getUserById(db, id)
+}
+
+export function createSession(db, userId, ttlMs, ua) {
+  const id = cryptoRandomId()
+  const now = Date.now()
+  db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, ua) VALUES (?, ?, ?, ?, ?)').run(
+    id,
+    userId,
     now,
     now + ttlMs,
     ua || null

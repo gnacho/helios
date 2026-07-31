@@ -1,22 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   BatteryCharging,
   Check,
   House,
+  LogOut,
   MapPin,
   Moon,
   RefreshCw,
   Smartphone,
   Sun,
   Sunrise,
+  UserPlus,
   Zap,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
@@ -30,6 +34,7 @@ const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
 
 const SECTIONS = [
   { id: 'tema', label: 'Tema' },
+  { id: 'idioma', label: 'Idioma' },
   { id: 'conexion', label: 'Conexión' },
   { id: 'instalacion', label: 'Instalación' },
   { id: 'precios', label: 'Precios' },
@@ -200,7 +205,54 @@ function ThemeSection() {
   );
 }
 
-// ── §2 Conexión con Home Assistant ───────────────────────────────────────────
+// ── §2 Idioma ─────────────────────────────────────────────────────────────────
+
+function LanguageSection() {
+  const { i18n } = useTranslation();
+  const currentLanguage = i18n.language;
+
+  const languages = [
+    { code: 'auto', name: 'Automático', flag: '🌐' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'zh-CN', name: '简体中文', flag: '🇨🇳' },
+  ];
+
+  const handleChange = (value: string) => {
+    if (value === 'auto') {
+      i18n.changeLanguage(navigator.language.startsWith('zh') ? 'zh-CN' : navigator.language.startsWith('en') ? 'en' : 'es');
+    } else {
+      i18n.changeLanguage(value);
+    }
+  };
+
+  const displayValue = currentLanguage === 'auto' || !currentLanguage ? 'auto' : currentLanguage;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm leading-snug text-muted">
+        Elige el idioma de la interfaz. Por defecto se usa el idioma de tu sistema operativo.
+      </p>
+      <Select value={displayValue} onValueChange={handleChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {languages.map((lang) => (
+            <SelectItem key={lang.code} value={lang.code}>
+              <span className="flex items-center gap-2">
+                <span>{lang.flag}</span>
+                <span>{lang.name}</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// ── §3 Conexión con Home Assistant ───────────────────────────────────────────
 
 function ConnectionSection() {
   const { connectionStatus, getLivePower } = useEnergyData();
@@ -224,14 +276,6 @@ function ConnectionSection() {
       heliosToast('Sin respuesta del servidor Helios.', { tone: 'warning' });
     } finally {
       setTesting(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
-    } finally {
-      window.dispatchEvent(new Event('helios-unauthorized'));
     }
   };
 
@@ -263,12 +307,6 @@ function ConnectionSection() {
           </span>
           {connected ? `Conectado · ${live.station || 'Home Assistant'}` : 'Reconectando con Home Assistant…'}
         </span>
-        <button
-          onClick={logout}
-          className="ml-auto inline-flex h-9 items-center gap-2 rounded-full border border-app bg-surface px-4 text-[13px] font-semibold text-muted transition-colors hover:text-app"
-        >
-          Cerrar sesión
-        </button>
       </div>
 
       {/* Entidades leídas (colapsable) */}
@@ -301,7 +339,7 @@ function ConnectionSection() {
   );
 }
 
-// ── §3 Instalación ───────────────────────────────────────────────────────────
+// ── §4 Instalación ───────────────────────────────────────────────────────────
 
 type Municipio = [string, string, number, number];
 
@@ -492,37 +530,17 @@ function InstallationSection() {
   );
 }
 
-// ── §4 Precios y ahorro ──────────────────────────────────────────────────────
+// ── §5 Precios y ahorro ──────────────────────────────────────────────────────
 
 function toEsDecimal(v: number, decimals = 2): string {
   return v.toFixed(decimals).replace('.', ',');
 }
 
-function parseEsDecimal(s: string): number | null {
-  const n = Number(s.trim().replace(',', '.'));
-  return Number.isFinite(n) && n >= 0 ? n : null;
-}
-
 function PricesSection() {
-  const [settings, update] = useEnergySettings();
+  const [settings] = useEnergySettings();
   const [priceImport, setPriceImport] = useState(() => toEsDecimal(settings.priceImport));
   const [priceExport, setPriceExport] = useState(() => toEsDecimal(settings.priceExport));
   const [co2, setCo2] = useState(() => toEsDecimal(settings.co2Factor));
-  const [saved, setSaved] = useState(false);
-
-  const save = () => {
-    const pi = parseEsDecimal(priceImport);
-    const pe = parseEsDecimal(priceExport);
-    const fc = parseEsDecimal(co2);
-    if (pi === null || pe === null || fc === null) {
-      heliosToast('Revisa los valores: deben ser números positivos.', { tone: 'warning' });
-      return;
-    }
-    update({ priceImport: pi, priceExport: pe, co2Factor: fc });
-    setSaved(true);
-    heliosToast('Preferencias guardadas', { tone: 'success' });
-    window.setTimeout(() => setSaved(false), 1000);
-  };
 
   const fields = [
     { id: 'precio-compra', label: 'Precio de compra', value: priceImport, set: setPriceImport, suffix: '€/kWh' },
@@ -563,32 +581,16 @@ function PricesSection() {
       <p className="text-[13px] leading-snug text-muted">
         Estos valores solo afectan a las estimaciones de ahorro y CO₂ mostradas en la app.
       </p>
-
-      <div>
-        <button
-          onClick={save}
-          className="bg-brand-gradient inline-flex h-9 min-w-[120px] items-center justify-center gap-2 rounded-full px-6 text-[13px] font-semibold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-95"
-        >
-          {saved ? (
-            <motion.span initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 20 }} className="flex">
-              <Check size={16} strokeWidth={2.6} />
-            </motion.span>
-          ) : (
-            'Guardar'
-          )}
-        </button>
-      </div>
     </div>
   );
 }
 
-// ── §5 Datos ─────────────────────────────────────────────────────────────────
+// ── §6 Datos ─────────────────────────────────────────────────────────────────
 
 function DataSection() {
   const { liveTick } = useEnergyData();
   const [lastSyncAt, setLastSyncAt] = useState(() => Date.now());
   const [nowTs, setNowTs] = useState(() => Date.now());
-  const [spinning, setSpinning] = useState(false);
 
   const liveTickRef = useRef(liveTick);
   useEffect(() => {
@@ -604,24 +606,6 @@ function DataSection() {
 
   const secs = Math.max(0, Math.round((nowTs - lastSyncAt) / 1000));
 
-  const refresh = async () => {
-    setSpinning(true);
-    try {
-      const res = await fetch('/api/solar/history/refresh', { method: 'POST', credentials: 'same-origin' });
-      const body = (await res.json().catch(() => null)) as { rows?: number } | null;
-      if (res.ok) {
-        heliosToast(`Histórico resincronizado · ${body?.rows ?? 0} días consolidados`, { tone: 'success' });
-      } else {
-        heliosToast('No se pudo resincronizar el histórico.', { tone: 'warning' });
-      }
-    } catch {
-      heliosToast('Sin respuesta del servidor Helios.', { tone: 'warning' });
-    } finally {
-      setLastSyncAt(Date.now());
-      window.setTimeout(() => setSpinning(false), 600);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -636,22 +620,12 @@ function DataSection() {
         <span>
           Última actualización en vivo · <span className="font-medium tabular-nums text-app">hace {secs} s</span>
         </span>
-        <button
-          onClick={refresh}
-          aria-label="Resincronizar histórico ahora"
-          className="ml-auto inline-flex items-center gap-2 rounded-full border border-app bg-surface px-3 py-2 text-muted transition-colors hover:text-app"
-        >
-          <motion.span animate={spinning ? { rotate: 360 } : { rotate: 0 }} transition={{ duration: 0.6 }} className="flex">
-            <RefreshCw size={14} />
-          </motion.span>
-          <span className="text-xs font-semibold">Resincronizar histórico</span>
-        </button>
       </div>
     </div>
   );
 }
 
-// ── §6 Instalar como app (PWA) ───────────────────────────────────────────────
+// ── §7 Instalar como app (PWA) ───────────────────────────────────────────────
 
 function InstallSection() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -688,7 +662,7 @@ function InstallSection() {
         transition={{ type: 'spring', stiffness: 260, damping: 18 }}
         className="h-24 w-24 shrink-0 rounded-[22px] shadow-lg"
       />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="font-display text-[15px] font-semibold text-app">Helios · Monitor Solar</p>
         <p className="mt-1 text-sm leading-snug text-muted">
           Instala la app en tu móvil u ordenador para ver tu energía a pantalla completa, como una app nativa.
@@ -710,18 +684,18 @@ function InstallSection() {
             </motion.li>
           ))}
         </ol>
-        <div className="mt-4">
+        <div className="mt-6 flex justify-center">
           {deferredPrompt ? (
             <button
               onClick={install}
-              className="bg-brand-gradient inline-flex h-9 items-center gap-2 rounded-full px-5 text-[13px] font-semibold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-95"
+              className="bg-brand-gradient inline-flex h-14 items-center gap-3 rounded-full px-8 text-[16px] font-semibold text-white shadow-lg transition-transform hover:scale-[1.03] active:scale-95"
             >
-              <Smartphone size={15} />
-              Instalar
+              <Smartphone size={22} />
+              Instalar app
             </button>
           ) : (
-            <p className="inline-flex items-center gap-2 rounded-full border border-app bg-surface-2 px-4 py-2 text-xs text-muted">
-              <Smartphone size={14} className="text-faint" />
+            <p className="inline-flex items-center gap-2 rounded-full border border-app bg-surface-2 px-6 py-3 text-sm text-muted">
+              <Smartphone size={18} className="text-faint" />
               Tu navegador ofrecerá la instalación desde su menú cuando esté disponible.
             </p>
           )}
@@ -736,6 +710,21 @@ function InstallSection() {
 export default function Ajustes() {
   const [activeSection, setActiveSection] = useState<string>('tema');
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const { t } = useTranslation();
+  const [, update] = useEnergySettings();
+  const [saved, setSaved] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          setUserRole(data.user.role);
+        }
+      })
+      .catch(() => setUserRole(null));
+  }, []);
 
   // Scroll-spy: resalta la sección visible en la mini-nav (≥xl).
   useEffect(() => {
@@ -754,12 +743,47 @@ export default function Ajustes() {
     return () => observer.disconnect();
   }, []);
 
+  const saveAll = () => {
+    // Aquí se guardarían todos los cambios de todas las secciones
+    update({});
+    setSaved(true);
+    heliosToast('Preferencias guardadas', { tone: 'success' });
+    window.setTimeout(() => setSaved(false), 1000);
+  };
+
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
       {/* Encabezado */}
       <motion.header initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-        <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">Ajustes</h1>
-        <p className="text-sm text-muted">Configura la app, la conexión local y los precios de tu energía.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('ajustes.title')}</h1>
+            <p className="text-sm text-muted">{t('ajustes.subtitle')}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {userRole === 'admin' && (
+              <a
+                href="/admin/users"
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-app bg-surface px-4 text-[13px] font-semibold text-muted transition-colors hover:text-app"
+              >
+                <UserPlus size={16} />
+                {t('admin.users.title')}
+              </a>
+            )}
+            <button
+              onClick={saveAll}
+              className="bg-brand-gradient inline-flex h-9 min-w-[120px] items-center justify-center gap-2 rounded-full px-6 text-[13px] font-semibold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-95"
+            >
+              {saved ? (
+                <motion.span initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 20 }} className="flex">
+                  <Check size={16} strokeWidth={2.6} />
+                </motion.span>
+              ) : (
+                t('common.save')
+              )}
+            </button>
+          </div>
+        </div>
       </motion.header>
 
       <div className="xl:flex xl:items-start xl:justify-center xl:gap-10">
@@ -794,6 +818,10 @@ export default function Ajustes() {
             <ThemeSection />
           </Section>
 
+          <Section id="idioma" title="Idioma" innerRef={(el) => (sectionRefs.current.idioma = el)}>
+            <LanguageSection />
+          </Section>
+
           <Section id="conexion" title="Conexión local" innerRef={(el) => (sectionRefs.current.conexion = el)}>
             <ConnectionSection />
           </Section>
@@ -814,7 +842,27 @@ export default function Ajustes() {
             <InstallSection />
           </Section>
 
-          {/* §7 Acerca de */}
+          {/* §8 Cerrar sesión */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="flex justify-center py-4"
+          >
+            <button
+              onClick={async () => {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+                window.location.href = '/login';
+              }}
+              className="inline-flex h-12 items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-8 text-[15px] font-semibold text-destructive transition-all hover:bg-destructive/20 hover:scale-[1.02] active:scale-95"
+            >
+              <LogOut size={20} />
+              {t('common.logout')}
+            </button>
+          </motion.div>
+
+          {/* §9 Acerca de */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}

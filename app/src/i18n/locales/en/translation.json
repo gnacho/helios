@@ -1,0 +1,46 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "logout": "Logout"
+  },
+  "nav": {
+    "dashboard": "Today",
+    "inversores": "Inverters",
+    "bateria": "Battery",
+    "historico": "History",
+    "ajustes": "Settings"
+  },
+  "dashboard": {
+    "title": "Today",
+    "production": "Production today",
+    "consumption": "Consumption today",
+    "battery": "Battery",
+    "autoconsumo": "Self-consumption",
+    "balance": "Grid balance"
+  },
+  "ajustes": {
+    "title": "Settings",
+    "subtitle": "Configure the app, local connection and energy prices.",
+    "sections": {
+      "tema": "Appearance",
+      "conexion": "Local connection",
+      "instalacion": "Your installation",
+      "precios": "Energy prices",
+      "datos": "Data",
+      "app": "Take it on your mobile"
+    }
+  },
+  "login": {
+    "title": "Helios",
+    "subtitle": "Your home's solar monitor",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Login",
+    "loading": "Logging in…",
+    "error": "Invalid username or password"
+  }
+}

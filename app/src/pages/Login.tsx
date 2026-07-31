@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { KeyRound, Sun, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { t } = useTranslation();
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -25,12 +27,12 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(body?.error ?? 'No se pudo iniciar sesión');
+        setError(body?.error ?? t('login.error'));
         return;
       }
       onSuccess();
     } catch {
-      setError('Sin conexión con el servidor');
+      setError(t('login.error'));
     } finally {
       setBusy(false);
     }
@@ -48,14 +50,14 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
           <span className="bg-brand-gradient flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg">
             <Sun size={28} className="text-white" strokeWidth={2.2} />
           </span>
-          <h1 className="font-display text-xl font-semibold tracking-[-0.01em] text-app">Helios</h1>
-          <p className="text-sm text-muted">Monitor solar de tu casa</p>
+          <h1 className="font-display text-xl font-semibold tracking-[-0.01em] text-app">{t('login.title')}</h1>
+          <p className="text-sm text-muted">{t('login.subtitle')}</p>
         </div>
 
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div>
             <Label htmlFor="login-user" className="mb-1.5 block text-[13px] font-medium text-muted">
-              Usuario
+              {t('login.username')}
             </Label>
             <div className="relative">
               <User size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -71,7 +73,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div>
             <Label htmlFor="login-pass" className="mb-1.5 block text-[13px] font-medium text-muted">
-              Contraseña
+              {t('login.password')}
             </Label>
             <div className="relative">
               <KeyRound size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -102,7 +104,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
             disabled={busy || !username || !password}
             className="bg-brand-gradient mt-1 inline-flex h-10 items-center justify-center rounded-full text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
           >
-            {busy ? 'Entrando…' : 'Entrar'}
+            {busy ? t('login.loading') : t('login.submit')}
           </button>
         </form>
       </motion.div>

@@ -1,0 +1,46 @@
+{
+  "common": {
+    "loading": "加载中…",
+    "error": "错误",
+    "save": "保存",
+    "cancel": "取消",
+    "close": "关闭",
+    "logout": "退出登录"
+  },
+  "nav": {
+    "dashboard": "今日",
+    "inversores": "逆变器",
+    "bateria": "电池",
+    "historico": "历史",
+    "ajustes": "设置"
+  },
+  "dashboard": {
+    "title": "今日",
+    "production": "今日发电量",
+    "consumption": "今日用电量",
+    "battery": "电池",
+    "autoconsumo": "自发自用",
+    "balance": "电网平衡"
+  },
+  "ajustes": {
+    "title": "设置",
+    "subtitle": "配置应用、本地连接和能源价格。",
+    "sections": {
+      "tema": "外观",
+      "conexion": "本地连接",
+      "instalacion": "您的安装",
+      "precios": "能源价格",
+      "datos": "数据",
+      "app": "手机安装"
+    }
+  },
+  "login": {
+    "title": "Helios",
+    "subtitle": "您的家庭太阳能监控",
+    "username": "用户名",
+    "password": "密码",
+    "submit": "登录",
+    "loading": "登录中…",
+    "error": "用户名或密码错误"
+  }
+}

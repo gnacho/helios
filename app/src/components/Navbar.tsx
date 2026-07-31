@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   Activity,
   Zap,
@@ -14,11 +15,11 @@ import { cn } from '@/lib/utils';
 import ConnectionStatus from '@/components/ConnectionStatus';
 
 export const NAV_ITEMS = [
-  { to: '/', label: 'Hoy', icon: Activity },
-  { to: '/inversores', label: 'Inversores', icon: Zap },
-  { to: '/bateria', label: 'Batería', icon: BatteryCharging },
-  { to: '/historico', label: 'Histórico', icon: BarChart3 },
-  { to: '/ajustes', label: 'Ajustes', icon: Settings },
+  { to: '/', labelKey: 'nav.dashboard', icon: Activity },
+  { to: '/inversores', labelKey: 'nav.inversores', icon: Zap },
+  { to: '/bateria', labelKey: 'nav.bateria', icon: BatteryCharging },
+  { to: '/historico', labelKey: 'nav.historico', icon: BarChart3 },
+  { to: '/ajustes', labelKey: 'nav.ajustes', icon: Settings },
 ] as const;
 
 function isActive(pathname: string, to: string): boolean {
@@ -34,6 +35,7 @@ function isActive(pathname: string, to: string): boolean {
 export default function Navbar() {
   const [collapsed, setCollapsed] = useState(false);
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -48,7 +50,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           to="/"
-          aria-label="Ir a Hoy"
+          aria-label={t('nav.dashboard')}
           className={cn('flex items-center gap-2.5 rounded-xl px-4 pb-6 pt-5 transition-opacity hover:opacity-80', collapsed && 'justify-center px-0')}
         >
           <img src="/logo.svg" alt="Helios" className="h-9 w-9 shrink-0" />
@@ -61,9 +63,10 @@ export default function Navbar() {
         </Link>
 
         {/* Nav vertical */}
-        <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Navegación principal">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
+        <nav className="flex flex-1 flex-col gap-1 px-3" aria-label={t('nav.dashboard')}>
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
+            const label = t(labelKey);
             return (
               <NavLink
                 key={to}
@@ -101,7 +104,7 @@ export default function Navbar() {
               <ConnectionStatus />
               <button
                 onClick={() => setCollapsed(true)}
-                aria-label="Colapsar menú"
+                aria-label={t('common.close')}
                 className="rounded-lg p-1.5 text-faint transition-colors hover:bg-surface-2 hover:text-muted"
               >
                 <ChevronsLeft size={18} />
@@ -111,7 +114,7 @@ export default function Navbar() {
           {collapsed && (
             <button
               onClick={() => setCollapsed(false)}
-              aria-label="Expandir menú"
+              aria-label={t('common.close')}
               className="rounded-lg p-1.5 text-faint transition-colors hover:bg-surface-2 hover:text-muted"
             >
               <ChevronsRight size={18} />
@@ -123,11 +126,12 @@ export default function Navbar() {
       {/* ── Bottom navigation < lg ───────────────────────────────── */}
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] lg:hidden"
-        aria-label="Navegación principal"
+        aria-label={t('nav.dashboard')}
       >
         <div className="grid h-16 grid-cols-5">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
+            const label = t(labelKey);
             return (
               <NavLink
                 key={to}
