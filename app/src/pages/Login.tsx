@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyRound, Sun, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import i18n, { LANG_MODE_KEY } from '@/i18n';
 
 export default function Login({ onSuccess }: { onSuccess: () => void }) {
   const [username, setUsername] = useState('');
@@ -29,6 +30,13 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
         setError(body?.error ?? t('login.error'));
         return;
+      }
+      // Idioma del perfil: fuerza el idioma salvo en dispositivos en modo "auto".
+      const me = await fetch('/api/auth/me', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const lang = (me as { user?: { language?: string } } | null)?.user?.language;
+      if (lang && localStorage.getItem(LANG_MODE_KEY) !== 'auto') {
+        if (i18n.language !== lang) await i18n.changeLanguage(lang);
+        if (!localStorage.getItem(LANG_MODE_KEY)) localStorage.setItem(LANG_MODE_KEY, 'manual');
       }
       onSuccess();
     } catch {

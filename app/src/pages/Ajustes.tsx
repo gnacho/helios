@@ -226,6 +226,13 @@ function LanguageSection() {
       localStorage.setItem(LANG_MODE_KEY, 'manual');
       setIsAuto(false);
       i18n.changeLanguage(value);
+      // Persistir en el perfil (BD): el idioma elegido fuerza en cualquier dispositivo.
+      fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ language: value }),
+      }).catch(() => {});
     }
   };
 
