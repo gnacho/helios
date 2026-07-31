@@ -6,6 +6,29 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0
 }
 
+// Caché TTL + single-flight para colectores caros (recorder/statistics de HAOS):
+// N requests concurrentes a la misma clave = UNA query a HAOS.
+function cachedCollector(keyFn, ttlFn, fn) {
+  const cache = new Map()
+  const inflight = new Map()
+  return (...args) => {
+    const key = keyFn(...args)
+    const hit = cache.get(key)
+    if (hit && Date.now() - hit.at < hit.ttl) return Promise.resolve(hit.value)
+    if (inflight.has(key)) return inflight.get(key)
+    const p = Promise.resolve()
+      .then(() => fn(...args))
+      .then((value) => {
+        if (cache.size > 300) cache.delete(cache.keys().next().value)
+        cache.set(key, { value, at: Date.now(), ttl: ttlFn(...args) })
+        return value
+      })
+      .finally(() => inflight.delete(key))
+    inflight.set(key, p)
+    return p
+  }
+}
+
 const entityNum = (ha, id, divisor = 1) => {
   const e = ha.getState(id)
   if (!e) return 0
@@ -161,7 +184,7 @@ export function computeTodayKpis(ha, consumptionOverride) {
   }
 }
 
-export async function getDaySeries(ha, dateStr, db) {
+async function getDaySeriesUncached(ha, dateStr, db) {
   const day = dateStr ? new Date(dateStr + 'T00:00:00') : new Date()
   if (Number.isNaN(day.getTime())) throw new Error('fecha inválida')
   const start = new Date(day)
@@ -257,6 +280,14 @@ export async function getDaySeries(ha, dateStr, db) {
   }
   return { points, estimated }
 }
+
+// Serie del día cacheada: hoy TTL 60 s (cambia con cada estadística de 5 min),
+// días pasados TTL 6 h (inmutables salvo recálculo de backfill nocturno).
+export const getDaySeries = cachedCollector(
+  (_ha, dateStr) => dateStr || todayStr(),
+  (_ha, dateStr) => ((dateStr || todayStr()) === todayStr() ? 60_000 : 6 * 3600_000),
+  getDaySeriesUncached
+)
 
 export async function getKpis(ha, dateStr, db) {
   const today = todayStr()

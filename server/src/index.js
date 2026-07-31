@@ -26,15 +26,6 @@ const auth = await import('./auth.js')
 const db = dbModule.openDb(config.dataDir)
 const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet } = dbModule
 
-if (!config.haosToken) {
-  console.error('[helios] FALTA HAOS_TOKEN en .env')
-  process.exit(1)
-}
-if (!config.authPass) {
-  console.error('[helios] FALTA AUTH_PASS en .env')
-  process.exit(1)
-}
-
 const ha = new HAClient(config.haosUrl, config.haosToken)
 let haReady = false
 let backfillState = 'pending'
