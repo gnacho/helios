@@ -6,6 +6,7 @@ import {
   BatteryCharging,
   Check,
   House,
+  KeyRound,
   LogOut,
   MapPin,
   Moon,
@@ -13,6 +14,7 @@ import {
   Smartphone,
   Sun,
   Sunrise,
+  User,
   UserPlus,
   Zap,
 } from 'lucide-react';
@@ -625,7 +627,171 @@ function DataSection() {
   );
 }
 
-// ── §7 Instalar como app (PWA) ───────────────────────────────────────────────
+// ── §7 Usuarios (solo admin) ────────────────────────────────────────────────
+
+function UsersSection() {
+  const { t } = useTranslation();
+  const [users, setUsers] = useState<any[]>([]);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [language, setLanguage] = useState('es');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const languages = [
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'zh-CN', name: '简体中文', flag: '🇨🇳' },
+  ];
+
+  useEffect(() => {
+    fetch('/api/auth/users', { credentials: 'same-origin' })
+      .then((res) => res.json())
+      .then((data) => setUsers(data.users || []))
+      .catch(() => setUsers([]));
+  }, []);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ username, password, language }),
+      });
+      const body = (await res.json()) as { error?: string; ok?: boolean; user?: unknown };
+      if (!res.ok) {
+        setError(body?.error ?? t('common.error'));
+        return;
+      }
+      heliosToast(`Usuario ${username} creado correctamente`, { tone: 'success' });
+      setUsername('');
+      setPassword('');
+      setLanguage('es');
+      // Recargar lista de usuarios
+      const res2 = await fetch('/api/auth/users', { credentials: 'same-origin' });
+      const data2 = await res2.json();
+      setUsers(data2.users || []);
+    } catch {
+      setError(t('common.error'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm leading-snug text-muted">
+        Gestiona los usuarios de la aplicación. Solo administradores pueden crear nuevos usuarios.
+      </p>
+
+      {/* Lista de usuarios */}
+      <div className="flex flex-col gap-2">
+        {users.length === 0 ? (
+          <p className="text-sm text-faint">No hay usuarios registrados</p>
+        ) : (
+          users.map((user) => (
+            <div key={user.id} className="flex items-center justify-between rounded-lg border border-app bg-surface px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2">
+                  <User size={16} />
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-app">{user.username}</p>
+                  <p className="text-xs text-faint">{user.role} · {user.language}</p>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Formulario crear usuario */}
+      <form onSubmit={submit} className="flex flex-col gap-4 border-t border-app pt-4">
+        <h3 className="text-sm font-semibold text-app">Crear nuevo usuario</h3>
+        <div>
+          <Label htmlFor="admin-user" className="mb-1.5 block text-[13px] font-medium text-muted">
+            Nombre de usuario
+          </Label>
+          <div className="relative">
+            <User size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+            <Input
+              id="admin-user"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="admin-pass" className="mb-1.5 block text-[13px] font-medium text-muted">
+            Contraseña
+          </Label>
+          <div className="relative">
+            <KeyRound size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+            <Input
+              id="admin-pass"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="admin-lang" className="mb-1.5 block text-[13px] font-medium text-muted">
+            Idioma
+          </Label>
+          <Select value={language} onValueChange={setLanguage}>
+            <SelectTrigger id="admin-lang" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {languages.map((lang) => (
+                <SelectItem key={lang.code} value={lang.code}>
+                  <span className="flex items-center gap-2">
+                    <span>{lang.flag}</span>
+                    <span>{lang.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-lg bg-rose-500/10 px-3 py-2 text-center text-[13px] font-medium text-rose-600 dark:text-rose-400"
+            role="alert"
+          >
+            {error}
+          </motion.p>
+        )}
+
+        <button
+          type="submit"
+          disabled={busy || !username || !password}
+          className="bg-brand-gradient inline-flex h-10 items-center justify-center gap-2 rounded-full text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
+        >
+          <UserPlus size={16} />
+          {busy ? 'Creando…' : 'Crear usuario'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ── §8 Instalar como app (PWA) ───────────────────────────────────────────────
 
 function InstallSection() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -760,29 +926,18 @@ export default function Ajustes() {
             <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('ajustes.title')}</h1>
             <p className="text-sm text-muted">{t('ajustes.subtitle')}</p>
           </div>
-          <div className="flex items-center gap-3">
-            {userRole === 'admin' && (
-              <a
-                href="/admin/users"
-                className="inline-flex h-9 items-center gap-2 rounded-full border border-app bg-surface px-4 text-[13px] font-semibold text-muted transition-colors hover:text-app"
-              >
-                <UserPlus size={16} />
-                {t('admin.users.title')}
-              </a>
+          <button
+            onClick={saveAll}
+            className="bg-brand-gradient inline-flex h-9 min-w-[120px] items-center justify-center gap-2 rounded-full px-6 text-[13px] font-semibold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-95"
+          >
+            {saved ? (
+              <motion.span initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 20 }} className="flex">
+                <Check size={16} strokeWidth={2.6} />
+              </motion.span>
+            ) : (
+              t('common.save')
             )}
-            <button
-              onClick={saveAll}
-              className="bg-brand-gradient inline-flex h-9 min-w-[120px] items-center justify-center gap-2 rounded-full px-6 text-[13px] font-semibold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-95"
-            >
-              {saved ? (
-                <motion.span initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 20 }} className="flex">
-                  <Check size={16} strokeWidth={2.6} />
-                </motion.span>
-              ) : (
-                t('common.save')
-              )}
-            </button>
-          </div>
+          </button>
         </div>
       </motion.header>
 
@@ -837,6 +992,12 @@ export default function Ajustes() {
           <Section id="datos" title="Datos" innerRef={(el) => (sectionRefs.current.datos = el)}>
             <DataSection />
           </Section>
+
+          {userRole === 'admin' && (
+            <Section id="usuarios" title="Usuarios" innerRef={(el) => (sectionRefs.current.usuarios = el)}>
+              <UsersSection />
+            </Section>
+          )}
 
           <Section id="app" title="Llévalo en tu móvil" innerRef={(el) => (sectionRefs.current.app = el)}>
             <InstallSection />

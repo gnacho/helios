@@ -8,7 +8,6 @@ import Inversores from '@/pages/Inversores';
 import Bateria from '@/pages/Bateria';
 import Historico from '@/pages/Historico';
 import Ajustes from '@/pages/Ajustes';
-import UsersAdmin from '@/pages/UsersAdmin';
 import StubPage from '@/pages/StubPage';
 
 export default function App() {
@@ -24,7 +23,6 @@ export default function App() {
               <Route path="/bateria" element={<Bateria />} />
               <Route path="/historico" element={<Historico />} />
               <Route path="/ajustes" element={<Ajustes />} />
-              <Route path="/admin/users" element={<UsersAdmin />} />
               <Route path="*" element={<StubPage title="No encontrado" description="La vista que buscas no existe." />} />
             </Routes>
           </Layout>

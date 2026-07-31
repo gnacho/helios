@@ -42,5 +42,27 @@
     "submit": "Entrar",
     "loading": "Entrando…",
     "error": "Usuario o contraseña incorrectos"
+  },
+  "admin": {
+    "users": {
+      "title": "Usuarios",
+      "subtitle": "Crea y gestiona usuarios de la aplicación.",
+      "username": "Nombre de usuario",
+      "password": "Contraseña",
+      "language": "Idioma",
+      "create": "Crear usuario",
+      "creating": "Creando…"
+    }
+  },
+  "admin": {
+    "users": {
+      "title": "Administrar usuarios",
+      "subtitle": "Crea y gestiona usuarios de la aplicación.",
+      "username": "Nombre de usuario",
+      "password": "Contraseña",
+      "language": "Idioma",
+      "create": "Crear usuario",
+      "creating": "Creando…"
+    }
   }
 }

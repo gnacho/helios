@@ -182,6 +182,17 @@ app.put('/api/auth/profile', async (c) => {
   return c.json({ ok: true, user: updated })
 })
 
+app.get('/api/auth/users', (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden ver usuarios' }, 403)
+  }
+  const users = db.prepare('SELECT id, username, email, phone, language, role, created_at FROM users').all()
+  return c.json({ users })
+})
+
 const guarded = new Hono()
 guarded.use('*', auth.requireAuth(db))
 

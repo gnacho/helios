@@ -42,5 +42,16 @@
     "submit": "登录",
     "loading": "登录中…",
     "error": "用户名或密码错误"
+  },
+  "admin": {
+    "users": {
+      "title": "用户管理",
+      "subtitle": "创建和管理应用用户。",
+      "username": "用户名",
+      "password": "密码",
+      "language": "语言",
+      "create": "创建用户",
+      "creating": "创建中…"
+    }
   }
 }

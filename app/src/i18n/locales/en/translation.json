@@ -42,5 +42,16 @@
     "submit": "Login",
     "loading": "Logging in…",
     "error": "Invalid username or password"
+  },
+  "admin": {
+    "users": {
+      "title": "Users",
+      "subtitle": "Create and manage application users.",
+      "username": "Username",
+      "password": "Password",
+      "language": "Language",
+      "create": "Create user",
+      "creating": "Creating…"
+    }
   }
 }
