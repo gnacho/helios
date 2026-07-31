@@ -37,6 +37,11 @@ export function openDb(dataDir) {
       key TEXT PRIMARY KEY,
       value TEXT
     );
+    CREATE TABLE IF NOT EXISTS login_attempts (
+      ip TEXT PRIMARY KEY,
+      attempts INTEGER DEFAULT 0,
+      locked_until INTEGER DEFAULT 0
+    );
   `)
   const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
   if (!cols.includes('solis_kwh')) db.exec('ALTER TABLE daily ADD COLUMN solis_kwh REAL')
