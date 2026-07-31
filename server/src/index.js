@@ -413,31 +413,23 @@ function scheduleNightly() {
     } catch (err) {
       console.error('[helios] consolidación nocturna error:', err.message)
     }
-scheduleNightly()
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('[helios] SIGTERM recibido, cerrando...')
-  ha.stop()
-  db.close()
-  for (const client of sseClients) {
-    try { client.write('event: shutdown\ndata: {}\n\n') } catch {}
-  }
-  process.exit(0)
-})
-
-process.on('SIGINT', async () => {
-  console.log('[helios] SIGINT recibido, cerrando...')
-  ha.stop()
-  db.close()
-  for (const client of sseClients) {
-    try { client.write('event: shutdown\ndata: {}\n\n') } catch {}
-  }
-  process.exit(0)
-})
+    scheduleNightly()
   }, next.getTime() - now.getTime()).unref()
 }
 scheduleNightly()
+
+// Graceful shutdown
+function gracefulShutdown(signal) {
+  console.log(`[helios] ${signal} recibido, cerrando...`)
+  ha.stop()
+  for (const client of sseClients) {
+    try { client.write('event: shutdown\ndata: {}\n\n') } catch {}
+  }
+  db.close()
+  process.exit(0)
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 
 function shiftDays(dateStr, days) {
   const d = new Date(dateStr + 'T00:00:00')
