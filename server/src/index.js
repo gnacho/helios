@@ -381,17 +381,17 @@ app.onError((err, c) => {
   return c.json({ error: 'error interno' }, 500)
 })
 
-const indexHtml = fs.existsSync(path.join(config.staticDir, 'index.html'))
-  ? fs.readFileSync(path.join(config.staticDir, 'index.html'), 'utf8')
-  : null
-
 app.use('/*', serveStatic({ root: config.staticDir }))
 
 app.get('*', (c) => {
   if (c.req.path.startsWith('/api/')) return c.json({ error: 'no encontrado' }, 404)
   if (c.req.path.startsWith('/assets/')) return c.text('no encontrado', 404)
-  if (indexHtml) return c.html(indexHtml)
-  return c.text('frontend no desplegado', 404)
+  // Se lee en cada petición: permite redesplegar el frontend sin reiniciar el server
+  try {
+    return c.html(fs.readFileSync(path.join(config.staticDir, 'index.html'), 'utf8'))
+  } catch {
+    return c.text('frontend no desplegado', 404)
+  }
 })
 
 serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
