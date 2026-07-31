@@ -2,9 +2,10 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { KeyRound, Sun, User } from 'lucide-react';
+import { KeyRound, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import BrandLogo from '@/components/BrandLogo';
 import i18n, { LANG_MODE_KEY } from '@/i18n';
 
 export default function Login({ onSuccess }: { onSuccess: () => void }) {
@@ -55,9 +56,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
         className="helios-card w-full max-w-sm p-7 shadow-card dark:shadow-card-dark"
       >
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <span className="bg-brand-gradient flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg">
-            <Sun size={28} className="text-white" strokeWidth={2.2} />
-          </span>
+          <BrandLogo className="h-16 w-16" />
           <h1 className="font-display text-xl font-semibold tracking-[-0.01em] text-app">{t('login.title')}</h1>
           <p className="text-sm text-muted">{t('login.subtitle')}</p>
         </div>

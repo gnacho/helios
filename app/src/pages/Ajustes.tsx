@@ -30,6 +30,7 @@ import type { ThemeMode } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
 import HeliosToaster from '@/components/HeliosToaster';
+import BrandLogo from '@/components/BrandLogo';
 import { heliosToast } from '@/lib/toast';
 import { LANG_MODE_KEY, resolveNavigatorLanguage } from '@/i18n';
 import { fmtTime } from '@/lib/format';
@@ -974,6 +975,7 @@ function UsersSection() {
 function InstallSection() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const { t } = useTranslation();
+  const { isDark } = useTheme();
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -995,7 +997,7 @@ function InstallSection() {
   return (
     <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
       <motion.img
-        src="/pwa-icon-512.png"
+        src={isDark ? '/icons/oscuro/helios-icon-512.png' : '/icons/claro/helios-icon-512.png'}
         alt={t('ajustes.pwa.iconAlt')}
         initial={{ scale: 0.8, opacity: 0 }}
         whileInView={{ scale: 1, opacity: 1 }}
@@ -1206,7 +1208,7 @@ export default function Ajustes() {
             transition={{ duration: 0.6 }}
             className="flex flex-col items-center gap-1.5 py-6 text-center text-[13px] text-faint"
           >
-            <img src="/logo.svg" alt="" className="h-7 w-7" />
+            <BrandLogo className="h-7 w-7" />
             <p className="font-medium">{t('ajustes.footer.version')}</p>
             <p>{t('ajustes.footer.local')}</p>
             <p>{t('ajustes.footer.made')}</p>

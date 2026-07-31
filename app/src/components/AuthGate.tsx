@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Sun } from 'lucide-react';
 import Login from '@/pages/Login';
+import BrandLogo from '@/components/BrandLogo';
 import i18n, { LANG_MODE_KEY } from '@/i18n';
 
 type AuthState = 'loading' | 'authed' | 'login';
@@ -48,8 +48,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (state === 'loading') {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-app">
-        <span className="bg-brand-gradient flex h-14 w-14 animate-pulse items-center justify-center rounded-2xl shadow-lg">
-          <Sun size={28} className="text-white" strokeWidth={2.2} />
+        <span className="flex h-14 w-14 animate-pulse items-center justify-center">
+          <BrandLogo className="h-14 w-14" />
         </span>
       </div>
     );

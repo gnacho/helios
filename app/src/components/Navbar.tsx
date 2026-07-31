@@ -12,6 +12,7 @@ import {
   ChevronsRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import BrandLogo from '@/components/BrandLogo';
 import ConnectionStatus from '@/components/ConnectionStatus';
 
 export const NAV_ITEMS = [
@@ -53,7 +54,7 @@ export default function Navbar() {
           aria-label={t('nav.dashboard')}
           className={cn('flex items-center gap-2.5 rounded-xl px-4 pb-6 pt-5 transition-opacity hover:opacity-80', collapsed && 'justify-center px-0')}
         >
-          <img src="/logo.svg" alt="Helios" className="h-9 w-9 shrink-0" />
+          <BrandLogo className="h-9 w-9 shrink-0" />
           {!collapsed && (
             <div className="min-w-0">
               <p className="font-display text-lg font-semibold leading-tight tracking-tight text-app">Helios</p>
