@@ -25,6 +25,7 @@ const auth = await import('./auth.js')
 
 const db = dbModule.openDb(config.dataDir)
 const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet } = dbModule
+await auth.ensureBootstrapAdmin(db)
 
 const ha = new HAClient(config.haosUrl, config.haosToken)
 let haReady = false

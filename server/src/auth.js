@@ -57,6 +57,15 @@ export function loginOk(db, c) {
   db.prepare('DELETE FROM login_attempts WHERE ip = ?').run(ip)
 }
 
+// Crea el admin inicial desde .env (AUTH_USER/AUTH_PASS) si no existe. Idempotente.
+export async function ensureBootstrapAdmin(db) {
+  const existing = getUserByUsername(db, config.authUser)
+  if (existing) return
+  const hash = await bcrypt.hash(config.authPass, 10)
+  createUser(db, config.authUser, hash, 'es', 'admin')
+  console.log(`[helios] admin bootstrap creado: ${config.authUser}`)
+}
+
 export async function registerUser(db, username, password, language = 'es', role = 'user') {
   if (!username || !password) return null
   const existing = getUserByUsername(db, username)

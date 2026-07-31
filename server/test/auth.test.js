@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { initSchema, getUserByUsername } from '../src/db.js'
-import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin } from '../src/auth.js'
+import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin, ensureBootstrapAdmin } from '../src/auth.js'
 
 function mockContext(ip) {
   return {
@@ -55,6 +55,18 @@ describe('handleLogin', () => {
     const res = await handleLogin(db, mockContext('1.1.1.1'), { username: 'demo', password: 'secreto123' })
     expect(res.user.username).toBe('demo')
     expect(res.user.password_hash).toBeUndefined()
+  })
+})
+
+describe('ensureBootstrapAdmin', () => {
+  it('crea el admin desde .env en el primer arranque e idempotente', async () => {
+    await ensureBootstrapAdmin(db) // AUTH_USER=admin / AUTH_PASS=test (script test)
+    const admin = getUserByUsername(db, 'admin')
+    expect(admin.role).toBe('admin')
+    await ensureBootstrapAdmin(db)
+    expect(db.prepare('SELECT COUNT(*) AS n FROM users').get().n).toBe(1)
+    const res = await handleLogin(db, mockContext('1.1.1.1'), { username: 'admin', password: 'test' })
+    expect(res.user.username).toBe('admin')
   })
 })
 
