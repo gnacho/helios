@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Sector } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtEnergy, fmtPct } from '@/lib/format';
 import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
@@ -51,15 +52,16 @@ const renderActiveShape = (props: unknown) => {
  */
 export default function EnergySourceDonut({ split, height = 320 }: EnergySourceDonutProps) {
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
   const total = Math.max(0, split.solar + split.bateria + split.red);
   const animatedTotal = useAnimatedNumber(total);
 
   const slices = [
-    { key: 'solar', label: 'Solar directa', value: split.solar, color: palette.solar },
-    { key: 'bateria', label: 'Batería', value: split.bateria, color: palette.bateria },
-    { key: 'red', label: 'Red', value: split.red, color: palette.redCompra },
+    { key: 'solar', label: t('historico.solarDirect'), value: split.solar, color: palette.solar },
+    { key: 'bateria', label: t('common.battery'), value: split.bateria, color: palette.bateria },
+    { key: 'red', label: t('common.grid'), value: split.red, color: palette.redCompra },
   ].filter((s) => s.value > 0.005);
 
   const active = activeIndex >= 0 ? slices[activeIndex] : undefined;
@@ -113,7 +115,7 @@ export default function EnergySourceDonut({ split, height = 320 }: EnergySourceD
               <p className="font-display text-2xl font-semibold leading-none text-app">
                 {fmtEnergy(animatedTotal)} <span className="text-[0.6em] font-medium text-faint">kWh</span>
               </p>
-              <p className="mt-1 text-xs text-faint">consumidos</p>
+              <p className="mt-1 text-xs text-faint">{t('historico.consumed')}</p>
             </>
           )}
         </div>

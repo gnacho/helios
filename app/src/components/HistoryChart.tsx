@@ -14,7 +14,8 @@ import {
   YAxis,
 } from 'recharts';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { dateLocale } from '@/i18n';
 import type { HistoryDay, PowerPoint } from '@/data/types';
 import { STEP_MIN } from '@/data/types';
 import type { Period } from '@/lib/historyStats';
@@ -123,6 +124,7 @@ export default function HistoryChart({
   onDrillMonth,
 }: HistoryChartProps) {
   const palette = useEnergyColors();
+  const { t, i18n } = useTranslation();
 
   // Filas de barras: por día (semana/mes) o agregadas por mes (año).
   const barRows = useMemo<BarRow[]>(() => {
@@ -135,8 +137,8 @@ export default function HistoryChart({
           const date = new Date(d.date.getFullYear(), m, 1);
           row = {
             key: `${d.date.getFullYear()}-${m}`,
-            label: format(date, 'MMM', { locale: es }),
-            caption: format(date, 'MMMM', { locale: es }),
+            label: format(date, 'MMM', { locale: dateLocale() }),
+            caption: format(date, 'MMMM', { locale: dateLocale() }),
             date,
             production: 0,
             consumption: 0,
@@ -155,8 +157,8 @@ export default function HistoryChart({
     }
     return days.map((d) => ({
       key: d.date.toISOString(),
-      label: period === 'semana' ? format(d.date, 'EEE d', { locale: es }) : `${d.date.getDate()}`,
-      caption: format(d.date, 'EEE d', { locale: es }),
+      label: period === 'semana' ? format(d.date, 'EEE d', { locale: dateLocale() }) : `${d.date.getDate()}`,
+      caption: format(d.date, 'EEE d', { locale: dateLocale() }),
       date: d.date,
       production: d.productionKwh,
       consumption: d.consumptionKwh,
@@ -166,7 +168,7 @@ export default function HistoryChart({
         d.date.getMonth() === today.getMonth() &&
         d.date.getDate() === today.getDate(),
     }));
-  }, [period, days, today]);
+  }, [period, days, today, i18n.language]);
 
   if (period === 'dia') {
     return (
@@ -202,7 +204,7 @@ export default function HistoryChart({
           />
           <Tooltip content={<DayTooltip />} cursor={{ stroke: 'var(--text-faint)', strokeDasharray: '3 3', strokeOpacity: 0.5 }} />
           <Area
-            name="Producción"
+            name={t('common.production')}
             type="monotone"
             dataKey="production"
             stroke={palette.solar}
@@ -213,7 +215,7 @@ export default function HistoryChart({
             activeDot={{ r: 4 }}
           />
           <Area
-            name="Consumo"
+            name={t('common.consumption')}
             type="monotone"
             dataKey="consumption"
             stroke={palette.consumo}
@@ -274,7 +276,7 @@ export default function HistoryChart({
         <Tooltip content={<BarsTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.6 }} />
         <Bar
           yAxisId="left"
-          name="Producción"
+          name={t('common.production')}
           dataKey="production"
           fill={palette.solar}
           radius={[4, 4, 0, 0]}
@@ -288,7 +290,7 @@ export default function HistoryChart({
         </Bar>
         <Bar
           yAxisId="left"
-          name="Consumo"
+          name={t('common.consumption')}
           dataKey="consumption"
           fill={palette.consumo}
           radius={[4, 4, 0, 0]}
@@ -303,7 +305,7 @@ export default function HistoryChart({
         </Bar>
         <Line
           yAxisId="right"
-          name="Autoconsumo"
+          name={t('common.autoconsumo')}
           type="monotone"
           dataKey="autoconsumo"
           stroke={palette.bateria}

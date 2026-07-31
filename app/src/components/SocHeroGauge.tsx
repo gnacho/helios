@@ -1,9 +1,10 @@
 import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { useTranslation } from 'react-i18next';
 import { useEnergyColors } from '@/lib/colors';
 import { prefersReducedMotion } from '@/lib/useAnimatedNumber';
-import { fmtEnergy } from '@/lib/format';
+import { fmtEnergy, fmtPct } from '@/lib/format';
 
 gsap.registerPlugin(useGSAP);
 
@@ -42,6 +43,7 @@ const RESERVE_PCT = 20;
  */
 export default function SocHeroGauge({ soc, size = 260 }: SocHeroGaugeProps) {
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement>(null);
   const arcRef = useRef<SVGPathElement>(null);
   const numRef = useRef<SVGTextElement>(null);
@@ -96,7 +98,7 @@ export default function SocHeroGauge({ soc, size = 260 }: SocHeroGaugeProps) {
   const [lx, ly] = polar(CX, CY, R - 30, reserveAngle);
 
   return (
-    <div ref={rootRef} className="flex justify-center" role="img" aria-label={`Batería al ${Math.round(clamped)} %`}>
+    <div ref={rootRef} className="flex justify-center" role="img" aria-label={t('bateria.gaugeAria', { pct: Math.round(clamped) })}>
       <svg width={size} height={size * 0.92} viewBox="0 0 260 240" fill="none">
         {/* track */}
         <path d={arcPath(CX, CY, R, START, START + SWEEP)} stroke="var(--surface-2)" strokeWidth={16} strokeLinecap="round" />
@@ -112,7 +114,7 @@ export default function SocHeroGauge({ soc, size = 260 }: SocHeroGaugeProps) {
         <g ref={reserveRef} opacity={0}>
           <line x1={tx1} y1={ty1} x2={tx2} y2={ty2} stroke={palette.redCompra} strokeWidth={2} strokeDasharray="3 3" strokeLinecap="round" />
           <text x={lx} y={ly + 3} textAnchor="middle" style={{ fill: palette.redCompra, fontSize: 10, fontWeight: 600, fontFamily: 'Inter' }}>
-            Reserva 20 %
+            {t('bateria.reservePct', { pct: fmtPct(RESERVE_PCT) })}
           </text>
         </g>
         {/* cifra central */}
@@ -121,7 +123,7 @@ export default function SocHeroGauge({ soc, size = 260 }: SocHeroGaugeProps) {
           <tspan style={{ fontSize: 26, fill: 'var(--text-faint)', fontWeight: 500 }}> %</tspan>
         </text>
         <text x={CX} y={CY + 32} textAnchor="middle" style={{ fill: 'var(--text-muted)', fontSize: 14, fontWeight: 500, fontFamily: 'Inter' }}>
-          {fmtEnergy((clamped / 100) * 5)} de 5,0 kWh
+          {t('bateria.ofTotalKwh', { kwh: fmtEnergy((clamped / 100) * 5), total: fmtEnergy(5) })}
         </text>
       </svg>
     </div>

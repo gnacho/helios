@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { numLocale } from '@/i18n';
 import { useEnergyColors } from '@/lib/colors';
 import type { EnergyColorKey } from '@/lib/colors';
 import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
@@ -47,9 +49,10 @@ export default function KpiCard({
   index = 0,
 }: KpiCardProps) {
   const palette = useEnergyColors();
+  const { i18n } = useTranslation();
   const accent = palette[color];
   const animated = useAnimatedNumber(value);
-  const formatted = new Intl.NumberFormat('es-ES', {
+  const formatted = new Intl.NumberFormat(numLocale(), {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(animated);
@@ -79,7 +82,7 @@ export default function KpiCard({
               <Icon size={17} strokeWidth={2.2} />
             </span>
           {live && (
-            <span className="relative flex h-2 w-2" aria-label="En vivo">
+            <span className="relative flex h-2 w-2" aria-label={i18n.t('dashboard.live')}>
               <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>

@@ -34,26 +34,18 @@ import { cn } from '@/lib/utils';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
 
-const SECTIONS = [
-  { id: 'tema', label: 'Tema' },
-  { id: 'idioma', label: 'Idioma' },
-  { id: 'conexion', label: 'Conexión' },
-  { id: 'instalacion', label: 'Instalación' },
-  { id: 'precios', label: 'Precios' },
-  { id: 'datos', label: 'Datos' },
-  { id: 'app', label: 'App' },
-] as const;
+const SECTION_IDS = ['tema', 'idioma', 'conexion', 'instalacion', 'precios', 'datos', 'app'] as const;
 
-const ENTIDADES: { entidad: string; descripcion: string }[] = [
-  { entidad: 'sensor.solis_potencia_actual', descripcion: 'Producción Solis (kW)' },
-  { entidad: 'sensor.almacen_pinza_power_b', descripcion: 'Producción Fox, pinza local (W)' },
-  { entidad: 'sensor.medidor_respaldo_power', descripcion: 'Consumo vivienda respaldada (W)' },
-  { entidad: 'sensor.vivienda_medidor_power', descripcion: 'Consumo vivienda no respaldada (W)' },
-  { entidad: 'sensor.almacen_pinza_power_a', descripcion: 'Consumo almacén (W)' },
-  { entidad: 'sensor.solis_bateria_soc', descripcion: 'Batería Soluna (%)' },
-  { entidad: 'sensor.solis_bateria_potencia', descripcion: 'Potencia carga/descarga (kW)' },
-  { entidad: 'sensor.solis_scraper', descripcion: 'Red Solis: dirección y potencia (atributos)' },
-  { entidad: 'sun.sun', descripcion: 'Amanecer/atardecer' },
+const ENTIDADES: { entidad: string; descKey: string }[] = [
+  { entidad: 'sensor.solis_potencia_actual', descKey: 'desc_solis_potencia_actual' },
+  { entidad: 'sensor.almacen_pinza_power_b', descKey: 'desc_almacen_pinza_power_b' },
+  { entidad: 'sensor.medidor_respaldo_power', descKey: 'desc_medidor_respaldo_power' },
+  { entidad: 'sensor.vivienda_medidor_power', descKey: 'desc_vivienda_medidor_power' },
+  { entidad: 'sensor.almacen_pinza_power_a', descKey: 'desc_almacen_pinza_power_a' },
+  { entidad: 'sensor.solis_bateria_soc', descKey: 'desc_solis_bateria_soc' },
+  { entidad: 'sensor.solis_bateria_potencia', descKey: 'desc_solis_bateria_potencia' },
+  { entidad: 'sensor.solis_scraper', descKey: 'desc_solis_scraper' },
+  { entidad: 'sun.sun', descKey: 'desc_sun' },
 ];
 
 interface BeforeInstallPromptEvent extends Event {
@@ -96,16 +88,16 @@ function Section({
 
 // ── §1 Tema ──────────────────────────────────────────────────────────────────
 
-const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { value: 'auto', label: 'Auto', icon: Sunrise },
-  { value: 'light', label: 'Claro', icon: Sun },
-  { value: 'dark', label: 'Oscuro', icon: Moon },
+const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: typeof Sun }[] = [
+  { value: 'auto', labelKey: 'theme.auto', icon: Sunrise },
+  { value: 'light', labelKey: 'theme.light', icon: Sun },
+  { value: 'dark', labelKey: 'theme.dark', icon: Moon },
 ];
 
 const THEME_PREVIEWS = [
   {
     key: 'light',
-    label: 'Claro',
+    labelKey: 'theme.light',
     bg: '#F4F6FA',
     surface: '#FFFFFF',
     text: '#0C1425',
@@ -115,7 +107,7 @@ const THEME_PREVIEWS = [
   },
   {
     key: 'dark',
-    label: 'Oscuro',
+    labelKey: 'theme.dark',
     bg: '#080D1A',
     surface: '#101828',
     text: '#E9EEF7',
@@ -127,12 +119,13 @@ const THEME_PREVIEWS = [
 
 function ThemeSection() {
   const { mode, setMode, effective } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-4">
       {/* Segmented grande */}
-      <div role="radiogroup" aria-label="Tema de la interfaz" className="grid grid-cols-3 gap-2">
-        {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+      <div role="radiogroup" aria-label={t('theme.label')} className="grid grid-cols-3 gap-2">
+        {THEME_OPTIONS.map(({ value, labelKey, icon: Icon }) => {
           const active = mode === value;
           return (
             <button
@@ -151,11 +144,11 @@ function ThemeSection() {
               )}
               {!active && <span className="absolute inset-0 rounded-xl border border-app transition-colors hover:bg-surface-2/50" />}
               <Icon size={20} strokeWidth={2.1} className={cn('relative', active ? 'text-amber-500' : 'text-faint')} />
-              <span className={cn('relative text-[13px]', active ? 'font-semibold text-app' : 'text-muted')}>{label}</span>
+              <span className={cn('relative text-[13px]', active ? 'font-semibold text-app' : 'text-muted')}>{t(labelKey)}</span>
               {value === 'auto' && active && (
                 <span
                   className={cn('relative h-1.5 w-1.5 rounded-full', effective === 'dark' ? 'bg-indigo-400' : 'bg-amber-500')}
-                  aria-label={effective === 'dark' ? 'Oscuro activo' : 'Claro activo'}
+                  aria-label={effective === 'dark' ? t('theme.darkActive') : t('theme.lightActive')}
                 />
               )}
             </button>
@@ -164,39 +157,39 @@ function ThemeSection() {
       </div>
 
       <p className="text-[13px] leading-snug text-muted">
-        En modo Auto, la interfaz usa el tema claro entre el amanecer (06:50) y el atardecer (21:40).
+        {t('ajustes.theme.autoNote')}
       </p>
 
       {/* Preview en vivo de ambos temas */}
       <div className="flex flex-wrap gap-3">
-        {THEME_PREVIEWS.map((t, i) => (
+        {THEME_PREVIEWS.map((tp, i) => (
           <motion.div
-            key={t.key}
+            key={tp.key}
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.1 + i * 0.1, ease: easeOutQuart }}
             className="w-[180px] rounded-2xl p-2"
-            style={{ backgroundColor: t.bg, border: `1px solid ${t.border}` }}
-            aria-label={`Vista previa del tema ${t.label}`}
+            style={{ backgroundColor: tp.bg, border: `1px solid ${tp.border}` }}
+            aria-label={t('ajustes.theme.previewAria', { label: t(tp.labelKey) })}
           >
-            <div className="flex h-[96px] flex-col justify-between rounded-xl p-3" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
+            <div className="flex h-[96px] flex-col justify-between rounded-xl p-3" style={{ backgroundColor: tp.surface, border: `1px solid ${tp.border}` }}>
               <div className="flex items-center justify-between">
                 <span
                   className="flex h-6 w-6 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: `${t.accent}1F`, color: t.accent }}
+                  style={{ backgroundColor: `${tp.accent}1F`, color: tp.accent }}
                 >
                   <Sun size={13} strokeWidth={2.4} />
                 </span>
-                <span className="text-[9px] font-medium uppercase tracking-[0.08em]" style={{ color: t.faint }}>
-                  {t.label}
+                <span className="text-[9px] font-medium uppercase tracking-[0.08em]" style={{ color: tp.faint }}>
+                  {t(tp.labelKey)}
                 </span>
               </div>
               <div>
-                <p className="text-[9px] font-medium uppercase tracking-[0.08em]" style={{ color: t.faint }}>
-                  Producción
+                <p className="text-[9px] font-medium uppercase tracking-[0.08em]" style={{ color: tp.faint }}>
+                  {t('common.production')}
                 </p>
-                <p className="font-display text-lg font-semibold leading-tight" style={{ color: t.text }}>
-                  6,12 <span className="text-[0.6em] font-medium" style={{ color: t.faint }}>kW</span>
+                <p className="font-display text-lg font-semibold leading-tight" style={{ color: tp.text }}>
+                  6,12 <span className="text-[0.6em] font-medium" style={{ color: tp.faint }}>kW</span>
                 </p>
               </div>
             </div>
@@ -210,11 +203,11 @@ function ThemeSection() {
 // ── §2 Idioma ─────────────────────────────────────────────────────────────────
 
 function LanguageSection() {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const currentLanguage = i18n.language;
 
   const languages = [
-    { code: 'auto', name: 'Automático', flag: '🌐' },
+    { code: 'auto', name: t('ajustes.language.auto'), flag: '🌐' },
     { code: 'es', name: 'Español', flag: '🇪🇸' },
     { code: 'en', name: 'English', flag: '🇬🇧' },
     { code: 'zh-CN', name: '简体中文', flag: '🇨🇳' },
@@ -233,7 +226,7 @@ function LanguageSection() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm leading-snug text-muted">
-        Elige el idioma de la interfaz. Por defecto se usa el idioma de tu sistema operativo.
+        {t('ajustes.language.note')}
       </p>
       <Select value={displayValue} onValueChange={handleChange}>
         <SelectTrigger className="w-full">
@@ -258,6 +251,7 @@ function LanguageSection() {
 
 function ConnectionSection() {
   const { connectionStatus, getLivePower } = useEnergyData();
+  const { t } = useTranslation();
   const [testing, setTesting] = useState(false);
   const live = getLivePower();
   const connected = connectionStatus === 'connected';
@@ -270,12 +264,12 @@ function ConnectionSection() {
       if (!res.ok) throw new Error();
       const data = (await res.json()) as { connected?: boolean; station?: string };
       if (data.connected) {
-        heliosToast(`Conectado a Home Assistant · ${data.station || 'estación activa'}`, { tone: 'success' });
+        heliosToast(t('ajustes.connection.connectedToast', { station: data.station || t('ajustes.connection.stationFallback') }), { tone: 'success' });
       } else {
-        heliosToast('El servidor no llega a Home Assistant; reintentando en segundo plano.', { tone: 'warning' });
+        heliosToast(t('ajustes.connection.unreachableToast'), { tone: 'warning' });
       }
     } catch {
-      heliosToast('Sin respuesta del servidor Helios.', { tone: 'warning' });
+      heliosToast(t('ajustes.connection.noResponseToast'), { tone: 'warning' });
     } finally {
       setTesting(false);
     }
@@ -284,8 +278,7 @@ function ConnectionSection() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm leading-snug text-muted">
-        Helios lee tu Home Assistant en red local desde el servidor de la app. Tus datos nunca salen de tu casa: solo esta web se
-        expone, protegida con tu contraseña.
+        {t('ajustes.connection.desc')}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -298,7 +291,7 @@ function ConnectionSection() {
           )}
         >
           {testing && <RefreshCw size={14} className="animate-spin" />}
-          {testing ? 'Probando…' : 'Probar conexión'}
+          {testing ? t('ajustes.connection.testing') : t('ajustes.connection.test')}
         </button>
         <span className="inline-flex h-8 items-center gap-2 rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted">
           <span className="relative flex h-2 w-2">
@@ -307,7 +300,7 @@ function ConnectionSection() {
             )}
             <span className={cn('relative inline-flex h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-amber-500')} />
           </span>
-          {connected ? `Conectado · ${live.station || 'Home Assistant'}` : 'Reconectando con Home Assistant…'}
+          {connected ? t('ajustes.connection.connected', { station: live.station || 'Home Assistant' }) : t('ajustes.connection.reconnecting')}
         </span>
       </div>
 
@@ -315,21 +308,21 @@ function ConnectionSection() {
       <Accordion type="single" collapsible>
         <AccordionItem value="entidades" className="rounded-xl border border-app px-3">
           <AccordionTrigger className="py-3 text-[13px] font-medium text-muted hover:no-underline">
-            Ver entidades que se leen
+            {t('ajustes.connection.entities')}
           </AccordionTrigger>
           <AccordionContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Entidad</TableHead>
-                  <TableHead className="text-xs">Descripción</TableHead>
+                  <TableHead className="text-xs">{t('ajustes.connection.entity')}</TableHead>
+                  <TableHead className="text-xs">{t('ajustes.connection.description')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {ENTIDADES.map((e) => (
                   <TableRow key={e.entidad}>
                     <TableCell className="py-2 font-mono text-xs text-app">{e.entidad}</TableCell>
-                    <TableCell className="py-2 text-xs text-muted">{e.descripcion}</TableCell>
+                    <TableCell className="py-2 text-xs text-muted">{t(`ajustes.connection.${e.descKey}`)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -354,6 +347,7 @@ const normText = (s: string) =>
 function LocationField() {
   const [settings, update] = useEnergySettings();
   const { sunriseMin, sunsetMin } = useEnergyData();
+  const { t } = useTranslation();
   const [query, setQuery] = useState(settings.location);
   const [list, setList] = useState<Municipio[] | null>(null);
   const [open, setOpen] = useState(false);
@@ -396,14 +390,14 @@ function LocationField() {
   return (
     <div>
       <Label htmlFor="install-location" className="mb-1.5 block text-[13px] font-medium text-muted">
-        Ubicación
+        {t('ajustes.install.location')}
       </Label>
       <div className="relative">
         <MapPin size={15} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-faint" />
         <Input
           id="install-location"
           value={query}
-          placeholder="Empieza a escribir tu población…"
+          placeholder={t('ajustes.install.locationPlaceholder')}
           autoComplete="off"
           onChange={(e) => {
             setQuery(e.target.value);
@@ -420,8 +414,8 @@ function LocationField() {
           <button
             type="button"
             onClick={clear}
-            aria-label="Quitar ubicación (usar la de Home Assistant)"
-            title="Quitar ubicación (usar la de Home Assistant)"
+            aria-label={t('ajustes.install.clearLocation')}
+            title={t('ajustes.install.clearLocation')}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-faint transition-colors hover:text-muted"
           >
             ✕
@@ -449,8 +443,8 @@ function LocationField() {
       </div>
       <p className="mt-1.5 text-xs text-faint">
         {settings.locationLat !== null
-          ? `Sol hoy en ${settings.location.split(' (')[0]}: ↑ ${fmtTime(sunriseMin)} · ↓ ${fmtTime(sunsetMin)}`
-          : `Usando la ubicación de Home Assistant: ↑ ${fmtTime(sunriseMin)} · ↓ ${fmtTime(sunsetMin)}`}
+          ? t('ajustes.install.sunTodayAt', { location: settings.location.split(' (')[0], sunrise: fmtTime(sunriseMin), sunset: fmtTime(sunsetMin) })
+          : t('ajustes.install.sunTodayHa', { sunrise: fmtTime(sunriseMin), sunset: fmtTime(sunsetMin) })}
       </p>
     </div>
   );
@@ -458,12 +452,13 @@ function LocationField() {
 
 function InstallationSection() {
   const [settings, update] = useEnergySettings();
+  const { t } = useTranslation();
 
   const chips = [
     {
       key: 'solis',
       name: 'Solis S5-EH1P5K-L',
-      lines: ['10 × 440 W · 4,4 kWp', 'Batería Soluna 5 kWh'],
+      lines: [t('ajustes.install.solisLine1'), t('ajustes.install.solisLine2')],
       color: 'var(--c-solis)',
       icon: Zap,
       extraIcon: BatteryCharging,
@@ -472,7 +467,7 @@ function InstallationSection() {
     {
       key: 'fox',
       name: 'Fox H1-3.0-E',
-      lines: ['6 × 450 W · 2,7 kWp'],
+      lines: [t('ajustes.install.foxLine1')],
       color: 'var(--c-fox)',
       icon: Zap,
       extraIcon: null,
@@ -514,7 +509,7 @@ function InstallationSection() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="install-name" className="mb-1.5 block text-[13px] font-medium text-muted">
-            Nombre de la instalación
+            {t('ajustes.install.name')}
           </Label>
           <div className="relative">
             <House size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -540,14 +535,15 @@ function toEsDecimal(v: number, decimals = 2): string {
 
 function PricesSection() {
   const [settings] = useEnergySettings();
+  const { t } = useTranslation();
   const [priceImport, setPriceImport] = useState(() => toEsDecimal(settings.priceImport));
   const [priceExport, setPriceExport] = useState(() => toEsDecimal(settings.priceExport));
   const [co2, setCo2] = useState(() => toEsDecimal(settings.co2Factor));
 
   const fields = [
-    { id: 'precio-compra', label: 'Precio de compra', value: priceImport, set: setPriceImport, suffix: '€/kWh' },
-    { id: 'precio-vertido', label: 'Compensación por vertido', value: priceExport, set: setPriceExport, suffix: '€/kWh' },
-    { id: 'factor-co2', label: 'Factor CO₂', value: co2, set: setCo2, suffix: 'kg/kWh' },
+    { id: 'precio-compra', label: t('ajustes.prices.buy'), value: priceImport, set: setPriceImport, suffix: '€/kWh' },
+    { id: 'precio-vertido', label: t('ajustes.prices.sell'), value: priceExport, set: setPriceExport, suffix: '€/kWh' },
+    { id: 'factor-co2', label: t('ajustes.prices.co2'), value: co2, set: setCo2, suffix: 'kg/kWh' },
   ];
 
   return (
@@ -581,7 +577,7 @@ function PricesSection() {
       </div>
 
       <p className="text-[13px] leading-snug text-muted">
-        Estos valores solo afectan a las estimaciones de ahorro y CO₂ mostradas en la app.
+        {t('ajustes.prices.note')}
       </p>
     </div>
   );
@@ -591,6 +587,7 @@ function PricesSection() {
 
 function DataSection() {
   const { liveTick } = useEnergyData();
+  const { t } = useTranslation();
   const [lastSyncAt, setLastSyncAt] = useState(() => Date.now());
   const [nowTs, setNowTs] = useState(() => Date.now());
 
@@ -611,16 +608,15 @@ function DataSection() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-sm font-medium text-app">Datos en vivo e histórico</p>
+        <p className="text-sm font-medium text-app">{t('ajustes.data.title')}</p>
         <p className="mt-0.5 max-w-md text-[13px] leading-snug text-muted">
-          Las potencias llegan en tiempo real desde Home Assistant. El histórico diario se consolida cada noche en el servidor de
-          Helios para el mapa anual.
+          {t('ajustes.data.desc')}
         </p>
       </div>
 
       <div className="flex items-center gap-2 border-t border-app pt-3 text-[13px] text-muted">
         <span>
-          Última actualización en vivo · <span className="font-medium tabular-nums text-app">hace {secs} s</span>
+          {t('ajustes.data.lastUpdate', { secs })}
         </span>
       </div>
     </div>
@@ -668,7 +664,7 @@ function UsersSection() {
         setError(body?.error ?? t('common.error'));
         return;
       }
-      heliosToast(`Usuario ${username} creado correctamente`, { tone: 'success' });
+      heliosToast(t('admin.users.createdToast', { username }), { tone: 'success' });
       setUsername('');
       setPassword('');
       setLanguage('es');
@@ -686,13 +682,13 @@ function UsersSection() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm leading-snug text-muted">
-        Gestiona los usuarios de la aplicación. Solo administradores pueden crear nuevos usuarios.
+        {t('admin.users.subtitle')}
       </p>
 
       {/* Lista de usuarios */}
       <div className="flex flex-col gap-2">
         {users.length === 0 ? (
-          <p className="text-sm text-faint">No hay usuarios registrados</p>
+          <p className="text-sm text-faint">{t('admin.users.empty')}</p>
         ) : (
           users.map((user) => (
             <div key={user.id} className="flex items-center justify-between rounded-lg border border-app bg-surface px-4 py-3">
@@ -712,10 +708,10 @@ function UsersSection() {
 
       {/* Formulario crear usuario */}
       <form onSubmit={submit} className="flex flex-col gap-4 border-t border-app pt-4">
-        <h3 className="text-sm font-semibold text-app">Crear nuevo usuario</h3>
+        <h3 className="text-sm font-semibold text-app">{t('admin.users.newUser')}</h3>
         <div>
           <Label htmlFor="admin-user" className="mb-1.5 block text-[13px] font-medium text-muted">
-            Nombre de usuario
+            {t('admin.users.username')}
           </Label>
           <div className="relative">
             <User size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -731,7 +727,7 @@ function UsersSection() {
 
         <div>
           <Label htmlFor="admin-pass" className="mb-1.5 block text-[13px] font-medium text-muted">
-            Contraseña
+            {t('admin.users.password')}
           </Label>
           <div className="relative">
             <KeyRound size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -748,7 +744,7 @@ function UsersSection() {
 
         <div>
           <Label htmlFor="admin-lang" className="mb-1.5 block text-[13px] font-medium text-muted">
-            Idioma
+            {t('admin.users.language')}
           </Label>
           <Select value={language} onValueChange={setLanguage}>
             <SelectTrigger id="admin-lang" className="w-full">
@@ -784,7 +780,7 @@ function UsersSection() {
           className="bg-brand-gradient inline-flex h-10 items-center justify-center gap-2 rounded-full text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
         >
           <UserPlus size={16} />
-          {busy ? 'Creando…' : 'Crear usuario'}
+          {busy ? t('admin.users.creating') : t('admin.users.create')}
         </button>
       </form>
     </div>
@@ -795,6 +791,7 @@ function UsersSection() {
 
 function InstallSection() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -811,17 +808,13 @@ function InstallSection() {
     setDeferredPrompt(null);
   };
 
-  const steps = [
-    'Abre esta página en el navegador de tu móvil',
-    'Pulsa "Añadir a pantalla de inicio"',
-    'Listo: acceso directo con icono propio',
-  ];
+  const steps = [t('ajustes.pwa.step1'), t('ajustes.pwa.step2'), t('ajustes.pwa.step3')];
 
   return (
     <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
       <motion.img
         src="/pwa-icon-512.png"
-        alt="Icono de la app Helios"
+        alt={t('ajustes.pwa.iconAlt')}
         initial={{ scale: 0.8, opacity: 0 }}
         whileInView={{ scale: 1, opacity: 1 }}
         viewport={{ once: true }}
@@ -829,9 +822,9 @@ function InstallSection() {
         className="h-24 w-24 shrink-0 rounded-[22px] shadow-lg"
       />
       <div className="min-w-0 flex-1">
-        <p className="font-display text-[15px] font-semibold text-app">Helios · Monitor Solar</p>
+        <p className="font-display text-[15px] font-semibold text-app">{t('ajustes.pwa.name')}</p>
         <p className="mt-1 text-sm leading-snug text-muted">
-          Instala la app en tu móvil u ordenador para ver tu energía a pantalla completa, como una app nativa.
+          {t('ajustes.pwa.desc')}
         </p>
         <ol className="mt-3 flex flex-col gap-1.5">
           {steps.map((s, i) => (
@@ -857,12 +850,12 @@ function InstallSection() {
               className="bg-brand-gradient inline-flex h-14 items-center gap-3 rounded-full px-8 text-[16px] font-semibold text-white shadow-lg transition-transform hover:scale-[1.03] active:scale-95"
             >
               <Smartphone size={22} />
-              Instalar app
+              {t('ajustes.pwa.install')}
             </button>
           ) : (
             <p className="inline-flex items-center gap-2 rounded-full border border-app bg-surface-2 px-6 py-3 text-sm text-muted">
               <Smartphone size={18} className="text-faint" />
-              Tu navegador ofrecerá la instalación desde su menú cuando esté disponible.
+              {t('ajustes.pwa.unavailable')}
             </p>
           )}
         </div>
@@ -902,8 +895,8 @@ export default function Ajustes() {
       },
       { rootMargin: '-40% 0px -55% 0px', threshold: 0 },
     );
-    for (const s of SECTIONS) {
-      const el = sectionRefs.current[s.id];
+    for (const s of SECTION_IDS) {
+      const el = sectionRefs.current[s];
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
@@ -913,7 +906,7 @@ export default function Ajustes() {
     // Aquí se guardarían todos los cambios de todas las secciones
     update({});
     setSaved(true);
-    heliosToast('Preferencias guardadas', { tone: 'success' });
+    heliosToast(t('ajustes.savedToast'), { tone: 'success' });
     window.setTimeout(() => setSaved(false), 1000);
   };
 
@@ -944,13 +937,13 @@ export default function Ajustes() {
       <div className="xl:flex xl:items-start xl:justify-center xl:gap-10">
         {/* Mini-nav anclada (solo ≥xl) */}
         <aside className="hidden w-[150px] shrink-0 xl:block">
-          <nav aria-label="Secciones de ajustes" className="sticky top-24 flex flex-col gap-0.5">
-            {SECTIONS.map((s) => {
-              const active = activeSection === s.id;
+          <nav aria-label={t('ajustes.navAria')} className="sticky top-24 flex flex-col gap-0.5">
+            {SECTION_IDS.map((id) => {
+              const active = activeSection === id;
               return (
                 <button
-                  key={s.id}
-                  onClick={() => sectionRefs.current[s.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  key={id}
+                  onClick={() => sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   aria-current={active}
                   className={cn(
                     'relative rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors',
@@ -960,7 +953,7 @@ export default function Ajustes() {
                   {active && (
                     <motion.span layoutId="ajustes-nav-bar" className="bg-brand-gradient absolute left-0 top-2 h-5 w-[3px] rounded-full" />
                   )}
-                  {s.label}
+                  {t(`ajustes.sections.${id}Short`)}
                 </button>
               );
             })}
@@ -969,37 +962,37 @@ export default function Ajustes() {
 
         {/* Columna de secciones */}
         <div className="mx-auto flex w-full max-w-[860px] flex-col gap-5 xl:mx-0">
-          <Section id="tema" title="Apariencia" innerRef={(el) => (sectionRefs.current.tema = el)}>
+          <Section id="tema" title={t('ajustes.sections.tema')} innerRef={(el) => (sectionRefs.current.tema = el)}>
             <ThemeSection />
           </Section>
 
-          <Section id="idioma" title="Idioma" innerRef={(el) => (sectionRefs.current.idioma = el)}>
+          <Section id="idioma" title={t('ajustes.sections.idioma')} innerRef={(el) => (sectionRefs.current.idioma = el)}>
             <LanguageSection />
           </Section>
 
-          <Section id="conexion" title="Conexión local" innerRef={(el) => (sectionRefs.current.conexion = el)}>
+          <Section id="conexion" title={t('ajustes.sections.conexion')} innerRef={(el) => (sectionRefs.current.conexion = el)}>
             <ConnectionSection />
           </Section>
 
-          <Section id="instalacion" title="Tu instalación" innerRef={(el) => (sectionRefs.current.instalacion = el)}>
+          <Section id="instalacion" title={t('ajustes.sections.instalacion')} innerRef={(el) => (sectionRefs.current.instalacion = el)}>
             <InstallationSection />
           </Section>
 
-          <Section id="precios" title="Precios de energía" innerRef={(el) => (sectionRefs.current.precios = el)}>
+          <Section id="precios" title={t('ajustes.sections.precios')} innerRef={(el) => (sectionRefs.current.precios = el)}>
             <PricesSection />
           </Section>
 
-          <Section id="datos" title="Datos" innerRef={(el) => (sectionRefs.current.datos = el)}>
+          <Section id="datos" title={t('ajustes.sections.datos')} innerRef={(el) => (sectionRefs.current.datos = el)}>
             <DataSection />
           </Section>
 
           {userRole === 'admin' && (
-            <Section id="usuarios" title="Usuarios" innerRef={(el) => (sectionRefs.current.usuarios = el)}>
+            <Section id="usuarios" title={t('ajustes.sections.usuarios')} innerRef={(el) => (sectionRefs.current.usuarios = el)}>
               <UsersSection />
             </Section>
           )}
 
-          <Section id="app" title="Llévalo en tu móvil" innerRef={(el) => (sectionRefs.current.app = el)}>
+          <Section id="app" title={t('ajustes.sections.app')} innerRef={(el) => (sectionRefs.current.app = el)}>
             <InstallSection />
           </Section>
 
@@ -1032,9 +1025,9 @@ export default function Ajustes() {
             className="flex flex-col items-center gap-1.5 py-6 text-center text-[13px] text-faint"
           >
             <img src="/logo.svg" alt="" className="h-7 w-7" />
-            <p className="font-medium">Helios v0.1 · Monitor solar doméstico</p>
-            <p>Datos locales vía Home Assistant · Sin nube, sin cuentas</p>
-            <p>Hecho con ☀ en casa</p>
+            <p className="font-medium">{t('ajustes.footer.version')}</p>
+            <p>{t('ajustes.footer.local')}</p>
+            <p>{t('ajustes.footer.made')}</p>
           </motion.div>
         </div>
       </div>

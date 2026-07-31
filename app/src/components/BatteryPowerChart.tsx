@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import type { PowerPoint } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtKw, fmtTime } from '@/lib/format';
@@ -29,6 +30,7 @@ interface BucketRow {
 }
 
 function PowerTooltip({ active, payload, label }: { active?: boolean; payload?: { dataKey?: string | number; value?: number | null }[]; label?: number }) {
+  const { t } = useTranslation();
   if (!active || !payload || payload.length === 0 || label === undefined) return null;
   const row = payload.find((p) => p.value !== null && p.value !== undefined);
   if (!row || row.value === null || row.value === undefined) return null;
@@ -36,7 +38,7 @@ function PowerTooltip({ active, payload, label }: { active?: boolean; payload?: 
   return (
     <div className="rounded-xl border border-app bg-surface/95 px-3 py-2 shadow-lg backdrop-blur-md">
       <p className="text-xs font-semibold text-app">
-        {fmtTime(label)} · {charging ? 'Cargando' : 'Descargando'} {fmtKw(Math.abs(row.value))} kW
+        {fmtTime(label)} · {charging ? t('common.charging') : t('common.discharging')} {fmtKw(Math.abs(row.value))} kW
       </p>
     </div>
   );
@@ -48,6 +50,7 @@ function PowerTooltip({ active, payload, label }: { active?: boolean; payload?: 
  */
 export default function BatteryPowerChart({ data, height = 260 }: BatteryPowerChartProps) {
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
 
   const rows = useMemo<BucketRow[]>(() => {
@@ -68,17 +71,17 @@ export default function BatteryPowerChart({ data, height = 260 }: BatteryPowerCh
   const dim = (i: number) => (activeIdx === null || activeIdx === i ? 1 : 0.45);
 
   return (
-    <section className="helios-card shadow-card dark:shadow-card-dark" aria-label="Potencia de carga y descarga de la batería">
+    <section className="helios-card shadow-card dark:shadow-card-dark" aria-label={t('bateria.powerAria')}>
       <div className="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
         <div className="mr-auto">
-          <h2 className="text-[15px] font-semibold text-app">Potencia de la batería · hoy</h2>
-          <p className="text-xs text-faint">Resolución 15 min · eje 0 centrado</p>
+          <h2 className="text-[15px] font-semibold text-app">{t('bateria.powerTitle')}</h2>
+          <p className="text-xs text-faint">{t('bateria.powerSubtitle')}</p>
         </div>
         <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.bateria }} /> Carga
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.bateria }} /> {t('bateria.charge')}
         </span>
         <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.solar }} /> Descarga
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.solar }} /> {t('bateria.discharge')}
         </span>
       </div>
 
@@ -111,12 +114,12 @@ export default function BatteryPowerChart({ data, height = 260 }: BatteryPowerCh
             />
             <Tooltip content={<PowerTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }} />
             <ReferenceLine y={0} stroke="var(--line)" strokeWidth={1.5} />
-            <Bar dataKey="carga" name="Carga" stackId="p" fill={palette.bateria} radius={[3, 3, 0, 0]} animationDuration={450}>
+            <Bar dataKey="carga" name={t('bateria.charge')} stackId="p" fill={palette.bateria} radius={[3, 3, 0, 0]} animationDuration={450}>
               {rows.map((r, i) => (
                 <Cell key={r.t} opacity={dim(i)} />
               ))}
             </Bar>
-            <Bar dataKey="descarga" name="Descarga" stackId="p" fill={palette.solar} radius={[0, 0, 3, 3]} animationDuration={450}>
+            <Bar dataKey="descarga" name={t('bateria.discharge')} stackId="p" fill={palette.solar} radius={[0, 0, 3, 3]} animationDuration={450}>
               {rows.map((r, i) => (
                 <Cell key={r.t} opacity={dim(i)} />
               ))}

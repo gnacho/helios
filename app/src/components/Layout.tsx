@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { dateLocale } from '@/i18n';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -17,6 +18,7 @@ import { useEnergyData } from '@/data/EnergyDataProvider';
  */
 export default function Layout({ children }: { children: ReactNode }) {
   const { today } = useEnergyData();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-[100dvh] bg-app text-app">
@@ -26,12 +28,12 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Header móvil (<lg), sticky en flujo normal */}
           <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-app bg-surface/85 px-4 backdrop-blur-[16px] lg:hidden">
-            <Link to="/" aria-label="Ir a Hoy" className="flex items-center gap-2 rounded-lg transition-opacity hover:opacity-80">
+            <Link to="/" aria-label={t('nav.dashboard')} className="flex items-center gap-2 rounded-lg transition-opacity hover:opacity-80">
               <img src="/logo.svg" alt="Helios" className="h-7 w-7" />
               <div className="leading-tight">
                 <p className="font-display text-sm font-semibold text-app">Helios</p>
                 <p className="text-[10px] font-medium capitalize text-faint">
-                  {format(today, 'EEE d MMM', { locale: es })}
+                  {format(today, 'EEE d MMM', { locale: dateLocale() })}
                 </p>
               </div>
             </Link>

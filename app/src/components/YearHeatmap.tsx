@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { dateLocale, fmtDayMonth, fmtDayMonthLong } from '@/i18n';
 import type { HistoryDay } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtEnergy } from '@/lib/format';
@@ -32,10 +33,10 @@ interface YearHeatmapProps {
 }
 
 /** Días L/X/V en las filas 0/2/4 (semana empieza en lunes). */
-const ROW_LABELS: { row: number; label: string }[] = [
-  { row: 0, label: 'L' },
-  { row: 2, label: 'X' },
-  { row: 4, label: 'V' },
+const ROW_LABELS: { row: number; key: string }[] = [
+  { row: 0, key: 'historico.wdMon' },
+  { row: 2, key: 'historico.wdWed' },
+  { row: 4, key: 'historico.wdFri' },
 ];
 
 /**
@@ -45,6 +46,7 @@ const ROW_LABELS: { row: number; label: string }[] = [
  */
 export default function YearHeatmap({ days, today, onSelectDay }: YearHeatmapProps) {
   const palette = useEnergyColors();
+  const { t, i18n } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<HeatCell | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
@@ -77,12 +79,12 @@ export default function YearHeatmap({ days, today, onSelectDay }: YearHeatmapPro
       });
       // Etiqueta de mes cuando cambia el mes del lunes de la columna.
       if (monday.getMonth() !== prevMonth) {
-        monthLabels.push({ col: Math.min(col, COLS - 1), label: format(monday, 'MMM', { locale: es }) });
+        monthLabels.push({ col: Math.min(col, COLS - 1), label: format(monday, 'MMM', { locale: dateLocale() }) });
         prevMonth = monday.getMonth();
       }
     }
     return { cells, monthLabels };
-  }, [days]);
+  }, [days, i18n.language]);
 
   // En móvil, el scroll arranca a la derecha (últimos meses).
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function YearHeatmap({ days, today, onSelectDay }: YearHeatmapPro
   const height = TOP + 7 * PITCH - GAP;
 
   return (
-    <div ref={scrollRef} className="relative overflow-x-auto pb-1" role="img" aria-label="Mapa de calor anual de producción diaria">
+    <div ref={scrollRef} className="relative overflow-x-auto pb-1" role="img" aria-label={t('historico.heatmapAria')}>
       <svg width={width} height={height} className="block" style={{ minWidth: width }}>
         {/* Etiquetas de mes */}
         {monthLabels.map((m) => (
@@ -124,14 +126,14 @@ export default function YearHeatmap({ days, today, onSelectDay }: YearHeatmapPro
         {/* Etiquetas L/X/V */}
         {ROW_LABELS.map((r) => (
           <text
-            key={r.label}
+            key={r.key}
             x={0}
             y={TOP + r.row * PITCH + CELL - 2}
             fontSize={9}
             fill="var(--text-faint)"
             fontFamily="Inter"
           >
-            {r.label}
+            {t(r.key)}
           </text>
         ))}
         {/* Celdas (cascada por columnas: ~8ms por columna) */}
@@ -160,7 +162,7 @@ export default function YearHeatmap({ days, today, onSelectDay }: YearHeatmapPro
               style={{ transformBox: 'fill-box', transformOrigin: 'center', cursor: 'pointer' }}
               role="button"
               tabIndex={0}
-              aria-label={`${format(c.date, "d 'de' MMMM", { locale: es })}: ${fmtEnergy(c.kwh)} kWh producidos`}
+              aria-label={t('historico.cellAria', { date: fmtDayMonthLong(c.date), kwh: fmtEnergy(c.kwh) })}
               onMouseEnter={(e) => showTooltip(c, e.currentTarget as unknown as SVGRectElement)}
               onMouseLeave={() => setHovered(null)}
               onFocus={(e) => showTooltip(c, e.currentTarget as unknown as SVGRectElement)}
@@ -183,13 +185,13 @@ export default function YearHeatmap({ days, today, onSelectDay }: YearHeatmapPro
           className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-app bg-surface px-2 py-1 text-[11px] font-semibold text-app shadow-lg"
           style={{ left: tooltipPos.x, top: Math.max(0, tooltipPos.y - 30) }}
         >
-          {format(hovered.date, 'd MMM', { locale: es })} · {fmtEnergy(hovered.kwh)} kWh
+          {fmtDayMonth(hovered.date)} · {fmtEnergy(hovered.kwh)} kWh
         </div>
       )}
 
       {/* Leyenda de intensidad */}
       <div className="mt-2 flex items-center justify-end gap-1 pr-1 text-[10px] text-faint">
-        <span className="mr-1">Menos</span>
+        <span className="mr-1">{t('historico.less')}</span>
         {levelOpacity.map((op, i) => (
           <span
             key={i}
@@ -197,7 +199,7 @@ export default function YearHeatmap({ days, today, onSelectDay }: YearHeatmapPro
             style={{ backgroundColor: i === 0 ? 'var(--surface-2)' : palette.solar, opacity: i === 0 ? 1 : op }}
           />
         ))}
-        <span className="ml-1">Más</span>
+        <span className="ml-1">{t('historico.more')}</span>
       </div>
     </div>
   );

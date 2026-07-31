@@ -16,7 +16,8 @@ import {
   ArrowUpFromLine,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { dateLocale, fmtDayMonthLong, fmtWeekdayDate } from '@/i18n';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +37,6 @@ import {
   periodSubtitle,
   shiftAnchor,
   totalsFor,
-  PREVIOUS_LABELS,
 } from '@/lib/historyStats';
 import type { Period, PeriodTotals } from '@/lib/historyStats';
 import { useEnergyColors } from '@/lib/colors';
@@ -115,6 +115,7 @@ export default function Historico() {
   const { today, nowMin, getDaySeries, getKpis, getHistory, isDayEstimated } = useEnergyData();
   const [settings] = useEnergySettings();
   const palette = useEnergyColors();
+  const { t, i18n } = useTranslation();
 
   const [period, setPeriod] = useState<Period>('semana');
   const [anchor, setAnchor] = useState<Date>(() => initialAnchor('semana', today));
@@ -174,27 +175,27 @@ export default function Historico() {
         key: 'pico',
         icon: Zap,
         color: palette.solar,
-        title: 'Pico de potencia',
+        title: t('historico.records.peak'),
         value: `${fmtKw(dayKpis.peakProductionKw)} kW`,
-        text: `A las ${fmtTime(dayKpis.peakAt)} · total ${fmtEnergy(dayKpis.productionKwh)} kWh`,
+        text: t('historico.records.peakText', { time: fmtTime(dayKpis.peakAt), kwh: fmtEnergy(dayKpis.productionKwh) }),
       });
       if (dayKpis.gridExportKwh > 0) {
         list.push({
           key: 'exportacion',
           icon: ArrowUpFromLine,
           color: palette.redVertido,
-          title: 'Exportación',
+          title: t('historico.records.export'),
           value: `${fmtEnergy(dayKpis.gridExportKwh)} kWh`,
-          text: `Compensados a ${fmtEuro(settings.priceExport)}/kWh`,
+          text: t('historico.records.exportText', { price: fmtEuro(settings.priceExport) }),
         });
       }
       list.push({
         key: 'autoconsumo',
         icon: Leaf,
         color: palette.bateria,
-        title: 'Autoconsumo',
+        title: t('common.autoconsumo'),
         value: `${fmtPct(dayKpis.autoconsumoPct)} %`,
-        text: `${fmtEnergy(dayKpis.productionKwh - dayKpis.gridExportKwh)} kWh aprovechados directos`,
+        text: t('historico.records.autoText', { kwh: fmtEnergy(dayKpis.productionKwh - dayKpis.gridExportKwh) }),
       });
       return list.slice(0, 3);
     }
@@ -204,9 +205,9 @@ export default function Historico() {
       key: 'mejor-dia',
       icon: Trophy,
       color: palette.solar,
-      title: period === 'semana' ? 'Mejor día de la semana' : period === 'mes' ? 'Mejor del mes' : 'Mejor día del año',
+      title: period === 'semana' ? t('historico.records.bestWeek') : period === 'mes' ? t('historico.records.bestMonth') : t('historico.records.bestYear'),
       value: `${fmtEnergy(best.productionKwh)} kWh`,
-      text: `${format(best.date, "EEEE d 'de' MMMM", { locale: es })}`,
+      text: fmtWeekdayDate(best.date),
     });
 
     const daysWithConsumption = days.filter((d) => d.consumptionKwh > 1);
@@ -218,9 +219,9 @@ export default function Historico() {
         key: 'noche',
         icon: Moon,
         color: palette.fox,
-        title: 'Día más autónomo',
+        title: t('historico.records.autonomous'),
         value: `${fmtPct(Math.min(97, bestNight.autoconsumoPct))} %`,
-        text: `${format(bestNight.date, "d 'de' MMMM", { locale: es })}`,
+        text: fmtDayMonthLong(bestNight.date),
       });
     }
 
@@ -240,9 +241,9 @@ export default function Historico() {
         key: 'racha',
         icon: Flame,
         color: palette.redCompra,
-        title: `Mejor racha`,
-        value: `${bestStreak} ${bestStreak === 1 ? 'día' : 'días'}`,
-        text: `Produciendo ${threshold} kWh o más`,
+        title: t('historico.records.streak'),
+        value: t('historico.records.streakDays', { count: bestStreak }),
+        text: t('historico.records.streakText', { threshold }),
       });
     }
 
@@ -259,14 +260,14 @@ export default function Historico() {
         key: 'mejor-mes',
         icon: CalendarCheck,
         color: palette.bateria,
-        title: 'Mejor mes',
-        value: `${format(bestMonth.date, 'MMMM', { locale: es })} · ${Math.round(bestMonth.kwh)} kWh`,
-        text: 'El mes con más producción del año',
+        title: t('historico.records.bestMonthTitle'),
+        value: `${format(bestMonth.date, 'MMMM', { locale: dateLocale() })} · ${Math.round(bestMonth.kwh)} kWh`,
+        text: t('historico.records.bestMonthText'),
       });
     }
 
     return list.slice(0, 4);
-  }, [days, period, dayKpis, palette, settings]);
+  }, [days, period, dayKpis, palette, settings, t, i18n.language]);
 
   const label = navLabel(period, anchor);
   const subtitle = periodSubtitle(period, anchor);
@@ -287,20 +288,20 @@ export default function Historico() {
     setAnchor(new Date(date.getFullYear(), date.getMonth(), 1));
   };
 
-  const exportToast = () => heliosToast('Disponible con la conexión a Home Assistant', { tone: 'warning' });
+  const exportToast = () => heliosToast(t('historico.exportToast'), { tone: 'warning' });
 
   const chartTitle = useMemo(() => {
     switch (period) {
       case 'dia':
-        return `Producción vs consumo · ${isToday ? 'hoy' : label}`;
+        return t('historico.chartTitle', { period: isToday ? t('historico.todayLower') : label });
       case 'semana':
-        return `Producción vs consumo · ${isCurrent ? 'esta semana' : label}`;
+        return t('historico.chartTitle', { period: isCurrent ? t('historico.thisWeek') : label });
       case 'mes':
-        return `Producción vs consumo · ${format(anchor, 'MMMM', { locale: es })}`;
+        return t('historico.chartTitle', { period: format(anchor, 'MMMM', { locale: dateLocale() }) });
       case 'ano':
-        return `Producción vs consumo · ${format(anchor, 'yyyy')}`;
+        return t('historico.chartTitle', { period: format(anchor, 'yyyy') });
     }
-  }, [period, isToday, isCurrent, label, anchor]);
+  }, [period, isToday, isCurrent, label, anchor, t, i18n.language]);
 
   const prodDelta = prevTotals ? deltaPct(totals.productionKwh, prevTotals.productionKwh) : null;
   const consDelta = prevTotals ? deltaPct(totals.consumptionKwh, prevTotals.consumptionKwh) : null;
@@ -318,7 +319,7 @@ export default function Historico() {
         className="flex flex-wrap items-center gap-3"
       >
         <div className="mr-auto">
-          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">Histórico</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('historico.title')}</h1>
           <p className="text-sm capitalize text-muted" aria-live="polite">
             {subtitle}
           </p>
@@ -327,13 +328,13 @@ export default function Historico() {
           <DropdownMenuTrigger asChild>
             <button className="inline-flex h-9 items-center gap-1.5 rounded-full border border-app bg-surface px-4 text-[13px] font-semibold text-muted transition-colors hover:text-app">
               <Download size={15} />
-              Exportar
+              {t('historico.export')}
               <ChevronDown size={13} className="text-faint" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[160px]">
             <DropdownMenuItem onClick={exportToast}>CSV</DropdownMenuItem>
-            <DropdownMenuItem onClick={exportToast}>Imagen PNG</DropdownMenuItem>
+            <DropdownMenuItem onClick={exportToast}>{t('historico.exportPng')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </motion.header>
@@ -371,15 +372,15 @@ export default function Historico() {
             /* Estado vacío */
             <div className="helios-card flex flex-col items-center gap-4 p-10 text-center shadow-card dark:shadow-card-dark">
               <img src="/empty-solar.svg" alt="" className="w-full max-w-[300px]" />
-              <p className="text-sm font-medium text-muted">Sin datos para este periodo</p>
+              <p className="text-sm font-medium text-muted">{t('historico.empty')}</p>
               <p className="max-w-xs text-xs text-faint">
-                La instalación empezó a registrar datos en marzo de 2023 y aún no hay registros de fechas futuras.
+                {t('historico.emptyDetail')}
               </p>
               <button
                 onClick={goToday}
                 className="bg-brand-gradient rounded-full px-5 py-2 text-[13px] font-semibold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-95"
               >
-                Volver a hoy
+                {t('historico.backToToday')}
               </button>
             </div>
           ) : (
@@ -387,13 +388,13 @@ export default function Historico() {
               {/* ── §2 KPIs del periodo ─────────────────────────── */}
               <div
                 className="flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5"
-                aria-label="Indicadores del periodo"
+                aria-label={t('historico.kpisAria')}
               >
                 <div className="w-[42%] shrink-0 snap-center lg:w-auto">
                   <KpiCard
                     icon={Sun}
                     color="solar"
-                    label="Producción"
+                    label={t('common.production')}
                     value={totals.productionKwh}
                     unit="kWh"
                     decimals={totals.productionKwh >= 100 ? 0 : 1}
@@ -402,7 +403,7 @@ export default function Historico() {
                       prodDelta !== null
                         ? {
                             direction: prodDelta >= 0 ? 'up' : 'down',
-                            text: `${fmtPct(Math.abs(prodDelta))} % ${PREVIOUS_LABELS[period]}`,
+                            text: `${fmtPct(Math.abs(prodDelta))} % ${t(`historico.vs.${period}`)}`,
                             good: prodDelta >= 0,
                           }
                         : undefined
@@ -413,7 +414,7 @@ export default function Historico() {
                   <KpiCard
                     icon={House}
                     color="consumo"
-                    label="Consumo"
+                    label={t('common.consumption')}
                     value={totals.consumptionKwh}
                     unit="kWh"
                     decimals={totals.consumptionKwh >= 100 ? 0 : 1}
@@ -422,7 +423,7 @@ export default function Historico() {
                       consDelta !== null
                         ? {
                             direction: consDelta >= 0 ? 'up' : 'down',
-                            text: `${fmtPct(Math.abs(consDelta))} % ${PREVIOUS_LABELS[period]}`,
+                            text: `${fmtPct(Math.abs(consDelta))} % ${t(`historico.vs.${period}`)}`,
                             good: consDelta < 0,
                           }
                         : undefined
@@ -433,7 +434,7 @@ export default function Historico() {
                   <KpiCard
                     icon={Leaf}
                     color="bateria"
-                    label="Autoconsumo"
+                    label={t('common.autoconsumo')}
                     value={totals.autoconsumoPct}
                     unit="%"
                     decimals={0}
@@ -442,15 +443,15 @@ export default function Historico() {
                   />
                 </div>
                 <div className="w-[42%] shrink-0 snap-center lg:w-auto">
-                  <KpiCard icon={Euro} color="bateria" label="Ahorro" value={totals.ahorroEur} unit="€" decimals={2} index={3}>
+                  <KpiCard icon={Euro} color="bateria" label={t('historico.savings')} value={totals.ahorroEur} unit="€" decimals={2} index={3}>
                     <p className="text-[11px] leading-snug text-faint">
-                      {fmtEuro(settings.priceImport)}/kWh evitado + {fmtEuro(settings.priceExport)}/kWh vertido
+                      {t('historico.savingsDetail', { importPrice: fmtEuro(settings.priceImport), exportPrice: fmtEuro(settings.priceExport) })}
                     </p>
                   </KpiCard>
                 </div>
                 <div className="w-[42%] shrink-0 snap-center lg:w-auto">
-                  <KpiCard icon={Leaf} color="bateria" label="CO₂ evitado" value={totals.co2Kg} unit="kg" decimals={0} index={4}>
-                    <p className="text-[11px] text-faint">{`≈ ${trees} ${trees === 1 ? 'árbol plantado' : 'árboles plantados'}`}</p>
+                  <KpiCard icon={Leaf} color="bateria" label={t('historico.co2')} value={totals.co2Kg} unit="kg" decimals={0} index={4}>
+                    <p className="text-[11px] text-faint">{t('historico.trees', { count: trees })}</p>
                   </KpiCard>
                 </div>
               </div>
@@ -465,22 +466,22 @@ export default function Historico() {
                 >
                   <ChartCard
                     title={chartTitle}
-                    subtitle={period === 'dia' ? 'Curvas de potencia' : subtitle}
-                    ariaLabel="Gráfica de producción y consumo del periodo"
+                    subtitle={period === 'dia' ? t('historico.powerCurves') : subtitle}
+                    ariaLabel={t('historico.chartAria')}
                     right={
                       period !== 'dia' ? (
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.solar }} />
-                            Producción
+                            {t('common.production')}
                           </span>
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.consumo }} />
-                            Consumo
+                            {t('common.consumption')}
                           </span>
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                             <span className="inline-block h-0 w-4 border-t-2 border-dashed" style={{ borderColor: palette.bateria }} />
-                            Autoconsumo
+                            {t('common.autoconsumo')}
                           </span>
                         </div>
                       ) : undefined
@@ -500,12 +501,12 @@ export default function Historico() {
                     </div>
                     {period === 'dia' && isDayEstimated(anchor) && (
                       <p className="px-5 pb-3 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                        Curva del Solis estimada a partir del Fox: ese día no hay registro de potencia del Solis.
+                        {t('historico.estimatedNote')}
                       </p>
                     )}
                     {period !== 'dia' && (
                       <p className="px-5 pb-3 text-[11px] text-faint">
-                        Pulsa una barra para ver el detalle {period === 'ano' ? 'del mes' : 'del día'}.
+                        {period === 'ano' ? t('historico.drillMonth') : t('historico.drillDay')}
                       </p>
                     )}
                   </ChartCard>
@@ -517,7 +518,7 @@ export default function Historico() {
                   transition={{ duration: 0.5, delay: 0.18, ease: easeOutQuart }}
                   className="lg:col-span-4"
                 >
-                  <ChartCard title="¿De dónde vino tu energía?" subtitle={subtitle} className="h-full" ariaLabel="Origen de la energía consumida">
+                  <ChartCard title={t('historico.donutTitle')} subtitle={subtitle} className="h-full" ariaLabel={t('historico.donutAria')}>
                     <div className="flex h-[calc(100%-64px)] flex-col px-4 pb-3 sm:px-5">
                       <EnergySourceDonut split={split} />
                     </div>
@@ -534,9 +535,9 @@ export default function Historico() {
                   transition={{ duration: 0.5, ease: easeOutQuart }}
                 >
                   <ChartCard
-                    title="Año completo · producción diaria"
-                    subtitle="Pulsa un día para ver su detalle"
-                    ariaLabel="Mapa de calor anual de producción"
+                    title={t('historico.heatmapTitle')}
+                    subtitle={t('historico.heatmapSubtitle')}
+                    ariaLabel={t('historico.heatmapAria')}
                   >
                     <div className="px-4 pb-3 sm:px-5">
                       <YearHeatmap days={history} today={today} onSelectDay={drillDay} />

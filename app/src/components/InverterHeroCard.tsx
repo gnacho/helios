@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { BatteryCharging, Compass, Sun, ThermometerSun, Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { fmtKw } from '@/lib/format';
 import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
 
@@ -25,6 +26,7 @@ interface InverterHeroCardProps {
 /** §2 HeroCard del inversor: acento de color, cifra héroe y mini-lista. */
 export default function InverterHeroCard({ meta, nowKw, color }: InverterHeroCardProps) {
   const animatedNow = useAnimatedNumber(nowKw, 0.9);
+  const { t } = useTranslation();
 
   return (
     <motion.section
@@ -33,7 +35,7 @@ export default function InverterHeroCard({ meta, nowKw, color }: InverterHeroCar
       transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
       className="helios-card h-full border-t-[3px] p-5 shadow-card hover:-translate-y-0.5 hover:shadow-lg dark:shadow-card-dark"
       style={{ borderTopColor: color }}
-      aria-label={`Ficha del inversor ${meta.name}`}
+      aria-label={t('inverter.aria', { name: meta.name })}
     >
       <div className="flex items-center gap-3">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${color}1F`, color }}>
@@ -48,7 +50,7 @@ export default function InverterHeroCard({ meta, nowKw, color }: InverterHeroCar
             <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
           </span>
-          Online
+          {t('common.online')}
         </span>
       </div>
 
@@ -57,27 +59,27 @@ export default function InverterHeroCard({ meta, nowKw, color }: InverterHeroCar
           {fmtKw(animatedNow)}
           <span className="ml-1.5 text-[0.42em] font-medium text-faint">kW</span>
         </p>
-        <p className="mt-1 text-sm text-muted">Produciendo ahora</p>
+        <p className="mt-1 text-sm text-muted">{t('inverter.producingNow')}</p>
       </div>
 
       <ul className="mt-5 flex flex-col gap-2.5 border-t border-app pt-4 text-sm">
         <li className="flex items-center gap-2.5 text-muted">
           <Sun size={15} className="shrink-0 text-faint" />
-          Campo solar <span className="ml-auto font-medium text-app">{meta.panels}</span>
+          {t('inverter.solarField')} <span className="ml-auto font-medium text-app">{meta.panels}</span>
         </li>
         <li className="flex items-center gap-2.5 text-muted">
           <Compass size={15} className="shrink-0 text-faint" />
-          Orientación <span className="ml-auto font-medium text-app">Sur · 30°</span>
+          {t('inverter.orientation')} <span className="ml-auto font-medium text-app">Sur · 30°</span>
         </li>
         {meta.hasBattery && (
           <li className="flex items-center gap-2.5 text-muted">
             <BatteryCharging size={15} className="shrink-0 text-faint" />
-            Batería <span className="ml-auto font-medium text-app">Soluna 5 kWh acoplada</span>
+            {t('common.battery')} <span className="ml-auto font-medium text-app">{t('inverter.batteryCoupled')}</span>
           </li>
         )}
         <li className="flex items-center gap-2.5 text-muted">
           <ThermometerSun size={15} className="shrink-0 text-faint" />
-          Temperatura
+          {t('inverter.temperature')}
           {meta.tempC > 60 ? (
             <span className="ml-auto inline-flex items-center rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
               {meta.tempC} °C

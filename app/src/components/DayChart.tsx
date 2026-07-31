@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { PowerPoint } from '@/data/types';
 import { STEP_MIN } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -69,6 +70,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 /** Gráfica gigante del día + scrubber "replay del día" (DayTimelineScrubber). */
 export default function DayChart({ data, nowMin, replayMin, onReplayChange, height = 380, fill = false }: DayChartProps & { fill?: boolean }) {
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const [visible, setVisible] = useState<Record<SeriesKey, boolean>>({ total: true, solis: false, fox: false, consumo: true });
   const [replayArmed, setReplayArmed] = useState(false);
   const plotRef = useRef<HTMLDivElement>(null);
@@ -121,22 +123,22 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
   const replaying = replayMin !== null;
 
   const seriesChips: { key: SeriesKey; label: string; color: string }[] = [
-    { key: 'total', label: 'Total', color: palette.solar },
+    { key: 'total', label: t('chart.total'), color: palette.solar },
     { key: 'solis', label: 'Solis', color: palette.solis },
     { key: 'fox', label: 'Fox', color: palette.fox },
-    { key: 'consumo', label: 'Consumo', color: palette.consumo },
+    { key: 'consumo', label: t('chart.consumption'), color: palette.consumo },
   ];
 
   return (
     <section
       className={cn('helios-card relative overflow-hidden shadow-card dark:shadow-card-dark', fill && 'flex h-full flex-col')}
-      aria-label="Gráfica del día: producción vs consumo"
+      aria-label={t('chart.aria')}
     >
       {/* Header */}
       <div className="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
         <div className="mr-auto">
-          <h2 className="text-[15px] font-semibold text-app">Producción vs consumo</h2>
-          <p className="text-xs text-faint">Hoy · curvas de potencia</p>
+          <h2 className="text-[15px] font-semibold text-app">{t('chart.title')}</h2>
+          <p className="text-xs text-faint">{t('chart.subtitle')}</p>
         </div>
         {seriesChips.map((chip) => (
           <button
@@ -166,7 +168,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
             replaying ? 'bg-brand-gradient text-white shadow-md' : 'border border-app text-amber-500 hover:bg-surface-2',
           )}
         >
-          <Zap size={13} strokeWidth={2.4} /> Replay
+          <Zap size={13} strokeWidth={2.4} /> {t('chart.replay')}
         </button>
       </div>
 
@@ -177,12 +179,12 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
           .map((c) => (
             <span key={c.key} className="inline-flex items-center gap-1.5 text-xs text-muted">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
-              {c.key === 'total' ? 'Producción total' : c.label}
+              {c.key === 'total' ? t('chart.productionTotal') : c.label}
             </span>
           ))}
         {replaying && (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-500">
-            ▸ Replay en {fmtTime(replayMin)}
+            {t('chart.replayAt', { time: fmtTime(replayMin) })}
           </span>
         )}
       </div>
@@ -213,7 +215,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
         aria-valuemax={replaying ? 1435 : undefined}
         aria-valuenow={replaying ? replayMin : undefined}
         aria-valuetext={replaying ? fmtTime(replayMin) : undefined}
-        aria-label={replaying ? 'Replay del día: elige la hora' : undefined}
+        aria-label={replaying ? t('chart.replayAria') : undefined}
       >
         <ResponsiveContainer width="100%" height={fill ? '100%' : height} className="max-lg:!h-[260px]">
           <ComposedChart data={rows} margin={{ top: 10, right: PLOT_RIGHT, bottom: 0, left: 4 }}>
@@ -256,7 +258,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
 
             {visible.total && (
               <Area
-                name="Producción"
+                name={t('chart.production')}
                 type="monotone"
                 dataKey="productionPast"
                 stroke={palette.solar}
@@ -270,7 +272,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
             )}
             {visible.total && (
               <Area
-                name="Producción (previsión)"
+                name={t('chart.productionForecast')}
                 type="monotone"
                 dataKey="productionFuture"
                 stroke={palette.solar}
@@ -288,7 +290,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
             )}
             {visible.consumo && (
               <Area
-                name="Consumo"
+                name={t('chart.consumption')}
                 type="monotone"
                 dataKey="consumption"
                 stroke={palette.consumo}
@@ -313,7 +315,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
               stroke="url(#grad-now)"
               strokeWidth={2}
               label={{
-                value: 'AHORA',
+                value: t('chart.now'),
                 position: 'insideTopLeft',
                 fill: '#F59E0B',
                 fontSize: 10,
@@ -344,19 +346,19 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
             onClick={exitReplay}
             className="bg-brand-gradient absolute bottom-12 left-1/2 z-10 -translate-x-1/2 rounded-full px-4 py-2 text-xs font-semibold text-white shadow-lg"
           >
-            Volver a ahora
+            {t('chart.backToNow')}
           </motion.button>
         )}
       </AnimatePresence>
 
       {/* Tabla accesible de la curva principal */}
       <table className="sr-only">
-        <caption>Producción y consumo por horas</caption>
+        <caption>{t('chart.caption')}</caption>
         <thead>
           <tr>
-            <th>Hora</th>
-            <th>Producción (kW)</th>
-            <th>Consumo (kW)</th>
+            <th>{t('chart.hour')}</th>
+            <th>{t('chart.production')} (kW)</th>
+            <th>{t('chart.consumption')} (kW)</th>
           </tr>
         </thead>
         <tbody>

@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { PowerPoint } from '@/data/types';
 import { FOX_KWP, SOLIS_KWP, STEP_MIN } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -62,6 +63,7 @@ function CompareTooltip({
  */
 export default function CompareChart({ data, nowMin, height = 340 }: CompareChartProps) {
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const [normalized, setNormalized] = useState(false);
 
   // Mismas keys de datos en ambos modos → Recharts hace tween de valores al normalizar.
@@ -78,11 +80,11 @@ export default function CompareChart({ data, nowMin, height = 340 }: CompareChar
   const nowT = Math.round(nowMin / STEP_MIN) * STEP_MIN;
 
   return (
-    <section className="helios-card shadow-card dark:shadow-card-dark" aria-label="Curvas de hoy: Solis vs Fox">
+    <section className="helios-card shadow-card dark:shadow-card-dark" aria-label={t('inversores.curvesTitle')}>
       <div className="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
         <div className="mr-auto">
-          <h2 className="text-[15px] font-semibold text-app">Curvas de hoy · Solis vs Fox</h2>
-          <p className="text-xs text-faint">{normalized ? 'Rendimiento específico · kW/kWp' : 'Potencia instantánea · kW'}</p>
+          <h2 className="text-[15px] font-semibold text-app">{t('inversores.curvesTitle')}</h2>
+          <p className="text-xs text-faint">{normalized ? t('inversores.specificYield') : t('inversores.instantPower')}</p>
         </div>
         <span className="inline-flex items-center gap-1.5 text-xs text-muted">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.solis }} /> Solis
@@ -98,7 +100,7 @@ export default function CompareChart({ data, nowMin, height = 340 }: CompareChar
             normalized ? 'border-app bg-surface-2 font-semibold text-app' : 'border-app text-faint hover:text-muted',
           )}
         >
-          Normalizar por kWp
+          {t('inversores.normalize')}
         </button>
       </div>
 
@@ -111,7 +113,7 @@ export default function CompareChart({ data, nowMin, height = 340 }: CompareChar
             transition={{ duration: 0.3 }}
             className="mx-4 mb-1 mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:mx-5"
           >
-            <TrendingUp size={13} /> El Fox rinde un 4 % mejor por kWp hoy
+            <TrendingUp size={13} /> {t('inversores.foxBetter')}
           </motion.p>
         )}
       </AnimatePresence>

@@ -13,7 +13,8 @@ import {
   Triangle,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { dateLocale, numLocale } from '@/i18n';
 import {
   Bar,
   BarChart,
@@ -46,7 +47,7 @@ const INVERTERS: Record<'solis' | 'fox', InverterMeta> = {
   solis: {
     key: 'solis',
     name: 'Solis',
-    model: 'Solis S5-EH1P5K-L (híbrido)',
+    model: 'Solis S5-EH1P5K-L',
     kwp: SOLIS_KWP,
     panels: '10 × 440 W',
     monthKwh: 412,
@@ -78,23 +79,24 @@ interface Last14Props {
 
 function Last14Chart({ share, color }: Last14Props) {
   const { getHistory } = useEnergyData();
+  const { t, i18n } = useTranslation();
   const rows = useMemo(
     () =>
       getHistory()
         .slice(-14)
         .map((d) => ({
           dayNum: d.date.getDate(),
-          label: format(d.date, 'd MMM', { locale: es }),
+          label: format(d.date, 'd MMM', { locale: dateLocale() }),
           kwh: d.productionKwh * share,
         })),
-    [getHistory, share],
+    [getHistory, share, i18n.language],
   );
 
   return (
-    <section className="helios-card h-full shadow-card dark:shadow-card-dark" aria-label="Producción de los últimos 14 días">
+    <section className="helios-card h-full shadow-card dark:shadow-card-dark" aria-label={t('inversores.last14aria')}>
       <div className="px-4 pb-1 pt-4 sm:px-5">
-        <h2 className="text-[15px] font-semibold text-app">Últimos 14 días</h2>
-        <p className="text-xs text-faint">Energía diaria · kWh</p>
+        <h2 className="text-[15px] font-semibold text-app">{t('inversores.last14')}</h2>
+        <p className="text-xs text-faint">{t('inversores.last14sub')}</p>
       </div>
       <div className="px-1 pb-2">
         <ResponsiveContainer width="100%" height={238} className="max-lg:!h-[220px]">
@@ -122,7 +124,7 @@ function Last14Chart({ share, color }: Last14Props) {
                 );
               }}
             />
-            <Bar dataKey="kwh" name="Producción" fill={color} radius={[4, 4, 0, 0]} animationDuration={500}>
+            <Bar dataKey="kwh" name={t('common.production')} fill={color} radius={[4, 4, 0, 0]} animationDuration={500}>
               {rows.map((r, i) => (
                 <Cell
                   key={r.dayNum}
@@ -151,6 +153,7 @@ interface InverterViewProps {
 
 function InverterView({ meta, nowKw, dayKwh, share, color }: InverterViewProps) {
   const { nowMin, today, getDaySeries } = useEnergyData();
+  const { t } = useTranslation();
   const series = useMemo(() => getDaySeries(today), [getDaySeries, today]);
 
   return (
@@ -160,26 +163,26 @@ function InverterView({ meta, nowKw, dayKwh, share, color }: InverterViewProps) 
       </div>
 
       {/* §3 KPIs del inversor */}
-      <div className="grid grid-cols-2 gap-4 lg:col-span-8 xl:grid-cols-4" aria-label={`Indicadores del ${meta.name}`}>
+      <div className="grid grid-cols-2 gap-4 lg:col-span-8 xl:grid-cols-4" aria-label={t('inversores.kpisAria', { name: meta.name })}>
         <KpiCard
           icon={Sun}
           color={meta.key}
-          label="Hoy"
+          label={t('inversores.today')}
           value={dayKwh}
           unit="kWh"
-          delta={{ direction: 'up', text: '8% vs ayer', good: true }}
+          delta={{ direction: 'up', text: t('inversores.vsYesterday'), good: true }}
           index={0}
         />
-        <KpiCard icon={CalendarRange} color={meta.key} label="Este mes" value={meta.monthKwh} unit="kWh" decimals={0} index={1} />
+        <KpiCard icon={CalendarRange} color={meta.key} label={t('inversores.thisMonth')} value={meta.monthKwh} unit="kWh" decimals={0} index={1} />
         <UiTooltip>
           <TooltipTrigger asChild>
             <div className="h-full">
-              <KpiCard icon={History} color={meta.key} label="Total" value={meta.totalMwh} unit="MWh" decimals={2} index={2} />
+              <KpiCard icon={History} color={meta.key} label={t('inversores.total')} value={meta.totalMwh} unit="MWh" decimals={2} index={2} />
             </div>
           </TooltipTrigger>
-          <TooltipContent>Desde puesta en marcha · 14 marzo 2023</TooltipContent>
+          <TooltipContent>{t('inversores.totalSince')}</TooltipContent>
         </UiTooltip>
-        <KpiCard icon={Gauge} color={meta.key} label="Rendimiento" value={dayKwh / meta.kwp} unit="kWh/kWp" index={3} />
+        <KpiCard icon={Gauge} color={meta.key} label={t('inversores.performance')} value={dayKwh / meta.kwp} unit="kWh/kWp" index={3} />
       </div>
 
       {/* §4 Curva del día */}
@@ -220,6 +223,7 @@ interface CompareViewProps {
 function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }: CompareViewProps) {
   const { nowMin, today, getDaySeries } = useEnergyData();
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const series = useMemo(() => getDaySeries(today), [getDaySeries, today]);
   const [repartoMode, setRepartoMode] = useState<'barra' | 'donut'>('barra');
 
@@ -227,29 +231,29 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
   const shareSolis = total > 0 ? (solisKwh / total) * 100 : 50;
   const shareFox = 100 - shareSolis;
 
-  const nf2 = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nf2 = new Intl.NumberFormat(numLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const bestChip = (
-    <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-500/12 p-0.5 text-emerald-600 dark:text-emerald-400" aria-label="Mejor métrica">
+    <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-500/12 p-0.5 text-emerald-600 dark:text-emerald-400" aria-label={t('inversores.bestMetric')}>
       <Triangle size={8} fill="currentColor" strokeWidth={0} />
     </span>
   );
 
   const metricRows: { label: string; solis: React.ReactNode; fox: React.ReactNode; best: 'solis' | 'fox' | null }[] = [
     {
-      label: 'Potencia ahora',
+      label: t('inversores.powerNow'),
       solis: `${fmtKw(nowSolis)} kW`,
       fox: `${fmtKw(nowFox)} kW`,
       best: nowSolis >= nowFox ? 'solis' : 'fox',
     },
     {
-      label: 'Energía hoy',
+      label: t('inversores.energyToday'),
       solis: `${fmtEnergy(solisKwh)} kWh`,
       fox: `${fmtEnergy(foxKwh)} kWh`,
       best: solisKwh >= foxKwh ? 'solis' : 'fox',
     },
     {
-      label: 'Pico del día (hora)',
+      label: t('inversores.peakDay'),
       solis: `${fmtKw(peakSolis.v)} kW · ${fmtTime(peakSolis.t)}`,
       fox: `${fmtKw(peakFox.v)} kW · ${fmtTime(peakFox.t)}`,
       best: peakSolis.v >= peakFox.v ? 'solis' : 'fox',
@@ -261,27 +265,27 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
       best: solisKwh / SOLIS_KWP >= foxKwh / FOX_KWP ? 'solis' : 'fox',
     },
     {
-      label: 'Temperatura',
+      label: t('inverter.temperature'),
       solis: `${INVERTERS.solis.tempC} °C`,
       fox: `${INVERTERS.fox.tempC} °C`,
       best: 'fox', // más frío = mejor
     },
     {
-      label: 'Aportación al total',
+      label: t('inversores.contribution'),
       solis: `${fmtPct(shareSolis)} %`,
       fox: `${fmtPct(shareFox)} %`,
       best: shareSolis >= shareFox ? 'solis' : 'fox',
     },
     {
-      label: 'Estado',
+      label: t('inversores.status'),
       solis: (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {t('common.online')}
         </span>
       ),
       fox: (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {t('common.online')}
         </span>
       ),
       best: null,
@@ -291,7 +295,7 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
       {/* §6 Hero comparativo */}
-      <section className="helios-card relative overflow-hidden shadow-card dark:shadow-card-dark" aria-label="Comparativa de inversores">
+      <section className="helios-card relative overflow-hidden shadow-card dark:shadow-card-dark" aria-label={t('inversores.compareAria')}>
         <div className="grid lg:grid-cols-2">
           <motion.div
             initial={{ opacity: 0, x: -32 }}
@@ -307,7 +311,7 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
               {fmtKw(nowSolis)} <span className="text-[0.55em] font-medium text-faint">kW</span>
             </p>
             <p className="text-sm text-muted">
-              Hoy <span className="font-semibold text-app">{fmtEnergy(solisKwh)} kWh</span>
+              {t('inversores.today')} <span className="font-semibold text-app">{fmtEnergy(solisKwh)} kWh</span>
             </p>
           </motion.div>
           <motion.div
@@ -324,7 +328,7 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
               {fmtKw(nowFox)} <span className="text-[0.55em] font-medium text-faint">kW</span>
             </p>
             <p className="text-sm text-muted">
-              Hoy <span className="font-semibold text-app">{fmtEnergy(foxKwh)} kWh</span>
+              {t('inversores.today')} <span className="font-semibold text-app">{fmtEnergy(foxKwh)} kWh</span>
             </p>
           </motion.div>
         </div>
@@ -352,13 +356,13 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.5, ease: EASE_OUT }}
           className="helios-card p-4 shadow-card dark:shadow-card-dark sm:p-5 lg:col-span-7"
-          aria-label="Métricas de hoy lado a lado"
+          aria-label={t('inversores.metricsAria')}
         >
-          <h2 className="px-1 text-[15px] font-semibold text-app">Métricas de hoy</h2>
+          <h2 className="px-1 text-[15px] font-semibold text-app">{t('inversores.metricsTitle')}</h2>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-faint">Métrica</TableHead>
+                <TableHead className="text-faint">{t('inversores.metric')}</TableHead>
                 <TableHead style={{ color: palette.solis }}>Solis</TableHead>
                 <TableHead style={{ color: palette.fox }}>Fox</TableHead>
               </TableRow>
@@ -395,10 +399,10 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.5, delay: 0.1, ease: EASE_OUT }}
           className="helios-card flex flex-col p-4 shadow-card dark:shadow-card-dark sm:p-5 lg:col-span-5"
-          aria-label="Reparto de la producción de hoy"
+          aria-label={t('inversores.shareAria')}
         >
           <div className="flex items-center gap-2">
-            <h2 className="mr-auto text-[15px] font-semibold text-app">Reparto de hoy</h2>
+            <h2 className="mr-auto text-[15px] font-semibold text-app">{t('inversores.shareTitle')}</h2>
             {(['barra', 'donut'] as const).map((m) => (
               <button
                 key={m}
@@ -409,7 +413,7 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
                   repartoMode === m ? 'border-app bg-surface-2 text-app' : 'border-app text-faint hover:text-muted',
                 )}
               >
-                {m === 'barra' ? 'Barras' : 'Donut'}
+                {m === 'barra' ? t('inversores.bars') : 'Donut'}
               </button>
             ))}
           </div>
@@ -482,7 +486,7 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
                   </ResponsiveContainer>
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <p className="font-display text-xl font-semibold text-app">{fmtEnergy(total)}</p>
-                    <p className="text-[11px] font-medium text-faint">kWh hoy</p>
+                    <p className="text-[11px] font-medium text-faint">{t('inversores.kwhToday')}</p>
                   </div>
                   <div className="mt-1 flex justify-center gap-4">
                     <span className="inline-flex items-center gap-1.5 text-xs text-muted">
@@ -497,7 +501,7 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
             </AnimatePresence>
           </div>
 
-          <p className="mt-4 text-sm text-muted">El Solis aporta casi dos tercios de tu energía hoy.</p>
+          <p className="mt-4 text-sm text-muted">{t('inversores.shareInsight')}</p>
         </motion.section>
       </div>
     </div>
@@ -506,15 +510,16 @@ function CompareView({ nowSolis, nowFox, solisKwh, foxKwh, peakSolis, peakFox }:
 
 // ── Página ──────────────────────────────────────────────────────────────────
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'compare', label: 'Comparativa' },
-  { key: 'solis', label: 'Solis' },
-  { key: 'fox', label: 'Fox' },
+const TABS: { key: TabKey; labelKey: string }[] = [
+  { key: 'compare', labelKey: 'inversores.compare' },
+  { key: 'solis', labelKey: '' },
+  { key: 'fox', labelKey: '' },
 ];
 
 export default function Inversores() {
   const { now, nowMin, liveTick, today, getLivePower, getDaySeries } = useEnergyData();
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [spinning, setSpinning] = useState(false);
 
@@ -557,8 +562,8 @@ export default function Inversores() {
           className="flex flex-wrap items-center gap-3"
         >
           <div className="mr-auto">
-            <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">Inversores</h1>
-            <p className="text-sm text-muted">7,1 kWp en total · 2 sistemas</p>
+            <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('inversores.title')}</h1>
+            <p className="text-sm text-muted">{t('inversores.subtitle')}</p>
           </div>
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -570,7 +575,7 @@ export default function Inversores() {
               {fmtClock(now)}
             </span>
             <button
-              aria-label="Refrescar datos"
+              aria-label={t('common.refresh')}
               onClick={() => {
                 setSpinning(true);
                 window.setTimeout(() => setSpinning(false), 600);
@@ -581,7 +586,7 @@ export default function Inversores() {
                 <RefreshCw size={16} />
               </motion.span>
             </button>
-            <button aria-label="Notificaciones" className="relative rounded-full border border-app bg-surface p-2 text-muted transition-colors hover:text-app">
+            <button aria-label={t('inversores.alertsAria')} className="relative rounded-full border border-app bg-surface p-2 text-muted transition-colors hover:text-app">
               <Bell size={16} />
               <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
             </button>
@@ -597,16 +602,17 @@ export default function Inversores() {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="sticky top-14 z-30 -mx-4 bg-[color-mix(in_srgb,var(--bg)_85%,transparent)] px-4 py-2 backdrop-blur-[16px] lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
         >
-          <div className="flex h-10 w-full items-center gap-1 rounded-full border border-app bg-surface p-1 lg:w-fit" role="tablist" aria-label="Selector de inversor">
-            {TABS.map((t) => {
-              const active = tab === t.key;
-              const color = tabColor(t.key);
+          <div className="flex h-10 w-full items-center gap-1 rounded-full border border-app bg-surface p-1 lg:w-fit" role="tablist" aria-label={t('inversores.tabAria')}>
+            {TABS.map((tab_) => {
+              const active = tab === tab_.key;
+              const color = tabColor(tab_.key);
+              const label = tab_.labelKey ? t(tab_.labelKey) : tab_.key === 'solis' ? 'Solis' : 'Fox';
               return (
                 <button
-                  key={t.key}
+                  key={tab_.key}
                   role="tab"
                   aria-selected={active}
-                  onClick={() => setTab(t.key)}
+                  onClick={() => setTab(tab_.key)}
                   className={cn(
                     'relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none',
                     active ? '' : 'text-faint hover:text-muted',
@@ -621,12 +627,12 @@ export default function Inversores() {
                     />
                   )}
                   <span className="relative z-10 flex items-center gap-1.5">
-                    {t.key === 'compare' ? (
+                    {tab_.key === 'compare' ? (
                       <ArrowLeftRight size={14} />
                     ) : (
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color, opacity: active ? 1 : 0.4 }} />
                     )}
-                    {t.label}
+                    {label}
                   </span>
                 </button>
               );
@@ -666,7 +672,7 @@ export default function Inversores() {
 
         {/* Nota de actividad (mock) */}
         <p className="flex items-center gap-1.5 text-xs text-faint">
-          <Activity size={12} /> Datos locales vía Home Assistant · actualización cada 5 s
+          <Activity size={12} /> {t('inversores.localData')}
         </p>
       </div>
     </TooltipProvider>

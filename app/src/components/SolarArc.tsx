@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Sunrise, Sunset, CloudSun } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { SUNRISE_MIN, SUNSET_MIN } from '@/data/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyColors } from '@/lib/colors';
@@ -19,22 +20,22 @@ interface SolarArcProps {
   weatherTemp?: number;
 }
 
-const WEATHER_LABELS: Record<string, string> = {
-  sunny: 'Despejado',
-  'clear-night': 'Despejado',
-  partlycloudy: 'Parcialmente nublado',
-  cloudy: 'Nublado',
-  rainy: 'Lluvia',
-  pouring: 'Lluvia intensa',
-  lightning: 'Tormenta',
-  'lightning-rainy': 'Tormenta',
-  snowy: 'Nieve',
-  'snowy-rainy': 'Aguanieve',
-  fog: 'Niebla',
-  windy: 'Ventoso',
-  'windy-variant': 'Ventoso',
-  hail: 'Granizo',
-};
+const WEATHER_KEYS = [
+  'sunny',
+  'clear-night',
+  'partlycloudy',
+  'cloudy',
+  'rainy',
+  'pouring',
+  'lightning',
+  'lightning-rainy',
+  'snowy',
+  'snowy-rainy',
+  'fog',
+  'windy',
+  'windy-variant',
+  'hail',
+] as const;
 
 /** Punto sobre el arco semicircular: frac 0 (amanecer, izq) → 1 (atardecer, der). */
 function arcPoint(frac: number): { x: number; y: number; angle: number } {
@@ -57,10 +58,17 @@ const STARS: [number, number][] = [
 export default function SolarArc({ atMin, peakKw, peakAtMin, sunriseMin = SUNRISE_MIN, sunsetMin = SUNSET_MIN, weather, weatherTemp }: SolarArcProps) {
   const { isDark } = useTheme();
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const sunRef = useRef<SVGGElement>(null);
   const animRef = useRef({ f: 0 });
   const frac = Math.min(1, Math.max(0, (atMin - sunriseMin) / (sunsetMin - sunriseMin)));
   const daytime = atMin >= sunriseMin && atMin <= sunsetMin;
+
+  const weatherLabel = weather
+    ? (WEATHER_KEYS as readonly string[]).includes(weather)
+      ? t(`weather.${weather}`)
+      : weather
+    : '—';
 
   useEffect(() => {
     const el = sunRef.current;
@@ -84,7 +92,7 @@ export default function SolarArc({ atMin, peakKw, peakAtMin, sunriseMin = SUNRIS
 
   return (
     <div>
-      <svg viewBox="0 0 300 140" className="mx-auto w-full max-w-[320px]" role="img" aria-label="Posición del sol">
+      <svg viewBox="0 0 300 140" className="mx-auto w-full max-w-[320px]" role="img" aria-label={t('solar.aria')}>
         <defs>
           <linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#101828" stopOpacity={isDark ? 0.9 : 0} />
@@ -128,7 +136,7 @@ export default function SolarArc({ atMin, peakKw, peakAtMin, sunriseMin = SUNRIS
         className="mt-3 flex flex-wrap items-center gap-2 border-t border-app pt-3 text-xs text-muted"
       >
         <span className="inline-flex items-center gap-1.5">
-          <CloudSun size={15} style={{ color: palette.solar }} /> {weather ? (WEATHER_LABELS[weather] ?? weather) : '—'}
+          <CloudSun size={15} style={{ color: palette.solar }} /> {weatherLabel}
         </span>
         {weatherTemp !== undefined && weatherTemp > -40 && (
           <>
@@ -137,7 +145,7 @@ export default function SolarArc({ atMin, peakKw, peakAtMin, sunriseMin = SUNRIS
           </>
         )}
         <span className="ml-auto rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-app">
-          Pico {fmtKw(peakKw)} kW a las {fmtTime(peakAtMin)}
+          {t('solar.peak', { kw: fmtKw(peakKw), time: fmtTime(peakAtMin) })}
         </span>
       </motion.div>
     </div>

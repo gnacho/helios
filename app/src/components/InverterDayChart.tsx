@@ -10,8 +10,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { fmtWeekdayDate } from '@/i18n';
 import type { PowerPoint } from '@/data/types';
 import { STEP_MIN } from '@/data/types';
 import { fmtKw, fmtTime } from '@/lib/format';
@@ -54,6 +54,7 @@ function InvTooltip({ active, payload, label }: { active?: boolean; payload?: { 
 /** §4 Curva del día del inversor con toggle "Comparar con ayer". */
 export default function InverterDayChart({ data, dataKey, color, nowMin, today, height = 300 }: InverterDayChartProps) {
   const [showYesterday, setShowYesterday] = useState(false);
+  const { t } = useTranslation();
 
   const rows = useMemo(() => {
     const nowIdx = Math.round(nowMin / STEP_MIN);
@@ -70,11 +71,11 @@ export default function InverterDayChart({ data, dataKey, color, nowMin, today, 
   const gradId = `grad-inv-${dataKey}`;
 
   return (
-    <section className="helios-card h-full shadow-card dark:shadow-card-dark" aria-label="Potencia de hoy del inversor">
+    <section className="helios-card h-full shadow-card dark:shadow-card-dark" aria-label={t('inversores.powerTodayAria')}>
       <div className="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
         <div className="mr-auto">
-          <h2 className="text-[15px] font-semibold text-app">Potencia de hoy</h2>
-          <p className="text-xs capitalize text-faint">{format(today, "EEEE, d 'de' MMMM", { locale: es })}</p>
+          <h2 className="text-[15px] font-semibold text-app">{t('inversores.powerToday')}</h2>
+          <p className="text-xs capitalize text-faint">{fmtWeekdayDate(today)}</p>
         </div>
         <button
           onClick={() => setShowYesterday((v) => !v)}
@@ -85,7 +86,7 @@ export default function InverterDayChart({ data, dataKey, color, nowMin, today, 
           )}
         >
           <span className={cn('h-2 w-2 rounded-full bg-slate-400', !showYesterday && 'opacity-35')} />
-          Comparar con ayer
+          {t('inversores.compareYesterday')}
         </button>
       </div>
 
@@ -123,7 +124,7 @@ export default function InverterDayChart({ data, dataKey, color, nowMin, today, 
             <Tooltip content={<InvTooltip />} cursor={{ stroke: 'var(--text-faint)', strokeDasharray: '3 3', strokeOpacity: 0.5 }} />
 
             <Area
-              name="Hoy"
+              name={t('inversores.today')}
               type="monotone"
               dataKey="past"
               stroke={color}
@@ -135,7 +136,7 @@ export default function InverterDayChart({ data, dataKey, color, nowMin, today, 
               activeDot={{ r: 4 }}
             />
             <Area
-              name="Hoy (previsión)"
+              name={t('inversores.forecastToday')}
               type="monotone"
               dataKey="future"
               stroke={color}
@@ -153,7 +154,7 @@ export default function InverterDayChart({ data, dataKey, color, nowMin, today, 
             />
             {showYesterday && (
               <Line
-                name="Ayer"
+                name={t('inversores.yesterday')}
                 type="monotone"
                 dataKey="yesterday"
                 stroke="var(--text-faint)"

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { PERIOD_LABELS } from '@/lib/historyStats';
+import { useTranslation } from 'react-i18next';
 import type { Period } from '@/lib/historyStats';
 import { cn } from '@/lib/utils';
 
@@ -32,12 +32,13 @@ export default function PeriodSelector({
   onNext,
   onToday,
 }: PeriodSelectorProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       {/* Segmented control */}
       <div
         role="tablist"
-        aria-label="Periodo del histórico"
+        aria-label={t('historico.periodAria')}
         className="flex h-9 items-center rounded-full border border-app bg-surface p-0.5"
       >
         {PERIODS.map((p) => {
@@ -60,7 +61,7 @@ export default function PeriodSelector({
                   className="absolute inset-0 rounded-full bg-surface-2 shadow-inner"
                 />
               )}
-              <span className="relative">{PERIOD_LABELS[p]}</span>
+              <span className="relative">{t(`historico.periods.${p}`)}</span>
             </button>
           );
         })}
@@ -70,7 +71,7 @@ export default function PeriodSelector({
       <div className="flex h-9 items-center gap-0.5 rounded-full border border-app bg-surface p-0.5">
         <button
           onClick={onPrev}
-          aria-label="Periodo anterior"
+          aria-label={t('historico.prevAria')}
           className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app active:scale-95"
         >
           <ChevronLeft size={16} />
@@ -92,7 +93,7 @@ export default function PeriodSelector({
         <button
           onClick={onNext}
           disabled={!canNext}
-          aria-label="Periodo siguiente"
+          aria-label={t('historico.nextAria')}
           className={cn(
             'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
             canNext ? 'text-muted hover:bg-surface-2 hover:text-app active:scale-95' : 'cursor-not-allowed text-faint/50',
@@ -113,7 +114,7 @@ export default function PeriodSelector({
             : 'border-amber-500/40 text-amber-600 hover:bg-amber-500/10 active:scale-95 dark:text-amber-400',
         )}
       >
-        Hoy
+        {t('common.today')}
       </button>
     </div>
   );

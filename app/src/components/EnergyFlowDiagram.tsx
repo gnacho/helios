@@ -2,6 +2,7 @@ import { memo, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sun, BatteryCharging, UtilityPole } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtKw } from '@/lib/format';
@@ -122,6 +123,7 @@ interface EnergyFlowDiagramProps {
 export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagramProps) {
   const palette = useEnergyColors();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const uid = useId().replace(/[:]/g, '');
 
   const fvToHome = Math.min(live.production, live.consumption);
@@ -147,7 +149,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
       ? `${fmtKw(live.batteryPower)} kW`
       : live.batteryPower < -0.05
         ? `${fmtKw(-live.batteryPower)} kW`
-        : 'En reposo';
+        : t('common.idle');
   const gridText =
     live.grid < -0.05 ? `${fmtKw(-live.grid)} kW ↑` : live.grid > 0.05 ? `${fmtKw(live.grid)} kW ↓` : '0 W';
 
@@ -159,7 +161,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, delay: 0.25, ease: 'easeOut' }}
       role="img"
-      aria-label="Diagrama de flujo de energía en tiempo real"
+      aria-label={t('flow.aria')}
     >
       {edges.map((e) => (
         <FlowEdgeLayer key={e.id} edge={e} uid={uid} />
@@ -168,7 +170,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
       <FlowNode
         x={NODES.fv.x}
         y={NODES.fv.y}
-        label="Fotovoltaica"
+        label={t('flow.fv')}
         valueText={`${fmtKw(live.production)} kW`}
         active={live.production > 0.1}
         glowColor={palette.solar}
@@ -180,7 +182,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
       <FlowNode
         x={NODES.home.x}
         y={NODES.home.y}
-        label="Vivienda"
+        label={t('flow.home')}
         valueText={`${fmtKw(live.consumption)} kW`}
         active={live.consumption > 0.1}
         glowColor={palette.consumo}
@@ -191,7 +193,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
       <FlowNode
         x={NODES.battery.x}
         y={NODES.battery.y}
-        label="Batería"
+        label={t('common.battery')}
         valueText={batteryText}
         active={Math.abs(live.batteryPower) > 0.1}
         glowColor={palette.bateria}
@@ -208,7 +210,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
       <FlowNode
         x={NODES.grid.x}
         y={NODES.grid.y}
-        label="Red"
+        label={t('common.grid')}
         valueText={gridText}
         active={Math.abs(live.grid) > 0.1}
         glowColor={live.grid < 0 ? palette.redVertido : palette.redCompra}

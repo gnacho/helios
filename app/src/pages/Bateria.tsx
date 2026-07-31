@@ -10,7 +10,8 @@ import {
   Thermometer,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { dateLocale, fmtWeekdayDate } from '@/i18n';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useEnergyColors } from '@/lib/colors';
@@ -43,13 +44,14 @@ interface WeekDay {
 }
 
 function WeekTooltip({ active, payload }: { active?: boolean; payload?: { payload?: WeekDay }[] }) {
+  const { t } = useTranslation();
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
   return (
     <div className="rounded-xl border border-app bg-surface/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md">
       <p className="font-semibold text-app">
-        {d.date} · Cargada {fmtEnergy(d.carga)} kWh · Descargada {fmtEnergy(d.descarga)} kWh
+        {t('bateria.weekTooltip', { date: d.date, charge: fmtEnergy(d.carga), discharge: fmtEnergy(d.descarga) })}
       </p>
     </div>
   );
@@ -58,6 +60,7 @@ function WeekTooltip({ active, payload }: { active?: boolean; payload?: { payloa
 export default function Bateria() {
   const { now, nowMin, liveTick, today, refresh, getLivePower, getDaySeries, getKpis, getHistory } = useEnergyData();
   const palette = useEnergyColors();
+  const { t, i18n } = useTranslation();
   const [spinning, setSpinning] = useState(false);
 
   const live = getLivePower(nowMin, liveTick);
@@ -68,12 +71,12 @@ export default function Bateria() {
     return getHistory()
       .slice(-7)
       .map((d) => ({
-        day: format(d.date, 'EEEEE', { locale: es }).toUpperCase(),
-        date: format(d.date, 'EEE d', { locale: es }),
+        day: format(d.date, 'EEEEE', { locale: dateLocale() }).toUpperCase(),
+        date: format(d.date, 'EEE d', { locale: dateLocale() }),
         carga: Math.round((d.batteryChargedKwh ?? 0) * 100) / 100,
         descarga: Math.round((d.batteryDischargedKwh ?? 0) * 100) / 100,
       }));
-  }, [getHistory]);
+  }, [getHistory, i18n.language]);
 
   const autoconsumoSemana = useMemo(() => {
     const days = getHistory().slice(-7);
@@ -84,9 +87,9 @@ export default function Bateria() {
   const state = batteryState(live.batteryPower);
 
   const stateChip = {
-    charging: { text: `Cargando · ${fmtKw(live.batteryPower)} kW`, cls: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400' },
-    discharging: { text: `Descargando · ${fmtKw(Math.abs(live.batteryPower))} kW`, cls: 'bg-amber-500/12 text-amber-600 dark:text-amber-400' },
-    idle: { text: 'En reposo', cls: 'bg-surface-2 text-muted' },
+    charging: { text: `${t('common.charging')} · ${fmtKw(live.batteryPower)} kW`, cls: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400' },
+    discharging: { text: `${t('common.discharging')} · ${fmtKw(Math.abs(live.batteryPower))} kW`, cls: 'bg-amber-500/12 text-amber-600 dark:text-amber-400' },
+    idle: { text: t('common.idle'), cls: 'bg-surface-2 text-muted' },
   }[state];
 
   return (
@@ -99,10 +102,10 @@ export default function Bateria() {
         className="flex flex-wrap items-center gap-3"
       >
         <div className="mr-auto">
-          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">Batería</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('bateria.title')}</h1>
           <p className="text-sm text-muted">
-            Soluna 5 kWh · acoplada al Solis ·{' '}
-            <span className="capitalize">{format(today, "EEEE, d 'de' MMMM", { locale: es })}</span>
+            {t('bateria.subtitle')} ·{' '}
+            <span className="capitalize">{fmtWeekdayDate(today)}</span>
           </p>
         </div>
         <motion.div
@@ -115,7 +118,7 @@ export default function Bateria() {
             {fmtClock(now)}
           </span>
           <button
-            aria-label="Refrescar datos"
+            aria-label={t('common.refresh')}
             onClick={() => {
               refresh();
               setSpinning(true);
@@ -163,12 +166,12 @@ export default function Bateria() {
             <div className="flex min-w-0 flex-1 items-center lg:border-l lg:border-app lg:pl-6">
               <div className="grid w-full grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[
-                  { icon: ArrowDownToLine, label: 'Cargada hoy', value: `${fmtEnergy(kpis.batteryChargedKwh)} kWh` },
-                  { icon: ArrowUpFromLine, label: 'Descargada hoy', value: `${fmtEnergy(kpis.batteryDischargedKwh)} kWh` },
-                  { icon: RefreshCw, label: 'Ciclos', value: '312' },
-                  { icon: HeartPulse, label: 'Salud', value: '98 %' },
-                  { icon: Thermometer, label: 'Temperatura', value: '28 °C' },
-                  { icon: Clock, label: 'Autonomía est.', value: '~3 h' },
+                  { icon: ArrowDownToLine, label: t('bateria.chargedToday'), value: `${fmtEnergy(kpis.batteryChargedKwh)} kWh` },
+                  { icon: ArrowUpFromLine, label: t('bateria.dischargedToday'), value: `${fmtEnergy(kpis.batteryDischargedKwh)} kWh` },
+                  { icon: RefreshCw, label: t('bateria.cycles'), value: '312' },
+                  { icon: HeartPulse, label: t('bateria.health'), value: '98 %' },
+                  { icon: Thermometer, label: t('bateria.temperature'), value: '28 °C' },
+                  { icon: Clock, label: t('bateria.autonomy'), value: '~3 h' },
                 ].map((d, i) => (
                   <motion.div
                     key={d.label}
@@ -215,18 +218,18 @@ export default function Bateria() {
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.5, delay: 0.1, ease: EASE_OUT }}
           className="helios-card col-span-12 shadow-card dark:shadow-card-dark lg:col-span-8"
-          aria-label="Balance semanal de la batería"
+          aria-label={t('bateria.weekAria')}
         >
           <div className="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
             <div className="mr-auto">
-              <h2 className="text-[15px] font-semibold text-app">Esta semana</h2>
-              <p className="text-xs text-faint">Carga y descarga por día</p>
+              <h2 className="text-[15px] font-semibold text-app">{t('bateria.weekTitle')}</h2>
+              <p className="text-xs text-faint">{t('bateria.weekSubtitle')}</p>
             </div>
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.bateria }} /> Carga
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.bateria }} /> {t('bateria.charge')}
             </span>
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.solar }} /> Descarga
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.solar }} /> {t('bateria.discharge')}
             </span>
           </div>
           <div className="px-1">
@@ -248,8 +251,8 @@ export default function Bateria() {
                   tickLine={false}
                 />
                 <Tooltip content={<WeekTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }} />
-                <Bar dataKey="carga" name="Carga" fill={palette.bateria} radius={[3, 3, 0, 0]} animationDuration={500} />
-                <Bar dataKey="descarga" name="Descarga" fill={palette.solar} radius={[3, 3, 0, 0]} animationDuration={500} animationBegin={60} />
+                <Bar dataKey="carga" name={t('bateria.charge')} fill={palette.bateria} radius={[3, 3, 0, 0]} animationDuration={500} />
+                <Bar dataKey="descarga" name={t('bateria.discharge')} fill={palette.solar} radius={[3, 3, 0, 0]} animationDuration={500} animationBegin={60} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -261,7 +264,7 @@ export default function Bateria() {
               transition={{ duration: 0.4, delay: 0.5 }}
               className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400"
             >
-              Autoconsumo medio {autoconsumoSemana} % esta semana
+              {t('bateria.avgAuto', { pct: autoconsumoSemana })}
             </motion.span>
           </div>
         </motion.section>
@@ -274,21 +277,21 @@ export default function Bateria() {
           className="helios-card col-span-12 flex flex-col gap-5 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:col-span-4"
         >
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Modo de trabajo</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('bateria.workMode')}</p>
             <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              <BatteryCharging size={13} /> Autoconsumo
+              <BatteryCharging size={13} /> {t('common.autoconsumo')}
             </span>
             <p className="mt-2 text-sm text-muted">
-              La batería prioriza cargar con excedente solar y descargar cuando no hay sol.
+              {t('bateria.workModeDesc')}
             </p>
           </div>
 
           <div className="border-t border-app pt-5">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Reserva mínima</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('bateria.minReserve')}</p>
             <p className="mt-1 font-display text-[28px] font-semibold leading-none tracking-[-0.01em] text-app">
               20 <span className="text-[0.6em] font-medium text-faint">%</span>
             </p>
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={20} aria-valuemin={0} aria-valuemax={100} aria-label="Reserva mínima 20 %">
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={20} aria-valuemin={0} aria-valuemax={100} aria-label={t('bateria.minReserveAria', { pct: 20 })}>
               <motion.div
                 className="h-full rounded-full"
                 style={{ backgroundColor: palette.redCompra }}
@@ -298,11 +301,11 @@ export default function Bateria() {
                 transition={{ duration: 0.8, ease: 'easeOut', delay: 0.4 }}
               />
             </div>
-            <p className="mt-1.5 text-sm text-muted">1,0 kWh siempre disponibles</p>
+            <p className="mt-1.5 text-sm text-muted">{t('bateria.minReserveDesc', { kwh: '1,0' })}</p>
           </div>
 
           <div className="border-t border-app pt-5">
-            <p className="text-xs text-faint">Solo lectura · la configuración se gestiona desde el inversor</p>
+            <p className="text-xs text-faint">{t('bateria.readOnly')}</p>
           </div>
         </motion.section>
       </div>

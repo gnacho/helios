@@ -1,25 +1,10 @@
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import i18n, { fmtDayMonth, fmtDayMonthLong, fmtMonthYear, fmtWeekdayDate } from '@/i18n';
 import type { HistoryDay } from '@/data/types';
 import type { EnergySettings } from '@/hooks/useEnergySettings';
 
 /** Periodos del histórico. */
 export type Period = 'dia' | 'semana' | 'mes' | 'ano';
-
-export const PERIOD_LABELS: Record<Period, string> = {
-  dia: 'Día',
-  semana: 'Semana',
-  mes: 'Mes',
-  ano: 'Año',
-};
-
-/** Texto del comparativo "vs … anterior" por periodo. */
-export const PREVIOUS_LABELS: Record<Period, string> = {
-  dia: 'vs día anterior',
-  semana: 'vs semana anterior',
-  mes: 'vs mes anterior',
-  ano: 'vs año anterior',
-};
 
 function sameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -105,14 +90,13 @@ export function navLabel(period: Period, anchor: Date): string {
   const { start, end } = periodWindow(period, anchor);
   switch (period) {
     case 'dia':
-      return format(anchor, 'd MMM', { locale: es });
+      return fmtDayMonth(anchor);
     case 'semana': {
-      const left =
-        start.getMonth() === end.getMonth() ? `${start.getDate()}` : format(start, 'd MMM', { locale: es });
-      return `${left} – ${format(end, 'd MMM', { locale: es })}`;
+      const left = start.getMonth() === end.getMonth() ? `${start.getDate()}` : fmtDayMonth(start);
+      return `${left} – ${fmtDayMonth(end)}`;
     }
     case 'mes':
-      return format(anchor, 'MMMM yyyy', { locale: es });
+      return fmtMonthYear(anchor);
     case 'ano':
       return format(anchor, 'yyyy');
   }
@@ -123,13 +107,13 @@ export function periodSubtitle(period: Period, anchor: Date): string {
   const { start, end } = periodWindow(period, anchor);
   switch (period) {
     case 'dia':
-      return format(anchor, "EEEE, d 'de' MMMM", { locale: es });
+      return fmtWeekdayDate(anchor);
     case 'semana':
-      return `Semana del ${start.getDate()} al ${format(end, "d 'de' MMMM", { locale: es })}`;
+      return i18n.t('historico.subtitle.week', { start: start.getDate(), end: fmtDayMonthLong(end) });
     case 'mes':
-      return `Mes de ${format(anchor, "MMMM 'de' yyyy", { locale: es })}`;
+      return i18n.t('historico.subtitle.month', { month: fmtMonthYear(anchor) });
     case 'ano':
-      return `Año ${format(anchor, 'yyyy')}`;
+      return i18n.t('historico.subtitle.year', { year: format(anchor, 'yyyy') });
   }
 }
 

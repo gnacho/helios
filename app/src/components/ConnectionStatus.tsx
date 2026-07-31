@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { cn } from '@/lib/utils';
 
@@ -7,11 +8,12 @@ import { cn } from '@/lib/utils';
  */
 export default function ConnectionStatus({ compact = false }: { compact?: boolean }) {
   const { connectionStatus } = useEnergyData();
+  const { t } = useTranslation();
 
   const config = {
-    connected: { dot: 'bg-emerald-500', text: 'HAOS · Local', ping: true },
-    reconnecting: { dot: 'bg-amber-500', text: 'Reconectando…', ping: true },
-    demo: { dot: 'bg-violet-500', text: 'Modo demo', ping: false },
+    connected: { dot: 'bg-emerald-500', text: t('connection.connected'), ping: true },
+    reconnecting: { dot: 'bg-amber-500', text: t('connection.reconnecting'), ping: true },
+    demo: { dot: 'bg-violet-500', text: t('connection.demo'), ping: false },
   }[connectionStatus];
 
   return (
@@ -20,7 +22,7 @@ export default function ConnectionStatus({ compact = false }: { compact?: boolea
         'inline-flex h-8 items-center gap-2 rounded-full border border-app bg-surface px-3',
         'text-xs font-medium text-muted',
       )}
-      title="Estado de la conexión con Home Assistant"
+      title={t('connection.title')}
     >
       <span className="relative flex h-2 w-2">
         {config.ping && (

@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Sparkline from '@/components/Sparkline';
+import { numLocale } from '@/i18n';
 import { fmtEnergy, fmtKw } from '@/lib/format';
 import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
 
@@ -36,8 +38,9 @@ export default function InverterCard({
   index = 0,
 }: InverterCardProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const animatedNow = useAnimatedNumber(nowKw);
-  const kwpFmt = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(kwp);
+  const kwpFmt = new Intl.NumberFormat(numLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(kwp);
 
   return (
     <motion.button
@@ -57,7 +60,7 @@ export default function InverterCard({
           <p className="text-xs text-faint">{model}</p>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {t('common.online')}
         </span>
         <span className="hidden text-xs font-medium text-faint sm:inline">{kwpFmt} kWp</span>
       </div>
@@ -69,7 +72,7 @@ export default function InverterCard({
             <span className="ml-1 text-[0.6em] font-medium text-faint">kW</span>
           </p>
           <p className="mt-0.5 text-sm text-muted">
-            Hoy <span className="font-semibold text-app">{fmtEnergy(todayKwh)} kWh</span>
+            {t('inverter.today')} <span className="font-semibold text-app">{fmtEnergy(todayKwh)} kWh</span>
           </p>
         </div>
         <div className="w-[140px] shrink-0 transition-[filter] duration-200 group-hover:brightness-110">
@@ -79,7 +82,7 @@ export default function InverterCard({
 
       <div className="mt-4">
         <div className="flex items-center justify-between text-[11px] font-medium text-faint">
-          <span>Aporte de hoy</span>
+          <span>{t('inverter.shareToday')}</span>
           <span className="font-semibold" style={{ color }}>
             {Math.round(sharePct)} %
           </span>

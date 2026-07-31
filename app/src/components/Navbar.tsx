@@ -57,7 +57,7 @@ export default function Navbar() {
           {!collapsed && (
             <div className="min-w-0">
               <p className="font-display text-lg font-semibold leading-tight tracking-tight text-app">Helios</p>
-              <p className="truncate text-[11px] font-medium text-faint">Monitor Solar</p>
+              <p className="truncate text-[11px] font-medium text-faint">{t('common.tagline')}</p>
             </div>
           )}
         </Link>

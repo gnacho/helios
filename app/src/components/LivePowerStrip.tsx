@@ -1,22 +1,11 @@
 import { motion } from 'framer-motion';
 import { Sun, House, BatteryCharging, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtKw, fmtTime } from '@/lib/format';
 import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
 import { cn } from '@/lib/utils';
-
-function batteryLabel(bp: number): string {
-  if (bp > 0.05) return 'Cargando';
-  if (bp < -0.05) return 'Descargando';
-  return 'En reposo';
-}
-
-function gridLabel(grid: number): string {
-  if (grid > 0.05) return 'Comprando';
-  if (grid < -0.05) return 'Vertiendo';
-  return 'En equilibrio';
-}
 
 interface StripValueProps {
   icon: typeof Sun;
@@ -66,7 +55,19 @@ interface LivePowerStripProps {
 /** Banda "Ahora mismo" con los 4 valores instantáneos. */
 export default function LivePowerStrip({ live, atMin }: LivePowerStripProps) {
   const palette = useEnergyColors();
+  const { t } = useTranslation();
   const exporting = live.grid < -0.05;
+
+  const batteryLabel = (bp: number): string => {
+    if (bp > 0.05) return t('common.charging');
+    if (bp < -0.05) return t('common.discharging');
+    return t('common.idle');
+  };
+  const gridLabel = (grid: number): string => {
+    if (grid > 0.05) return t('live.buying');
+    if (grid < -0.05) return t('live.exporting');
+    return t('live.balanced');
+  };
 
   return (
     <motion.section
@@ -74,23 +75,23 @@ export default function LivePowerStrip({ live, atMin }: LivePowerStripProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 1, 0.5, 1] }}
       className="helios-card shadow-card dark:shadow-card-dark"
-      aria-label="Potencia en tiempo real"
+      aria-label={t('live.aria')}
     >
       <div className="flex items-center gap-2 border-b border-app px-4 py-3 sm:px-5">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
-        <h2 className="text-[15px] font-semibold text-app">Ahora mismo</h2>
-        <span className="text-xs text-faint">· última lectura {fmtTime(atMin)}</span>
+        <h2 className="text-[15px] font-semibold text-app">{t('live.title')}</h2>
+        <span className="text-xs text-faint">· {t('live.lastReading', { time: fmtTime(atMin) })}</span>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4">
-        <StripValue icon={Sun} label="Producción" kw={live.production} color={palette.solar} />
-        <StripValue icon={House} label="Consumo" kw={live.consumption} color={palette.consumo} className="border-l border-app" />
+        <StripValue icon={Sun} label={t('common.production')} kw={live.production} color={palette.solar} />
+        <StripValue icon={House} label={t('common.consumption')} kw={live.consumption} color={palette.consumo} className="border-l border-app" />
         <StripValue
           icon={BatteryCharging}
-          label="Batería"
+          label={t('common.battery')}
           kw={Math.abs(live.batteryPower)}
           status={batteryLabel(live.batteryPower)}
           color={palette.bateria}
@@ -100,7 +101,7 @@ export default function LivePowerStrip({ live, atMin }: LivePowerStripProps) {
         />
         <StripValue
           icon={exporting ? ArrowUpFromLine : ArrowDownToLine}
-          label="Red"
+          label={t('common.grid')}
           kw={Math.abs(live.grid)}
           status={gridLabel(live.grid)}
           color={exporting ? palette.redVertido : palette.redCompra}

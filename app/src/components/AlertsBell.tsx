@@ -1,10 +1,12 @@
 import { Bell } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { cn } from '@/lib/utils';
 
 export default function AlertsBell() {
   const { getLivePower } = useEnergyData();
+  const { t } = useTranslation();
   const alerts = getLivePower().alerts ?? [];
   const top = alerts.some((a) => a.severity === 'critical')
     ? 'bg-rose-500'
@@ -16,7 +18,7 @@ export default function AlertsBell() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          aria-label={`Notificaciones · ${alerts.length} alertas`}
+          aria-label={t('alerts.label', { count: alerts.length })}
           className="relative rounded-full border border-app bg-surface p-2 text-muted transition-colors hover:text-app"
         >
           <Bell size={16} />
@@ -25,7 +27,7 @@ export default function AlertsBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         {alerts.length === 0 ? (
-          <div className="px-3 py-2.5 text-xs text-muted">Todo en orden · sin alertas</div>
+          <div className="px-3 py-2.5 text-xs text-muted">{t('alerts.empty')}</div>
         ) : (
           alerts.map((a) => (
             <div key={a.id} className="flex items-start gap-2 px-3 py-2">

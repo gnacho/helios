@@ -11,8 +11,8 @@ import {
   ArrowUpFromLine,
   ArrowDownToLine,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { fmtWeekdayDate } from '@/i18n';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { STEP_MIN } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -27,10 +27,10 @@ import ThemeToggle from '@/components/ThemeToggle';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import AlertsBell from '@/components/AlertsBell';
 
-function batteryState(bp: number): string {
-  if (bp > 0.05) return 'Cargando';
-  if (bp < -0.05) return 'Descargando';
-  return 'En reposo';
+function batteryState(bp: number): 'charging' | 'discharging' | 'idle' {
+  if (bp > 0.05) return 'charging';
+  if (bp < -0.05) return 'discharging';
+  return 'idle';
 }
 
 export default function Dashboard() {
@@ -38,6 +38,7 @@ export default function Dashboard() {
     useEnergyData();
   const palette = useEnergyColors();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [replayMin, setReplayMin] = useState<number | null>(null);
   const [spinning, setSpinning] = useState(false);
 
@@ -73,8 +74,8 @@ export default function Dashboard() {
         className="flex flex-wrap items-center gap-3"
       >
         <div className="mr-auto">
-          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">Hoy</h1>
-          <p className="text-sm capitalize text-muted">{format(today, "EEEE, d 'de' MMMM", { locale: es })}</p>
+          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('dashboard.title')}</h1>
+          <p className="text-sm capitalize text-muted">{fmtWeekdayDate(today)}</p>
         </div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -86,7 +87,7 @@ export default function Dashboard() {
             {fmtClock(now)}
           </span>
           <button
-            aria-label="Refrescar datos"
+            aria-label={t('common.refresh')}
             onClick={() => {
               refresh();
               setSpinning(true);
@@ -122,13 +123,13 @@ export default function Dashboard() {
           className="helios-card col-span-12 order-2 p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4"
         >
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-app">Flujo de energía</h2>
+            <h2 className="text-[15px] font-semibold text-app">{t('dashboard.flowTitle')}</h2>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-600 dark:text-emerald-400">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
               </span>
-              EN VIVO
+              {t('dashboard.live')}
             </span>
           </div>
           <EnergyFlowDiagram live={live} />
@@ -148,13 +149,13 @@ export default function Dashboard() {
       {/* ── KPIs del día (debajo del chart) ───────────────────────── */}
       <div
         className="flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5"
-        aria-label="Indicadores del día"
+        aria-label={t('dashboard.kpisLabel')}
       >
         <div className="w-[42%] shrink-0 snap-center lg:w-auto">
           <KpiCard
             icon={Sun}
             color="solar"
-            label="Producción hoy"
+            label={t('dashboard.productionToday')}
             value={kpis.productionKwh}
             unit="kWh"
             live
@@ -165,7 +166,7 @@ export default function Dashboard() {
           <KpiCard
             icon={House}
             color="consumo"
-            label="Consumo hoy"
+            label={t('dashboard.consumptionToday')}
             value={kpis.consumptionKwh}
             unit="kWh"
             index={1}
@@ -175,7 +176,7 @@ export default function Dashboard() {
           <KpiCard
             icon={BatteryCharging}
             color="bateria"
-            label="Batería"
+            label={t('common.battery')}
             value={socKwh}
             unit="kWh"
             decimals={1}
@@ -183,7 +184,7 @@ export default function Dashboard() {
             index={2}
           >
             <p className="text-xs font-medium text-muted">
-              {Math.round(live.soc)}% · {batteryState(live.batteryPower)}
+              {Math.round(live.soc)}% · {t(`common.${batteryState(live.batteryPower)}`)}
             </p>
           </KpiCard>
         </div>
@@ -191,7 +192,7 @@ export default function Dashboard() {
           <KpiCard
             icon={Leaf}
             color="bateria"
-            label="Autoconsumo"
+            label={t('common.autoconsumo')}
             value={kpis.autoconsumoPct}
             unit="%"
             decimals={0}
@@ -203,7 +204,7 @@ export default function Dashboard() {
           <KpiCard
             icon={UtilityPole}
             color="redVertido"
-            label="Balance de red"
+            label={t('dashboard.gridBalance')}
             value={kpis.gridExportKwh}
             unit="kWh"
             onClick={() => navigate('/historico')}
@@ -211,10 +212,10 @@ export default function Dashboard() {
           >
             <div className="flex flex-col gap-0.5 text-[11px] font-medium">
               <span className="inline-flex items-center gap-1" style={{ color: palette.redVertido }}>
-                <ArrowUpFromLine size={11} /> {fmtEnergy(kpis.gridExportKwh)} kWh vertidos
+                <ArrowUpFromLine size={11} /> {fmtEnergy(kpis.gridExportKwh)} kWh {t('dashboard.exported')}
               </span>
               <span className="inline-flex items-center gap-1" style={{ color: palette.redCompra }}>
-                <ArrowDownToLine size={11} /> {fmtEnergy(kpis.gridImportKwh)} kWh comprados
+                <ArrowDownToLine size={11} /> {fmtEnergy(kpis.gridImportKwh)} kWh {t('dashboard.imported')}
               </span>
             </div>
           </KpiCard>
@@ -224,9 +225,9 @@ export default function Dashboard() {
       {/* ── Sol de hoy + Inversores ────────────────────────────────── */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold tracking-[-0.01em] text-app">Tus inversores</h2>
+          <h2 className="font-display text-lg font-semibold tracking-[-0.01em] text-app">{t('dashboard.yourInverters')}</h2>
           <Link to="/inversores" className="text-xs font-semibold text-amber-500 hover:underline">
-            Ver comparativa →
+            {t('dashboard.viewCompare')}
           </Link>
         </div>
         <div className="grid gap-4 lg:grid-cols-3 lg:gap-5">
@@ -237,7 +238,7 @@ export default function Dashboard() {
             transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
             className="helios-card p-5 shadow-card dark:shadow-card-dark"
           >
-            <h2 className="mb-2 text-[15px] font-semibold text-app">Sol de hoy</h2>
+            <h2 className="mb-2 text-[15px] font-semibold text-app">{t('dashboard.sunToday')}</h2>
             <SolarArc
               atMin={effectiveMin}
               peakKw={dayKpis.peakProductionKw}
@@ -249,7 +250,7 @@ export default function Dashboard() {
             />
           </motion.section>
           <InverterCard
-            name="Solis · Híbrido"
+            name={`Solis · ${t('common.hybrid')}`}
             model="4,4 kWp · 10 × 440 W"
             kwp={4.4}
             nowKw={live.solis}

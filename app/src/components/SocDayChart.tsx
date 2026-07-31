@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import type { PowerPoint } from '@/data/types';
 import { STEP_MIN } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -69,6 +70,7 @@ function AnnotationDot({ cx, cy, color, delay, faded, label }: { cx?: number; cy
  */
 export default function SocDayChart({ data, nowMin, height = 280 }: SocDayChartProps) {
   const palette = useEnergyColors();
+  const { t } = useTranslation();
 
   const { rows, events, nowIdx } = useMemo(() => {
     const idx = Math.round(nowMin / STEP_MIN);
@@ -80,23 +82,23 @@ export default function SocDayChart({ data, nowMin, height = 280 }: SocDayChartP
     }));
     const events: SocEvent[] = [];
     const chargeStart = data.find((p) => p.batteryPower > 0.05);
-    if (chargeStart) events.push({ t: chargeStart.t, soc: chargeStart.soc, label: `Inicio de carga ${chargeStart.label}`, past: chargeStart.t <= nowMin });
+    if (chargeStart) events.push({ t: chargeStart.t, soc: chargeStart.soc, label: t('bateria.chargeStart', { time: chargeStart.label }), past: chargeStart.t <= nowMin });
     const full = data.find((p) => p.soc >= 99.5);
-    if (full) events.push({ t: full.t, soc: full.soc, label: `Batería llena ${full.label}`, past: full.t <= nowMin });
+    if (full) events.push({ t: full.t, soc: full.soc, label: t('bateria.socFull', { time: full.label }), past: full.t <= nowMin });
     const dischargeStart = data.find((p) => p.batteryPower < -0.05);
-    if (dischargeStart) events.push({ t: dischargeStart.t, soc: dischargeStart.soc, label: `Inicio descarga ${dischargeStart.label}`, past: dischargeStart.t <= nowMin });
+    if (dischargeStart) events.push({ t: dischargeStart.t, soc: dischargeStart.soc, label: t('bateria.dischargeStart', { time: dischargeStart.label }), past: dischargeStart.t <= nowMin });
     return { rows, events, nowIdx: idx };
-  }, [data, nowMin]);
+  }, [data, nowMin, t]);
 
   const nowT = nowIdx * STEP_MIN;
 
   return (
-    <section className="helios-card shadow-card dark:shadow-card-dark" aria-label="Estado de carga de la batería a lo largo del día">
+    <section className="helios-card shadow-card dark:shadow-card-dark" aria-label={t('bateria.socAria')}>
       <style>{`.helios-soc-pop{transform-box:fill-box;transform-origin:center;animation:helios-soc-pop .45s cubic-bezier(.34,1.56,.64,1) both}@keyframes helios-soc-pop{from{transform:scale(0)}to{transform:scale(1)}}`}</style>
       <div className="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
         <div className="mr-auto">
-          <h2 className="text-[15px] font-semibold text-app">Estado de carga · hoy</h2>
-          <p className="text-xs text-faint">0–100 % · proyección nocturna discontinua</p>
+          <h2 className="text-[15px] font-semibold text-app">{t('bateria.socTitle')}</h2>
+          <p className="text-xs text-faint">{t('bateria.socSubtitle')}</p>
         </div>
       </div>
 
@@ -140,7 +142,7 @@ export default function SocDayChart({ data, nowMin, height = 280 }: SocDayChartP
               y2={20}
               fill={palette.redCompra}
               fillOpacity={0.06}
-              label={{ value: 'Reserva', position: 'insideBottomRight', fill: palette.redCompra, fontSize: 10, fontWeight: 600 }}
+              label={{ value: t('bateria.reserve'), position: 'insideBottomRight', fill: palette.redCompra, fontSize: 10, fontWeight: 600 }}
             />
 
             <Area
@@ -156,7 +158,7 @@ export default function SocDayChart({ data, nowMin, height = 280 }: SocDayChartP
               activeDot={{ r: 4 }}
             />
             <Area
-              name="SOC (proyección)"
+              name={t('bateria.socProjection')}
               type="monotone"
               dataKey="socFuture"
               stroke={palette.bateria}
