@@ -46,7 +46,7 @@ export function registerLoginFail(db, c) {
     ON CONFLICT(ip) DO UPDATE SET
       attempts = attempts + 1,
       locked_until = CASE
-        WHEN attempts >= 5 THEN ?
+        WHEN attempts >= 4 THEN ?
         ELSE locked_until
       END
   `).run(ip, Date.now() + 5 * 60 * 1000)
