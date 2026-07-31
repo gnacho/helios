@@ -8,7 +8,7 @@ const num = (v) => {
 
 // Caché TTL + single-flight para colectores caros (recorder/statistics de HAOS):
 // N requests concurrentes a la misma clave = UNA query a HAOS.
-function cachedCollector(keyFn, ttlFn, fn) {
+export function cachedCollector(keyFn, ttlFn, fn) {
   const cache = new Map()
   const inflight = new Map()
   return (...args) => {

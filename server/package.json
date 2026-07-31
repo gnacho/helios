@@ -8,7 +8,8 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "HAOS_TOKEN=test AUTH_PASS=test vitest run"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
@@ -21,5 +22,8 @@
   "allowScripts": {
     "better-sqlite3@12.11.1": true,
     "bcrypt@6.0.0": true
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }

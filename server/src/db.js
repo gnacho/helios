@@ -2,9 +2,7 @@ import Database from 'better-sqlite3'
 import fs from 'node:fs'
 import path from 'node:path'
 
-export function openDb(dataDir) {
-  fs.mkdirSync(dataDir, { recursive: true })
-  const db = new Database(path.join(dataDir, 'helios.db'))
+export function initSchema(db) {
   db.pragma('journal_mode = WAL')
   db.exec(`
     CREATE TABLE IF NOT EXISTS daily (
@@ -47,6 +45,12 @@ export function openDb(dataDir) {
   if (!cols.includes('solis_kwh')) db.exec('ALTER TABLE daily ADD COLUMN solis_kwh REAL')
   if (!cols.includes('fox_kwh')) db.exec('ALTER TABLE daily ADD COLUMN fox_kwh REAL')
   return db
+}
+
+export function openDb(dataDir) {
+  fs.mkdirSync(dataDir, { recursive: true })
+  const db = new Database(path.join(dataDir, 'helios.db'))
+  return initSchema(db)
 }
 
 export function upsertDaily(db, row) {
