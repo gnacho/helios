@@ -193,6 +193,76 @@ app.get('/api/auth/users', (c) => {
   return c.json({ users })
 })
 
+app.put('/api/auth/users/:id/password', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden cambiar contraseñas' }, 403)
+  }
+  
+  const userId = c.req.param('id')
+  const body = await c.req.json().catch(() => null)
+  const parsed = z.object({ password: z.string().min(6) }).safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  
+  const hash = await bcrypt.hash(parsed.data.password, 10)
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
+  return c.json({ ok: true })
+})
+
+app.put('/api/auth/users/:id/language', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden cambiar idioma' }, 403)
+  }
+  
+  const userId = c.req.param('id')
+  const body = await c.req.json().catch(() => null)
+  const parsed = z.object({ language: z.string().regex(/^(es|en|zh-CN)$/) }).safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  
+  db.prepare('UPDATE users SET language = ? WHERE id = ?').run(parsed.data.language, userId)
+  return c.json({ ok: true })
+})
+
+app.put('/api/auth/users/:id/role', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden cambiar roles' }, 403)
+  }
+  
+  const userId = c.req.param('id')
+  const body = await c.req.json().catch(() => null)
+  const parsed = z.object({ role: z.enum(['user', 'admin']) }).safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(parsed.data.role, userId)
+  return c.json({ ok: true })
+})
+
+app.delete('/api/auth/users/:id', (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden eliminar usuarios' }, 403)
+  }
+  
+  const userId = c.req.param('id')
+  if (userId === session.userId) {
+    return c.json({ error: 'no puedes eliminarte a ti mismo' }, 400)
+  }
+  
+  db.prepare('DELETE FROM users WHERE id = ?').run(userId)
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
+  return c.json({ ok: true })
+})
+
 const guarded = new Hono()
 guarded.use('*', auth.requireAuth(db))
 
