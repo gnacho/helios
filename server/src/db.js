@@ -65,10 +65,14 @@ export function upsertDaily(db, row) {
   ).run(row)
 }
 
-export function dailyRange(db, from, to) {
+export function dailyRange(db, from, to, limit = 1000, offset = 0) {
   return db
-    .prepare('SELECT * FROM daily WHERE date >= ? AND date <= ? ORDER BY date ASC')
-    .all(from, to)
+    .prepare('SELECT * FROM daily WHERE date >= ? AND date <= ? ORDER BY date ASC LIMIT ? OFFSET ?')
+    .all(from, to, limit, offset)
+}
+
+export function dailyCount(db, from, to) {
+  return db.prepare('SELECT COUNT(*) AS n FROM daily WHERE date >= ? AND date <= ?').get(from, to).n
 }
 
 export function dailyEmpty(db) {

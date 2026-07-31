@@ -24,7 +24,7 @@ const solar = await import('./solar.js')
 const auth = await import('./auth.js')
 
 const db = dbModule.openDb(config.dataDir)
-const { dailyRange, cleanSessions, kvGet, kvSet } = dbModule
+const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet } = dbModule
 
 if (!config.haosToken) {
   console.error('[helios] FALTA HAOS_TOKEN en .env')
@@ -70,6 +70,26 @@ ha.start()
 
 const app = new Hono()
 
+app.get('/health', (c) => {
+  let dbOk = true
+  try {
+    db.prepare('SELECT 1').get()
+  } catch {
+    dbOk = false
+  }
+  const mem = process.memoryUsage()
+  return c.json(
+    {
+      status: dbOk ? 'ok' : 'degraded',
+      uptime: Math.round(process.uptime()),
+      memory: { rss: mem.rss, heapUsed: mem.heapUsed },
+      db: dbOk ? 'connected' : 'error',
+      haos: haReady ? 'connected' : 'disconnected',
+    },
+    dbOk ? 200 : 503
+  )
+})
+
 // Security headers middleware
 app.use('*', async (c, next) => {
   c.header('X-Content-Type-Options', 'nosniff')
@@ -81,6 +101,7 @@ app.use('*', async (c, next) => {
   await next()
 })
 const sseClients = new Set()
+const MAX_SSE_CLIENTS = 10
 
 let lastPush = 0
 ha.on('entity', () => {
@@ -311,9 +332,19 @@ guarded.get('/solar/history', (c) => {
   if (!toParsed.success || !fromParsed.success) {
     return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
   }
+  const pageParsed = z
+    .object({
+      limit: z.coerce.number().int().min(1).max(1000).default(1000),
+      offset: z.coerce.number().int().min(0).default(0),
+    })
+    .safeParse({ limit: c.req.query('limit'), offset: c.req.query('offset') })
+  if (!pageParsed.success) {
+    return c.json({ error: 'paginación inválida' }, 400)
+  }
   const toFinal = toParsed.data || solar.todayStr()
   const fromFinal = fromParsed.data || shiftDays(toFinal, -364)
-  const rows = dailyRange(db, fromFinal, toFinal)
+  const total = dailyCount(db, fromFinal, toFinal)
+  const rows = dailyRange(db, fromFinal, toFinal, pageParsed.data.limit, pageParsed.data.offset)
   const days = rows.map((r) => ({
     date: r.date,
     productionKwh: r.production_kwh,
@@ -327,10 +358,13 @@ guarded.get('/solar/history', (c) => {
     autoconsumoPct:
       r.production_kwh > 0 ? Math.min(100, ((r.production_kwh - r.grid_export_kwh) / r.production_kwh) * 100) : 0,
   }))
-  return c.json({ from: fromFinal, to: toFinal, backfill: backfillState, days })
+  return c.json({ from: fromFinal, to: toFinal, backfill: backfillState, total, limit: pageParsed.data.limit, offset: pageParsed.data.offset, days })
 })
 
 guarded.get('/solar/stream', (c) => {
+  if (sseClients.size >= MAX_SSE_CLIENTS) {
+    return c.json({ error: 'demasiados clientes conectados' }, 429)
+  }
   c.header('X-Accel-Buffering', 'no')
   c.header('Cache-Control', 'no-cache')
   return streamSSE(c, async (stream) => {
@@ -399,6 +433,13 @@ serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => 
 })
 
 setInterval(() => cleanSessions(db), 3600 * 1000).unref()
+setInterval(() => {
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)')
+  } catch (err) {
+    console.error('[helios] wal_checkpoint error:', err.message)
+  }
+}, 3600 * 1000).unref()
 
 function scheduleNightly() {
   const now = new Date()
