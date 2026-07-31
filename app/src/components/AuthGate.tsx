@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import Login from '@/pages/Login';
 import BrandLogo from '@/components/BrandLogo';
 import i18n, { LANG_MODE_KEY } from '@/i18n';
+import { apiFetch } from '@/data/api-client';
 
 type AuthState = 'loading' | 'authed' | 'login';
 
@@ -20,16 +21,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/auth/me', { credentials: 'same-origin' })
-      .then(async (res) => {
+    apiFetch<{ user?: { language?: string } }>('/api/auth/me')
+      .then((data) => {
         if (cancelled) return;
-        if (res.ok) {
-          const data = (await res.json().catch(() => null)) as { user?: { language?: string } } | null;
-          applyProfileLanguage(data?.user);
-          setState('authed');
-        } else {
-          setState('login');
-        }
+        applyProfileLanguage(data?.user);
+        setState('authed');
       })
       .catch(() => {
         if (!cancelled) setState('login');

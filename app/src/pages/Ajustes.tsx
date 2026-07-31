@@ -35,6 +35,7 @@ import { heliosToast } from '@/lib/toast';
 import { LANG_MODE_KEY, resolveNavigatorLanguage } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-client';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
 
@@ -228,12 +229,7 @@ function LanguageSection() {
       setIsAuto(false);
       i18n.changeLanguage(value);
       // Persistir en el perfil (BD): el idioma elegido fuerza en cualquier dispositivo.
-      fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ language: value }),
-      }).catch(() => {});
+      apiPut('/api/auth/profile', { language: value }).catch(() => {});
     }
   };
 
@@ -276,9 +272,7 @@ function ConnectionSection() {
     if (testing) return;
     setTesting(true);
     try {
-      const res = await fetch('/api/solar/live', { credentials: 'same-origin' });
-      if (!res.ok) throw new Error();
-      const data = (await res.json()) as { connected?: boolean; station?: string };
+      const data = await apiFetch<{ connected?: boolean; station?: string }>('/api/solar/live');
       if (data.connected) {
         heliosToast(t('ajustes.connection.connectedToast', { station: data.station || t('ajustes.connection.stationFallback') }), { tone: 'success' });
       } else {
@@ -641,9 +635,18 @@ function DataSection() {
 
 // ── §7 Usuarios (solo admin) ────────────────────────────────────────────────
 
+interface AdminUser {
+  id: string;
+  username: string;
+  email?: string | null;
+  phone?: string | null;
+  language: string;
+  role: string;
+}
+
 function UsersSection() {
   const { t } = useTranslation();
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -661,16 +664,14 @@ function UsersSection() {
   ];
 
   const reload = () => {
-    fetch('/api/auth/users', { credentials: 'same-origin' })
-      .then((res) => res.json())
+    apiFetch<{ users?: AdminUser[] }>('/api/auth/users')
       .then((data) => setUsers(data.users || []))
       .catch(() => setUsers([]));
   };
 
   useEffect(() => {
     reload();
-    fetch('/api/auth/me', { credentials: 'same-origin' })
-      .then((res) => res.json())
+    apiFetch<{ authenticated?: boolean; user?: { id: string } }>('/api/auth/me')
       .then((data) => {
         if (data.authenticated && data.user) setMeId(data.user.id);
       })
@@ -683,25 +684,15 @@ function UsersSection() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ username, password, language, role }),
-      });
-      const body = (await res.json()) as { error?: string; ok?: boolean; user?: unknown };
-      if (!res.ok) {
-        setError(body?.error ?? t('common.error'));
-        return;
-      }
+      await apiPost('/api/auth/register', { username, password, language, role });
       heliosToast(t('admin.users.createdToast', { username }), { tone: 'success' });
       setUsername('');
       setPassword('');
       setLanguage('es');
       setRole('user');
       reload();
-    } catch {
-      setError(t('common.error'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('common.error'));
     } finally {
       setBusy(false);
     }
@@ -709,58 +700,43 @@ function UsersSection() {
 
   const changePassword = async (userId: string) => {
     if (newPwd.length < 6) return;
-    const res = await fetch(`/api/auth/users/${userId}/password`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ password: newPwd }),
-    });
-    if (res.ok) {
+    try {
+      await apiPut(`/api/auth/users/${userId}/password`, { password: newPwd });
       heliosToast(t('admin.users.passwordChanged'), { tone: 'success' });
       setPwdFor(null);
       setNewPwd('');
-    } else {
+    } catch {
       heliosToast(t('common.error'), { tone: 'warning' });
     }
   };
 
   const changeLanguage = async (userId: string, lang: string) => {
-    const res = await fetch(`/api/auth/users/${userId}/language`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ language: lang }),
-    });
-    if (res.ok) {
+    try {
+      await apiPut(`/api/auth/users/${userId}/language`, { language: lang });
       heliosToast(t('admin.users.languageChanged'), { tone: 'success' });
       setUsers((us) => us.map((u) => (u.id === userId ? { ...u, language: lang } : u)));
-    } else {
+    } catch {
       heliosToast(t('common.error'), { tone: 'warning' });
     }
   };
 
   const changeRole = async (userId: string, newRole: string) => {
-    const res = await fetch(`/api/auth/users/${userId}/role`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ role: newRole }),
-    });
-    if (res.ok) {
+    try {
+      await apiPut(`/api/auth/users/${userId}/role`, { role: newRole });
       heliosToast(t('admin.users.roleChanged'), { tone: 'success' });
       setUsers((us) => us.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
-    } else {
+    } catch {
       heliosToast(t('common.error'), { tone: 'warning' });
     }
   };
 
   const deleteUser = async (userId: string, name: string) => {
     if (!window.confirm(t('admin.users.deleteConfirm', { username: name }))) return;
-    const res = await fetch(`/api/auth/users/${userId}`, { method: 'DELETE', credentials: 'same-origin' });
-    if (res.ok) {
+    try {
+      await apiDelete(`/api/auth/users/${userId}`);
       heliosToast(t('admin.users.deleted'), { tone: 'success' });
       setUsers((us) => us.filter((u) => u.id !== userId));
-    } else {
+    } catch {
       heliosToast(t('common.error'), { tone: 'warning' });
     }
   };
@@ -1059,11 +1035,10 @@ export default function Ajustes() {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/auth/me', { credentials: 'same-origin' })
-      .then((res) => res.json())
+    apiFetch<{ authenticated?: boolean; user?: { role?: string } }>('/api/auth/me')
       .then((data) => {
         if (data.authenticated && data.user) {
-          setUserRole(data.user.role);
+          setUserRole(data.user.role ?? null);
         }
       })
       .catch(() => setUserRole(null));
@@ -1190,8 +1165,12 @@ export default function Ajustes() {
           >
             <button
               onClick={async () => {
-                await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
-                window.location.href = '/login';
+                // Contrato de sesión: logout = POST + evento unauthorized (AuthGate muestra Login). Sin recargar la SPA.
+                try {
+                  await apiPost('/api/auth/logout');
+                } finally {
+                  window.dispatchEvent(new Event('helios-unauthorized'));
+                }
               }}
               className="inline-flex h-12 items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-8 text-[15px] font-semibold text-destructive transition-all hover:bg-destructive/20 hover:scale-[1.02] active:scale-95"
             >
