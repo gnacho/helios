@@ -31,6 +31,7 @@ import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
 import HeliosToaster from '@/components/HeliosToaster';
 import { heliosToast } from '@/lib/toast';
+import { LANG_MODE_KEY, resolveNavigatorLanguage } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -207,6 +208,7 @@ function ThemeSection() {
 function LanguageSection() {
   const { i18n, t } = useTranslation();
   const currentLanguage = i18n.language;
+  const [isAuto, setIsAuto] = useState(() => localStorage.getItem(LANG_MODE_KEY) === 'auto');
 
   const languages = [
     { code: 'auto', name: t('ajustes.language.auto'), flag: '🌐' },
@@ -217,13 +219,17 @@ function LanguageSection() {
 
   const handleChange = (value: string) => {
     if (value === 'auto') {
-      i18n.changeLanguage(navigator.language.startsWith('zh') ? 'zh-CN' : navigator.language.startsWith('en') ? 'en' : 'es');
+      localStorage.setItem(LANG_MODE_KEY, 'auto');
+      setIsAuto(true);
+      i18n.changeLanguage(resolveNavigatorLanguage());
     } else {
+      localStorage.setItem(LANG_MODE_KEY, 'manual');
+      setIsAuto(false);
       i18n.changeLanguage(value);
     }
   };
 
-  const displayValue = currentLanguage === 'auto' || !currentLanguage ? 'auto' : currentLanguage;
+  const displayValue = isAuto ? 'auto' : currentLanguage;
 
   return (
     <div className="flex flex-col gap-4">

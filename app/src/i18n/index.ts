@@ -34,6 +34,32 @@ i18n
     },
   });
 
+/** Clave del modo de idioma elegido por el usuario: 'auto' | 'manual'. */
+export const LANG_MODE_KEY = 'heliosLangMode';
+
+/** Idioma de la app a partir del navegador/OS (zh→zh-CN, en→en, resto→es). */
+export function resolveNavigatorLanguage(): string {
+  const nav = navigator.language || 'es';
+  if (nav.startsWith('zh')) return 'zh-CN';
+  if (nav.startsWith('en')) return 'en';
+  return 'es';
+}
+
+// Modo "auto": re-resolver desde el navegador en CADA arranque (no se fija).
+// Auto si el usuario lo eligió, o si nunca ha elegido nada manualmente.
+const savedMode = localStorage.getItem(LANG_MODE_KEY);
+if (savedMode === 'auto' || (savedMode === null && !localStorage.getItem('i18nextLng'))) {
+  localStorage.setItem(LANG_MODE_KEY, 'auto');
+  void i18n.changeLanguage(resolveNavigatorLanguage());
+}
+
+// Si el SO/navegador cambia de idioma con la app abierta, seguirlo en modo auto.
+window.addEventListener('languagechange', () => {
+  if (localStorage.getItem(LANG_MODE_KEY) === 'auto') {
+    void i18n.changeLanguage(resolveNavigatorLanguage());
+  }
+});
+
 /** Locale de date-fns según el idioma activo de i18n. */
 export function dateLocale(): Locale {
   const lang = i18n.language || 'es';
