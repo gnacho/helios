@@ -364,6 +364,11 @@
     "line1": "Helios · 太阳能监控 — 通过 Home Assistant 本地获取数据",
     "line2": "Solis 4.4 kWp + Fox 2.7 kWp · Soluna 5 kWh"
   },
+  "stub": {
+    "title": "页面未找到",
+    "desc": "您访问的页面不存在。",
+    "body": "此页面正在建设中。"
+  },
   "login": {
     "title": "Helios",
     "subtitle": "您的家庭太阳能监控",

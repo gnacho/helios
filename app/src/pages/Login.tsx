@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { KeyRound, User } from 'lucide-react';
@@ -14,6 +15,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -39,6 +41,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
         if (i18n.language !== lang) await i18n.changeLanguage(lang);
         if (!localStorage.getItem(LANG_MODE_KEY)) localStorage.setItem(LANG_MODE_KEY, 'manual');
       }
+      navigate('/', { replace: true });
       onSuccess();
     } catch {
       setError(t('login.error'));

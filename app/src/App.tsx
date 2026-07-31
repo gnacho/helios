@@ -23,7 +23,7 @@ export default function App() {
               <Route path="/bateria" element={<Bateria />} />
               <Route path="/historico" element={<Historico />} />
               <Route path="/ajustes" element={<Ajustes />} />
-              <Route path="*" element={<StubPage title="No encontrado" description="La vista que buscas no existe." />} />
+              <Route path="*" element={<StubPage />} />
             </Routes>
           </Layout>
         </EnergyDataProvider>

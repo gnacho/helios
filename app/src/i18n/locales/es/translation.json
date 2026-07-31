@@ -366,6 +366,11 @@
     "line1": "Helios · Monitor Solar — datos locales vía Home Assistant",
     "line2": "Solis 4,4 kWp + Fox 2,7 kWp · Soluna 5 kWh"
   },
+  "stub": {
+    "title": "No encontrado",
+    "desc": "La vista que buscas no existe.",
+    "body": "Esta vista está en construcción."
+  },
   "login": {
     "title": "Helios",
     "subtitle": "Monitor solar de tu casa",
