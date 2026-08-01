@@ -18,11 +18,12 @@
       rel="stylesheet"
     />
     <script>
-      // Tema inicial antes del primer pintado (evita flash). Modos: auto | light | dark.
-      // Auto: claro entre 06:50 y 21:40 (mock julio, España).
+      // Preferencias antes del primer pintado (evita flash). Modos: auto | light | dark.
+      // Auto: claro entre 06:50 y 21:40 (mock julio, España). Clave nueva helios-theme-mode
+      // con fallback a la legacy helios-theme. Densidad compacta = root 13.5px.
       (function () {
         try {
-          var mode = localStorage.getItem('helios-theme') || 'auto';
+          var mode = localStorage.getItem('helios-theme-mode') || localStorage.getItem('helios-theme') || 'auto';
           var dark;
           if (mode === 'auto') {
             var now = new Date();
@@ -34,6 +35,8 @@
           if (dark) document.documentElement.classList.add('dark');
           var meta = document.getElementById('meta-theme-color');
           if (meta) meta.setAttribute('content', dark ? '#080D1A' : '#F4F6FA');
+          if (localStorage.getItem('helios-density') === 'compact') document.documentElement.style.fontSize = '13.5px';
+          if (localStorage.getItem('helios-reduce-motion') === '1') document.documentElement.classList.add('reduce-motion');
         } catch (e) {}
       })();
       (function () {

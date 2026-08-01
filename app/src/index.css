@@ -4,7 +4,25 @@
 
 @layer base {
   :root {
-    /* ── Helios · tema claro (día) ─────────────────────────── */
+    /* ── Tokens canónicos webapp-shell (RGB triplets, claro) ──
+       Sufijo -rgb: los nombres sin sufijo están ocupados por los
+       legacy hex (gráficas SVG) y los HSL de shadcn. */
+    --canvas-rgb: 244 246 250;
+    --surface-rgb: 255 255 255;
+    --elevated-rgb: 238 241 246;
+    --hover-rgb: 226 232 240;
+    --border-rgb: 227 232 240;
+    --border-strong-rgb: 203 213 225;
+    --text-primary-rgb: 12 20 37;
+    --text-secondary-rgb: 91 107 132;
+    --text-muted-rgb: 148 163 184;
+    --accent-rgb: 245 158 11; /* ámbar marca Helios */
+    --ok-rgb: 16 185 129;
+    --warn-rgb: 217 119 6;
+    --danger-rgb: 244 63 94;
+    --info-rgb: 14 165 233;
+
+    /* ── Helios · tema claro (día) — legacy hex (SVG/gráficas) ── */
     --bg: #F4F6FA;
     --surface: #FFFFFF;
     --surface-2: #EEF1F6;
@@ -54,7 +72,23 @@
   }
 
   .dark {
-    /* ── Helios · tema oscuro (noche) ──────────────────────── */
+    /* ── Tokens canónicos webapp-shell (RGB triplets, oscuro) ── */
+    --canvas-rgb: 8 13 26;
+    --surface-rgb: 16 24 40;
+    --elevated-rgb: 24 35 56;
+    --hover-rgb: 30 43 66;
+    --border-rgb: 30 43 66;
+    --border-strong-rgb: 42 58 82;
+    --text-primary-rgb: 233 238 247;
+    --text-secondary-rgb: 147 161 184;
+    --text-muted-rgb: 92 107 133;
+    --accent-rgb: 251 191 36;
+    --ok-rgb: 52 211 153;
+    --warn-rgb: 251 191 36;
+    --danger-rgb: 251 113 133;
+    --info-rgb: 56 189 248;
+
+    /* ── Helios · tema oscuro (noche) — legacy hex ── */
     --bg: #080D1A;
     --surface: #101828;
     --surface-2: #182338;
@@ -180,5 +214,21 @@
   /* Gradiente de marca: logo, botón primario, marcador "ahora" */
   .bg-brand-gradient {
     background-image: linear-gradient(135deg, #F59E0B, #F97316);
+  }
+}
+
+/* Reducir animaciones: switch de Ajustes (clase en <html>) + SO */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
