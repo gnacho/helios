@@ -23,12 +23,20 @@ const { HAClient } = await import('./ha.js')
 const dbModule = await import('./db.js')
 const solar = await import('./solar.js')
 const auth = await import('./auth.js')
+const push = await import('./push.js')
+const { registerPushRoutes } = await import('./routes-push.js')
+const alerts = await import('./alerts.js')
 const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
 const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema } = schemas
 
 const db = dbModule.openDb(config.dataDir)
 const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet, audit, auditRange, auditCount, purgeAudit } = dbModule
 await auth.ensureBootstrapAdmin(db)
+push.configurePush({
+  publicKey: process.env.VAPID_PUBLIC_KEY,
+  privateKey: process.env.VAPID_PRIVATE_KEY,
+  subject: process.env.VAPID_SUBJECT,
+})
 
 const ha = new HAClient(config.haosUrl, config.haosToken)
 let haReady = false
@@ -325,6 +333,7 @@ app.post('/api/auth/recover', async (c) => {
 
 const guarded = new Hono()
 guarded.use('*', auth.requireAuth(db))
+registerPushRoutes(guarded, db)
 
 guarded.get('/solar/live', (c) => {
   return c.json({ connected: haReady, ...solar.computeLive(ha) })
@@ -464,12 +473,24 @@ serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => 
 })
 
 setInterval(() => cleanSessions(db), 3600 * 1000).unref()
+// Motor de alertas push (inversor/corte red/batería) cada minuto + resumen
+// diario a las 21:00. Flush de la cola de quiet hours con el tick horario.
+const alertsEngine = alerts.createAlertsEngine({ db, ha, solar })
+setInterval(() => {
+  try {
+    alertsEngine.tick()
+  } catch (err) {
+    console.error('[helios] alerts tick error:', err.message)
+  }
+}, 60 * 1000).unref()
+alerts.scheduleResumenDiario(db, ha, solar)
 setInterval(() => {
   try {
     db.pragma('wal_checkpoint(TRUNCATE)')
   } catch (err) {
     console.error('[helios] wal_checkpoint error:', err.message)
   }
+  push.flushNotificationQueue(db).catch((err) => console.error('[helios] flush cola push error:', err.message))
 }, 3600 * 1000).unref()
 
 function scheduleNightly() {

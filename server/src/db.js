@@ -49,6 +49,39 @@ export function initSchema(db) {
       detail TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts);
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      endpoint TEXT UNIQUE NOT NULL,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      user_agent TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS notification_preferences (
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      min_severity TEXT NOT NULL DEFAULT 'normal',
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, tipo)
+    );
+    CREATE TABLE IF NOT EXISTS notification_quiet_hours (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      quiet_start INTEGER,
+      quiet_end INTEGER,
+      tz TEXT NOT NULL DEFAULT 'Europe/Madrid',
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS notification_queue (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'normal',
+      datos_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL
+    );
   `)
   const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
   if (!cols.includes('solis_kwh')) db.exec('ALTER TABLE daily ADD COLUMN solis_kwh REAL')

@@ -294,6 +294,7 @@
       "datos": "Datos",
       "usuarios": "Usuarios",
       "app": "Llévalo en tu móvil",
+      "notificaciones": "Notificaciones",
       "appShort": "App",
       "acerca": "Acerca de",
       "seguridad": "Seguridad",
@@ -389,7 +390,27 @@
       "comfortable": "Cómoda",
       "compact": "Compacta"
     },
-    "reduceMotion": "Reducir animaciones"
+    "reduceMotion": "Reducir animaciones",
+    "notif": {
+      "descripcion": "Recibe avisos en este dispositivo aunque la app esté cerrada: inversor, cortes de red, batería y el resumen del día.",
+      "activar": "Activar alertas",
+      "desactivar": "Desactivar alertas",
+      "activadas": "Alertas activadas en este dispositivo",
+      "requiereHttps": "Las notificaciones push necesitan HTTPS (o localhost). Con acceso por IP local (http) están dormidas y se activarán solas cuando la app se sirva por HTTPS.",
+      "iosInstalacion": "En iPhone/iPad las notificaciones solo funcionan con la app instalada: ábrela en Safari y usa «Añadir a pantalla de inicio».",
+      "noConfigurado": "El servidor no tiene claves VAPID configuradas; las alertas push están desactivadas.",
+      "noSoportado": "Este navegador no soporta notificaciones push.",
+      "permisoDenegado": "El permiso de notificaciones está bloqueado en el navegador. Actívalo en los ajustes del sitio para recibir alertas.",
+      "tiposTitulo": "Alertas que quieres recibir",
+      "tipos": {
+        "inversor_offline": "Inversor offline",
+        "inversor_ok": "Inversor recuperado",
+        "corte_red": "Corte de red",
+        "corte_red_ok": "Red recuperada",
+        "bateria_baja": "Batería baja",
+        "resumen_diario": "Resumen diario (21:00)"
+      }
+    }
   },
   "footer": {
     "line1": "Helios · Monitor Solar — datos locales vía Home Assistant",

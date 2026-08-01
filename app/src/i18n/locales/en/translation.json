@@ -294,6 +294,7 @@
       "datos": "Data",
       "usuarios": "Users",
       "app": "Take it on your phone",
+      "notificaciones": "Notifications",
       "appShort": "App",
       "acerca": "About",
       "seguridad": "Security",
@@ -389,7 +390,27 @@
       "comfortable": "Comfortable",
       "compact": "Compact"
     },
-    "reduceMotion": "Reduce animations"
+    "reduceMotion": "Reduce animations",
+    "notif": {
+      "descripcion": "Get alerts on this device even when the app is closed: inverter, grid outages, battery and the daily summary.",
+      "activar": "Enable alerts",
+      "desactivar": "Disable alerts",
+      "activadas": "Alerts enabled on this device",
+      "requiereHttps": "Push notifications require HTTPS (or localhost). Over local IP access (http) they stay dormant and will activate by themselves once the app is served over HTTPS.",
+      "iosInstalacion": "On iPhone/iPad notifications only work with the installed app: open it in Safari and use “Add to Home Screen”.",
+      "noConfigurado": "The server has no VAPID keys configured; push alerts are disabled.",
+      "noSoportado": "This browser does not support push notifications.",
+      "permisoDenegado": "Notification permission is blocked in the browser. Enable it in the site settings to receive alerts.",
+      "tiposTitulo": "Alerts you want to receive",
+      "tipos": {
+        "inversor_offline": "Inverter offline",
+        "inversor_ok": "Inverter recovered",
+        "corte_red": "Grid outage",
+        "corte_red_ok": "Grid restored",
+        "bateria_baja": "Low battery",
+        "resumen_diario": "Daily summary (9:00 PM)"
+      }
+    }
   },
   "footer": {
     "line1": "Helios · Solar Monitor — local data via Home Assistant",

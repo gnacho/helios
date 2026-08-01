@@ -292,6 +292,7 @@
       "datos": "数据",
       "usuarios": "用户",
       "app": "手机使用",
+      "notificaciones": "通知",
       "appShort": "应用",
       "acerca": "关于",
       "seguridad": "安全",
@@ -387,7 +388,27 @@
       "comfortable": "舒适",
       "compact": "紧凑"
     },
-    "reduceMotion": "减少动画"
+    "reduceMotion": "减少动画",
+    "notif": {
+      "descripcion": "即使应用关闭也能在此设备上接收提醒：逆变器、电网停电、电池和每日总结。",
+      "activar": "开启提醒",
+      "desactivar": "关闭提醒",
+      "activadas": "此设备已开启提醒",
+      "requiereHttps": "推送通知需要 HTTPS（或 localhost）。通过本地 IP（http）访问时处于休眠状态，应用改为 HTTPS 后会自动启用。",
+      "iosInstalacion": "在 iPhone/iPad 上，通知仅对已安装的应用有效：请在 Safari 中打开并选择“添加到主屏幕”。",
+      "noConfigurado": "服务器未配置 VAPID 密钥，推送提醒已停用。",
+      "noSoportado": "此浏览器不支持推送通知。",
+      "permisoDenegado": "浏览器已阻止通知权限。请在网站设置中允许以接收提醒。",
+      "tiposTitulo": "要接收的提醒",
+      "tipos": {
+        "inversor_offline": "逆变器离线",
+        "inversor_ok": "逆变器已恢复",
+        "corte_red": "电网停电",
+        "corte_red_ok": "电网已恢复",
+        "bateria_baja": "电池电量低",
+        "resumen_diario": "每日总结（21:00）"
+      }
+    }
   },
   "footer": {
     "line1": "Helios · 太阳能监控 — 通过 Home Assistant 本地获取数据",

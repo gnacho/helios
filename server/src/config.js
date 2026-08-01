@@ -17,6 +17,9 @@ const envSchema = z.object({
   PRICE_IMPORT_EUR: z.coerce.number().default(0.15),
   PRICE_EXPORT_EUR: z.coerce.number().default(0.08),
   CO2_KG_PER_KWH: z.coerce.number().default(0.25),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)

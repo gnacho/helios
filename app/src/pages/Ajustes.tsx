@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import {
   BatteryCharging,
+  Bell,
   Check,
   HeartPulse,
   House,
@@ -32,6 +33,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
+import { usePush } from '@/hooks/usePush';
 import BrandLogo from '@/components/BrandLogo';
 import { heliosToast } from '@/lib/toast';
 import { LANG_MODE_KEY, resolveNavigatorLanguage, dateLocale, numLocale } from '@/i18n';
@@ -1417,6 +1419,132 @@ function InstallSection({ state, install }: { state: InstallState; install: () =
 
 // ── §9 Acerca de ─────────────────────────────────────────────────────────────
 
+// ── § Notificaciones push ────────────────────────────────────────────────────
+
+const TIPOS_NOTIF = [
+  'inversor_offline',
+  'inversor_ok',
+  'corte_red',
+  'corte_red_ok',
+  'bateria_baja',
+  'resumen_diario',
+] as const;
+
+function NotificationsSection() {
+  const { t } = useTranslation();
+  const { soporte, estado, activar, desactivar } = usePush();
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
+
+  useEffect(() => {
+    if (!estado.suscrito) {
+      setPrefs(null);
+      return;
+    }
+    apiFetch<{ prefs: Record<string, boolean> }>('/api/push/preferences')
+      .then((r) => setPrefs(r.prefs))
+      .catch(() => setPrefs(null));
+  }, [estado.suscrito]);
+
+  const cambiarPref = (tipo: string, enabled: boolean) => {
+    setPrefs((p) => (p ? { ...p, [tipo]: enabled } : p));
+    apiPut('/api/push/preferences', { tipo, enabled }).catch(() => {
+      setPrefs((p) => (p ? { ...p, [tipo]: !enabled } : p)); // rollback optimista
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-[13px] leading-snug text-muted">{t('ajustes.notif.descripcion')}</p>
+
+      {estado.cargando ? (
+        <div className="h-10 animate-pulse rounded-xl bg-surface-2" />
+      ) : soporte === 'requiere-https' ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-[13px] text-amber-600 dark:text-amber-400">
+          {t('ajustes.notif.requiereHttps')}
+        </p>
+      ) : soporte === 'ios-necesita-instalacion' ? (
+        <p className="rounded-xl border border-app bg-surface-2 px-3.5 py-2.5 text-[13px] text-muted">
+          {t('ajustes.notif.iosInstalacion')}
+        </p>
+      ) : soporte === 'no-configurado' ? (
+        <p className="rounded-xl border border-app bg-surface-2 px-3.5 py-2.5 text-[13px] text-muted">
+          {t('ajustes.notif.noConfigurado')}
+        </p>
+      ) : soporte === 'no-soportado' ? (
+        <p className="rounded-xl border border-app bg-surface-2 px-3.5 py-2.5 text-[13px] text-muted">
+          {t('ajustes.notif.noSoportado')}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {estado.suscrito ? (
+              <button
+                onClick={() => desactivar()}
+                disabled={estado.cargando}
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-app bg-surface px-5 text-sm font-semibold text-app transition-colors hover:bg-surface-2 disabled:opacity-50"
+              >
+                <Bell size={16} />
+                {t('ajustes.notif.desactivar')}
+              </button>
+            ) : (
+              <button
+                onClick={() => activar()}
+                disabled={estado.cargando}
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/15 px-5 text-sm font-semibold text-amber-600 transition-colors hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-400"
+              >
+                <Bell size={16} />
+                {t('ajustes.notif.activar')}
+              </button>
+            )}
+            {estado.suscrito && (
+              <span className="inline-flex items-center gap-1.5 text-[13px] text-emerald-500">
+                <Check size={14} />
+                {t('ajustes.notif.activadas')}
+              </span>
+            )}
+          </div>
+          {estado.permiso === 'denied' && (
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-[13px] text-destructive">
+              {t('ajustes.notif.permisoDenegado')}
+            </p>
+          )}
+          {estado.error && <p className="text-[13px] text-destructive">{estado.error}</p>}
+
+          {estado.suscrito && prefs && (
+            <div className="flex flex-col gap-3 border-t border-app pt-4">
+              <p className="text-[13px] font-medium text-muted">{t('ajustes.notif.tiposTitulo')}</p>
+              {TIPOS_NOTIF.map((tipo) => (
+                <div key={tipo} className="flex items-center justify-between">
+                  <span className="text-sm text-app">{t(`ajustes.notif.tipos.${tipo}`)}</span>
+                  <button
+                    role="switch"
+                    aria-checked={prefs[tipo] !== false}
+                    aria-label={t(`ajustes.notif.tipos.${tipo}`)}
+                    onClick={() => cambiarPref(tipo, prefs[tipo] === false)}
+                    className={cn(
+                      'relative h-6 w-11 rounded-full transition-colors',
+                      prefs[tipo] !== false ? 'bg-amber-500' : 'bg-surface-2',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                        prefs[tipo] !== false ? 'translate-x-[22px]' : 'translate-x-0.5',
+                      )}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── § Acerca de ──────────────────────────────────────────────────────────────
+
 function AboutSection() {
   const { t } = useTranslation();
   return (
@@ -1520,6 +1648,10 @@ export default function Ajustes() {
 
         <Section id="precios" title={t('ajustes.sections.precios')}>
           <PricesSection />
+        </Section>
+
+        <Section id="notificaciones" title={t('ajustes.sections.notificaciones')}>
+          <NotificationsSection />
         </Section>
 
         {userRole === 'admin' ? (
