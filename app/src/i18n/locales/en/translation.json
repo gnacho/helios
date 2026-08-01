@@ -293,7 +293,8 @@
       "app": "Take it on your phone",
       "appShort": "App",
       "acerca": "About",
-      "seguridad": "Security"
+      "seguridad": "Security",
+      "conexionDatos": "Connection & data"
     },
     "theme": {
       "autoNote": "In Auto mode, the interface uses the light theme between sunrise (06:50) and sunset (21:40).",
@@ -333,9 +334,10 @@
       "clearLocation": "Clear location (use Home Assistant's)",
       "sunTodayAt": "Sun today in {{location}}: ↑ {{sunrise}} · ↓ {{sunset}}",
       "sunTodayHa": "Using Home Assistant location: ↑ {{sunrise}} · ↓ {{sunset}}",
-      "solisLine1": "10 × 440 W · 4.4 kWp",
-      "solisLine2": "Soluna 5 kWh battery",
-      "foxLine1": "6 × 450 W · 2.7 kWp"
+      "panels": "{{count}} panels × {{watts}} W",
+      "battery": "Battery {{name}} · {{kwh}} kWh",
+      "theoretical": "Theoretical capacity",
+      "totalLabel": "Total theoretical capacity"
     },
     "prices": {
       "buy": "Purchase price",

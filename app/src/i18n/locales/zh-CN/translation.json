@@ -291,7 +291,8 @@
       "app": "手机使用",
       "appShort": "应用",
       "acerca": "关于",
-      "seguridad": "安全"
+      "seguridad": "安全",
+      "conexionDatos": "连接与数据"
     },
     "theme": {
       "autoNote": "自动模式下，界面在日出（06:50）和日落（21:40）之间使用浅色主题。",
@@ -331,9 +332,10 @@
       "clearLocation": "清除位置（使用 Home Assistant 的位置）",
       "sunTodayAt": "今天{{location}}的日照：↑ {{sunrise}} · ↓ {{sunset}}",
       "sunTodayHa": "使用 Home Assistant 的位置：↑ {{sunrise}} · ↓ {{sunset}}",
-      "solisLine1": "10 × 440 W · 4.4 kWp",
-      "solisLine2": "Soluna 5 kWh 电池",
-      "foxLine1": "6 × 450 W · 2.7 kWp"
+      "panels": "{{count}} 块 × {{watts}} W",
+      "battery": "电池 {{name}} · {{kwh}} kWh",
+      "theoretical": "理论容量",
+      "totalLabel": "总理论容量"
     },
     "prices": {
       "buy": "购电价格",

@@ -293,7 +293,8 @@
       "app": "Llévalo en tu móvil",
       "appShort": "App",
       "acerca": "Acerca de",
-      "seguridad": "Seguridad"
+      "seguridad": "Seguridad",
+      "conexionDatos": "Conexión y datos"
     },
     "theme": {
       "autoNote": "En modo Auto, la interfaz usa el tema claro entre el amanecer (06:50) y el atardecer (21:40).",
@@ -333,9 +334,10 @@
       "clearLocation": "Quitar ubicación (usar la de Home Assistant)",
       "sunTodayAt": "Sol hoy en {{location}}: ↑ {{sunrise}} · ↓ {{sunset}}",
       "sunTodayHa": "Usando la ubicación de Home Assistant: ↑ {{sunrise}} · ↓ {{sunset}}",
-      "solisLine1": "10 × 440 W · 4,4 kWp",
-      "solisLine2": "Batería Soluna 5 kWh",
-      "foxLine1": "6 × 450 W · 2,7 kWp"
+      "panels": "{{count}} placas × {{watts}} W",
+      "battery": "Batería {{name}} · {{kwh}} kWh",
+      "theoretical": "Capacidad teórica",
+      "totalLabel": "Capacidad teórica total"
     },
     "prices": {
       "buy": "Precio de compra",

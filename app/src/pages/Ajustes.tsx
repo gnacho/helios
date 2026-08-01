@@ -9,6 +9,7 @@ import {
   HeartPulse,
   House,
   KeyRound,
+  LayoutGrid,
   LogOut,
   MapPin,
   Moon,
@@ -34,7 +35,7 @@ import { useEnergySettings } from '@/hooks/useEnergySettings';
 import HeliosToaster from '@/components/HeliosToaster';
 import BrandLogo from '@/components/BrandLogo';
 import { heliosToast } from '@/lib/toast';
-import { LANG_MODE_KEY, resolveNavigatorLanguage, dateLocale } from '@/i18n';
+import { LANG_MODE_KEY, resolveNavigatorLanguage, dateLocale, numLocale } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { THEME_SWATCHES } from '@/lib/colors';
@@ -458,61 +459,96 @@ function LocationField() {
   );
 }
 
+const INVERTERS = [
+  {
+    key: 'solis',
+    name: 'Solis S5-EH1P5K-L',
+    color: 'var(--c-solis)',
+    panels: 10,
+    panelW: 440,
+    kwp: 4.4,
+    battery: { name: 'Soluna', kwh: 5 },
+  },
+  {
+    key: 'fox',
+    name: 'Fox H1-3.0-E',
+    color: 'var(--c-fox)',
+    panels: 6,
+    panelW: 450,
+    kwp: 2.7,
+    battery: null,
+  },
+] as const;
+
+const TOTAL_KWP = INVERTERS.reduce((acc, inv) => acc + inv.kwp, 0);
+
+const fmtKwp = (v: number) => new Intl.NumberFormat(numLocale(), { maximumFractionDigits: 1 }).format(v);
+
 function InstallationSection() {
   const [settings, update] = useEnergySettings();
   const { t } = useTranslation();
 
-  const chips = [
-    {
-      key: 'solis',
-      name: 'Solis S5-EH1P5K-L',
-      lines: [t('ajustes.install.solisLine1'), t('ajustes.install.solisLine2')],
-      color: 'var(--c-solis)',
-      icon: Zap,
-      extraIcon: BatteryCharging,
-      from: -24,
-    },
-    {
-      key: 'fox',
-      name: 'Fox H1-3.0-E',
-      lines: [t('ajustes.install.foxLine1')],
-      color: 'var(--c-fox)',
-      icon: Zap,
-      extraIcon: null,
-      from: 24,
-    },
-  ];
-
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 md:grid-cols-2">
-        {chips.map((c, i) => (
+        {INVERTERS.map((inv, i) => (
           <motion.div
-            key={c.key}
-            initial={{ opacity: 0, x: c.from }}
+            key={inv.key}
+            initial={{ opacity: 0, x: i === 0 ? -24 : 24 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: i * 0.12, ease: easeOutQuart }}
             className="group rounded-xl border-2 bg-surface p-4 transition-colors"
-            style={{ borderColor: `color-mix(in srgb, ${c.color} 35%, transparent)` }}
+            style={{ borderColor: `color-mix(in srgb, ${inv.color} 35%, transparent)` }}
           >
-            <div className="mb-2 flex items-center gap-2">
+            <div className="mb-3 flex items-center gap-2">
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-lg transition-transform group-hover:scale-110"
-                style={{ backgroundColor: `color-mix(in srgb, ${c.color} 12%, transparent)`, color: c.color }}
+                style={{ backgroundColor: `color-mix(in srgb, ${inv.color} 12%, transparent)`, color: inv.color }}
               >
-                <c.icon size={16} strokeWidth={2.2} />
+                <Zap size={16} strokeWidth={2.2} />
               </span>
-              <p className="font-display text-[15px] font-semibold text-app">{c.name}</p>
+              <p className="font-display text-[15px] font-semibold text-app">{inv.name}</p>
             </div>
-            {c.lines.map((l) => (
-              <p key={l} className="text-[13px] leading-relaxed text-muted">
-                {l}
+
+            {/* Capacidad teórica del inversor, en grande */}
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.install.theoretical')}</p>
+            <p className="font-display text-3xl font-bold leading-tight text-app">
+              {fmtKwp(inv.kwp)} <span className="text-base font-medium text-faint">kWp</span>
+            </p>
+
+            <div className="mt-3 flex flex-col gap-2">
+              <p className="flex items-center gap-2 text-[13px] text-muted">
+                <LayoutGrid size={15} className="shrink-0 text-faint" />
+                {t('ajustes.install.panels', { count: inv.panels, watts: inv.panelW })}
               </p>
-            ))}
+              {inv.battery && (
+                <p className="flex items-center gap-2 text-[13px] text-muted">
+                  <BatteryCharging size={15} className="shrink-0 text-faint" />
+                  {t('ajustes.install.battery', { name: inv.battery.name, kwh: inv.battery.kwh })}
+                </p>
+              )}
+            </div>
           </motion.div>
         ))}
       </div>
+
+      {/* Capacidad teórica TOTAL, en grande */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.2, ease: easeOutQuart }}
+        className="flex items-center justify-center gap-4 rounded-2xl border border-app bg-surface-2 px-6 py-5"
+      >
+        <Sun size={30} className="shrink-0 text-amber-500" />
+        <div className="text-center">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.install.totalLabel')}</p>
+          <p className="font-display text-4xl font-bold leading-tight text-app">
+            {fmtKwp(TOTAL_KWP)} <span className="text-lg font-medium text-faint">kWp</span>
+          </p>
+        </div>
+      </motion.div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -1313,18 +1349,21 @@ export default function Ajustes() {
           <ThemeSection />
         </Section>
 
-        {/* Idioma + conexión + datos en la misma horizontal (≥lg) */}
-        <div className="grid items-start gap-5 lg:grid-cols-3">
+        {/* Idioma + conexión/datos (unificadas) en la misma horizontal (≥lg) */}
+        <div className="grid items-stretch gap-5 lg:grid-cols-2">
           <Section id="idioma" title={t('ajustes.sections.idioma')}>
             <LanguageSection />
           </Section>
 
-          <Section id="conexion" title={t('ajustes.sections.conexion')} badge={<HealthBadge ok={connectionStatus === 'connected'} />}>
-            <ConnectionSection />
-          </Section>
-
-          <Section id="datos" title={t('ajustes.sections.datos')} badge={<HealthBadge ok={dataOk} />}>
-            <DataSection />
+          <Section
+            id="conexion"
+            title={t('ajustes.sections.conexionDatos')}
+            badge={<HealthBadge ok={connectionStatus === 'connected' && dataOk} />}
+          >
+            <div className="flex flex-col gap-4">
+              <ConnectionSection />
+              <DataSection />
+            </div>
           </Section>
         </div>
 
