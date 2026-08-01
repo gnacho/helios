@@ -43,11 +43,15 @@ echo "5. Instalando dependencias..."
 ssh $CT_USER@$CT_IP "cd /opt/$SERVICE_NAME/server && npm install --production"
 
 # 6. Crear .env
+if [ -z "$HAOS_TOKEN" ]; then
+    echo "ERROR: exporta HAOS_TOKEN antes de ejecutar (token de larga duración de HAOS)"
+    exit 1
+fi
 echo "6. Creando .env..."
 ssh $CT_USER@$CT_IP "cat > /opt/$SERVICE_NAME/server/.env << 'EOF'
 PORT=$PORT
 HAOS_URL=http://192.168.10.244:8123
-HAOS_TOKEN=HAOS_TOKEN_ELIMINADO_POR_REWRITE
+HAOS_TOKEN=$HAOS_TOKEN
 AUTH_USER=admin
 AUTH_PASS=$(openssl rand -hex 16)
 SESSION_SECRET=$(openssl rand -hex 32)
