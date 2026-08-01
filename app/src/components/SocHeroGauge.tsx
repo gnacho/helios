@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useEnergyColors } from '@/lib/colors';
 import { prefersReducedMotion } from '@/lib/useAnimatedNumber';
 import { fmtEnergy, fmtPct } from '@/lib/format';
+import { BATTERY_RESERVE_PCT as RESERVE_PCT } from '@/lib/thresholds';
 
 gsap.registerPlugin(useGSAP);
 
@@ -33,7 +34,6 @@ const CY = 132;
 const R = 100;
 const START = 150;
 const SWEEP = 240;
-const RESERVE_PCT = 20;
 
 /**
  * Gauge SOC héroe (página /bateria) — §1 de bateria.md.

@@ -7,7 +7,7 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'node_modules', 'src/components/ui/**']), // ui/ = shadcn vendorizado
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -20,6 +20,11 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+    rules: {
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // react-hooks v7: demasiado estricta para patrones de inicialización legítimos
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ])
