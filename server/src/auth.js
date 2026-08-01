@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import { createSession, getSession, deleteSession, createUser, getUserByUsername, getUserById, updateUser } from './db.js'
 import { config } from './config.js'
@@ -97,7 +97,11 @@ export async function handleLogin(db, c, body) {
   
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) return null
-  
+
+  // Rotación de sesión: invalida la sesión previa de la cookie (anti session-fixation)
+  const previous = sessionIdFromCookie(db, c)
+  if (previous) deleteSession(db, previous.id)
+
   const id = createSession(db, user.id, config.sessionTtlMs, c.req.header('user-agent'))
   const value = `${id}.${sign(db, id)}`
   const isHttps = c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https://')

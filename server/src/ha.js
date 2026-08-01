@@ -62,7 +62,8 @@ export class HAClient extends EventEmitter {
     this.pending.clear()
     if (wasConnected) this.emit('disconnected')
     if (this.stopped) return
-    const delay = Math.min(30000, 1000 * 2 ** Math.min(this.retries, 5))
+    const base = Math.min(30000, 1000 * 2 ** Math.min(this.retries, 5))
+    const delay = Math.round(base * (0.5 + Math.random()))
     this.retries += 1
     setTimeout(() => this._connect(), delay)
   }

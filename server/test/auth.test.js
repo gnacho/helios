@@ -3,11 +3,14 @@ import Database from 'better-sqlite3'
 import { initSchema, getUserByUsername } from '../src/db.js'
 import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin, ensureBootstrapAdmin, changeOwnPassword } from '../src/auth.js'
 
-function mockContext(ip) {
+function mockContext(ip, cookie) {
+  const headers = new Headers()
+  if (cookie) headers.set('cookie', cookie)
   return {
     req: {
       header: (name) => (name === 'x-forwarded-for' ? ip : undefined),
       url: 'http://localhost/',
+      raw: { headers },
     },
     header: () => {},
     res: { headers: { append: () => {} } },

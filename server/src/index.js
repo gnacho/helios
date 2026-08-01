@@ -1,8 +1,9 @@
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const envPath = path.join(dirname, '..', '.env')
@@ -296,6 +297,21 @@ app.delete('/api/auth/users/:id', (c) => {
   db.prepare('DELETE FROM users WHERE id = ?').run(userId)
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
   return c.json({ ok: true })
+})
+
+// Recovery de admin: SOLO conexión directa desde localhost (sin cabeceras de proxy).
+// Uso: curl -X POST http://127.0.0.1:<puerto>/api/auth/recover desde SSH en el host.
+app.post('/api/auth/recover', async (c) => {
+  const ip = c.env?.incoming?.socket?.remoteAddress
+  const proxied = c.req.header('x-forwarded-for') || c.req.header('x-real-ip')
+  if (proxied || (ip !== '127.0.0.1' && ip !== '::1' && ip !== '::ffff:127.0.0.1')) {
+    return c.json({ error: 'solo desde localhost' }, 403)
+  }
+  const temp = crypto.randomBytes(9).toString('base64url')
+  const hash = await bcrypt.hash(temp, 10)
+  db.prepare('UPDATE users SET password_hash = ? WHERE role = ?').run(hash, 'admin')
+  console.log('[helios] recovery: contraseña de admins reseteada (temporal)')
+  return c.json({ ok: true, tempPassword: temp })
 })
 
 const guarded = new Hono()
