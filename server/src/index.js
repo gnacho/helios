@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import crypto from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -22,7 +23,7 @@ const { HAClient } = await import('./ha.js')
 const dbModule = await import('./db.js')
 const solar = await import('./solar.js')
 const auth = await import('./auth.js')
-const schemas = await import('../../shared/schemas.js')
+const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
 const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema } = schemas
 
 const db = dbModule.openDb(config.dataDir)

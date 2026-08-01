@@ -9,6 +9,7 @@
     "lint": "eslint . && node scripts/theme-audit.mjs",
     "format": "prettier --write .",
     "check:bundlesize": "node scripts/check-bundle-size.mjs",
+    "test:e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
