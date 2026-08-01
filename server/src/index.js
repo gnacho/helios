@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import crypto from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -23,6 +22,8 @@ const { HAClient } = await import('./ha.js')
 const dbModule = await import('./db.js')
 const solar = await import('./solar.js')
 const auth = await import('./auth.js')
+const schemas = await import('../../shared/schemas.js')
+const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema } = schemas
 
 const db = dbModule.openDb(config.dataDir)
 const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet, audit, auditRange, auditCount, purgeAudit } = dbModule
@@ -107,28 +108,6 @@ ha.on('entity', () => {
       c.write(payload)
     } catch {}
   }
-})
-
-// Validation schemas
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
-const loginSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1)
-})
-const registerSchema = z.object({
-  username: z.string().min(3).max(50),
-  password: z.string().min(6),
-  language: z.string().regex(/^(es|en|zh-CN)$/).optional(),
-  role: z.enum(['user', 'admin']).optional()
-})
-const profileSchema = z.object({
-  email: z.string().email().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  language: z.string().regex(/^(es|en|zh-CN)$/).optional()
-})
-const passwordSchema = z.object({
-  current: z.string().min(1),
-  password: z.string().min(6)
 })
 
 app.post('/api/auth/login', async (c) => {
@@ -244,7 +223,7 @@ app.put('/api/auth/users/:id/password', async (c) => {
   
   const userId = c.req.param('id')
   const body = await c.req.json().catch(() => null)
-  const parsed = z.object({ password: z.string().min(6) }).safeParse(body)
+  const parsed = adminPasswordSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   
   const hash = await bcrypt.hash(parsed.data.password, 10)
@@ -263,7 +242,7 @@ app.put('/api/auth/users/:id/language', async (c) => {
   
   const userId = c.req.param('id')
   const body = await c.req.json().catch(() => null)
-  const parsed = z.object({ language: z.string().regex(/^(es|en|zh-CN)$/) }).safeParse(body)
+  const parsed = adminLanguageSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   
   db.prepare('UPDATE users SET language = ? WHERE id = ?').run(parsed.data.language, userId)
@@ -284,7 +263,7 @@ app.put('/api/auth/users/:id/role', async (c) => {
     return c.json({ error: 'no puedes cambiar tu propio rol' }, 400)
   }
   const body = await c.req.json().catch(() => null)
-  const parsed = z.object({ role: z.enum(['user', 'admin']) }).safeParse(body)
+  const parsed = adminRoleSchema.safeParse(body)
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(parsed.data.role, userId)
@@ -299,12 +278,7 @@ app.get('/api/auth/audit', (c) => {
   if (!user || user.role !== 'admin') {
     return c.json({ error: 'solo administradores pueden ver la actividad' }, 403)
   }
-  const pageParsed = z
-    .object({
-      limit: z.coerce.number().int().min(1).max(200).default(50),
-      offset: z.coerce.number().int().min(0).default(0),
-    })
-    .safeParse({ limit: c.req.query('limit'), offset: c.req.query('offset') })
+  const pageParsed = auditQuerySchema.safeParse({ limit: c.req.query('limit'), offset: c.req.query('offset') })
   if (!pageParsed.success) return c.json({ error: 'paginación inválida' }, 400)
   return c.json({
     total: auditCount(db),
@@ -391,12 +365,7 @@ guarded.get('/solar/history', (c) => {
   if (!toParsed.success || !fromParsed.success) {
     return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
   }
-  const pageParsed = z
-    .object({
-      limit: z.coerce.number().int().min(1).max(1000).default(1000),
-      offset: z.coerce.number().int().min(0).default(0),
-    })
-    .safeParse({ limit: c.req.query('limit'), offset: c.req.query('offset') })
+  const pageParsed = historyQuerySchema.safeParse({ limit: c.req.query('limit'), offset: c.req.query('offset') })
   if (!pageParsed.success) {
     return c.json({ error: 'paginación inválida' }, 400)
   }
