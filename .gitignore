@@ -34,3 +34,7 @@ Thumbs.db
 coverage/
 .nyc_output/
 Kimi_Agent_PanelSolar.zip
+
+# Playwright
+app/test-results/
+app/playwright-report/
