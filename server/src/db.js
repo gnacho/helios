@@ -40,6 +40,15 @@ export function initSchema(db) {
       attempts INTEGER DEFAULT 0,
       locked_until INTEGER DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      actor TEXT NOT NULL,
+      user_id TEXT,
+      action TEXT NOT NULL,
+      detail TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts);
   `)
   const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
   if (!cols.includes('solis_kwh')) db.exec('ALTER TABLE daily ADD COLUMN solis_kwh REAL')
@@ -157,8 +166,30 @@ export function cleanSessions(db) {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now())
 }
 
-export function kvGet(db, key) {
-  const row = db.prepare('SELECT value FROM kv WHERE key = ?').get(key)
+// Audit log: toda mutación autenticada queda registrada. detail NUNCA lleva passwords/tokens.
+export function audit(db, actor, userId, action, detail) {
+  db.prepare('INSERT INTO audit_log (ts, actor, user_id, action, detail) VALUES (?, ?, ?, ?, ?)').run(
+    Date.now(),
+    actor,
+    userId || null,
+    action,
+    detail ? JSON.stringify(detail).slice(0, 500) : null
+  )
+}
+
+export function auditRange(db, limit = 50, offset = 0) {
+  return db.prepare('SELECT * FROM audit_log ORDER BY ts DESC LIMIT ? OFFSET ?').all(limit, offset)
+}
+
+export function auditCount(db) {
+  return db.prepare('SELECT COUNT(*) AS n FROM audit_log').get().n
+}
+
+export function purgeAudit(db, retentionMs = 90 * 24 * 3600 * 1000) {
+  db.prepare('DELETE FROM audit_log WHERE ts < ?').run(Date.now() - retentionMs)
+}
+
+export function kvGet(db, key) {  const row = db.prepare('SELECT value FROM kv WHERE key = ?').get(key)
   return row ? row.value : null
 }
 

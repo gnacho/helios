@@ -25,7 +25,7 @@ const solar = await import('./solar.js')
 const auth = await import('./auth.js')
 
 const db = dbModule.openDb(config.dataDir)
-const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet } = dbModule
+const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet, audit, auditRange, auditCount, purgeAudit } = dbModule
 await auth.ensureBootstrapAdmin(db)
 
 const ha = new HAClient(config.haosUrl, config.haosToken)
@@ -144,6 +144,7 @@ app.post('/api/auth/login', async (c) => {
     return c.json({ error: 'usuario o contraseña incorrectos' }, 401)
   }
   auth.loginOk(db, c)
+  audit(db, res.user.username, res.user.id, 'auth.login')
   return c.json({ ok: true, user: res.user })
 })
 
@@ -165,11 +166,15 @@ app.post('/api/auth/register', async (c) => {
   if (!res) {
     return c.json({ error: 'usuario ya existe' }, 409)
   }
+  audit(db, currentUser.username, currentUser.id, 'user.create', { username: res.username, role: res.role })
   return c.json({ ok: true, user: res })
 })
 
 app.post('/api/auth/logout', (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  const actor = session ? dbModule.getUserById(db, session.userId) : null
   auth.handleLogout(db, c)
+  if (actor) audit(db, actor.username, actor.id, 'auth.logout')
   return c.json({ ok: true })
 })
 
@@ -199,6 +204,7 @@ app.put('/api/auth/profile', async (c) => {
   }
   const updated = auth.updateUser(db, session.userId, parsed.data)
   if (!updated) return c.json({ error: 'no se pudo actualizar' }, 500)
+  audit(db, updated.username, updated.id, 'user.profile', { fields: Object.keys(parsed.data) })
   return c.json({ ok: true, user: updated })
 })
 
@@ -212,6 +218,8 @@ app.put('/api/auth/password', async (c) => {
   if (!res.ok) {
     return c.json({ error: res.reason === 'wrong_current' ? 'la contraseña actual no es correcta' : 'no se pudo cambiar' }, 400)
   }
+  const me = dbModule.getUserById(db, session.userId)
+  audit(db, me?.username || session.userId, session.userId, 'user.password')
   return c.json({ ok: true })
 })
 
@@ -241,6 +249,7 @@ app.put('/api/auth/users/:id/password', async (c) => {
   
   const hash = await bcrypt.hash(parsed.data.password, 10)
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
+  audit(db, user.username, user.id, 'admin.password', { target: userId })
   return c.json({ ok: true })
 })
 
@@ -258,6 +267,7 @@ app.put('/api/auth/users/:id/language', async (c) => {
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   
   db.prepare('UPDATE users SET language = ? WHERE id = ?').run(parsed.data.language, userId)
+  audit(db, user.username, user.id, 'admin.language', { target: userId, language: parsed.data.language })
   return c.json({ ok: true })
 })
 
@@ -278,7 +288,30 @@ app.put('/api/auth/users/:id/role', async (c) => {
   if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
   
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(parsed.data.role, userId)
+  audit(db, user.username, user.id, 'admin.role', { target: userId, role: parsed.data.role })
   return c.json({ ok: true })
+})
+
+app.get('/api/auth/audit', (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden ver la actividad' }, 403)
+  }
+  const pageParsed = z
+    .object({
+      limit: z.coerce.number().int().min(1).max(200).default(50),
+      offset: z.coerce.number().int().min(0).default(0),
+    })
+    .safeParse({ limit: c.req.query('limit'), offset: c.req.query('offset') })
+  if (!pageParsed.success) return c.json({ error: 'paginación inválida' }, 400)
+  return c.json({
+    total: auditCount(db),
+    limit: pageParsed.data.limit,
+    offset: pageParsed.data.offset,
+    entries: auditRange(db, pageParsed.data.limit, pageParsed.data.offset),
+  })
 })
 
 app.delete('/api/auth/users/:id', (c) => {
@@ -296,6 +329,7 @@ app.delete('/api/auth/users/:id', (c) => {
   
   db.prepare('DELETE FROM users WHERE id = ?').run(userId)
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
+  audit(db, user.username, user.id, 'admin.delete', { target: userId })
   return c.json({ ok: true })
 })
 
@@ -430,6 +464,8 @@ guarded.put('/config', async (c) => {
   const body = await c.req.json().catch(() => null)
   if (!body || typeof body !== 'object') return c.json({ error: 'body inválido' }, 400)
   kvSet(db, 'install_config', JSON.stringify(body))
+  const me = dbModule.getUserById(db, c.get('userId'))
+  audit(db, me?.username || 'unknown', c.get('userId'), 'settings.change', { keys: Object.keys(body) })
   return c.json({ ok: true })
 })
 
@@ -475,6 +511,7 @@ function scheduleNightly() {
     try {
       const n = await solar.backfillHistory(ha, db)
       await solar.ensureConsumptionBaseline(ha, db)
+      purgeAudit(db)
       console.log(`[helios] consolidación nocturna: ${n} días`)
     } catch (err) {
       console.error('[helios] consolidación nocturna error:', err.message)
