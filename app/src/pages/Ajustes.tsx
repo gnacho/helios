@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   BatteryCharging,
   Check,
+  HeartPulse,
   House,
   KeyRound,
   LogOut,
@@ -39,8 +40,6 @@ import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-clien
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
 
-const SECTION_IDS = ['tema', 'idioma', 'conexion', 'instalacion', 'precios', 'datos', 'app'] as const;
-
 const ENTIDADES: { entidad: string; descKey: string }[] = [
   { entidad: 'sensor.solis_potencia_actual', descKey: 'desc_solis_potencia_actual' },
   { entidad: 'sensor.almacen_pinza_power_b', descKey: 'desc_almacen_pinza_power_b' },
@@ -64,18 +63,15 @@ function Section({
   title,
   badge,
   children,
-  innerRef,
 }: {
   id: string;
   title: string;
   badge?: ReactNode;
   children: ReactNode;
-  innerRef?: (el: HTMLElement | null) => void;
 }) {
   return (
     <motion.section
       id={id}
-      ref={innerRef}
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.15 }}
@@ -88,6 +84,24 @@ function Section({
       </div>
       {children}
     </motion.section>
+  );
+}
+
+/** Icono de salud: verde si el flujo está vivo, ámbar si no. */
+function HealthBadge({ ok }: { ok: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <span
+      role="status"
+      aria-label={ok ? t('ajustes.health.alive') : t('ajustes.health.down')}
+      title={ok ? t('ajustes.health.alive') : t('ajustes.health.down')}
+      className={cn(
+        'ml-auto flex h-6 w-6 items-center justify-center rounded-full',
+        ok ? 'bg-emerald-500/15 text-emerald-500' : 'bg-amber-500/15 text-amber-500',
+      )}
+    >
+      <HeartPulse size={14} strokeWidth={2.2} />
+    </span>
   );
 }
 
@@ -656,6 +670,7 @@ function UsersSection() {
   const [error, setError] = useState<string | null>(null);
   const [pwdFor, setPwdFor] = useState<string | null>(null);
   const [newPwd, setNewPwd] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
 
   const languages = [
     { code: 'es', name: 'Español', flag: '🇪🇸' },
@@ -690,6 +705,7 @@ function UsersSection() {
       setPassword('');
       setLanguage('es');
       setRole('user');
+      setShowCreate(false);
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('common.error'));
@@ -849,8 +865,23 @@ function UsersSection() {
         )}
       </div>
 
-      {/* Formulario crear usuario */}
-      <form onSubmit={submit} className="flex flex-col gap-4 border-t border-app pt-4">
+      {/* Formulario crear usuario: oculto por defecto, se despliega al pulsar "Crear usuario" */}
+      {!showCreate ? (
+        <button
+          type="button"
+          onClick={() => setShowCreate(true)}
+          className="bg-brand-gradient inline-flex h-10 items-center justify-center gap-2 self-start rounded-full px-6 text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95"
+        >
+          <UserPlus size={16} />
+          {t('admin.users.create')}
+        </button>
+      ) : (
+      <motion.form
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+        onSubmit={submit}
+        className="flex flex-col gap-4 overflow-hidden border-t border-app pt-4"
+      >
         <h3 className="text-sm font-semibold text-app">{t('admin.users.newUser')}</h3>
         <div>
           <Label htmlFor="admin-user" className="mb-1.5 block text-[13px] font-medium text-muted">
@@ -933,15 +964,28 @@ function UsersSection() {
           </motion.p>
         )}
 
-        <button
-          type="submit"
-          disabled={busy || !username || !password}
-          className="bg-brand-gradient inline-flex h-10 items-center justify-center gap-2 rounded-full text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
-        >
-          <UserPlus size={16} />
-          {busy ? t('admin.users.creating') : t('admin.users.create')}
-        </button>
-      </form>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={busy || !username || !password}
+            className="bg-brand-gradient inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
+          >
+            <UserPlus size={16} />
+            {busy ? t('admin.users.creating') : t('admin.users.create')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowCreate(false);
+              setError(null);
+            }}
+            className="inline-flex h-10 items-center justify-center rounded-full border border-app px-6 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-app"
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </motion.form>
+      )}
     </div>
   );
 }
@@ -1024,15 +1068,30 @@ function InstallSection() {
   );
 }
 
+// ── §9 Acerca de ─────────────────────────────────────────────────────────────
+
+function AboutSection() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-1.5 py-4 text-center text-[13px] text-faint">
+      <BrandLogo className="h-12 w-12" />
+      <p className="font-medium">{t('ajustes.footer.version')}</p>
+      <p>{t('ajustes.footer.local')}</p>
+      <p>{t('ajustes.footer.made')}</p>
+    </div>
+  );
+}
+
 // ── Página ───────────────────────────────────────────────────────────────────
 
 export default function Ajustes() {
-  const [activeSection, setActiveSection] = useState<string>('tema');
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const { t } = useTranslation();
   const [, update] = useEnergySettings();
   const [saved, setSaved] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const { connectionStatus, liveTick } = useEnergyData();
+  const [dataOk, setDataOk] = useState(true);
+  const lastTickAt = useRef(0);
 
   useEffect(() => {
     apiFetch<{ authenticated?: boolean; user?: { role?: string } }>('/api/auth/me')
@@ -1044,22 +1103,12 @@ export default function Ajustes() {
       .catch(() => setUserRole(null));
   }, []);
 
-  // Scroll-spy: resalta la sección visible en la mini-nav (≥xl).
+  // Salud del flujo de datos: vivo si el SSE empujó algo en los últimos 15 s.
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActiveSection(entry.target.id);
-        }
-      },
-      { rootMargin: '-40% 0px -55% 0px', threshold: 0 },
-    );
-    for (const s of SECTION_IDS) {
-      const el = sectionRefs.current[s];
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, []);
+    lastTickAt.current = Date.now();
+    const id = window.setInterval(() => setDataOk(Date.now() - lastTickAt.current < 15000), 5000);
+    return () => window.clearInterval(id);
+  }, [liveTick]);
 
   const saveAll = () => {
     // Aquí se guardarían todos los cambios de todas las secciones
@@ -1093,106 +1142,75 @@ export default function Ajustes() {
         </div>
       </motion.header>
 
-      <div className="xl:flex xl:items-start xl:justify-center xl:gap-10">
-        {/* Mini-nav anclada (solo ≥xl) */}
-        <aside className="hidden w-[150px] shrink-0 xl:block">
-          <nav aria-label={t('ajustes.navAria')} className="sticky top-24 flex flex-col gap-0.5">
-            {SECTION_IDS.map((id) => {
-              const active = activeSection === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  aria-current={active}
-                  className={cn(
-                    'relative rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors',
-                    active ? 'bg-surface-2 text-amber-600 dark:text-amber-400' : 'text-faint hover:bg-surface-2/50 hover:text-muted',
-                  )}
-                >
-                  {active && (
-                    <motion.span layoutId="ajustes-nav-bar" className="bg-brand-gradient absolute left-0 top-2 h-5 w-[3px] rounded-full" />
-                  )}
-                  {t(`ajustes.sections.${id}Short`)}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
+      {/* Secciones a todo el ancho (sin mini-nav) */}
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5">
+        <Section id="tema" title={t('ajustes.sections.tema')}>
+          <ThemeSection />
+        </Section>
 
-        {/* Columna de secciones */}
-        <div className="mx-auto flex w-full max-w-[860px] flex-col gap-5 xl:mx-0">
-          <Section id="tema" title={t('ajustes.sections.tema')} innerRef={(el) => (sectionRefs.current.tema = el)}>
-            <ThemeSection />
-          </Section>
-
-          <Section id="idioma" title={t('ajustes.sections.idioma')} innerRef={(el) => (sectionRefs.current.idioma = el)}>
+        {/* Idioma + conexión + datos en la misma horizontal (≥lg) */}
+        <div className="grid items-start gap-5 lg:grid-cols-3">
+          <Section id="idioma" title={t('ajustes.sections.idioma')}>
             <LanguageSection />
           </Section>
 
-          <Section id="conexion" title={t('ajustes.sections.conexion')} innerRef={(el) => (sectionRefs.current.conexion = el)}>
+          <Section id="conexion" title={t('ajustes.sections.conexion')} badge={<HealthBadge ok={connectionStatus === 'connected'} />}>
             <ConnectionSection />
           </Section>
 
-          <Section id="instalacion" title={t('ajustes.sections.instalacion')} innerRef={(el) => (sectionRefs.current.instalacion = el)}>
-            <InstallationSection />
-          </Section>
-
-          <Section id="precios" title={t('ajustes.sections.precios')} innerRef={(el) => (sectionRefs.current.precios = el)}>
-            <PricesSection />
-          </Section>
-
-          <Section id="datos" title={t('ajustes.sections.datos')} innerRef={(el) => (sectionRefs.current.datos = el)}>
+          <Section id="datos" title={t('ajustes.sections.datos')} badge={<HealthBadge ok={dataOk} />}>
             <DataSection />
           </Section>
+        </div>
 
-          {userRole === 'admin' && (
-            <Section id="usuarios" title={t('ajustes.sections.usuarios')} innerRef={(el) => (sectionRefs.current.usuarios = el)}>
-              <UsersSection />
-            </Section>
-          )}
+        <Section id="instalacion" title={t('ajustes.sections.instalacion')}>
+          <InstallationSection />
+        </Section>
 
-          <Section id="app" title={t('ajustes.sections.app')} innerRef={(el) => (sectionRefs.current.app = el)}>
+        <Section id="precios" title={t('ajustes.sections.precios')}>
+          <PricesSection />
+        </Section>
+
+        {userRole === 'admin' && (
+          <Section id="usuarios" title={t('ajustes.sections.usuarios')}>
+            <UsersSection />
+          </Section>
+        )}
+
+        {/* PWA + Acerca de en la misma horizontal (≥lg) */}
+        <div className="grid items-stretch gap-5 lg:grid-cols-2">
+          <Section id="app" title={t('ajustes.sections.app')}>
             <InstallSection />
           </Section>
 
-          {/* §8 Cerrar sesión */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="flex justify-center py-4"
-          >
-            <button
-              onClick={async () => {
-                // Contrato de sesión: logout = POST + evento unauthorized (AuthGate muestra Login). Sin recargar la SPA.
-                try {
-                  await apiPost('/api/auth/logout');
-                } finally {
-                  window.dispatchEvent(new Event('helios-unauthorized'));
-                }
-              }}
-              className="inline-flex h-12 items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-8 text-[15px] font-semibold text-destructive transition-all hover:bg-destructive/20 hover:scale-[1.02] active:scale-95"
-            >
-              <LogOut size={20} />
-              {t('common.logout')}
-            </button>
-          </motion.div>
-
-          {/* §9 Acerca de */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col items-center gap-1.5 py-6 text-center text-[13px] text-faint"
-          >
-            <BrandLogo className="h-7 w-7" />
-            <p className="font-medium">{t('ajustes.footer.version')}</p>
-            <p>{t('ajustes.footer.local')}</p>
-            <p>{t('ajustes.footer.made')}</p>
-          </motion.div>
+          <Section id="acerca" title={t('ajustes.sections.acerca')}>
+            <AboutSection />
+          </Section>
         </div>
+
+        {/* Cerrar sesión */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="flex justify-center py-4"
+        >
+          <button
+            onClick={async () => {
+              // Contrato de sesión: logout = POST + evento unauthorized (AuthGate muestra Login). Sin recargar la SPA.
+              try {
+                await apiPost('/api/auth/logout');
+              } finally {
+                window.dispatchEvent(new Event('helios-unauthorized'));
+              }
+            }}
+            className="inline-flex h-12 items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-8 text-[15px] font-semibold text-destructive transition-all hover:bg-destructive/20 hover:scale-[1.02] active:scale-95"
+          >
+            <LogOut size={20} />
+            {t('common.logout')}
+          </button>
+        </motion.div>
       </div>
 
       <HeliosToaster />

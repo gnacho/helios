@@ -291,7 +291,8 @@
       "datos": "Datos",
       "usuarios": "Usuarios",
       "app": "Llévalo en tu móvil",
-      "appShort": "App"
+      "appShort": "App",
+      "acerca": "Acerca de"
     },
     "theme": {
       "autoNote": "En modo Auto, la interfaz usa el tema claro entre el amanecer (06:50) y el atardecer (21:40).",
@@ -360,6 +361,10 @@
       "version": "Helios v0.1 · Monitor solar doméstico",
       "local": "Datos locales vía Home Assistant · Sin nube, sin cuentas",
       "made": "Hecho con ☀ en casa"
+    },
+    "health": {
+      "alive": "Activo",
+      "down": "Sin datos"
     }
   },
   "footer": {

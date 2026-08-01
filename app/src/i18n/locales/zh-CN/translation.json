@@ -289,7 +289,8 @@
       "datos": "数据",
       "usuarios": "用户",
       "app": "手机使用",
-      "appShort": "应用"
+      "appShort": "应用",
+      "acerca": "关于"
     },
     "theme": {
       "autoNote": "自动模式下，界面在日出（06:50）和日落（21:40）之间使用浅色主题。",
@@ -358,6 +359,10 @@
       "version": "Helios v0.1 · 家庭太阳能监控",
       "local": "通过 Home Assistant 本地获取数据 · 无云端，无账号",
       "made": "在家用 ☀ 制作"
+    },
+    "health": {
+      "alive": "正常",
+      "down": "无数据"
     }
   },
   "footer": {

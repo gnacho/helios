@@ -291,7 +291,8 @@
       "datos": "Data",
       "usuarios": "Users",
       "app": "Take it on your phone",
-      "appShort": "App"
+      "appShort": "App",
+      "acerca": "About"
     },
     "theme": {
       "autoNote": "In Auto mode, the interface uses the light theme between sunrise (06:50) and sunset (21:40).",
@@ -360,6 +361,10 @@
       "version": "Helios v0.1 · Home solar monitor",
       "local": "Local data via Home Assistant · No cloud, no accounts",
       "made": "Made with ☀ at home"
+    },
+    "health": {
+      "alive": "Alive",
+      "down": "No data"
     }
   },
   "footer": {
