@@ -4,11 +4,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
   ArrowLeftRight,
-  Bell,
   CalendarRange,
   Gauge,
   History,
-  RefreshCw,
   Sun,
   Triangle,
 } from 'lucide-react';
@@ -29,15 +27,13 @@ import {
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { FOX_KWP, SOLIS_KWP, STEP_MIN } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
-import { fmtClock, fmtEnergy, fmtKw, fmtPct, fmtTime } from '@/lib/format';
+import { fmtEnergy, fmtKw, fmtPct, fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import KpiCard from '@/components/KpiCard';
 import InverterHeroCard from '@/components/InverterHeroCard';
 import type { InverterMeta } from '@/components/InverterHeroCard';
 import InverterDayChart from '@/components/InverterDayChart';
 import CompareChart from '@/components/CompareChart';
-import ThemeToggle from '@/components/ThemeToggle';
-import ConnectionStatus from '@/components/ConnectionStatus';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -517,11 +513,10 @@ const TABS: { key: TabKey; labelKey: string }[] = [
 ];
 
 export default function Inversores() {
-  const { now, nowMin, liveTick, today, getLivePower, getDaySeries } = useEnergyData();
+  const { nowMin, liveTick, today, getLivePower, getDaySeries } = useEnergyData();
   const palette = useEnergyColors();
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [spinning, setSpinning] = useState(false);
 
   const tabParam = searchParams.get('tab');
   const tab: TabKey = tabParam === 'fox' || tabParam === 'solis' ? tabParam : 'compare';
@@ -554,47 +549,6 @@ export default function Inversores() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-4 lg:gap-5">
-        {/* ── §1 Encabezado ─────────────────────────────────────── */}
-        <motion.header
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="flex flex-wrap items-center gap-3"
-        >
-          <div className="mr-auto">
-            <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('inversores.title')}</h1>
-            <p className="text-sm text-muted">{t('inversores.subtitle')}</p>
-          </div>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.08 }}
-            className="hidden items-center gap-3 lg:flex"
-          >
-            <span className="font-mono text-sm tabular-nums text-faint" aria-live="off">
-              {fmtClock(now)}
-            </span>
-            <button
-              aria-label={t('common.refresh')}
-              onClick={() => {
-                setSpinning(true);
-                window.setTimeout(() => setSpinning(false), 600);
-              }}
-              className="rounded-full border border-app bg-surface p-2 text-muted transition-colors hover:text-app"
-            >
-              <motion.span animate={spinning ? { rotate: 360 } : { rotate: 0 }} transition={{ duration: 0.6 }} className="flex">
-                <RefreshCw size={16} />
-              </motion.span>
-            </button>
-            <button aria-label={t('inversores.alertsAria')} className="relative rounded-full border border-app bg-surface p-2 text-muted transition-colors hover:text-app">
-              <Bell size={16} />
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
-            </button>
-            <ThemeToggle />
-            <ConnectionStatus />
-          </motion.div>
-        </motion.header>
-
         {/* ── §1 Segmented control (sticky en móvil) ────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}

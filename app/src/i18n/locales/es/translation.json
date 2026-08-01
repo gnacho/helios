@@ -26,7 +26,9 @@
     "bateria": "Batería",
     "historico": "Histórico",
     "ajustes": "Ajustes",
-    "main": "Navegación principal"
+    "main": "Navegación principal",
+    "collapse": "Plegar menú",
+    "expand": "Desplegar menú"
   },
   "theme": {
     "label": "Tema de la interfaz",
@@ -433,5 +435,9 @@
       "next": "Siguiente",
       "empty": "Sin actividad registrada"
     }
+  },
+  "demo": {
+    "banner": "Modo demo — los cambios no se aplican al sistema",
+    "exit": "Salir del demo"
   }
 }

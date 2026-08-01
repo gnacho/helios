@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { EnergyDataProvider } from '@/data/EnergyDataProvider';
 import AuthGate from '@/components/AuthGate';
-import Layout from '@/components/Layout';
+import AppLayout from '@/components/shell/AppLayout';
 import Dashboard from '@/pages/Dashboard';
 import Inversores from '@/pages/Inversores';
 import Bateria from '@/pages/Bateria';
@@ -15,8 +15,8 @@ export default function App() {
     <ThemeProvider>
       <AuthGate>
         <EnergyDataProvider>
-          {/* Patrón children: Layout renderiza {children} envolviendo <Routes>. */}
-          <Layout>
+          {/* Patrón children: AppLayout renderiza {children} envolviendo <Routes>. */}
+          <AppLayout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/inversores" element={<Inversores />} />
@@ -25,7 +25,7 @@ export default function App() {
               <Route path="/ajustes" element={<Ajustes />} />
               <Route path="*" element={<StubPage />} />
             </Routes>
-          </Layout>
+          </AppLayout>
         </EnergyDataProvider>
       </AuthGate>
     </ThemeProvider>

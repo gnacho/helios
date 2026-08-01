@@ -7,25 +7,20 @@ import {
   BatteryCharging,
   Leaf,
   UtilityPole,
-  RefreshCw,
   ArrowUpFromLine,
   ArrowDownToLine,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { fmtWeekdayDate } from '@/i18n';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { STEP_MIN } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
-import { fmtClock, fmtEnergy } from '@/lib/format';
+import { fmtEnergy } from '@/lib/format';
 import KpiCard from '@/components/KpiCard';
 import LivePowerStrip from '@/components/LivePowerStrip';
 import DayChart from '@/components/DayChart';
 import EnergyFlowDiagram from '@/components/EnergyFlowDiagram';
 import SolarArc from '@/components/SolarArc';
 import InverterCard from '@/components/InverterCard';
-import ThemeToggle from '@/components/ThemeToggle';
-import ConnectionStatus from '@/components/ConnectionStatus';
-import AlertsBell from '@/components/AlertsBell';
 
 function batteryState(bp: number): 'charging' | 'discharging' | 'idle' {
   if (bp > 0.05) return 'charging';
@@ -34,13 +29,12 @@ function batteryState(bp: number): 'charging' | 'discharging' | 'idle' {
 }
 
 export default function Dashboard() {
-  const { now, nowMin, liveTick, today, sunriseMin, sunsetMin, refresh, getLivePower, getDaySeries, getKpis } =
+  const { nowMin, liveTick, today, sunriseMin, sunsetMin, getLivePower, getDaySeries, getKpis } =
     useEnergyData();
   const palette = useEnergyColors();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [replayMin, setReplayMin] = useState<number | null>(null);
-  const [spinning, setSpinning] = useState(false);
 
   const effectiveMin = replayMin ?? nowMin;
   const live = getLivePower(effectiveMin, replayMin === null ? liveTick : 0);
@@ -67,48 +61,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
-      <motion.header
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="flex flex-wrap items-center gap-3"
-      >
-        <div className="mr-auto">
-          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('dashboard.title')}</h1>
-          <p className="text-sm capitalize text-muted">{fmtWeekdayDate(today)}</p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08 }}
-          className="hidden items-center gap-3 lg:flex"
-        >
-          <span className="font-mono text-sm tabular-nums text-faint" aria-live="off">
-            {fmtClock(now)}
-          </span>
-          <button
-            aria-label={t('common.refresh')}
-            onClick={() => {
-              refresh();
-              setSpinning(true);
-              window.setTimeout(() => setSpinning(false), 600);
-            }}
-            className="rounded-full border border-app bg-surface p-2 text-muted transition-colors hover:text-app"
-          >
-            <motion.span
-              animate={spinning ? { rotate: 360 } : { rotate: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex"
-            >
-              <RefreshCw size={16} />
-            </motion.span>
-          </button>
-          <AlertsBell />
-          <ThemeToggle />
-          <ConnectionStatus />
-        </motion.div>
-      </motion.header>
-
       {/* Ahora mismo + Flujo + Prod/Consumo */}
       <div className="grid grid-cols-12 gap-4 lg:gap-5">
         <div className="col-span-12 order-1">

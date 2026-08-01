@@ -26,7 +26,9 @@
     "bateria": "Battery",
     "historico": "History",
     "ajustes": "Settings",
-    "main": "Main navigation"
+    "main": "Main navigation",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
   },
   "theme": {
     "label": "Interface theme",
@@ -433,5 +435,9 @@
       "next": "Next",
       "empty": "No activity recorded"
     }
+  },
+  "demo": {
+    "banner": "Demo mode — changes are not applied to the system",
+    "exit": "Exit demo"
   }
 }

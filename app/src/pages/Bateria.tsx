@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowDownToLine,
@@ -11,18 +11,15 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { dateLocale, fmtWeekdayDate } from '@/i18n';
+import { dateLocale } from '@/i18n';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useEnergyColors } from '@/lib/colors';
-import { fmtClock, fmtEnergy, fmtKw } from '@/lib/format';
+import { fmtEnergy, fmtKw } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import SocHeroGauge from '@/components/SocHeroGauge';
 import SocDayChart from '@/components/SocDayChart';
 import BatteryPowerChart from '@/components/BatteryPowerChart';
-import ThemeToggle from '@/components/ThemeToggle';
-import ConnectionStatus from '@/components/ConnectionStatus';
-import AlertsBell from '@/components/AlertsBell';
 
 const EASE_OUT: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
@@ -58,10 +55,9 @@ function WeekTooltip({ active, payload }: { active?: boolean; payload?: { payloa
 }
 
 export default function Bateria() {
-  const { now, nowMin, liveTick, today, refresh, getLivePower, getDaySeries, getKpis, getHistory } = useEnergyData();
+  const { nowMin, liveTick, today, getLivePower, getDaySeries, getKpis, getHistory } = useEnergyData();
   const palette = useEnergyColors();
   const { t, i18n } = useTranslation();
-  const [spinning, setSpinning] = useState(false);
 
   const live = getLivePower(nowMin, liveTick);
   const kpis = useMemo(() => getKpis(today), [getKpis, today]);
@@ -94,48 +90,6 @@ export default function Bateria() {
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
-      {/* ── Encabezado de vista ─────────────────────────────────── */}
-      <motion.header
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="flex flex-wrap items-center gap-3"
-      >
-        <div className="mr-auto">
-          <h1 className="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{t('bateria.title')}</h1>
-          <p className="text-sm text-muted">
-            {t('bateria.subtitle')} ·{' '}
-            <span className="capitalize">{fmtWeekdayDate(today)}</span>
-          </p>
-        </div>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08 }}
-          className="hidden items-center gap-3 lg:flex"
-        >
-          <span className="font-mono text-sm tabular-nums text-faint" aria-live="off">
-            {fmtClock(now)}
-          </span>
-          <button
-            aria-label={t('common.refresh')}
-            onClick={() => {
-              refresh();
-              setSpinning(true);
-              window.setTimeout(() => setSpinning(false), 600);
-            }}
-            className="rounded-full border border-app bg-surface p-2 text-muted transition-colors hover:text-app"
-          >
-            <motion.span animate={spinning ? { rotate: 360 } : { rotate: 0 }} transition={{ duration: 0.6 }} className="flex">
-              <RefreshCw size={16} />
-            </motion.span>
-          </button>
-          <AlertsBell />
-          <ThemeToggle />
-          <ConnectionStatus />
-        </motion.div>
-      </motion.header>
-
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
         {/* ── Soluna + Estado (tarjeta única compacta) ──────────────── */}
         <motion.section
