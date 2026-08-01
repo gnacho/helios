@@ -647,7 +647,82 @@ function DataSection() {
   );
 }
 
-// ── §7 Usuarios (solo admin) ────────────────────────────────────────────────
+// ── §7 Seguridad (contraseña propia) ────────────────────────────────────────
+
+function SecuritySection() {
+  const { t } = useTranslation();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const mismatch = confirm.length > 0 && next !== confirm;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy || mismatch) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPut('/api/auth/password', { current, password: next });
+      heliosToast(t('ajustes.security.changed'), { tone: 'success' });
+      setCurrent('');
+      setNext('');
+      setConfirm('');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('common.error'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <p className="text-sm leading-snug text-muted">{t('ajustes.security.desc')}</p>
+      <div>
+        <Label htmlFor="sec-current" className="mb-1.5 block text-[13px] font-medium text-muted">
+          {t('ajustes.security.current')}
+        </Label>
+        <Input id="sec-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="sec-new" className="mb-1.5 block text-[13px] font-medium text-muted">
+            {t('ajustes.security.new')}
+          </Label>
+          <Input id="sec-new" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="sec-confirm" className="mb-1.5 block text-[13px] font-medium text-muted">
+            {t('ajustes.security.confirm')}
+          </Label>
+          <Input id="sec-confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        </div>
+      </div>
+      {mismatch && (
+        <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-center text-[13px] font-medium text-rose-600 dark:text-rose-400" role="alert">
+          {t('ajustes.security.mismatch')}
+        </p>
+      )}
+      {error && (
+        <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-center text-[13px] font-medium text-rose-600 dark:text-rose-400" role="alert">
+          {error}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={busy || !current || next.length < 6 || next !== confirm}
+        className="bg-brand-gradient inline-flex h-10 items-center justify-center gap-2 rounded-full text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
+      >
+        <KeyRound size={16} />
+        {t('ajustes.security.submit')}
+      </button>
+    </form>
+  );
+}
+
+// ── §8 Usuarios (solo admin) ────────────────────────────────────────────────
 
 interface AdminUser {
   id: string;
@@ -1171,9 +1246,18 @@ export default function Ajustes() {
           <PricesSection />
         </Section>
 
-        {userRole === 'admin' && (
-          <Section id="usuarios" title={t('ajustes.sections.usuarios')}>
-            <UsersSection />
+        {userRole === 'admin' ? (
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            <Section id="seguridad" title={t('ajustes.sections.seguridad')}>
+              <SecuritySection />
+            </Section>
+            <Section id="usuarios" title={t('ajustes.sections.usuarios')}>
+              <UsersSection />
+            </Section>
+          </div>
+        ) : (
+          <Section id="seguridad" title={t('ajustes.sections.seguridad')}>
+            <SecuritySection />
           </Section>
         )}
 

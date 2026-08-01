@@ -66,6 +66,20 @@ export async function ensureBootstrapAdmin(db) {
   console.log(`[helios] admin bootstrap creado: ${config.authUser}`)
 }
 
+// Cambio de contraseña del propio usuario: exige la actual (bcrypt) y cierra el resto de sesiones.
+export async function changeOwnPassword(db, userId, currentPassword, newPassword, keepSessionId) {
+  const row = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(userId)
+  if (!row) return { ok: false, reason: 'not_found' }
+  const valid = await bcrypt.compare(currentPassword, row.password_hash)
+  if (!valid) return { ok: false, reason: 'wrong_current' }
+  const hash = await bcrypt.hash(newPassword, 10)
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, userId)
+  if (keepSessionId) {
+    db.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?').run(userId, keepSessionId)
+  }
+  return { ok: true }
+}
+
 export async function registerUser(db, username, password, language = 'es', role = 'user') {
   if (!username || !password) return null
   const existing = getUserByUsername(db, username)

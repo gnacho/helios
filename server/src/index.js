@@ -125,6 +125,10 @@ const profileSchema = z.object({
   phone: z.string().optional().nullable(),
   language: z.string().regex(/^(es|en|zh-CN)$/).optional()
 })
+const passwordSchema = z.object({
+  current: z.string().min(1),
+  password: z.string().min(6)
+})
 
 app.post('/api/auth/login', async (c) => {
   if (auth.loginRateLimited(db, c)) return c.json({ error: 'demasiados intentos, espera 5 minutos' }, 429)
@@ -195,6 +199,19 @@ app.put('/api/auth/profile', async (c) => {
   const updated = auth.updateUser(db, session.userId, parsed.data)
   if (!updated) return c.json({ error: 'no se pudo actualizar' }, 500)
   return c.json({ ok: true, user: updated })
+})
+
+app.put('/api/auth/password', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const body = await c.req.json().catch(() => null)
+  const parsed = passwordSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const res = await auth.changeOwnPassword(db, session.userId, parsed.data.current, parsed.data.password, session.id)
+  if (!res.ok) {
+    return c.json({ error: res.reason === 'wrong_current' ? 'la contraseña actual no es correcta' : 'no se pudo cambiar' }, 400)
+  }
+  return c.json({ ok: true })
 })
 
 app.get('/api/auth/users', (c) => {

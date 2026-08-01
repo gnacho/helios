@@ -292,7 +292,8 @@
       "usuarios": "Users",
       "app": "Take it on your phone",
       "appShort": "App",
-      "acerca": "About"
+      "acerca": "About",
+      "seguridad": "Security"
     },
     "theme": {
       "autoNote": "In Auto mode, the interface uses the light theme between sunrise (06:50) and sunset (21:40).",
@@ -365,6 +366,15 @@
     "health": {
       "alive": "Alive",
       "down": "No data"
+    },
+    "security": {
+      "desc": "Change your password. Your other sessions will be signed out.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Repeat password",
+      "mismatch": "Passwords do not match",
+      "submit": "Change password",
+      "changed": "Password updated"
     }
   },
   "footer": {

@@ -292,7 +292,8 @@
       "usuarios": "Usuarios",
       "app": "Llévalo en tu móvil",
       "appShort": "App",
-      "acerca": "Acerca de"
+      "acerca": "Acerca de",
+      "seguridad": "Seguridad"
     },
     "theme": {
       "autoNote": "En modo Auto, la interfaz usa el tema claro entre el amanecer (06:50) y el atardecer (21:40).",
@@ -365,6 +366,15 @@
     "health": {
       "alive": "Activo",
       "down": "Sin datos"
+    },
+    "security": {
+      "desc": "Cambia tu contraseña. Al hacerlo se cerrarán tus demás sesiones.",
+      "current": "Contraseña actual",
+      "new": "Nueva contraseña",
+      "confirm": "Repite la contraseña",
+      "mismatch": "Las contraseñas no coinciden",
+      "submit": "Cambiar contraseña",
+      "changed": "Contraseña actualizada"
     }
   },
   "footer": {

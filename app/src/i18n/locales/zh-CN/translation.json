@@ -290,7 +290,8 @@
       "usuarios": "用户",
       "app": "手机使用",
       "appShort": "应用",
-      "acerca": "关于"
+      "acerca": "关于",
+      "seguridad": "安全"
     },
     "theme": {
       "autoNote": "自动模式下，界面在日出（06:50）和日落（21:40）之间使用浅色主题。",
@@ -363,6 +364,15 @@
     "health": {
       "alive": "正常",
       "down": "无数据"
+    },
+    "security": {
+      "desc": "更改密码，其他会话将被注销。",
+      "current": "当前密码",
+      "new": "新密码",
+      "confirm": "重复密码",
+      "mismatch": "两次输入的密码不一致",
+      "submit": "更改密码",
+      "changed": "密码已更新"
     }
   },
   "footer": {

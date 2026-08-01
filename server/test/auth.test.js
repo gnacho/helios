@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { initSchema, getUserByUsername } from '../src/db.js'
-import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin, ensureBootstrapAdmin } from '../src/auth.js'
+import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin, ensureBootstrapAdmin, changeOwnPassword } from '../src/auth.js'
 
 function mockContext(ip) {
   return {
@@ -67,6 +67,27 @@ describe('ensureBootstrapAdmin', () => {
     expect(db.prepare('SELECT COUNT(*) AS n FROM users').get().n).toBe(1)
     const res = await handleLogin(db, mockContext('1.1.1.1'), { username: 'admin', password: 'test' })
     expect(res.user.username).toBe('admin')
+  })
+})
+
+describe('changeOwnPassword', () => {
+  it('rechaza si la actual no coincide y acepta con la correcta', async () => {
+    const u = await registerUser(db, 'demo', 'secreto123')
+    expect((await changeOwnPassword(db, u.id, 'mal', 'nueva456')).reason).toBe('wrong_current')
+    expect((await changeOwnPassword(db, u.id, 'secreto123', 'nueva456')).ok).toBe(true)
+    expect(await handleLogin(db, mockContext('1.1.1.1'), { username: 'demo', password: 'secreto123' })).toBeNull()
+    const res = await handleLogin(db, mockContext('1.1.1.1'), { username: 'demo', password: 'nueva456' })
+    expect(res.user.username).toBe('demo')
+  })
+
+  it('cierra las demás sesiones del usuario salvo la actual', async () => {
+    const u = await registerUser(db, 'demo', 'secreto123')
+    const { createSession, getSession } = await import('../src/db.js')
+    const s1 = createSession(db, u.id, 100000, 'ua1')
+    const s2 = createSession(db, u.id, 100000, 'ua2')
+    await changeOwnPassword(db, u.id, 'secreto123', 'nueva456', s1)
+    expect(getSession(db, s1)).not.toBeNull()
+    expect(getSession(db, s2)).toBeNull()
   })
 })
 
