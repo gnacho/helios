@@ -8,6 +8,12 @@
 // Triggers (decisión del usuario 2-Ago-2026):
 // - inversor_offline / inversor_ok: scraper.attributes.inverterOnline === 0,
 //   sostenido 2 ticks (2 min) para no avisar por un hueco puntual del scraper.
+//   SOLO se evalúa con scraper fresco (<15 min) y de DÍA (sun.sun
+//   above_horizon): el inversor se apaga cada noche (decisión del usuario:
+//   "está offline todas las noches") y alertar con datos viejos es avisar sin
+//   información nueva (2-Ago: datos stale desde las 23:33 toda la noche).
+//   Si sun.sun no está disponible se evalúa igualmente (fail-open: es una
+//   alerta crítica y sun.sun es de las entidades más fiables de HAOS).
 // - corte_red / corte_red_ok: HEURÍSTICA — con red presente la pinza de red
 //   oscila siempre (import/export); en isla (backup Solis) grid ≈ 0 sostenido
 //   mientras la casa sigue consumiendo desde batería/PV. Firma: scraper fresco
@@ -52,19 +58,23 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     const lastUpd = attrs.lastUpdate ? new Date(attrs.lastUpdate).getTime() : null
     const fresco = lastUpd !== null && Date.now() - lastUpd < 15 * 60000
 
-    // ── Inversor offline ────────────────────────────────────────────────
-    if (attrs.inverterOnline === 0) {
-      estado.inversor.mal++
-      if (!estado.inversor.alertado && estado.inversor.mal >= TICKS_INVERSOR_OFFLINE) {
-        estado.inversor.alertado = true
-        notifyFn(db, 'inversor_offline', {}, { severity: 'critical' })
+    // ── Inversor offline: solo de día y con scraper fresco ──────────────
+    const sun = ha.getState(ENTITIES.sun)
+    const deDia = !sun || sun.state === 'above_horizon' // fail-open si falta sun.sun
+    if (fresco && deDia) {
+      if (attrs.inverterOnline === 0) {
+        estado.inversor.mal++
+        if (!estado.inversor.alertado && estado.inversor.mal >= TICKS_INVERSOR_OFFLINE) {
+          estado.inversor.alertado = true
+          notifyFn(db, 'inversor_offline', {}, { severity: 'critical' })
+        }
+      } else {
+        if (estado.inversor.alertado) {
+          estado.inversor.alertado = false
+          notifyFn(db, 'inversor_ok', {}, { severity: 'normal' })
+        }
+        estado.inversor.mal = 0
       }
-    } else {
-      if (estado.inversor.alertado) {
-        estado.inversor.alertado = false
-        notifyFn(db, 'inversor_ok', {}, { severity: 'normal' })
-      }
-      estado.inversor.mal = 0
     }
 
     // ── Corte de red (heurística, ver cabecera) ─────────────────────────

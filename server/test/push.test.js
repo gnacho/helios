@@ -146,13 +146,14 @@ describe('motor notifyUsers', () => {
 
 // --- Motor de alertas (flancos y anti-rebote) --------------------------------
 
-function mockHa({ inverterOnline = 1, gridPower = 0.5, lastUpdate = new Date().toISOString() } = {}) {
+function mockHa({ inverterOnline = 1, gridPower = 0.5, lastUpdate = new Date().toISOString(), sunState = 'above_horizon' } = {}) {
   return {
     connected: true,
     getState: (id) => {
       if (id.endsWith('scraper')) {
         return { state: 'ok', attributes: { inverterOnline, currentGridPower: gridPower, lastUpdate } }
       }
+      if (id === 'sun.sun') return { state: sunState, attributes: {} }
       return null
     },
   }
@@ -199,6 +200,55 @@ describe('motor de alertas', () => {
     expect(llamadas.map((l) => l.tipo)).toEqual(['inversor_offline', 'inversor_ok'])
     engine.tick()
     expect(llamadas).toHaveLength(2)
+  })
+
+  it('inversor: NO dispara de noche (sun below_horizon) aunque esté offline', () => {
+    const { llamadas, notifyFn } = capturaNotifs()
+    const engine = createAlertsEngine({
+      db,
+      ha: mockHa({ inverterOnline: 0, sunState: 'below_horizon' }),
+      solar: mockSolar(),
+      notifyFn,
+    })
+    engine.tick()
+    engine.tick()
+    engine.tick()
+    engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('inversor: NO dispara con scraper antiguo (>15 min) ni reevalúa hasta que refresca', () => {
+    const { llamadas, notifyFn } = capturaNotifs()
+    const viejo = new Date(Date.now() - 30 * 60000).toISOString()
+    const ha = mockHa({ inverterOnline: 0, lastUpdate: viejo })
+    const engine = createAlertsEngine({ db, ha, solar: mockSolar(), notifyFn })
+    engine.tick()
+    engine.tick()
+    engine.tick()
+    expect(llamadas).toHaveLength(0)
+    // El scraper refresca y sigue offline de día: ahora sí, a los 2 ticks
+    ha.getState = mockHa({ inverterOnline: 0 }).getState
+    engine.tick()
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['inversor_offline'])
+  })
+
+  it('inversor: la recuperación nocturna se notifica al reanudarse la evaluación (amanecer)', () => {
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ inverterOnline: 0 })
+    const engine = createAlertsEngine({ db, ha, solar: mockSolar(), notifyFn })
+    engine.tick()
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['inversor_offline'])
+    // Anochece y el inversor vuelve: de noche no se evalúa
+    ha.getState = mockHa({ inverterOnline: 1, sunState: 'below_horizon' }).getState
+    engine.tick()
+    engine.tick()
+    expect(llamadas).toHaveLength(1)
+    // Amanece: la evaluación se reanuda y se notifica la recuperación
+    ha.getState = mockHa({ inverterOnline: 1 }).getState
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['inversor_offline', 'inversor_ok'])
   })
 
   it('corte de red: firma sostenida 3 ticks dispara crítica y recupera a los 2', () => {
