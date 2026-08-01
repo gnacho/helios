@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* .light permite forzar el tema claro en previews dentro de páginas oscuras */
+  :root,
+  .light {
     /* ── Tokens canónicos webapp-shell (RGB triplets, claro) ──
        Sufijo -rgb: los nombres sin sufijo están ocupados por los
        legacy hex (gráficas SVG) y los HSL de shadcn. */

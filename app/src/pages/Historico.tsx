@@ -48,7 +48,6 @@ import HistoryChart from '@/components/HistoryChart';
 import EnergySourceDonut from '@/components/EnergySourceDonut';
 import type { SourceSplit } from '@/components/EnergySourceDonut';
 import YearHeatmap from '@/components/YearHeatmap';
-import HeliosToaster from '@/components/HeliosToaster';
 import { heliosToast } from '@/lib/toast';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
@@ -579,8 +578,6 @@ export default function Historico() {
           )}
         </motion.div>
       </AnimatePresence>
-
-      <HeliosToaster />
     </div>
   );
 }

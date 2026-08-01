@@ -18,7 +18,8 @@
     "autoconsumo": "Self-consumption",
     "charging": "Charging",
     "discharging": "Discharging",
-    "idle": "Idle"
+    "idle": "Idle",
+    "confirm": "Confirm"
   },
   "nav": {
     "dashboard": "Today",
@@ -296,7 +297,8 @@
       "appShort": "App",
       "acerca": "About",
       "seguridad": "Security",
-      "conexionDatos": "Connection & data"
+      "conexionDatos": "Connection & data",
+      "sesion": "My session"
     },
     "theme": {
       "autoNote": "In Auto mode, the interface uses the light theme between sunrise (06:50) and sunset (21:40).",
@@ -360,10 +362,11 @@
       "step3": "Done: shortcut with its own icon",
       "install": "Install app",
       "unavailable": "Your browser will offer installation from its menu when available.",
-      "iconAlt": "Helios app icon"
+      "iconAlt": "Helios app icon",
+      "installed": "Installed"
     },
     "footer": {
-      "version": "Helios v0.1 · Home solar monitor",
+      "version": "Helios v{{version}} · Home solar monitor",
       "local": "Local data via Home Assistant · No cloud, no accounts",
       "made": "Made with ☀ at home"
     },
@@ -378,8 +381,15 @@
       "confirm": "Repeat password",
       "mismatch": "Passwords do not match",
       "submit": "Change password",
-      "changed": "Password updated"
-    }
+      "changed": "Password updated",
+      "change": "Change my password"
+    },
+    "density": {
+      "title": "Density",
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    },
+    "reduceMotion": "Reduce animations"
   },
   "footer": {
     "line1": "Helios · Solar Monitor — local data via Home Assistant",

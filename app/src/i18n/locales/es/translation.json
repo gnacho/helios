@@ -18,7 +18,8 @@
     "autoconsumo": "Autoconsumo",
     "charging": "Cargando",
     "discharging": "Descargando",
-    "idle": "En reposo"
+    "idle": "En reposo",
+    "confirm": "Confirmar"
   },
   "nav": {
     "dashboard": "Hoy",
@@ -296,7 +297,8 @@
       "appShort": "App",
       "acerca": "Acerca de",
       "seguridad": "Seguridad",
-      "conexionDatos": "Conexión y datos"
+      "conexionDatos": "Conexión y datos",
+      "sesion": "Mi sesión"
     },
     "theme": {
       "autoNote": "En modo Auto, la interfaz usa el tema claro entre el amanecer (06:50) y el atardecer (21:40).",
@@ -360,10 +362,11 @@
       "step3": "Listo: acceso directo con icono propio",
       "install": "Instalar app",
       "unavailable": "Tu navegador ofrecerá la instalación desde su menú cuando esté disponible.",
-      "iconAlt": "Icono de la app Helios"
+      "iconAlt": "Icono de la app Helios",
+      "installed": "Instalada"
     },
     "footer": {
-      "version": "Helios v0.1 · Monitor solar doméstico",
+      "version": "Helios v{{version}} · Monitor solar doméstico",
       "local": "Datos locales vía Home Assistant · Sin nube, sin cuentas",
       "made": "Hecho con ☀ en casa"
     },
@@ -378,8 +381,15 @@
       "confirm": "Repite la contraseña",
       "mismatch": "Las contraseñas no coinciden",
       "submit": "Cambiar contraseña",
-      "changed": "Contraseña actualizada"
-    }
+      "changed": "Contraseña actualizada",
+      "change": "Cambiar mi contraseña"
+    },
+    "density": {
+      "title": "Densidad",
+      "comfortable": "Cómoda",
+      "compact": "Compacta"
+    },
+    "reduceMotion": "Reducir animaciones"
   },
   "footer": {
     "line1": "Helios · Monitor Solar — datos locales vía Home Assistant",

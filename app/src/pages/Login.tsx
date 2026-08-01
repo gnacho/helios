@@ -10,6 +10,25 @@ import BrandLogo from '@/components/BrandLogo';
 import i18n, { LANG_MODE_KEY } from '@/i18n';
 import { ApiError, apiFetch, apiPost, resetAuthGuard } from '@/data/api-client';
 
+/**
+ * Fuerza el prompt "guardar contraseña" del navegador tras un login OK en SPA
+ * (sin esto, al no haber recarga de página, el gestor no la ofrece).
+ */
+async function storeCredentials(username: string, password: string) {
+  try {
+    const PC = (
+      window as unknown as {
+        PasswordCredential?: new (d: { id: string; password: string; name?: string }) => Credential;
+      }
+    ).PasswordCredential;
+    if ('credentials' in navigator && PC) {
+      await navigator.credentials.store(new PC({ id: username, password, name: username }));
+    }
+  } catch {
+    /* el usuario rechazó o el navegador no lo soporta: ignorar */
+  }
+}
+
 export default function Login({ onSuccess }: { onSuccess: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +44,7 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
     setError(null);
     try {
       await apiPost('/api/auth/login', { username, password });
+      await storeCredentials(username, password);
       // Idioma del perfil: fuerza el idioma salvo en dispositivos en modo "auto".
       const me = await apiFetch<{ user?: { language?: string } }>('/api/auth/me').catch(() => null);
       const lang = me?.user?.language;

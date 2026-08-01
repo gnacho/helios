@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import {
@@ -32,14 +32,13 @@ import { useTheme } from '@/theme/ThemeProvider';
 import type { ThemeMode } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
-import HeliosToaster from '@/components/HeliosToaster';
 import BrandLogo from '@/components/BrandLogo';
 import { heliosToast } from '@/lib/toast';
 import { LANG_MODE_KEY, resolveNavigatorLanguage, dateLocale, numLocale } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { THEME_SWATCHES } from '@/lib/colors';
 import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-client';
+import pkg from '../../package.json';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
 
@@ -117,12 +116,12 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: typeof Sun }[] 
 ];
 
 const THEME_PREVIEWS = [
-  { key: 'light', labelKey: 'theme.light', ...THEME_SWATCHES.light },
-  { key: 'dark', labelKey: 'theme.dark', ...THEME_SWATCHES.dark },
+  { key: 'light', labelKey: 'theme.light' },
+  { key: 'dark', labelKey: 'theme.dark' },
 ] as const;
 
 function ThemeSection() {
-  const { mode, setMode, effective } = useTheme();
+  const { mode, setMode, effective, density, setDensity, reduceMotion, setReduceMotion } = useTheme();
   const { t } = useTranslation();
 
   return (
@@ -164,7 +163,7 @@ function ThemeSection() {
         {t('ajustes.theme.autoNote')}
       </p>
 
-      {/* Preview en vivo de ambos temas */}
+      {/* Preview en vivo de ambos temas: tokens reales scoping .light/.dark */}
       <div className="flex flex-wrap gap-3">
         {THEME_PREVIEWS.map((tp, i) => (
           <motion.div
@@ -172,33 +171,69 @@ function ThemeSection() {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.1 + i * 0.1, ease: easeOutQuart }}
-            className="w-[180px] rounded-2xl p-2"
-            style={{ backgroundColor: tp.bg, border: `1px solid ${tp.border}` }}
+            className={cn('w-[180px] rounded-2xl border border-app bg-app p-2', tp.key)}
             aria-label={t('ajustes.theme.previewAria', { label: t(tp.labelKey) })}
           >
-            <div className="flex h-[96px] flex-col justify-between rounded-xl p-3" style={{ backgroundColor: tp.surface, border: `1px solid ${tp.border}` }}>
+            <div className="flex h-[96px] flex-col justify-between rounded-xl border border-app bg-surface p-3">
               <div className="flex items-center justify-between">
-                <span
-                  className="flex h-6 w-6 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: `${tp.accent}1F`, color: tp.accent }}
-                >
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
                   <Sun size={13} strokeWidth={2.4} />
                 </span>
-                <span className="text-[9px] font-medium uppercase tracking-[0.08em]" style={{ color: tp.faint }}>
+                <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-faint">
                   {t(tp.labelKey)}
                 </span>
               </div>
               <div>
-                <p className="text-[9px] font-medium uppercase tracking-[0.08em]" style={{ color: tp.faint }}>
+                <p className="text-[9px] font-medium uppercase tracking-[0.08em] text-faint">
                   {t('common.production')}
                 </p>
-                <p className="font-display text-lg font-semibold leading-tight" style={{ color: tp.text }}>
-                  6,12 <span className="text-[0.6em] font-medium" style={{ color: tp.faint }}>kW</span>
+                <p className="font-display text-lg font-semibold leading-tight text-app">
+                  6,12 <span className="text-[0.6em] font-medium text-faint">kW</span>
                 </p>
               </div>
             </div>
           </motion.div>
         ))}
+      </div>
+
+      {/* Densidad cómoda/compacta */}
+      <div>
+        <p className="text-[13px] font-medium text-muted">{t('ajustes.density.title')}</p>
+        <div role="radiogroup" aria-label={t('ajustes.density.title')} className="mt-1.5 flex rounded-xl border border-app p-0.5">
+          {(['comfortable', 'compact'] as const).map((d) => (
+            <button
+              key={d}
+              role="radio"
+              aria-checked={density === d}
+              onClick={() => setDensity(d)}
+              className={cn(
+                'h-8 flex-1 rounded-lg text-[13px] transition-colors',
+                density === d ? 'bg-surface-2 font-semibold text-app' : 'text-faint hover:text-muted',
+              )}
+            >
+              {t(`ajustes.density.${d}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Reducir animaciones */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-app">{t('ajustes.reduceMotion')}</span>
+        <button
+          role="switch"
+          aria-checked={reduceMotion}
+          aria-label={t('ajustes.reduceMotion')}
+          onClick={() => setReduceMotion(!reduceMotion)}
+          className={cn('relative h-6 w-11 rounded-full transition-colors', reduceMotion ? 'bg-amber-500' : 'bg-surface-2')}
+        >
+          <span
+            className={cn(
+              'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+              reduceMotion ? 'translate-x-[22px]' : 'translate-x-0.5',
+            )}
+          />
+        </button>
       </div>
     </div>
   );
@@ -577,12 +612,29 @@ function toEsDecimal(v: number, decimals = 2): string {
   return v.toFixed(decimals).replace('.', ',');
 }
 
+function fromEsDecimal(v: string): number | null {
+  const n = Number(v.trim().replace(',', '.'));
+  return Number.isFinite(n) && v.trim() !== '' ? n : null;
+}
+
 function PricesSection() {
-  const [settings] = useEnergySettings();
+  const [settings, update] = useEnergySettings();
   const { t } = useTranslation();
   const [priceImport, setPriceImport] = useState(() => toEsDecimal(settings.priceImport));
   const [priceExport, setPriceExport] = useState(() => toEsDecimal(settings.priceExport));
   const [co2, setCo2] = useState(() => toEsDecimal(settings.co2Factor));
+
+  // Persiste lo escrito (antes solo vivía en estado local y el Guardar global hacía update({})).
+  const persist = () => {
+    const pi = fromEsDecimal(priceImport);
+    const pe = fromEsDecimal(priceExport);
+    const c = fromEsDecimal(co2);
+    update({
+      ...(pi !== null ? { priceImport: pi } : {}),
+      ...(pe !== null ? { priceExport: pe } : {}),
+      ...(c !== null ? { co2Factor: c } : {}),
+    });
+  };
 
   const fields = [
     { id: 'precio-compra', label: t('ajustes.prices.buy'), value: priceImport, set: setPriceImport, suffix: '€/kWh' },
@@ -610,6 +662,7 @@ function PricesSection() {
                 inputMode="decimal"
                 value={f.value}
                 onChange={(e) => f.set(e.target.value)}
+                onBlur={persist}
                 className="pr-16 text-right tabular-nums"
               />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-faint">
@@ -742,6 +795,56 @@ function SecuritySection() {
   );
 }
 
+// ── §7b Mi sesión (patrón easyzfs: cambiar contraseña + cerrar sesión) ──────
+
+async function doLogout() {
+  // Contrato de sesión: logout = POST + evento unauthorized (AuthGate muestra Login). Sin recargar la SPA.
+  try {
+    await apiPost('/api/auth/logout');
+  } finally {
+    window.dispatchEvent(new Event('helios-unauthorized'));
+  }
+}
+
+function SessionSection() {
+  const { t } = useTranslation();
+  const [showPwd, setShowPwd] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-2.5">
+        <button
+          onClick={() => setShowPwd((v) => !v)}
+          aria-expanded={showPwd}
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-app bg-surface px-5 text-sm font-semibold text-app transition-colors hover:bg-surface-2"
+        >
+          <KeyRound size={16} />
+          {t('ajustes.security.change')}
+        </button>
+        <button
+          onClick={doLogout}
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/20"
+        >
+          <LogOut size={16} />
+          {t('common.logout')}
+        </button>
+      </div>
+      <AnimatePresence>
+        {showPwd && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <SecuritySection />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── §8 Usuarios (solo admin) ────────────────────────────────────────────────
 
 interface AdminUser {
@@ -766,6 +869,7 @@ function UsersSection() {
   const [pwdFor, setPwdFor] = useState<string | null>(null);
   const [newPwd, setNewPwd] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const languages = [
     { code: 'es', name: 'Español', flag: '🇪🇸' },
@@ -841,11 +945,11 @@ function UsersSection() {
     }
   };
 
-  const deleteUser = async (userId: string, name: string) => {
-    if (!window.confirm(t('admin.users.deleteConfirm', { username: name }))) return;
+  const deleteUser = async (userId: string) => {
     try {
       await apiDelete(`/api/auth/users/${userId}`);
       heliosToast(t('admin.users.deleted'), { tone: 'success' });
+      setConfirmDelete(null);
       setUsers((us) => us.filter((u) => u.id !== userId));
     } catch {
       heliosToast(t('common.error'), { tone: 'warning' });
@@ -918,17 +1022,33 @@ function UsersSection() {
                   >
                     <KeyRound size={14} />
                   </button>
-                  {/* Eliminar (no sobre uno mismo) */}
-                  {user.id !== meId && (
-                    <button
-                      onClick={() => deleteUser(user.id, user.username)}
-                      title={t('admin.users.delete')}
-                      aria-label={t('admin.users.delete')}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/30 text-destructive transition-colors hover:bg-destructive/10"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
+                  {/* Eliminar (no sobre uno mismo): confirmación inline en dos pasos */}
+                  {user.id !== meId &&
+                    (confirmDelete === user.id ? (
+                      <span className="flex gap-1">
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          className="h-8 rounded-lg bg-destructive px-3 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                        >
+                          {t('common.confirm')}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(null)}
+                          className="h-8 rounded-lg border border-app px-3 text-xs font-medium text-muted transition-colors hover:text-app"
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelete(user.id)}
+                        title={t('admin.users.delete')}
+                        aria-label={t('admin.users.delete')}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/30 text-destructive transition-colors hover:bg-destructive/10"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ))}
                 </div>
               </div>
               {/* Form inline cambio de contraseña */}
@@ -1193,26 +1313,49 @@ function ActivitySection() {
 
 // ── §9 Instalar como app (PWA) ───────────────────────────────────────────────
 
-function InstallSection() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const { t } = useTranslation();
-  const { isDark } = useTheme();
+type InstallState = 'installed' | 'installable' | 'ios' | 'hidden';
+
+function useInstallPrompt() {
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(
+    () =>
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as { standalone?: boolean }).standalone === true,
+  );
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
   useEffect(() => {
-    const handler = (e: Event) => {
+    const onPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setDeferred(e as BeforeInstallPromptEvent);
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    const onInstalled = () => {
+      setInstalled(true);
+      setDeferred(null);
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
   }, []);
 
+  // Sin evento y no-iOS: el navegador no lo soporta → la tarjeta no se muestra.
+  const state: InstallState = installed ? 'installed' : deferred ? 'installable' : isIos ? 'ios' : 'hidden';
+
   const install = async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    setDeferredPrompt(null);
+    if (!deferred) return;
+    await deferred.prompt();
+    setDeferred(null);
   };
 
+  return { state, install };
+}
+
+function InstallSection({ state, install }: { state: InstallState; install: () => void }) {
+  const { t } = useTranslation();
+  const { isDark } = useTheme();
   const steps = [t('ajustes.pwa.step1'), t('ajustes.pwa.step2'), t('ajustes.pwa.step3')];
 
   return (
@@ -1231,25 +1374,27 @@ function InstallSection() {
         <p className="mt-1 text-sm leading-snug text-muted">
           {t('ajustes.pwa.desc')}
         </p>
-        <ol className="mt-3 flex flex-col gap-1.5">
-          {steps.map((s, i) => (
-            <motion.li
-              key={s}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: 0.15 + i * 0.1, ease: 'easeOut' }}
-              className="flex items-baseline gap-2 text-sm text-muted"
-            >
-              <span className="flex h-5 w-5 shrink-0 translate-y-0.5 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold text-muted">
-                {i + 1}
-              </span>
-              {s}
-            </motion.li>
-          ))}
-        </ol>
+        {state === 'ios' && (
+          <ol className="mt-3 flex flex-col gap-1.5">
+            {steps.map((step, i) => (
+              <motion.li
+                key={step}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: 0.15 + i * 0.1, ease: 'easeOut' }}
+                className="flex items-baseline gap-2 text-sm text-muted"
+              >
+                <span className="flex h-5 w-5 shrink-0 translate-y-0.5 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold text-muted">
+                  {i + 1}
+                </span>
+                {step}
+              </motion.li>
+            ))}
+          </ol>
+        )}
         <div className="mt-6 flex justify-center">
-          {deferredPrompt ? (
+          {state === 'installable' && (
             <button
               onClick={install}
               className="bg-brand-gradient inline-flex h-14 items-center gap-3 rounded-full px-8 text-[16px] font-semibold text-white shadow-lg transition-transform hover:scale-[1.03] active:scale-95"
@@ -1257,10 +1402,11 @@ function InstallSection() {
               <Smartphone size={22} />
               {t('ajustes.pwa.install')}
             </button>
-          ) : (
-            <p className="inline-flex items-center gap-2 rounded-full border border-app bg-surface-2 px-6 py-3 text-sm text-muted">
-              <Smartphone size={18} className="text-faint" />
-              {t('ajustes.pwa.unavailable')}
+          )}
+          {state === 'installed' && (
+            <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-6 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+              <Check size={18} />
+              {t('ajustes.pwa.installed')}
             </p>
           )}
         </div>
@@ -1276,7 +1422,7 @@ function AboutSection() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1.5 py-4 text-center text-[13px] text-faint">
       <BrandLogo className="h-12 w-12" />
-      <p className="font-medium">{t('ajustes.footer.version')}</p>
+      <p className="font-medium">{t('ajustes.footer.version', { version: pkg.version })}</p>
       <p>{t('ajustes.footer.local')}</p>
       <p>{t('ajustes.footer.made')}</p>
     </div>
@@ -1287,6 +1433,7 @@ function AboutSection() {
 
 export default function Ajustes() {
   const { t } = useTranslation();
+  const { state: installState, install } = useInstallPrompt();
   const [, update] = useEnergySettings();
   const [saved, setSaved] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -1377,56 +1524,33 @@ export default function Ajustes() {
 
         {userRole === 'admin' ? (
           <div className="grid items-start gap-5 lg:grid-cols-2">
-            <Section id="seguridad" title={t('ajustes.sections.seguridad')}>
-              <SecuritySection />
+            <Section id="sesion" title={t('ajustes.sections.sesion')}>
+              <SessionSection />
             </Section>
             <Section id="usuarios" title={t('ajustes.sections.usuarios')}>
               <UsersSection />
             </Section>
           </div>
         ) : (
-          <Section id="seguridad" title={t('ajustes.sections.seguridad')}>
-            <SecuritySection />
+          <Section id="sesion" title={t('ajustes.sections.sesion')}>
+            <SessionSection />
           </Section>
         )}
 
-        {/* PWA + Acerca de en la misma horizontal (≥lg) */}
+        {/* PWA (solo si el navegador lo soporta) + Acerca de en la misma horizontal (≥lg) */}
         <div className="grid items-stretch gap-5 lg:grid-cols-2">
-          <Section id="app" title={t('ajustes.sections.app')}>
-            <InstallSection />
-          </Section>
+          {installState !== 'hidden' && (
+            <Section id="app" title={t('ajustes.sections.app')}>
+              <InstallSection state={installState} install={install} />
+            </Section>
+          )}
 
           <Section id="acerca" title={t('ajustes.sections.acerca')}>
             <AboutSection />
           </Section>
         </div>
 
-        {/* Cerrar sesión */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="flex justify-center py-4"
-        >
-          <button
-            onClick={async () => {
-              // Contrato de sesión: logout = POST + evento unauthorized (AuthGate muestra Login). Sin recargar la SPA.
-              try {
-                await apiPost('/api/auth/logout');
-              } finally {
-                window.dispatchEvent(new Event('helios-unauthorized'));
-              }
-            }}
-            className="inline-flex h-12 items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-8 text-[15px] font-semibold text-destructive transition-all hover:bg-destructive/20 hover:scale-[1.02] active:scale-95"
-          >
-            <LogOut size={20} />
-            {t('common.logout')}
-          </button>
-        </motion.div>
       </div>
-
-      <HeliosToaster />
     </div>
   );
 }

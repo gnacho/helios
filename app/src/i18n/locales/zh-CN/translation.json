@@ -18,7 +18,8 @@
     "autoconsumo": "自用",
     "charging": "充电中",
     "discharging": "放电中",
-    "idle": "待机"
+    "idle": "待机",
+    "confirm": "确认"
   },
   "nav": {
     "dashboard": "今日",
@@ -294,7 +295,8 @@
       "appShort": "应用",
       "acerca": "关于",
       "seguridad": "安全",
-      "conexionDatos": "连接与数据"
+      "conexionDatos": "连接与数据",
+      "sesion": "我的会话"
     },
     "theme": {
       "autoNote": "自动模式下，界面在日出（06:50）和日落（21:40）之间使用浅色主题。",
@@ -358,10 +360,11 @@
       "step3": "完成：带有专属图标的快捷方式",
       "install": "安装应用",
       "unavailable": "您的浏览器会在可用时从菜单中提供安装选项。",
-      "iconAlt": "Helios 应用图标"
+      "iconAlt": "Helios 应用图标",
+      "installed": "已安装"
     },
     "footer": {
-      "version": "Helios v0.1 · 家庭太阳能监控",
+      "version": "Helios v{{version}} · 家庭太阳能监控",
       "local": "通过 Home Assistant 本地获取数据 · 无云端，无账号",
       "made": "在家用 ☀ 制作"
     },
@@ -376,8 +379,15 @@
       "confirm": "重复密码",
       "mismatch": "两次输入的密码不一致",
       "submit": "更改密码",
-      "changed": "密码已更新"
-    }
+      "changed": "密码已更新",
+      "change": "修改我的密码"
+    },
+    "density": {
+      "title": "密度",
+      "comfortable": "舒适",
+      "compact": "紧凑"
+    },
+    "reduceMotion": "减少动画"
   },
   "footer": {
     "line1": "Helios · 太阳能监控 — 通过 Home Assistant 本地获取数据",
