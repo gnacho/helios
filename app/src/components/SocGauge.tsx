@@ -1,3 +1,4 @@
+import { BATTERY_LOW_COLOR } from '@/lib/colors';
 import { useId } from 'react';
 import { motion } from 'framer-motion';
 import { useEnergyColors } from '@/lib/colors';
@@ -31,7 +32,7 @@ export default function SocGauge({ soc, status, size = 180 }: SocGaugeProps) {
   const animated = useAnimatedNumber(soc, 1);
 
   const clamped = Math.min(100, Math.max(0, soc));
-  const arcColor = clamped < 15 ? '#FB7185' : clamped < 25 ? palette.solar : palette.bateria;
+  const arcColor = clamped < 15 ? BATTERY_LOW_COLOR : clamped < 25 ? palette.solar : palette.bateria;
 
   const cx = 100;
   const cy = 100;

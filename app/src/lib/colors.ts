@@ -23,6 +23,33 @@ export const ESTADO_COLORS = {
   online: '#22C55E',
 } as const;
 
+/** Degradado ámbar de las áreas solares en gráficas. */
+export const SOLAR_GRADIENT = { from: '#F59E0B', to: '#F97316' } as const;
+
+/** Batería por debajo de la reserva (gauge). */
+export const BATTERY_LOW_COLOR = '#FB7185';
+
+/** Icono casa del flujo (SVG inline). */
+export const FLOW_HOME_COLORS = {
+  strokeFrom: '#3B82F6',
+  strokeTo: '#1D4ED8',
+  stroke: '#60A5FA',
+  sun: '#FBBF24',
+  sunStroke: '#B45309',
+} as const;
+
+/** Arco solar: cielo nocturno y estrellas. */
+export const SOLAR_ARC_COLORS = { nightFrom: '#101828', nightTo: '#182338', star: '#FFFFFF' } as const;
+
+/** Fondos base por tema (theme-color meta, swatches de preview). */
+export const THEME_BG = { light: '#F4F6FA', dark: '#080D1A' } as const;
+
+/** Swatches literales para la vista previa de temas en Ajustes. */
+export const THEME_SWATCHES = {
+  light: { bg: '#F4F6FA', surface: '#FFFFFF', text: '#0C1425', faint: '#94A3B8', border: '#E3E8F0', accent: '#F59E0B' },
+  dark: { bg: '#080D1A', surface: '#101828', text: '#E9EEF7', faint: '#5C6B85', border: '#1E2B42', accent: '#FBBF24' },
+} as const;
+
 export function energyColor(key: EnergyColorKey, isDark: boolean): string {
   return isDark ? ENERGY_COLORS[key].dark : ENERGY_COLORS[key].light;
 }

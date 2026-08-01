@@ -1,3 +1,4 @@
+import { SOLAR_GRADIENT } from '@/lib/colors';
 import { useMemo } from 'react';
 import {
   Area,
@@ -231,7 +232,7 @@ export default function HistoryChart({
               x={Math.round(nowMin / STEP_MIN) * STEP_MIN}
               stroke={palette.solar}
               strokeWidth={2}
-              label={{ value: 'AHORA', position: 'insideTopLeft', fill: '#F59E0B', fontSize: 10, fontWeight: 700 }}
+              label={{ value: 'AHORA', position: 'insideTopLeft', fill: SOLAR_GRADIENT.from, fontSize: 10, fontWeight: 700 }}
             />
           )}
         </AreaChart>

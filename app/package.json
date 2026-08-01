@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/theme-audit.mjs",
     "format": "prettier --write .",
+    "check:bundlesize": "node scripts/check-bundle-size.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

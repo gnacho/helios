@@ -1,3 +1,4 @@
+import { SOLAR_ARC_COLORS } from '@/lib/colors';
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Sunrise, Sunset, CloudSun } from 'lucide-react';
@@ -95,13 +96,13 @@ export default function SolarArc({ atMin, peakKw, peakAtMin, sunriseMin = SUNRIS
       <svg viewBox="0 0 300 140" className="mx-auto w-full max-w-[320px]" role="img" aria-label={t('solar.aria')}>
         <defs>
           <linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#101828" stopOpacity={isDark ? 0.9 : 0} />
-            <stop offset="100%" stopColor="#182338" stopOpacity={isDark ? 0.4 : 0} />
+            <stop offset="0%" stopColor={SOLAR_ARC_COLORS.nightFrom} stopOpacity={isDark ? 0.9 : 0} />
+            <stop offset="100%" stopColor={SOLAR_ARC_COLORS.nightTo} stopOpacity={isDark ? 0.4 : 0} />
           </linearGradient>
         </defs>
         <path d="M 42 128 A 108 108 0 0 1 258 128" fill="url(#night-sky)" stroke="none" />
         {isDark &&
-          STARS.map(([sx, sy], i) => <circle key={i} cx={sx} cy={sy} r={1.4} fill="#FFFFFF" opacity={0.3} />)}
+          STARS.map(([sx, sy], i) => <circle key={i} cx={sx} cy={sy} r={1.4} fill={SOLAR_ARC_COLORS.star} opacity={0.3} />)}
         {/* arco */}
         <path d="M 42 128 A 108 108 0 0 1 258 128" fill="none" stroke="var(--line)" strokeWidth={2} strokeDasharray="3 5" />
         {/* horizonte */}

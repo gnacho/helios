@@ -1,3 +1,4 @@
+import { SOLAR_GRADIENT } from '@/lib/colors';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Area,
@@ -229,8 +230,8 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
                 <stop offset="100%" stopColor={palette.consumo} stopOpacity={0} />
               </linearGradient>
               <linearGradient id="grad-now" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F59E0B" />
-                <stop offset="100%" stopColor="#F97316" />
+                <stop offset="0%" stopColor={SOLAR_GRADIENT.from} />
+                <stop offset="100%" stopColor={SOLAR_GRADIENT.to} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="var(--line)" strokeOpacity={0.6} strokeDasharray="3 6" />
@@ -317,7 +318,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
               label={{
                 value: t('chart.now'),
                 position: 'insideTopLeft',
-                fill: '#F59E0B',
+                fill: SOLAR_GRADIENT.from,
                 fontSize: 10,
                 fontWeight: 700,
               }}

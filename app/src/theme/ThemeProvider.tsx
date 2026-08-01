@@ -1,3 +1,4 @@
+import { THEME_BG } from '@/lib/colors';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -39,7 +40,7 @@ function applyTheme(effective: EffectiveTheme) {
   const root = document.documentElement;
   root.classList.toggle('dark', effective === 'dark');
   const meta = document.getElementById('meta-theme-color');
-  if (meta) meta.setAttribute('content', effective === 'dark' ? '#080D1A' : '#F4F6FA');
+  if (meta) meta.setAttribute('content', effective === 'dark' ? THEME_BG.dark : THEME_BG.light);
   // Favicon según el tema EFECTIVO de la app (pisa los estáticos con media del SO)
   let icon = document.querySelector<HTMLLinkElement>('link[rel="icon"][data-app-theme]');
   if (!icon) {

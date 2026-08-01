@@ -1,3 +1,4 @@
+import { SOLAR_GRADIENT } from '@/lib/colors';
 import { useMemo } from 'react';
 import {
   Area,
@@ -111,8 +112,8 @@ export default function SocDayChart({ data, nowMin, height = 280 }: SocDayChartP
                 <stop offset="100%" stopColor={palette.bateria} stopOpacity={0} />
               </linearGradient>
               <linearGradient id="grad-soc-now" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F59E0B" />
-                <stop offset="100%" stopColor="#F97316" />
+                <stop offset="0%" stopColor={SOLAR_GRADIENT.from} />
+                <stop offset="100%" stopColor={SOLAR_GRADIENT.to} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="var(--line)" strokeOpacity={0.6} strokeDasharray="3 6" />
@@ -189,7 +190,7 @@ export default function SocDayChart({ data, nowMin, height = 280 }: SocDayChartP
               x={nowT}
               stroke="url(#grad-soc-now)"
               strokeWidth={2}
-              label={{ value: 'AHORA', position: 'insideTopLeft', fill: '#F59E0B', fontSize: 10, fontWeight: 700 }}
+              label={{ value: 'AHORA', position: 'insideTopLeft', fill: SOLAR_GRADIENT.from, fontSize: 10, fontWeight: 700 }}
             />
           </AreaChart>
         </ResponsiveContainer>

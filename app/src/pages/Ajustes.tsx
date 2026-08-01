@@ -37,6 +37,7 @@ import { heliosToast } from '@/lib/toast';
 import { LANG_MODE_KEY, resolveNavigatorLanguage, dateLocale } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { THEME_SWATCHES } from '@/lib/colors';
 import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-client';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
@@ -115,26 +116,8 @@ const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: typeof Sun }[] 
 ];
 
 const THEME_PREVIEWS = [
-  {
-    key: 'light',
-    labelKey: 'theme.light',
-    bg: '#F4F6FA',
-    surface: '#FFFFFF',
-    text: '#0C1425',
-    faint: '#94A3B8',
-    border: '#E3E8F0',
-    accent: '#F59E0B',
-  },
-  {
-    key: 'dark',
-    labelKey: 'theme.dark',
-    bg: '#080D1A',
-    surface: '#101828',
-    text: '#E9EEF7',
-    faint: '#5C6B85',
-    border: '#1E2B42',
-    accent: '#FBBF24',
-  },
+  { key: 'light', labelKey: 'theme.light', ...THEME_SWATCHES.light },
+  { key: 'dark', labelKey: 'theme.dark', ...THEME_SWATCHES.dark },
 ] as const;
 
 function ThemeSection() {
