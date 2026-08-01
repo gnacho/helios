@@ -420,6 +420,16 @@
       "deleteConfirm": "Delete user {{username}}? This action cannot be undone.",
       "deleted": "User deleted",
       "you": "you"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "when": "When",
+      "user": "User",
+      "action": "Action",
+      "detail": "Detail",
+      "prev": "Previous",
+      "next": "Next",
+      "empty": "No activity recorded"
     }
   }
 }

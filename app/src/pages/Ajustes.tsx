@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { format } from 'date-fns';
 import {
   BatteryCharging,
   Check,
@@ -33,7 +34,7 @@ import { useEnergySettings } from '@/hooks/useEnergySettings';
 import HeliosToaster from '@/components/HeliosToaster';
 import BrandLogo from '@/components/BrandLogo';
 import { heliosToast } from '@/lib/toast';
-import { LANG_MODE_KEY, resolveNavigatorLanguage } from '@/i18n';
+import { LANG_MODE_KEY, resolveNavigatorLanguage, dateLocale } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-client';
@@ -1061,11 +1062,117 @@ function UsersSection() {
         </div>
       </motion.form>
       )}
+
+      {/* Actividad (audit log) */}
+      <div className="border-t border-app pt-4">
+        <ActivitySection />
+      </div>
     </div>
   );
 }
 
-// ── §8 Instalar como app (PWA) ───────────────────────────────────────────────
+// ── §8b Actividad (audit log, solo admin) ───────────────────────────────────
+
+interface AuditEntry {
+  id: number;
+  ts: number;
+  actor: string;
+  action: string;
+  detail: string | null;
+}
+
+const AUDIT_PAGE = 20;
+
+function ActivitySection() {
+  const { t } = useTranslation();
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = (off: number) => {
+    apiFetch<{ total: number; entries: AuditEntry[] }>(`/api/auth/audit?limit=${AUDIT_PAGE}&offset=${off}`)
+      .then((data) => {
+        setEntries(data.entries);
+        setTotal(data.total);
+        setOffset(off);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  };
+
+  const pages = Math.max(1, Math.ceil(total / AUDIT_PAGE));
+  const page = Math.floor(offset / AUDIT_PAGE) + 1;
+
+  return (
+    <Accordion
+      type="single"
+      collapsible
+      onValueChange={(v) => {
+        if (v === 'actividad' && !loaded) load(0);
+      }}
+    >
+      <AccordionItem value="actividad" className="rounded-xl border border-app px-3">
+        <AccordionTrigger className="py-3 text-[13px] font-medium text-muted hover:no-underline">
+          {t('admin.activity.title')}
+        </AccordionTrigger>
+        <AccordionContent>
+          {entries.length === 0 ? (
+            <p className="py-2 text-sm text-faint">{t('admin.activity.empty')}</p>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">{t('admin.activity.when')}</TableHead>
+                    <TableHead className="text-xs">{t('admin.activity.user')}</TableHead>
+                    <TableHead className="text-xs">{t('admin.activity.action')}</TableHead>
+                    <TableHead className="text-xs">{t('admin.activity.detail')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {entries.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="py-1.5 text-xs whitespace-nowrap text-muted">
+                        {format(new Date(e.ts), 'P p', { locale: dateLocale() })}
+                      </TableCell>
+                      <TableCell className="py-1.5 text-xs text-app">{e.actor}</TableCell>
+                      <TableCell className="py-1.5 font-mono text-xs text-muted">{e.action}</TableCell>
+                      <TableCell className="max-w-[180px] truncate py-1.5 font-mono text-[11px] text-faint">{e.detail ?? '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {pages > 1 && (
+                <div className="mt-2 flex items-center justify-between text-xs text-muted">
+                  <button
+                    disabled={offset === 0}
+                    onClick={() => load(Math.max(0, offset - AUDIT_PAGE))}
+                    className="rounded-full border border-app px-3 py-1 disabled:opacity-40"
+                  >
+                    {t('admin.activity.prev')}
+                  </button>
+                  <span>
+                    {page} / {pages}
+                  </span>
+                  <button
+                    disabled={offset + AUDIT_PAGE >= total}
+                    onClick={() => load(offset + AUDIT_PAGE)}
+                    className="rounded-full border border-app px-3 py-1 disabled:opacity-40"
+                  >
+                    {t('admin.activity.next')}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+// ── §9 Instalar como app (PWA) ───────────────────────────────────────────────
 
 function InstallSection() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);

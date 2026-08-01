@@ -420,6 +420,16 @@
       "deleteConfirm": "¿Eliminar al usuario {{username}}? Esta acción no se puede deshacer.",
       "deleted": "Usuario eliminado",
       "you": "tú"
+    },
+    "activity": {
+      "title": "Actividad reciente",
+      "when": "Cuándo",
+      "user": "Usuario",
+      "action": "Acción",
+      "detail": "Detalle",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "empty": "Sin actividad registrada"
     }
   }
 }

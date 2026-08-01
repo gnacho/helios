@@ -418,6 +418,16 @@
       "deleteConfirm": "确定删除用户 {{username}}？此操作无法撤销。",
       "deleted": "用户已删除",
       "you": "您"
+    },
+    "activity": {
+      "title": "最近活动",
+      "when": "时间",
+      "user": "用户",
+      "action": "操作",
+      "detail": "详情",
+      "prev": "上一页",
+      "next": "下一页",
+      "empty": "暂无活动记录"
     }
   }
 }
