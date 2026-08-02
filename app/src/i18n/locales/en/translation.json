@@ -408,6 +408,8 @@
       "tipos": {
         "inversor_offline": "Inverter offline",
         "inversor_ok": "Inverter recovered",
+        "fox_offline": "Fox inverter offline",
+        "fox_ok": "Fox inverter recovered",
         "corte_red": "Grid outage",
         "corte_red_ok": "Grid restored",
         "bateria_baja": "Low battery",

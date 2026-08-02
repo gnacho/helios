@@ -406,6 +406,8 @@
       "tipos": {
         "inversor_offline": "逆变器离线",
         "inversor_ok": "逆变器已恢复",
+        "fox_offline": "Fox 逆变器离线",
+        "fox_ok": "Fox 逆变器已恢复",
         "corte_red": "电网停电",
         "corte_red_ok": "电网已恢复",
         "bateria_baja": "电池电量低",

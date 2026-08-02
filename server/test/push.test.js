@@ -146,7 +146,7 @@ describe('motor notifyUsers', () => {
 
 // --- Motor de alertas (flancos y anti-rebote) --------------------------------
 
-function mockHa({ inverterOnline = 1, gridPower = 0.5, lastUpdate = new Date().toISOString(), sunState = 'above_horizon' } = {}) {
+function mockHa({ inverterOnline = 1, gridPower = 0.5, lastUpdate = new Date().toISOString(), sunState = 'above_horizon', foxState = '123.4' } = {}) {
   return {
     connected: true,
     getState: (id) => {
@@ -154,6 +154,7 @@ function mockHa({ inverterOnline = 1, gridPower = 0.5, lastUpdate = new Date().t
         return { state: 'ok', attributes: { inverterOnline, currentGridPower: gridPower, lastUpdate } }
       }
       if (id === 'sun.sun') return { state: sunState, attributes: {} }
+      if (id === 'sensor.almacen_pinza_power_b') return { state: foxState, attributes: {} }
       return null
     },
   }
@@ -200,6 +201,38 @@ describe('motor de alertas', () => {
     expect(llamadas.map((l) => l.tipo)).toEqual(['inversor_offline', 'inversor_ok'])
     engine.tick()
     expect(llamadas).toHaveLength(2)
+  })
+
+  it('fox offline: dispara al 3er tick de día y avisa al recuperar', () => {
+    const { llamadas, notifyFn } = capturaNotifs()
+    const haFox = mockHa({ foxState: 'unavailable' })
+    const engine = createAlertsEngine({ db, ha: haFox, solar: mockSolar(), notifyFn })
+    engine.tick()
+    engine.tick()
+    expect(llamadas).toHaveLength(0) // 2 ticks no bastan (anti-rebote)
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['fox_offline'])
+    expect(llamadas[0].opciones.severity).toBe('high')
+    engine.tick()
+    expect(llamadas).toHaveLength(1) // no reenvía mientras persiste
+    haFox.getState = mockHa({ foxState: '120.0' }).getState
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['fox_offline', 'fox_ok'])
+  })
+
+  it('fox offline: NO se evalúa de noche (sun below_horizon)', () => {
+    const { llamadas, notifyFn } = capturaNotifs()
+    const engine = createAlertsEngine({
+      db,
+      ha: mockHa({ foxState: 'unavailable', sunState: 'below_horizon' }),
+      solar: mockSolar(),
+      notifyFn,
+    })
+    engine.tick()
+    engine.tick()
+    engine.tick()
+    engine.tick()
+    expect(llamadas).toHaveLength(0)
   })
 
   it('inversor: NO dispara de noche (sun below_horizon) aunque esté offline', () => {

@@ -59,7 +59,21 @@ GET  /api/solar/day?date  288 puntos 5-min + flag estimated
 GET  /api/solar/kpis?date hoy (live) o pasado (SQLite daily)
 GET  /api/solar/history   días desde SQLite (from/to)
 POST /api/solar/history/refresh  re-backfill manual
-GET  /api/solar/stream    SSE: push live throttled 1s + heartbeat 30s
+GET  /api/solar/stream    SSE: push live throttled 1s + heartbeat 25s (mensaje
+                          data {"type":"ping"}; el comentario `: ping` lo ignora EventSource)
+
+## Alertas push (v0.3)
+
+- Motor `server/src/alerts.js` (tick 60 s, flancos + anti-rebote): inversor_offline
+  (solo de día + scraper fresco), fox_offline (pinza unavailable solo de día),
+  corte_red (heurística isla), bateria_baja (SOC ≤ reserva), resumen_diario 21:00.
+- Web Push VAPID (`push.js`, `routes-push.js`): prefs por tipo, quiet hours con
+  cola consolidada, i18n server-side es/en/zh. Sin VAPID arranca con push off.
+- Toda alerta disparada se audita (`audit_log`, action `alert:<tipo>`) para
+  ajustar umbrales con historial real.
+- Migraciones de esquema: `user_version` en db.js (v1 daily solis/fox, v2 sessions
+  viejo). Los CREATE IF NOT EXISTS son idempotentes; las transformaciones van en
+  migraciones numeradas, nunca editadas a posteriori.
 GET/PUT /api/config       ajustes instalación (kv)
 ```
 

@@ -1,4 +1,5 @@
 import { THEME_BG } from '@/lib/colors';
+import { getLiveSunState } from '@/data/EnergyDataProvider';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -6,7 +7,7 @@ export type ThemeMode = 'auto' | 'light' | 'dark';
 export type EffectiveTheme = 'light' | 'dark';
 export type Density = 'comfortable' | 'compact';
 
-/** Amanecer 06:50 y atardecer 21:40 (mock julio, España). Fase 2: sun.sun vía HAOS. */
+/** Fallback por reloj cuando no hay dato de sun.sun (login, HAOS caído). */
 export const SUNRISE_MIN = 6 * 60 + 50;
 export const SUNSET_MIN = 21 * 60 + 40;
 
@@ -30,6 +31,9 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function computeAuto(): EffectiveTheme {
+  const sun = getLiveSunState();
+  if (sun === 'above_horizon') return 'light';
+  if (sun === 'below_horizon') return 'dark';
   const now = new Date();
   const mins = now.getHours() * 60 + now.getMinutes();
   return mins >= SUNRISE_MIN && mins < SUNSET_MIN ? 'light' : 'dark';

@@ -1424,6 +1424,8 @@ function InstallSection({ state, install }: { state: InstallState; install: () =
 const TIPOS_NOTIF = [
   'inversor_offline',
   'inversor_ok',
+  'fox_offline',
+  'fox_ok',
   'corte_red',
   'corte_red_ok',
   'bateria_baja',

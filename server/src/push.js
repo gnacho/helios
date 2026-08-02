@@ -52,6 +52,8 @@ const CATALOGO = {
   es: {
     inversor_offline: { titulo: 'Inversor offline', cuerpo: () => 'El inversor Solis no responde' },
     inversor_ok: { titulo: 'Inversor recuperado', cuerpo: () => 'El inversor Solis vuelve a estar online' },
+    fox_offline: { titulo: 'Inversor Fox offline', cuerpo: () => 'El inversor Fox no reporta datos (de día)' },
+    fox_ok: { titulo: 'Inversor Fox recuperado', cuerpo: () => 'El inversor Fox vuelve a reportar' },
     corte_red: { titulo: 'Corte de red', cuerpo: () => 'Posible corte de red eléctrica: consumo desde batería/PV' },
     corte_red_ok: { titulo: 'Red recuperada', cuerpo: () => 'La red eléctrica vuelve a estar presente' },
     bateria_baja: { titulo: 'Batería baja', cuerpo: (d) => `SOC en ${d.soc}% (reserva ${d.reserva}%)` },
@@ -64,6 +66,8 @@ const CATALOGO = {
   en: {
     inversor_offline: { titulo: 'Inverter offline', cuerpo: () => 'The Solis inverter is not responding' },
     inversor_ok: { titulo: 'Inverter recovered', cuerpo: () => 'The Solis inverter is back online' },
+    fox_offline: { titulo: 'Fox inverter offline', cuerpo: () => 'The Fox inverter is not reporting (daytime)' },
+    fox_ok: { titulo: 'Fox inverter recovered', cuerpo: () => 'The Fox inverter is reporting again' },
     corte_red: { titulo: 'Grid outage', cuerpo: () => 'Possible grid outage: running on battery/PV' },
     corte_red_ok: { titulo: 'Grid restored', cuerpo: () => 'Grid power is back' },
     bateria_baja: { titulo: 'Low battery', cuerpo: (d) => `SOC at ${d.soc}% (reserve ${d.reserva}%)` },
@@ -76,6 +80,8 @@ const CATALOGO = {
   zh: {
     inversor_offline: { titulo: '逆变器离线', cuerpo: () => 'Solis 逆变器无响应' },
     inversor_ok: { titulo: '逆变器已恢复', cuerpo: () => 'Solis 逆变器已重新上线' },
+    fox_offline: { titulo: 'Fox 逆变器离线', cuerpo: () => 'Fox 逆变器白天无数据' },
+    fox_ok: { titulo: 'Fox 逆变器已恢复', cuerpo: () => 'Fox 逆变器已恢复数据' },
     corte_red: { titulo: '电网停电', cuerpo: () => '可能电网停电：正在使用电池/光伏供电' },
     corte_red_ok: { titulo: '电网已恢复', cuerpo: () => '电网供电已恢复' },
     bateria_baja: { titulo: '电池电量低', cuerpo: (d) => `SOC ${d.soc}%（保留 ${d.reserva}%）` },
@@ -91,6 +97,8 @@ const CATALOGO = {
 export const TIPOS_ALERTA = [
   'inversor_offline',
   'inversor_ok',
+  'fox_offline',
+  'fox_ok',
   'corte_red',
   'corte_red_ok',
   'bateria_baja',

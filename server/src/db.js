@@ -83,10 +83,43 @@ export function initSchema(db) {
       created_at INTEGER NOT NULL
     );
   `)
-  const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
-  if (!cols.includes('solis_kwh')) db.exec('ALTER TABLE daily ADD COLUMN solis_kwh REAL')
-  if (!cols.includes('fox_kwh')) db.exec('ALTER TABLE daily ADD COLUMN fox_kwh REAL')
+  migrate(db)
   return db
+}
+
+// Migraciones incrementales con PRAGMA user_version. Los CREATE IF NOT EXISTS
+// de arriba son idempotentes y cubren el esquema completo; aquí solo va lo que
+// requiere transformar datos o tablas ya existentes. Regla: NUNCA editar una
+// migración ya aplicada en producción; se añade una nueva al final.
+function migrate(db) {
+  const version = db.pragma('user_version', { simple: true })
+
+  if (version < 1) {
+    // v1: daily gana desglose por inversor.
+    const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
+    if (!cols.includes('solis_kwh')) db.exec('ALTER TABLE daily ADD COLUMN solis_kwh REAL')
+    if (!cols.includes('fox_kwh')) db.exec('ALTER TABLE daily ADD COLUMN fox_kwh REAL')
+    db.pragma('user_version = 1')
+  }
+
+  if (version < 2) {
+    // v2: sessions del esquema viejo (sin user_id) se recrea. Se pierden las
+    // sesiones activas (relogin), aceptable: antes rompía el login con 500.
+    const cols = db.prepare('PRAGMA table_info(sessions)').all().map((c) => c.name)
+    if (cols.length > 0 && !cols.includes('user_id')) {
+      db.exec(`
+        DROP TABLE sessions;
+        CREATE TABLE sessions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          ua TEXT
+        );
+      `)
+    }
+    db.pragma('user_version = 2')
+  }
 }
 
 export function openDb(dataDir) {

@@ -19,16 +19,24 @@
 //   mientras la casa sigue consumiendo desde batería/PV. Firma: scraper fresco
 //   (<15 min) + grid < 0,02 kW + consumo > 0,1 kW + (batería descargando o PV
 //   cubriendo el consumo), sostenido 3 ticks. Ajustar si da falsos positivos.
+// - fox_offline / fox_ok: la pinza del Fox (pvFox) en 'unavailable'/'unknown'
+//   sostenido 3 ticks, SOLO de día (el Fox se apaga cada noche igual que el
+//   Solis; evaluar 24/7 sería falso positivo nocturno). Severidad high, no
+//   critical: la casa sigue funcionando, solo falta producción.
 // - bateria_baja: SOC ≤ reserva (install_config.batteryReservePct, defecto 20).
 //   Se rearma cuando SOC > reserva + 5.
 // - resumen_diario: scheduler propio a las 21:00 local con los KPI del día.
 //
 // notifyFn inyectable para tests (defecto: notifyAll de push.js).
-import { kvGet } from './db.js'
+// Cada disparo queda en audit_log (action 'alert:<tipo>') para poder ajustar
+// umbrales con historial real (2-Ago-2026: corte_red no tenía historial y no
+// se podía evaluar su tasa de falsos positivos).
+import { kvGet, audit } from './db.js'
 import { ENTITIES } from './config.js'
 import { notifyAll } from './push.js'
 
 const TICKS_INVERSOR_OFFLINE = 2
+const TICKS_FOX_OFFLINE = 3
 const TICKS_CORTE_RED = 3
 const TICKS_RED_RECUPERADA = 2
 const HISTERESIS_SOC = 5
@@ -37,8 +45,18 @@ export const HORA_RESUMEN_DIARIO = 21 // hora local
 export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
   const estado = {
     inversor: { mal: 0, alertado: false },
+    fox: { mal: 0, alertado: false },
     red: { mal: 0, ok: 0, alertado: false },
     bateria: { alertado: false },
+  }
+
+  function disparar(tipo, datos, opciones) {
+    notifyFn(db, tipo, datos, opciones)
+    try {
+      audit(db, 'system', null, 'alert:' + tipo, { severity: opciones?.severity || 'normal', ...datos })
+    } catch {
+      /* el audit nunca debe romper la alerta */
+    }
   }
 
   function reservaPct() {
@@ -66,14 +84,32 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
         estado.inversor.mal++
         if (!estado.inversor.alertado && estado.inversor.mal >= TICKS_INVERSOR_OFFLINE) {
           estado.inversor.alertado = true
-          notifyFn(db, 'inversor_offline', {}, { severity: 'critical' })
+          disparar('inversor_offline', {}, { severity: 'critical' })
         }
       } else {
         if (estado.inversor.alertado) {
           estado.inversor.alertado = false
-          notifyFn(db, 'inversor_ok', {}, { severity: 'normal' })
+          disparar('inversor_ok', {}, { severity: 'normal' })
         }
         estado.inversor.mal = 0
+      }
+    }
+
+    // ── Fox offline: pinza unavailable/unknown, solo de día ─────────────
+    if (deDia) {
+      const foxState = ha.getState(ENTITIES.pvFox)?.state
+      if (foxState === 'unavailable' || foxState === 'unknown') {
+        estado.fox.mal++
+        if (!estado.fox.alertado && estado.fox.mal >= TICKS_FOX_OFFLINE) {
+          estado.fox.alertado = true
+          disparar('fox_offline', {}, { severity: 'high' })
+        }
+      } else {
+        if (estado.fox.alertado) {
+          estado.fox.alertado = false
+          disparar('fox_ok', {}, { severity: 'normal' })
+        }
+        estado.fox.mal = 0
       }
     }
 
@@ -89,7 +125,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
       estado.red.ok = 0
       if (!estado.red.alertado && estado.red.mal >= TICKS_CORTE_RED) {
         estado.red.alertado = true
-        notifyFn(db, 'corte_red', {}, { severity: 'critical' })
+        disparar('corte_red', {}, { severity: 'critical' })
       }
     } else {
       estado.red.mal = 0
@@ -98,7 +134,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
         if (estado.red.ok >= TICKS_RED_RECUPERADA) {
           estado.red.alertado = false
           estado.red.ok = 0
-          notifyFn(db, 'corte_red_ok', {}, { severity: 'normal' })
+          disparar('corte_red_ok', {}, { severity: 'normal' })
         }
       }
     }
@@ -107,7 +143,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     const reserva = reservaPct()
     if (!estado.bateria.alertado && live.soc > 0 && live.soc <= reserva) {
       estado.bateria.alertado = true
-      notifyFn(db, 'bateria_baja', { soc: live.soc, reserva }, { severity: 'high' })
+      disparar('bateria_baja', { soc: live.soc, reserva }, { severity: 'high' })
     } else if (estado.bateria.alertado && live.soc > reserva + HISTERESIS_SOC) {
       estado.bateria.alertado = false
     }
@@ -120,16 +156,17 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
 // usuarios con el tipo activado. Severidad normal (respeta quiet hours).
 export async function enviarResumenDiario(db, ha, solar, notifyFn = notifyAll) {
   const kpis = await solar.getKpis(ha, solar.todayStr(), db)
-  await notifyFn(
-    db,
-    'resumen_diario',
-    {
-      produccion: kpis.productionKwh,
-      consumo: kpis.consumptionKwh,
-      autoconsumo: Math.round(kpis.autoconsumoPct),
-    },
-    { severity: 'normal' }
-  )
+  const datos = {
+    produccion: kpis.productionKwh,
+    consumo: kpis.consumptionKwh,
+    autoconsumo: Math.round(kpis.autoconsumoPct),
+  }
+  await notifyFn(db, 'resumen_diario', datos, { severity: 'normal' })
+  try {
+    audit(db, 'system', null, 'alert:resumen_diario', { severity: 'normal', ...datos })
+  } catch {
+    /* el audit nunca debe romper la alerta */
+  }
 }
 
 // Scheduler del resumen: mismo patrón que scheduleNightly de index.js pero a

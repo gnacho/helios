@@ -25,6 +25,11 @@ export interface EnergyDataApi {
 
 const EnergyDataContext = createContext<EnergyDataApi | null>(null);
 
+let lastLiveSunState: string | undefined;
+export function getLiveSunState(): string | undefined {
+  return lastLiveSunState;
+}
+
 const EMPTY_LIVE: LivePower = {
   production: 0,
   consumption: 0,
@@ -152,6 +157,7 @@ export function EnergyDataProvider({ children }: { children: ReactNode }) {
             lastMsgRef.current = ts;
             setLiveUpdatedAt(ts);
             if (msg.type === 'live') {
+              lastLiveSunState = msg.data.sun?.state;
               setLiveData(msg.data);
               setConnectionStatus('connected');
               bump();

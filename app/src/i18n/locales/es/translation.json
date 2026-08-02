@@ -408,6 +408,8 @@
       "tipos": {
         "inversor_offline": "Inversor offline",
         "inversor_ok": "Inversor recuperado",
+        "fox_offline": "Inversor Fox offline",
+        "fox_ok": "Inversor Fox recuperado",
         "corte_red": "Corte de red",
         "corte_red_ok": "Red recuperada",
         "bateria_baja": "Batería baja",
