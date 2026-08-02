@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import type { ReactNode } from 'react';
 import { getTimes } from 'suncalc';
 import type { ConnectionStatus, DayKpis, HistoryDay, LivePower, PowerPoint } from '@/data/types';
-import { CO2_KG_PER_KWH, PRICE_EXPORT_EUR, PRICE_IMPORT_EUR, STEP_MIN, SUNRISE_MIN, SUNSET_MIN } from '@/data/types';
+import { CO2_KG_PER_KWH, LIVE_STALE_MS, PRICE_EXPORT_EUR, PRICE_IMPORT_EUR, STEP_MIN, SUNRISE_MIN, SUNSET_MIN } from '@/data/types';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
 import { apiFetch } from '@/data/api-client';
 
@@ -12,6 +12,7 @@ export interface EnergyDataApi {
   nowMin: number;
   now: Date;
   liveTick: number;
+  liveUpdatedAt: number | null;
   sunriseMin: number;
   sunsetMin: number;
   refresh: () => void;
@@ -114,6 +115,8 @@ export function EnergyDataProvider({ children }: { children: ReactNode }) {
   const [settings] = useEnergySettings();
 
   const [liveData, setLiveData] = useState<LivePower | null>(null);
+  const [liveUpdatedAt, setLiveUpdatedAt] = useState<number | null>(null);
+  const lastMsgRef = useRef(0);
   const dayCache = useRef(new Map<string, PowerPoint[]>());
   const dayEstimated = useRef(new Map<string, boolean>());
   const kpisCache = useRef(new Map<string, DayKpis>());
@@ -133,26 +136,56 @@ export function EnergyDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let es: EventSource | null = null;
-    try {
-      es = new EventSource('/api/solar/stream');
-      es.onopen = () => setConnectionStatus('connected');
-      es.onmessage = (ev) => {
-        try {
-          const msg = JSON.parse(ev.data) as { type: string; data: LivePower & { connected?: boolean } };
-          if (msg.type === 'live') {
-            setLiveData(msg.data);
-            setConnectionStatus('connected');
-            bump();
+    let stopped = false;
+
+    const connect = () => {
+      if (stopped) return;
+      es?.close();
+      lastMsgRef.current = Date.now(); // ventana fresca para el watchdog
+      try {
+        es = new EventSource('/api/solar/stream');
+        es.onopen = () => setConnectionStatus('connected');
+        es.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data) as { type: string; data: LivePower & { connected?: boolean } };
+            const ts = Date.now();
+            lastMsgRef.current = ts;
+            setLiveUpdatedAt(ts);
+            if (msg.type === 'live') {
+              setLiveData(msg.data);
+              setConnectionStatus('connected');
+              bump();
+            }
+          } catch {
+            /* mensaje no parseable */
           }
-        } catch {
-          /* mensaje no parseable */
-        }
-      };
-      es.onerror = () => setConnectionStatus('reconnecting');
-    } catch {
-      setConnectionStatus('reconnecting');
-    }
-    return () => es?.close();
+        };
+        es.onerror = () => setConnectionStatus('reconnecting');
+      } catch {
+        setConnectionStatus('reconnecting');
+      }
+    };
+
+    connect();
+
+    // Watchdog: el navegador puede matar el SSE en silencio (móvil suspendido,
+    // proxy) sin disparar onerror — si no llega nada en LIVE_STALE_MS, recreamos.
+    const watchdog = window.setInterval(() => {
+      if (document.hidden) return;
+      if (Date.now() - lastMsgRef.current > LIVE_STALE_MS) connect();
+    }, 5000);
+
+    const onVisible = () => {
+      if (!document.hidden && Date.now() - lastMsgRef.current > LIVE_STALE_MS) connect();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(watchdog);
+      document.removeEventListener('visibilitychange', onVisible);
+      es?.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -259,6 +292,7 @@ export function EnergyDataProvider({ children }: { children: ReactNode }) {
       nowMin,
       now,
       liveTick: version,
+      liveUpdatedAt,
       refresh: () => {
         dayCache.current.clear();
         kpisCache.current.clear();
@@ -314,7 +348,7 @@ export function EnergyDataProvider({ children }: { children: ReactNode }) {
       sunriseMin,
       sunsetMin,
     };
-  }, [version, now, connectionStatus, liveData, settings.locationLat, settings.locationLon]);
+  }, [version, now, connectionStatus, liveData, liveUpdatedAt, settings.locationLat, settings.locationLon]);
 
   return <EnergyDataContext.Provider value={value}>{children}</EnergyDataContext.Provider>;
 }

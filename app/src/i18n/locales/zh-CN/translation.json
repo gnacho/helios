@@ -43,6 +43,9 @@
     "connected": "HAOS · 本地",
     "reconnecting": "重新连接中…",
     "demo": "演示模式",
+    "staleSec": "无实时数据 · {{count}}秒",
+    "staleMin": "无实时数据 · {{count}}分钟",
+    "staleHour": "无实时数据 · {{count}}小时",
     "title": "Home Assistant 连接状态"
   },
   "alerts": {

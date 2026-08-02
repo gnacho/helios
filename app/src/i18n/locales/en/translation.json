@@ -43,6 +43,9 @@
     "connected": "HAOS · Local",
     "reconnecting": "Reconnecting…",
     "demo": "Demo mode",
+    "staleSec": "No live data · {{count}}s",
+    "staleMin": "No live data · {{count}} min",
+    "staleHour": "No live data · {{count}} h",
     "title": "Home Assistant connection status"
   },
   "alerts": {

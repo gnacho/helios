@@ -72,6 +72,7 @@ export interface HistoryDay {
 export type ConnectionStatus = 'connected' | 'reconnecting' | 'demo';
 
 export const STEP_MIN = 5;
+export const LIVE_STALE_MS = 45_000;
 export const DAY_POINTS = (24 * 60) / STEP_MIN;
 export const SOLIS_KWP = 4.4;
 export const FOX_KWP = 2.7;

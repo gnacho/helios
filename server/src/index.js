@@ -412,8 +412,9 @@ guarded.get('/solar/stream', (c) => {
     sseClients.add(client)
     await stream.write(`data: ${JSON.stringify({ type: 'live', data: solar.computeLive(ha) })}\n\n`)
     const heartbeat = setInterval(() => {
-      stream.write(`: ping\n\n`).catch(() => {})
-    }, 30000)
+      // ping como mensaje data (no comentario): el cliente lo usa como prueba de vida del SSE
+      stream.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`).catch(() => {})
+    }, 25000)
     stream.onAbort(() => {
       clearInterval(heartbeat)
       sseClients.delete(client)
