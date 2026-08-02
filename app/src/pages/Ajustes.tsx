@@ -1624,8 +1624,8 @@ export default function Ajustes() {
           <ThemeSection />
         </Section>
 
-        {/* Idioma + conexión/datos (unificadas) en la misma horizontal (≥lg) */}
-        <div className="grid items-stretch gap-5 lg:grid-cols-2">
+        {/* Idioma + conexión/datos (unificadas) en la misma horizontal (≥lg); items-start: prohibido estirar la tarjeta corta (hueco interior) */}
+        <div className="grid items-start gap-5 lg:grid-cols-2">
           <Section id="idioma" title={t('ajustes.sections.idioma')}>
             <LanguageSection />
           </Section>
@@ -1669,18 +1669,23 @@ export default function Ajustes() {
           </Section>
         )}
 
-        {/* PWA (solo si el navegador lo soporta) + Acerca de en la misma horizontal (≥lg) */}
-        <div className="grid items-stretch gap-5 lg:grid-cols-2">
-          {installState !== 'hidden' && (
+        {/* PWA (solo si el navegador lo soporta) + Acerca de en la misma horizontal (≥lg).
+            Si la tarjeta de instalar no se renderiza, la fila colapsa a 1 columna:
+            nunca dejar una celda vacía al lado de Acerca de. */}
+        {installState !== 'hidden' ? (
+          <div className="grid items-start gap-5 lg:grid-cols-2">
             <Section id="app" title={t('ajustes.sections.app')}>
               <InstallSection state={installState} install={install} />
             </Section>
-          )}
-
+            <Section id="acerca" title={t('ajustes.sections.acerca')}>
+              <AboutSection />
+            </Section>
+          </div>
+        ) : (
           <Section id="acerca" title={t('ajustes.sections.acerca')}>
             <AboutSection />
           </Section>
-        </div>
+        )}
 
       </div>
     </div>
