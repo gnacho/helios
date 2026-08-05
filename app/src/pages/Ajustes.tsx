@@ -1642,7 +1642,7 @@ function InstallSection({ state, install }: { state: InstallState; install: () =
 
 // ── § Acerca de ──────────────────────────────────────────────────────────────
 
-const REPO_URL = 'https://github.com/gdemo/panelsolar';
+const REPO_URL = 'https://github.com/gnacho/helios';
 
 function compareSemver(a: string, b: string): number {
   const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);

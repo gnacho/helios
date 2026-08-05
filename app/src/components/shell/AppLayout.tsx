@@ -25,6 +25,7 @@ import { fmtWeekdayDate } from '@/i18n';
 import BrandLogo from '@/components/BrandLogo';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import AlertsBell from '@/components/AlertsBell';
+import UpdateRibbon from '@/components/UpdateRibbon';
 import ThemeToggle from '@/components/ThemeToggle';
 import Footer from '@/components/Footer';
 import HeliosToaster from '@/components/HeliosToaster';
@@ -422,6 +423,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       <main className={cn('mx-auto max-w-[1440px] px-4 pb-24 pt-4 md:ml-16 md:px-6 md:pb-6 md:pt-6', lgMargin)}>
+        <UpdateRibbon />
         {isDemo && <DemoBanner onExit={exitDemo} />}
         {children}
         <div className="hidden lg:block">
