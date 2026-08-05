@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
+import { THEME_BG, THEME_SURFACE, THEME_BAR, ACCENTS } from '@/lib/colors';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
 import { usePush } from '@/hooks/usePush';
 import BrandLogo from '@/components/BrandLogo';
@@ -327,59 +328,57 @@ function HealthBadge({ ok }: { ok: boolean }) {
 
 // ── §1 Tema ──────────────────────────────────────────────────────────────────
 
-/** Mini-preview de tema: dibuja una mini-UI con divs usando variables CSS reales. */
-function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
-  const bg = variant === 'dark' ? 'bg-[#080D1A]' : variant === 'light' ? 'bg-[#F4F6FA]' : '';
-  const surface = variant === 'dark' ? 'bg-[#0F1729]' : variant === 'light' ? 'bg-[#FFFFFF]' : '';
-  const accent = 'bg-brand';
-  if (variant === 'split') {
-    return (
-      <div className="flex h-[72px] w-full overflow-hidden rounded-lg border border-app">
-        <div className="flex w-1/2 flex-col bg-[#080D1A] p-1.5">
-          <div className="mb-1 h-1.5 w-full rounded bg-[#1E293B]" />
-          <div className="flex flex-1 gap-1">
-            <div className="w-1/4 rounded bg-[#1E293B]" />
-            <div className="flex flex-1 flex-col gap-1">
-              <div className="h-2 w-3/4 rounded bg-brand/60" />
-              <div className="h-4 flex-1 rounded bg-[#1E293B]" />
-            </div>
-          </div>
-        </div>
-        <div className="flex w-1/2 flex-col bg-[#F4F6FA] p-1.5">
-          <div className="mb-1 h-1.5 w-full rounded bg-slate-200" />
-          <div className="flex flex-1 gap-1">
-            <div className="w-1/4 rounded bg-slate-200" />
-            <div className="flex flex-1 flex-col gap-1">
-              <div className="h-2 w-3/4 rounded bg-brand/60" />
-              <div className="h-4 flex-1 rounded bg-slate-200" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+/** Mitad del preview 'split': un lado del tema con sus tokens reales. */
+function PreviewBlock({ useLight }: { useLight: boolean }) {
+  const bgC = useLight ? THEME_BG.light : THEME_BG.dark;
+  const surfaceC = useLight ? THEME_SURFACE.light : THEME_SURFACE.dark;
+  const barC = useLight ? THEME_BAR.light : THEME_BAR.dark;
   return (
-    <div className={cn('flex h-[72px] w-full flex-col rounded-lg border border-app p-1.5', bg)}>
-      <div className={cn('mb-1 h-1.5 w-full rounded', surface === 'bg-[#FFFFFF]' ? 'bg-slate-200' : 'bg-[#1E293B]')} />
+    <div className="flex w-1/2 flex-col p-1.5" style={{ backgroundColor: bgC }}>
+      <div className="mb-1 h-1.5 w-full rounded" style={{ backgroundColor: barC }} />
       <div className="flex flex-1 gap-1">
-        <div className={cn('w-1/4 rounded', surface === 'bg-[#FFFFFF]' ? 'bg-slate-200' : 'bg-[#1E293B]')} />
+        <div className="w-1/4 rounded" style={{ backgroundColor: barC }} />
         <div className="flex flex-1 flex-col gap-1">
-          <div className={cn('h-2 w-3/4 rounded', accent)} />
-          <div className={cn('h-4 flex-1 rounded', surface === 'bg-[#FFFFFF]' ? 'bg-slate-200' : 'bg-[#1E293B]')} />
+          <div className="h-2 w-3/4 rounded bg-brand/60" />
+          <div className="h-4 flex-1 rounded" style={{ backgroundColor: surfaceC }} />
         </div>
       </div>
     </div>
   );
 }
 
-/** Acenos disponibles (triplete RGB para --accent-rgb; null = naranja por defecto). */
-const ACCENTS = [
-  { id: 'naranja', rgb: null, hex: '#F59E0B' },
-  { id: 'verde', rgb: '34 197 94', hex: '#22C55E' },
-  { id: 'azul', rgb: '59 130 246', hex: '#3B82F6' },
-  { id: 'violeta', rgb: '139 92 246', hex: '#8B5CF6' },
-] as const;
+/** Mini-preview de tema: dibuja una mini-UI con divs usando los tokens reales. */
+function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
+  const { bg, surface, bar } = {
+    dark: { bg: THEME_BG.dark, surface: THEME_SURFACE.dark, bar: THEME_BAR.dark },
+    light: { bg: THEME_BG.light, surface: THEME_SURFACE.light, bar: THEME_BAR.light },
+  }[variant === 'split' ? 'dark' : variant];
+  const accent = 'bg-brand';
+
+  if (variant === 'split') {
+    return (
+      <div className="flex h-[72px] w-full overflow-hidden rounded-lg border border-app">
+        <PreviewBlock useLight={false} />
+        <PreviewBlock useLight />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-[72px] w-full flex-col rounded-lg border border-app p-1.5" style={{ backgroundColor: bg }}>
+      <div className="mb-1 h-1.5 w-full rounded" style={{ backgroundColor: bar }} />
+      <div className="flex flex-1 gap-1">
+        <div className="w-1/4 rounded" style={{ backgroundColor: bar }} />
+        <div className="flex flex-1 flex-col gap-1">
+          <div className={cn('h-2 w-3/4 rounded', accent)} />
+          <div className="h-4 flex-1 rounded" style={{ backgroundColor: surface }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Acenos disponibles (paleta en lib/colors.ts). */
 
 function ThemeSection() {
   const { mode, setMode, density, setDensity, reduceMotion, setReduceMotion, accent, setAccent } = useTheme();
@@ -1642,7 +1641,7 @@ function InstallSection({ state, install }: { state: InstallState; install: () =
 
 // ── § Acerca de ──────────────────────────────────────────────────────────────
 
-const REPO_URL = 'https://github.com/gdemo/panelsolar';
+const REPO_URL = 'https://github.com/gnacho/helios';
 
 function compareSemver(a: string, b: string): number {
   const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);

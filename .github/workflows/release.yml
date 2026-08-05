@@ -1,0 +1,81 @@
+name: release
+
+# Release estable por tag v*: empaqueta la webapp completa (frontend build +
+# server + node_modules de producción PRE-BUILT por arch) + checksums.txt.
+# El 'Comprobar actualizaciones' del front y el ribbon semanal consumen estas
+# releases (releases/latest, semver).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: # sin tag = empaqueta y sube como artifact de prueba
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runs-on: ubuntu-latest
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            server/package-lock.json
+
+      - name: Tests del server (vitest)
+        working-directory: server
+        run: npm ci --no-audit --no-fund && npm test
+
+      - name: Build frontend
+        working-directory: app
+        run: npm ci --no-audit --no-fund && npm run build
+
+      - name: node_modules de producción (sin dev, compila prebuilds del arch)
+        working-directory: server
+        run: rm -rf node_modules && npm ci --omit=dev --no-audit --no-fund
+
+      - name: Empaqueta release
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          VERSION="${REF#v}"
+          [ "${{ github.ref_type }}" = "tag" ] || VERSION="0.0.0-SNAPSHOT-${GITHUB_SHA::7}"
+          mkdir -p stage/server
+          cp -r app/dist stage/dist
+          cp -r server/src server/package.json stage/server/
+          cp -r shared stage/shared
+          cp -r server/node_modules stage/server/node_modules
+          tar -czf "helios_${VERSION}_linux_${{ matrix.arch }}.tar.gz" -C stage .
+          sha256sum helios_*.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Publica en la release (solo tags)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            helios_*.tar.gz
+            checksums.txt
+
+      - name: Sube artifact de prueba (solo workflow_dispatch)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-snapshot-linux-${{ matrix.arch }}
+          path: |
+            helios_*.tar.gz
+            checksums.txt
+          retention-days: 7
