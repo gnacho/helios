@@ -328,6 +328,12 @@
       "changes": "Cambios",
       "kofi": "Apoya el proyecto en Ko-fi",
       "privacy": "100% privado · 0% nube",
+      "checkUpdates": "Comprobar actualizaciones",
+      "checking": "Comprobando…",
+      "upToDate": "Estás al día — v{{version}} es la última versión",
+      "updateAvailable": "Nueva versión disponible: v{{version}}",
+      "viewRelease": "Ver novedades",
+      "updateError": "No se pudo comprobar la actualización. Inténtalo de nuevo.",
       "made": "hecho en casa"
     },
     "connection": {

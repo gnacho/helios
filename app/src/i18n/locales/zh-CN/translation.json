@@ -326,6 +326,12 @@
       "changes": "更新",
       "kofi": "在 Ko-fi 支持项目",
       "privacy": "100% 私密 · 0% 云",
+      "checkUpdates": "检查更新",
+      "checking": "检查中…",
+      "upToDate": "已是最新版本 — v{{version}} 是最新版",
+      "updateAvailable": "有新版本可用：v{{version}}",
+      "viewRelease": "查看更新",
+      "updateError": "无法检查更新。请重试。",
       "made": "在家制作"
     },
     "connection": {

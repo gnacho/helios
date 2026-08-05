@@ -99,10 +99,50 @@ function Section({
 }
 
 /** Zona de administración (patrón AdminBar del skill): tarjeta horizontal con
- *  borde de acento, título "Administración" y secciones desplegables a la derecha. */
+ *  borde de acento, título "Administración", secciones desplegables (Usuarios)
+ *  y widgets inline. El comprobador de actualizaciones vive AQUÍ, no en Acerca de. */
 function AdminZone() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'uptodate' | 'available' | 'error'>('idle');
+  const [latestVersion, setLatestVersion] = useState('');
+
+  const checkUpdates = async () => {
+    setChecking(true);
+    setUpdateStatus('idle');
+    try {
+      const repo = REPO_URL.match(/github\.com\/([^/]+\/[^/.]+)/)?.[1];
+      if (!repo) throw new Error('no repo');
+      const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+      let version = '';
+      if (res.ok) {
+        const data = await res.json();
+        version = data.tag_name || '';
+      } else if (res.status === 404) {
+        const tagRes = await fetch(`https://api.github.com/repos/${repo}/tags?per_page=1`, {
+          headers: { Accept: 'application/vnd.github+json' },
+        });
+        if (tagRes.ok) {
+          const tags = await tagRes.json();
+          version = tags[0]?.name || '';
+        }
+      }
+      if (!version || compareSemver(version, pkg.version) <= 0) {
+        setUpdateStatus('uptodate');
+      } else {
+        setLatestVersion(version);
+        setUpdateStatus('available');
+      }
+    } catch {
+      setUpdateStatus('error');
+    } finally {
+      setChecking(false);
+    }
+  };
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 24 }}
@@ -133,8 +173,44 @@ function AdminZone() {
           <ChevronDown size={14} className={cn('transition-transform', open && 'rotate-180')} />
         </button>
       </div>
+
+      {/* Widget inline: Comprobar actualizaciones (en la AdminBar según el skill) */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-app pt-3">
+        <button
+          type="button"
+          onClick={checkUpdates}
+          disabled={checking}
+          className="inline-flex h-8 items-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/20 disabled:opacity-60"
+        >
+          {checking && <RefreshCw size={13} className="animate-spin" />}
+          {checking ? t('ajustes.about.checking') : t('ajustes.about.checkUpdates')}
+        </button>
+        {updateStatus === 'uptodate' && (
+          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-500">
+            <Check size={13} />
+            {t('ajustes.about.upToDate', { version: pkg.version })}
+          </span>
+        )}
+        {updateStatus === 'available' && (
+          <span className="inline-flex items-center gap-2 text-xs text-brand">
+            {t('ajustes.about.updateAvailable', { version: latestVersion })}
+            <a
+              href={`${REPO_URL}/releases`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-6 items-center rounded-full border border-brand/40 bg-brand/10 px-2.5 text-[11px] font-medium text-brand hover:bg-brand/20"
+            >
+              {t('ajustes.about.viewRelease')}
+            </a>
+          </span>
+        )}
+        {updateStatus === 'error' && (
+          <span className="text-xs text-destructive">{t('ajustes.about.updateError')}</span>
+        )}
+      </div>
+
       {open && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 border-t border-app pt-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3">
           <UsersSection />
         </motion.div>
       )}
@@ -1478,6 +1554,13 @@ function InstallSection({ state, install }: { state: InstallState; install: () =
 // ── § Acerca de ──────────────────────────────────────────────────────────────
 
 const REPO_URL = 'https://github.com/gdemo/panelsolar';
+
+function compareSemver(a: string, b: string): number {
+  const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+  return 0;
+}
 
 function AboutSection() {
   const { t } = useTranslation();
