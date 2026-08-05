@@ -35,6 +35,19 @@ export const SOLAR_ARC_COLORS = { nightFrom: '#101828', nightTo: '#182338', star
 /** Fondos base por tema (theme-color meta, swatches de preview). */
 export const THEME_BG = { light: '#F4F6FA', dark: '#080D1A' } as const;
 
+/** Superficies del preview de tema (mini-UI pintada con los colores reales). */
+export const THEME_SURFACE = { light: '#FFFFFF', dark: '#0F1729' } as const;
+/** Barras internas del preview de tema. */
+export const THEME_BAR = { light: '#E2E8F0', dark: '#1E293B' } as const;
+
+/** Paleta de acentos del selector de Ajustes (triplete RGB para --accent-rgb; null = naranja por defecto). */
+export const ACCENTS = [
+  { id: 'naranja', rgb: null, hex: '#F59E0B' },
+  { id: 'verde', rgb: '34 197 94', hex: '#22C55E' },
+  { id: 'azul', rgb: '59 130 246', hex: '#3B82F6' },
+  { id: 'violeta', rgb: '139 92 246', hex: '#8B5CF6' },
+] as const;
+
 export function energyColor(key: EnergyColorKey, isDark: boolean): string {
   return isDark ? ENERGY_COLORS[key].dark : ENERGY_COLORS[key].light;
 }
