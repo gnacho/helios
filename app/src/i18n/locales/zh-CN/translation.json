@@ -18,8 +18,9 @@
     "autoconsumo": "自用",
     "charging": "充电中",
     "discharging": "放电中",
-    "idle": "待机",
-    "confirm": "确认"
+    "idle": "空闲",
+    "confirm": "确认",
+    "edit": "编辑"
   },
   "nav": {
     "dashboard": "今日",
@@ -300,15 +301,32 @@
       "acerca": "关于",
       "seguridad": "安全",
       "conexionDatos": "连接与数据",
-      "sesion": "我的会话"
+      "sesion": "我的会话",
+      "apariencia": "外观",
+      "perfil": "我的资料",
+      "administracion": "管理"
     },
     "theme": {
       "autoNote": "自动模式下，界面在日出（06:50）和日落（21:40）之间使用浅色主题。",
       "previewAria": "{{label}}主题预览"
     },
     "language": {
-      "note": "选择界面语言。默认使用您操作系统的语言。",
+      "title": "语言",
+      "note": "选择界面语言。默认为您的操作系统语言。",
       "auto": "自动"
+    },
+    "profile": {
+      "displayName": "显示名称",
+      "email": "电子邮件（可选）",
+      "saved": "资料已保存"
+    },
+    "about": {
+      "desc": "自托管太阳能仪表板：从您的 Home Assistant 实时获取发电量、用电量、电池和逆变器数据。无云，无第三方账户。",
+      "code": "代码",
+      "changes": "更新",
+      "kofi": "在 Ko-fi 支持项目",
+      "privacy": "100% 私密 · 0% 云",
+      "made": "在家制作"
     },
     "connection": {
       "desc": "Helios 通过应用服务器在局域网读取您的 Home Assistant。您的数据不会离开您的家：只有本网站对外可见，并受密码保护。",
@@ -341,9 +359,11 @@
       "sunTodayAt": "今天{{location}}的日照：↑ {{sunrise}} · ↓ {{sunset}}",
       "sunTodayHa": "使用 Home Assistant 的位置：↑ {{sunrise}} · ↓ {{sunset}}",
       "panels": "{{count}} 块 × {{watts}} W",
+      "panelsShort": "块",
+      "inverters": "逆变器",
       "battery": "电池 {{name}} · {{kwh}} kWh",
       "theoretical": "理论容量",
-      "totalLabel": "总理论容量"
+      "totalLabel": "总计"
     },
     "prices": {
       "buy": "购电价格",
@@ -458,16 +478,6 @@
       "deleteConfirm": "确定删除用户 {{username}}？此操作无法撤销。",
       "deleted": "用户已删除",
       "you": "您"
-    },
-    "activity": {
-      "title": "最近活动",
-      "when": "时间",
-      "user": "用户",
-      "action": "操作",
-      "detail": "详情",
-      "prev": "上一页",
-      "next": "下一页",
-      "empty": "暂无活动记录"
     }
   },
   "demo": {

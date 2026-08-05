@@ -19,7 +19,8 @@
     "charging": "Cargando",
     "discharging": "Descargando",
     "idle": "En reposo",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "edit": "Editar"
   },
   "nav": {
     "dashboard": "Hoy",
@@ -302,15 +303,32 @@
       "acerca": "Acerca de",
       "seguridad": "Seguridad",
       "conexionDatos": "Conexión y datos",
-      "sesion": "Mi sesión"
+      "sesion": "Mi sesión",
+      "apariencia": "Apariencia",
+      "perfil": "Mi perfil",
+      "administracion": "Administración"
     },
     "theme": {
       "autoNote": "En modo Auto, la interfaz usa el tema claro entre el amanecer (06:50) y el atardecer (21:40).",
       "previewAria": "Vista previa del tema {{label}}"
     },
     "language": {
+      "title": "Idioma",
       "note": "Elige el idioma de la interfaz. Por defecto se usa el idioma de tu sistema operativo.",
       "auto": "Automático"
+    },
+    "profile": {
+      "displayName": "Nombre visible",
+      "email": "Email (opcional)",
+      "saved": "Perfil guardado"
+    },
+    "about": {
+      "desc": "Dashboard solar autoalojado: producción, consumo, batería e inversores en tiempo real desde tu Home Assistant. Sin nube, sin cuentas de terceros.",
+      "code": "Código",
+      "changes": "Cambios",
+      "kofi": "Apoya el proyecto en Ko-fi",
+      "privacy": "100% privado · 0% nube",
+      "made": "hecho en casa"
     },
     "connection": {
       "desc": "Helios lee tu Home Assistant en red local desde el servidor de la app. Tus datos nunca salen de tu casa: solo esta web se expone, protegida con tu contraseña.",
@@ -343,9 +361,11 @@
       "sunTodayAt": "Sol hoy en {{location}}: ↑ {{sunrise}} · ↓ {{sunset}}",
       "sunTodayHa": "Usando la ubicación de Home Assistant: ↑ {{sunrise}} · ↓ {{sunset}}",
       "panels": "{{count}} placas × {{watts}} W",
+      "panelsShort": "placas",
+      "inverters": "inversores",
       "battery": "Batería {{name}} · {{kwh}} kWh",
       "theoretical": "Capacidad teórica",
-      "totalLabel": "Capacidad teórica total"
+      "totalLabel": "Total"
     },
     "prices": {
       "buy": "Precio de compra",
@@ -460,16 +480,6 @@
       "deleteConfirm": "¿Eliminar al usuario {{username}}? Esta acción no se puede deshacer.",
       "deleted": "Usuario eliminado",
       "you": "tú"
-    },
-    "activity": {
-      "title": "Actividad reciente",
-      "when": "Cuándo",
-      "user": "Usuario",
-      "action": "Acción",
-      "detail": "Detalle",
-      "prev": "Anterior",
-      "next": "Siguiente",
-      "empty": "Sin actividad registrada"
     }
   },
   "demo": {

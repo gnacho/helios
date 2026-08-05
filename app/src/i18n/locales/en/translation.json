@@ -19,7 +19,8 @@
     "charging": "Charging",
     "discharging": "Discharging",
     "idle": "Idle",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "edit": "Edit"
   },
   "nav": {
     "dashboard": "Today",
@@ -302,15 +303,32 @@
       "acerca": "About",
       "seguridad": "Security",
       "conexionDatos": "Connection & data",
-      "sesion": "My session"
+      "sesion": "My session",
+      "apariencia": "Appearance",
+      "perfil": "My profile",
+      "administracion": "Administration"
     },
     "theme": {
       "autoNote": "In Auto mode, the interface uses the light theme between sunrise (06:50) and sunset (21:40).",
       "previewAria": "{{label}} theme preview"
     },
     "language": {
-      "note": "Choose the interface language. By default your operating system language is used.",
+      "title": "Language",
+      "note": "Choose the interface language. Defaults to your operating system language.",
       "auto": "Automatic"
+    },
+    "profile": {
+      "displayName": "Display name",
+      "email": "Email (optional)",
+      "saved": "Profile saved"
+    },
+    "about": {
+      "desc": "Self-hosted solar dashboard: production, consumption, battery and inverters in real time from your Home Assistant. No cloud, no third-party accounts.",
+      "code": "Code",
+      "changes": "Changes",
+      "kofi": "Support the project on Ko-fi",
+      "privacy": "100% private · 0% cloud",
+      "made": "made at home"
     },
     "connection": {
       "desc": "Helios reads your Home Assistant on the local network from the app server. Your data never leaves your home: only this website is exposed, protected with your password.",
@@ -343,9 +361,11 @@
       "sunTodayAt": "Sun today in {{location}}: ↑ {{sunrise}} · ↓ {{sunset}}",
       "sunTodayHa": "Using Home Assistant location: ↑ {{sunrise}} · ↓ {{sunset}}",
       "panels": "{{count}} panels × {{watts}} W",
+      "panelsShort": "panels",
+      "inverters": "inverters",
       "battery": "Battery {{name}} · {{kwh}} kWh",
       "theoretical": "Theoretical capacity",
-      "totalLabel": "Total theoretical capacity"
+      "totalLabel": "Total"
     },
     "prices": {
       "buy": "Purchase price",
@@ -460,16 +480,6 @@
       "deleteConfirm": "Delete user {{username}}? This action cannot be undone.",
       "deleted": "User deleted",
       "you": "you"
-    },
-    "activity": {
-      "title": "Recent activity",
-      "when": "When",
-      "user": "User",
-      "action": "Action",
-      "detail": "Detail",
-      "prev": "Previous",
-      "next": "Next",
-      "empty": "No activity recorded"
     }
   },
   "demo": {
