@@ -109,7 +109,7 @@ function AdminZone() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.15 }}
       transition={{ duration: 0.5, ease: easeOutQuart }}
-      className="helios-card scroll-mt-20 rounded-l-lg border-l-4 border-l-amber-500 bg-amber-500/[0.03] p-5 shadow-card dark:shadow-card-dark"
+      className="helios-card scroll-mt-20 border-l-4 border-l-amber-500 bg-amber-500/[0.03] p-5 shadow-card dark:shadow-card-dark"
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex h-9 items-center gap-2">
