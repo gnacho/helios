@@ -50,6 +50,7 @@ const INVERTERS: Record<'solis' | 'fox', InverterMeta> = {
     totalMwh: 8.42,
     tempC: 46,
     hasBattery: true,
+    batteryKwh: 5,
   },
   fox: {
     key: 'fox',

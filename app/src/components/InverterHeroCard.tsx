@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
-import { BatteryCharging, Compass, Sun, ThermometerSun, Zap } from 'lucide-react';
+import { BatteryCharging, Sun, ThermometerSun, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { fmtKw } from '@/lib/format';
 import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
+import { cn } from '@/lib/utils';
 
 export interface InverterMeta {
   key: 'solis' | 'fox';
@@ -14,6 +15,7 @@ export interface InverterMeta {
   totalMwh: number;
   tempC: number;
   hasBattery: boolean;
+  batteryKwh?: number;
 }
 
 interface InverterHeroCardProps {
@@ -37,21 +39,38 @@ export default function InverterHeroCard({ meta, nowKw, color }: InverterHeroCar
       style={{ borderTopColor: color }}
       aria-label={t('inverter.aria', { name: meta.name })}
     >
-      <div className="flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${color}1F`, color }}>
+      <div className="flex items-start gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={{ backgroundColor: `${color}1F`, color }}>
           <Zap size={24} strokeWidth={2.2} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-display text-[22px] font-semibold leading-tight tracking-[-0.01em] text-app">{meta.name}</p>
           <p className="truncate text-[13px] text-muted">{meta.model}</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <div className="flex flex-col items-end gap-1.5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            {t('common.online')}
           </span>
-          {t('common.online')}
-        </span>
+          {meta.hasBattery && meta.batteryKwh != null && (
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
+              <BatteryCharging size={13} className="shrink-0 text-faint" />
+              {meta.batteryKwh} <span className="text-faint">kWh</span>
+            </span>
+          )}
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 text-[12px] font-medium',
+              meta.tempC > 60 ? 'text-amber-600 dark:text-amber-400' : 'text-muted',
+            )}
+          >
+            <ThermometerSun size={13} className="shrink-0 text-faint" />
+            {meta.tempC} <span className="text-faint">°C</span>
+          </span>
+        </div>
       </div>
 
       <div className="mt-5">
@@ -67,27 +86,12 @@ export default function InverterHeroCard({ meta, nowKw, color }: InverterHeroCar
           <Sun size={15} className="shrink-0 text-faint" />
           {t('inverter.solarField')} <span className="ml-auto font-medium text-app">{meta.panels}</span>
         </li>
-        <li className="flex items-center gap-2.5 text-muted">
-          <Compass size={15} className="shrink-0 text-faint" />
-          {t('inverter.orientation')} <span className="ml-auto font-medium text-app">Sur · 30°</span>
-        </li>
         {meta.hasBattery && (
           <li className="flex items-center gap-2.5 text-muted">
             <BatteryCharging size={15} className="shrink-0 text-faint" />
             {t('common.battery')} <span className="ml-auto font-medium text-app">{t('inverter.batteryCoupled')}</span>
           </li>
         )}
-        <li className="flex items-center gap-2.5 text-muted">
-          <ThermometerSun size={15} className="shrink-0 text-faint" />
-          {t('inverter.temperature')}
-          {meta.tempC > 60 ? (
-            <span className="ml-auto inline-flex items-center rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-              {meta.tempC} °C
-            </span>
-          ) : (
-            <span className="ml-auto font-medium text-app">{meta.tempC} °C</span>
-          )}
-        </li>
       </ul>
     </motion.section>
   );

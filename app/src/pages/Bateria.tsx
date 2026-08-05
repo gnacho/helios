@@ -145,14 +145,14 @@ export default function Bateria() {
           </div>
         </motion.section>
 
-        {/* ── Estado de carga hoy + Potencia (misma fila = misma altura) */}
+        {/* ── Potencia hoy + Estado de carga hoy (misma fila = misma altura) */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15, ease: EASE_OUT }}
           className="col-span-12 lg:col-span-6"
         >
-          <SocDayChart data={series} nowMin={nowMin} height={260} />
+          <BatteryPowerChart data={series} height={260} />
         </motion.div>
 
         <motion.div
@@ -162,7 +162,7 @@ export default function Bateria() {
           transition={{ duration: 0.5, ease: EASE_OUT }}
           className="col-span-12 lg:col-span-6"
         >
-          <BatteryPowerChart data={series} height={260} />
+          <SocDayChart data={series} nowMin={nowMin} height={260} />
         </motion.div>
 
         {/* ── Esta semana (2/3) + Modo (1/3) ───────────────────────── */}
