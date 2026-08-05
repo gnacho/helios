@@ -13,15 +13,16 @@
   </picture>
 </p>
 
-> **Private repo.** This README is not meant to sell the project: it's so
-> that future-me understands in five minutes **why this exists, where it
-> came from, and why it's built the way it's built**, without re-reading
-> the whole codebase.
+> This README is not meant to sell the project: it's so that a future
+> maintainer understands in five minutes **why this exists, where it came
+> from, and why it's built the way it's built**, without re-reading the
+> whole codebase.
 
-Helios is the solar monitor of our home: two inverters (Solis 4.4 kWp +
-Fox 2.7 kWp), a 5 kWh battery, 798+ days of history, live data from Home
-Assistant, and savings in euros computed against our real Octopus tariff.
-One Node + SQLite service running in an LXC at home. No cloud.
+Helios is a solar monitor for a home installation: two inverters (Solis
+4.4 kWp + Fox 2.7 kWp), a 5 kWh battery, 798+ days of history, live data
+from Home Assistant, and savings in euros computed against the real
+electricity tariff. One Node + SQLite service running in an LXC at home.
+No cloud.
 
 ## Why does this exist?
 
@@ -47,10 +48,10 @@ battery is doing, and what every self-consumed kWh is worth in euros.
    grew into multi-user with roles, history, battery, prices and PWA.
 3. The daily history was imported from HAOS and keeps being fed every
    day: **798+ days** in a SQLite that is **untouchable** (it lives in
-   `/opt/helios/data/helios.db` on CT 226; before any migration, backup.
-   There's a Litestream replica with PITR to the zfs_2tb disk on
-   host-a).
-4. A **Solis Cloud scraper** (LXC 202 + HAOS add-on) complements the data
+   `/opt/helios/data/helios.db` on the production host; before any
+   migration, backup. There's a Litestream replica with PITR to a disk
+   on the backup host).
+4. A **Solis Cloud scraper** (a separate LXC + HAOS add-on) complements the data
    when the local integration falls short.
 
 ## Why this stack (and not another)
@@ -74,7 +75,7 @@ battery is doing, and what every self-consumed kWh is worth in euros.
   and the energy flow move in real time.
 - **Serious history**: 798+ days with daily aggregates (production,
   consumption, grid import/export, battery charge/discharge, per
-  inverter), self-consumption, savings in € at Octopus prices, and CO₂
+  inverter), self-consumption, savings in € at real electricity prices, and CO₂
   avoided.
 - **Installable PWA**, light/dark/auto theme (auto follows the solar
   hour, not the OS), density, shared shell with the other house apps.
@@ -108,11 +109,11 @@ data explains better what each view is for.
 ```
 Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ Helios server (Hono)
                                             ▲                    │ better-sqlite3
-                                 Solis Cloud scraper             ▼
-                                   (LXC 202 + add-on)      SQLite (798+ days)
-                                                                  │ Litestream
-                                                                  ▼
-                                                      SFTP zfs_2tb (host-a)
+                                  Solis Cloud scraper             ▼
+                                    (separate LXC)             SQLite (798+ days)
+                                                                   │ Litestream
+                                                                   ▼
+                                                    SFTP to a disk (backup host)
 ```
 
 - `server/`: Hono API + multi-user auth + aggregation + data sanitation.
@@ -122,7 +123,7 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 
 ## Operations (just enough to not break anything)
 
-- Production: **CT 226** (host-a), `helios.service`, port 80 (LAN
+- Production: a Proxmox CT, `helios.service`, port 80 (LAN
   only). The DB **is never touched** without a prior backup.
 - Local dev: `PORT=8199 AUTH_PASS=… node server/src/index.js` from
   `server/` (the DB in `server/data/` is a development copy).
@@ -134,5 +135,4 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 
 ## License
 
-Private (unpublished repo). If it's ever published, the house standard is
-AGPL-3.0, but that decision gets made then, not now.
+AGPL-3.0 — see [LICENSE](LICENSE).

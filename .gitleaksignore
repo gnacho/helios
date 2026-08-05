@@ -1,4 +1,0 @@
-# Token HAOS en commit histórico 55084e35 (working tree ya limpio: el script exige HAOS_TOKEN por env).
-# Repo PRIVADO — riesgo contenido. 🔴 SI EL REPO SE HACE PÚBLICO ALGÚN DÍA: rotar primero el token
-# de larga duración en HAOS y borrar esta entrada.
-55084e351a311143ae83f037f215ad2769229772:crear-servicio.sh:jwt:50

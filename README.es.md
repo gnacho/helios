@@ -13,16 +13,16 @@
   </picture>
 </p>
 
-> Repo **privado**. Este README no es para vender el proyecto: es para que el
-> Nacho del futuro entienda en cinco minutos **por qué existe esto, de dónde
-> salió y por qué está hecho como está hecho**, sin tener que re-leerse todo
-> el código.
+> Este README no es para vender el proyecto: es para que un futuro
+> mantenedor entienda en cinco minutos **por qué existe esto, de dónde
+> salió y por qué está hecho como está hecho**, sin tener que re-leerse
+> todo el código.
 
-Helios es el monitor solar de casa: dos inversores (Solis 4,4 kWp + Fox
-2,7 kWp), una batería de 5 kWh, más de 798 días de histórico, datos en
-vivo desde Home Assistant y el ahorro en euros calculado con nuestra
-tarifa real de Octopus. Un único servicio Node + SQLite corriendo en un
-LXC de casa. Sin nube.
+Helios es el monitor solar de una instalación doméstica: dos inversores
+(Solis 4,4 kWp + Fox 2,7 kWp), una batería de 5 kWh, más de 798 días de
+histórico, datos en vivo desde Home Assistant y el ahorro en euros
+calculado contra la tarifa eléctrica real. Un único servicio Node +
+SQLite corriendo en un LXC en casa. Sin nube.
 
 ## ¿Por qué existe?
 
@@ -48,9 +48,10 @@ la batería y cuánto vale en euros cada kWh autoconsumido.
    Creció a multiusuario con roles, histórico, batería, precios y PWA.
 3. El histórico diario se importó desde HAOS y se sigue alimentando cada
    día: **798+ días** en una SQLite que es **intocable** (vive en
-   `/opt/helios/data/helios.db` del CT 226; antes de cualquier migración,
-   backup. Hay réplica Litestream con PITR al disco zfs_2tb de host-a).
-4. Un **scraper de Solis Cloud** (LXC 202 + add-on HAOS) complementa el
+   `/opt/helios/data/helios.db` del host de producción; antes de cualquier
+   migración, backup. Hay réplica Litestream con PITR a un disco del host
+   de backup).
+4. Un **scraper de Solis Cloud** (un LXC aparte + add-on HAOS) complementa el
    dato cuando la integración local se queda corta.
 
 ## Por qué este stack (y no otro)
@@ -74,7 +75,7 @@ la batería y cuánto vale en euros cada kWh autoconsumido.
   flujo de energía se mueven en tiempo real.
 - **Histórico serio**: 798+ días con agregados diarios (producción,
   consumo, import/export de red, carga/descarga de batería, por inversor),
-  autoconsumo, ahorro en € con precios Octopus y CO₂ evitado.
+  autoconsumo, ahorro en € con precios reales y CO₂ evitado.
 - **PWA instalable**, tema claro/oscuro/auto (el auto va por hora solar,
   no por el sistema), densidad y shell común con el resto de apps de la
   casa.
@@ -108,11 +109,11 @@ aparte: los datos de verdad cuentan mejor para qué sirve cada vista.
 ```
 Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──▶ Helios server (Hono)
                                             ▲                    │ better-sqlite3
-                                 scraper Solis Cloud             ▼
-                                   (LXC 202 + add-on)      SQLite (798+ días)
-                                                                  │ Litestream
-                                                                  ▼
-                                                      SFTP zfs_2tb (host-a)
+                                  scraper Solis Cloud             ▼
+                                    (LXC aparte)            SQLite (798+ días)
+                                                                   │ Litestream
+                                                                   ▼
+                                                    SFTP a un disco (host backup)
 ```
 
 - `server/`: API Hono + auth multiusuario + agregados + saneado de datos.
@@ -122,7 +123,7 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 
 ## Operación (lo justo para no romper nada)
 
-- Producción: **CT 226** (host-a), servicio `helios.service`, puerto
+- Producción: un CT de Proxmox, servicio `helios.service`, puerto
   80 (solo LAN). La BD **no se toca** sin backup previo.
 - Desarrollo local: `PORT=8199 AUTH_PASS=… node server/src/index.js`
   desde `server/` (la BD de `server/data/` es una copia de desarrollo).
@@ -134,5 +135,4 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 
 ## Licencia
 
-Privada (repo sin publicar). Si algún día se publica, la casa usa
-AGPL-3.0, pero esa decisión se toma entonces, no ahora.
+AGPL-3.0 — ver [LICENSE](LICENSE).
