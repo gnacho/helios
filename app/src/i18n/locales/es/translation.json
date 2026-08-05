@@ -498,5 +498,13 @@
   "demo": {
     "banner": "Modo demo — los cambios no se aplican al sistema",
     "exit": "Salir del demo"
+  },
+  "audit": {
+    "title": "Auditoría",
+    "subtitle": "Registro de acciones de administración.",
+    "action": "Acción",
+    "actor": "Usuario",
+    "when": "Cuándo",
+    "empty": "Sin actividad registrada"
   }
 }

@@ -498,5 +498,13 @@
   "demo": {
     "banner": "Demo mode — changes are not applied to the system",
     "exit": "Exit demo"
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "Record of admin actions.",
+    "action": "Action",
+    "actor": "User",
+    "when": "When",
+    "empty": "No activity recorded"
   }
 }

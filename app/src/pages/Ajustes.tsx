@@ -98,12 +98,80 @@ function Section({
   );
 }
 
+/** Sección de auditoría (AdminBar): consume GET /api/auth/audit (solo admin). */
+interface AuditEntry {
+  id: number;
+  ts: number;
+  actor: string;
+  action: string;
+  detail?: string | null;
+}
+
+function AuditSection() {
+  const { t } = useTranslation();
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setBusy(true);
+    apiFetch<{ entries?: AuditEntry[] }>('/api/auth/audit?limit=50')
+      .then((d) => setEntries(d.entries ?? []))
+      .catch(() => setEntries([]))
+      .finally(() => setBusy(false));
+  }, []);
+
+  if (busy) {
+    return <p className="text-[13px] text-muted">{t('ajustes.about.checking')}</p>;
+  }
+
+  if (entries.length === 0) {
+    return <p className="text-[13px] text-muted">{t('audit.empty')}</p>;
+  }
+
+  const fmtTs = (ms: number) => {
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(ms));
+    } catch {
+      return String(ms);
+    }
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t('audit.when')}</TableHead>
+            <TableHead>{t('audit.actor')}</TableHead>
+            <TableHead>{t('audit.action')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map((e) => (
+            <TableRow key={e.id}>
+              <TableCell className="whitespace-nowrap text-[13px] text-muted">{fmtTs(e.ts)}</TableCell>
+              <TableCell className="text-[13px]">{e.actor}</TableCell>
+              <TableCell className="text-[13px] text-muted">{e.action}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 /** Zona de administración (patrón AdminBar del skill): tarjeta horizontal con
- *  borde de acento, título "Administración", secciones desplegables (Usuarios)
- *  y widgets inline. El comprobador de actualizaciones vive AQUÍ, no en Acerca de. */
+ *  borde de acento, título "Administración", secciones en la barra y paneles
+ *  desplegables debajo. Orden canónico: Actualizaciones → Usuarios → Auditoría
+ *  (Respaldos y Modo demo no existen en Helios). */
 function AdminZone() {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   const [checking, setChecking] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'uptodate' | 'available' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
@@ -143,6 +211,16 @@ function AdminZone() {
     }
   };
 
+  const toggle = (id: string) => setOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const btnCls = (active: boolean) =>
+    cn(
+      'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors shrink-0',
+      active
+        ? 'border-brand bg-brand/10 text-brand'
+        : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
+    );
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 24 }}
@@ -151,67 +229,78 @@ function AdminZone() {
       transition={{ duration: 0.5, ease: easeOutQuart }}
       className="helios-card scroll-mt-20 border-l-4 border-l-brand bg-brand/[0.03] p-5 shadow-card dark:shadow-card-dark"
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex h-9 items-center gap-2">
+      {/* Fila horizontal de la barra */}
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="flex h-9 items-center gap-2 shrink-0">
           <ShieldCheck size={18} strokeWidth={1.75} className="text-brand" />
           <h2 className="font-display text-[15px] font-semibold text-app">{t('ajustes.sections.administracion')}</h2>
         </div>
         <div className="hidden h-6 w-px bg-app sm:block" />
+
+        {/* 1. Comprobar actualizaciones (widget inline) */}
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={checkUpdates}
+            disabled={checking}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-60"
+          >
+            {checking && <RefreshCw size={13} className="animate-spin" />}
+            <span className="hidden sm:inline">
+              {checking ? t('ajustes.about.checking') : t('ajustes.about.checkUpdates')}
+            </span>
+          </button>
+          {updateStatus === 'uptodate' && (
+            <span className="text-[10px] font-medium text-emerald-500">
+              {t('ajustes.about.upToDate', { version: pkg.version })}
+            </span>
+          )}
+          {updateStatus === 'available' && (
+            <a href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer" className="text-[10px] font-medium text-brand">
+              {t('ajustes.about.updateAvailable', { version: latestVersion })}
+            </a>
+          )}
+          {updateStatus === 'error' && (
+            <span role="alert" className="text-[10px] font-medium text-destructive">
+              {t('ajustes.about.updateError')}
+            </span>
+          )}
+        </div>
+
+        {/* 2. Usuarios (desplegable) */}
         <button
           type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className={cn(
-            'ml-auto inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors',
-            open
-              ? 'border-brand bg-brand/10 text-brand'
-              : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
-          )}
+          aria-expanded={!!open.users}
+          onClick={() => toggle('users')}
+          className={btnCls(!!open.users)}
         >
           <UserPlus size={16} strokeWidth={1.75} />
           <span className="hidden sm:inline">{t('ajustes.sections.usuarios')}</span>
-          <ChevronDown size={14} className={cn('transition-transform', open && 'rotate-180')} />
+          <ChevronDown size={14} className={cn('transition-transform', open.users && 'rotate-180')} />
         </button>
-      </div>
 
-      {/* Widget inline: Comprobar actualizaciones (en la AdminBar según el skill) */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-app pt-3">
+        {/* 3. Auditoría (desplegable) */}
         <button
           type="button"
-          onClick={checkUpdates}
-          disabled={checking}
-          className="inline-flex h-8 items-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/20 disabled:opacity-60"
+          aria-expanded={!!open.audit}
+          onClick={() => toggle('audit')}
+          className={btnCls(!!open.audit)}
         >
-          {checking && <RefreshCw size={13} className="animate-spin" />}
-          {checking ? t('ajustes.about.checking') : t('ajustes.about.checkUpdates')}
+          <FileText size={16} strokeWidth={1.75} />
+          <span className="hidden sm:inline">{t('audit.title')}</span>
+          <ChevronDown size={14} className={cn('transition-transform', open.audit && 'rotate-180')} />
         </button>
-        {updateStatus === 'uptodate' && (
-          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-500">
-            <Check size={13} />
-            {t('ajustes.about.upToDate', { version: pkg.version })}
-          </span>
-        )}
-        {updateStatus === 'available' && (
-          <span className="inline-flex items-center gap-2 text-xs text-brand">
-            {t('ajustes.about.updateAvailable', { version: latestVersion })}
-            <a
-              href={`${REPO_URL}/releases`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-6 items-center rounded-full border border-brand/40 bg-brand/10 px-2.5 text-[11px] font-medium text-brand hover:bg-brand/20"
-            >
-              {t('ajustes.about.viewRelease')}
-            </a>
-          </span>
-        )}
-        {updateStatus === 'error' && (
-          <span className="text-xs text-destructive">{t('ajustes.about.updateError')}</span>
-        )}
       </div>
 
-      {open && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3">
+      {/* Paneles desplegados */}
+      {open.users && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 border-t border-app pt-4">
           <UsersSection />
+        </motion.div>
+      )}
+      {open.audit && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 border-t border-app pt-4">
+          <AuditSection />
         </motion.div>
       )}
     </motion.section>
