@@ -6,6 +6,7 @@ import {
   BatteryCharging,
   Bell,
   Check,
+  ChevronDown,
   FileText,
   Github,
   Heart,
@@ -97,13 +98,47 @@ function Section({
   );
 }
 
-/** Cabecera de zona (no es tarjeta): delimita el territorio de administración. */
-function ZoneHeader({ title }: { title: string }) {
+/** Zona de administración (patrón AdminBar del skill): tarjeta horizontal con
+ *  borde de acento, título "Administración" y secciones desplegables a la derecha. */
+function AdminZone() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-2 px-1 pt-1">
-      <ShieldCheck size={15} strokeWidth={1.75} className="text-faint" />
-      <h2 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-faint">{title}</h2>
-    </div>
+    <motion.section
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.5, ease: easeOutQuart }}
+      className="helios-card scroll-mt-20 rounded-l-lg border-l-4 border-l-amber-500 bg-amber-500/[0.03] p-5 shadow-card dark:shadow-card-dark"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex h-9 items-center gap-2">
+          <ShieldCheck size={18} strokeWidth={1.75} className="text-amber-500" />
+          <h2 className="font-display text-[15px] font-semibold text-app">{t('ajustes.sections.administracion')}</h2>
+        </div>
+        <div className="hidden h-6 w-px bg-app sm:block" />
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            'ml-auto inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors',
+            open
+              ? 'border-amber-500 bg-amber-500/10 text-amber-500'
+              : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
+          )}
+        >
+          <UserPlus size={16} strokeWidth={1.75} />
+          <span className="hidden sm:inline">{t('ajustes.sections.usuarios')}</span>
+          <ChevronDown size={14} className={cn('transition-transform', open && 'rotate-180')} />
+        </button>
+      </div>
+      {open && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 border-t border-app pt-4">
+          <UsersSection />
+        </motion.div>
+      )}
+    </motion.section>
   );
 }
 
@@ -623,7 +658,7 @@ function PricesSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid max-w-md gap-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         {fields.map((f, i) => (
           <motion.div
             key={f.id}
@@ -1543,49 +1578,37 @@ export default function Ajustes() {
 
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-5">
 
-        {/* 1. Tu instalación (span-7) + Apariencia (span-5) en horizontal */}
+        {/* 1. Tu instalación (izquierda) + columna derecha: Apariencia y debajo Conexión
+             (aprovecha la diferencia de altura entre instalación y apariencia) */}
         <div className="grid items-start gap-5 lg:grid-cols-12">
           <div className="lg:col-span-7">
             <Section id="instalacion" title={t('ajustes.sections.instalacion')}>
               <InstallationSection />
             </Section>
           </div>
-          <div className="lg:col-span-5">
+          <div className="flex flex-col gap-5 lg:col-span-5">
             <Section id="apariencia" title={t('ajustes.sections.apariencia')}>
               <ThemeSection />
+            </Section>
+            <Section
+              id="conexion"
+              title={t('ajustes.sections.conexionDatos')}
+              badge={<HealthBadge ok={connectionStatus === 'connected' && dataOk} />}
+            >
+              <ConnectionSection />
             </Section>
           </div>
         </div>
 
-        {/* 2. Conexión y datos (span-12, horizontal) */}
-        <Section
-          id="conexion"
-          title={t('ajustes.sections.conexionDatos')}
-          badge={<HealthBadge ok={connectionStatus === 'connected' && dataOk} />}
-        >
-          <ConnectionSection />
-        </Section>
-
-        {/* 3. Mi perfil (span-12) */}
+        {/* 2. Mi perfil (span-12) */}
         <Section id="perfil" title={t('ajustes.sections.perfil')}>
           <ProfileSection />
         </Section>
 
-        {/* 4. Zona administración: Usuarios (admin, span-12) */}
-        {userRole === 'admin' && (
-          <>
-            <ZoneHeader title={t('ajustes.sections.administracion')} />
-            <Section
-              id="usuarios"
-              title={t('ajustes.sections.usuarios')}
-              className="border-amber-500/40 bg-amber-500/[0.03]"
-            >
-              <UsersSection />
-            </Section>
-          </>
-        )}
+        {/* 3. Zona administración (solo admin): barra AdminBar con Usuarios desplegable */}
+        {userRole === 'admin' && <AdminZone />}
 
-        {/* 5. Precios (span-12, abajo, fila vertical) */}
+        {/* 4. Precios (abajo, en una única fila) */}
         <Section id="precios" title={t('ajustes.sections.precios')}>
           <PricesSection />
         </Section>
