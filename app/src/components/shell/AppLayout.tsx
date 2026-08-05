@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,9 @@ import {
   Sunrise,
   Sun,
   Moon,
+  User,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -25,6 +28,7 @@ import AlertsBell from '@/components/AlertsBell';
 import ThemeToggle from '@/components/ThemeToggle';
 import Footer from '@/components/Footer';
 import HeliosToaster from '@/components/HeliosToaster';
+import { apiFetch } from '@/data/api-client';
 
 /**
  * AppLayout unificado (skill webapp-shell):
@@ -125,22 +129,76 @@ function IconNavLink({ to, labelKey, icon: Icon }: { to: string; labelKey: strin
   );
 }
 
+function UserBlock({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation();
+  const { connectionStatus } = useEnergyData();
+  const [username, setUsername] = useState<string | null>(null);
+  const connected = connectionStatus === 'connected';
+
+  useEffect(() => {
+    apiFetch<{ authenticated?: boolean; user?: { username?: string } }>('/api/auth/me')
+      .then((d) => { if (d.authenticated && d.user?.username) setUsername(d.user.username); })
+      .catch(() => setUsername(null));
+  }, []);
+
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-1.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/12 text-amber-500">
+          <User size={16} />
+        </span>
+        <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-amber-500')} title={connected ? t('common.online') : t('ajustes.connection.reconnecting')} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-app bg-surface-2/50 px-3 py-2">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/12 text-amber-500">
+        <User size={16} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-app">{username ?? '...'}</p>
+        <span className="inline-flex items-center gap-1 text-[11px] text-faint">
+          {connected
+            ? <><Wifi size={10} /> {t('common.online')}</>
+            : <><WifiOff size={10} /> {t('ajustes.connection.reconnecting')}</>
+          }
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggleCollapse: () => void }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const settingsActive = isActive(pathname, SETTINGS_ITEM.to);
 
   if (collapsed) {
     return (
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 lg:flex">
         <Logo collapsed />
         <nav className="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={t('nav.dashboard')}>
-          {ALL_ITEMS.map((item) => (
+          {NAV_ITEMS.map((item) => (
             <IconNavLink key={item.to} {...item} />
           ))}
         </nav>
         <div className="flex flex-col items-center gap-2">
-          <ConnectionStatus compact />
-          <ThemeCycleButton />
+          <UserBlock collapsed />
+          <div className="flex items-center gap-1.5">
+            <ThemeCycleButton />
+            <NavLink
+              to={SETTINGS_ITEM.to}
+              aria-label={t('nav.ajustes')}
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                settingsActive ? 'bg-amber-500/15 text-amber-500' : 'border border-app bg-surface text-muted hover:text-app',
+              )}
+            >
+              <Settings size={16} strokeWidth={1.75} />
+            </NavLink>
+          </div>
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -181,15 +239,17 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
           );
         })}
       </nav>
-      <div className="space-y-3 border-t border-app p-3">
-        <ConnectionStatus />
-        <div className="flex items-center gap-2">
+      <div className="border-t border-app p-3">
+        <UserBlock collapsed={false} />
+        <div className="mt-2 flex items-center gap-2">
           <ThemeCycleButton />
           <NavLink
             to={SETTINGS_ITEM.to}
             className={cn(
-              'flex h-9 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors',
-              isActive(pathname, SETTINGS_ITEM.to) ? ACTIVE : IDLE,
+              'flex h-9 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors',
+              settingsActive
+                ? 'bg-amber-500/15 text-amber-500'
+                : 'bg-amber-500/8 text-amber-600 hover:bg-amber-500/15 dark:text-amber-400',
             )}
           >
             <Settings size={18} strokeWidth={1.75} />
@@ -211,6 +271,8 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
 
 function Rail() {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const settingsActive = isActive(pathname, SETTINGS_ITEM.to);
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
       <Logo collapsed />
@@ -220,8 +282,18 @@ function Rail() {
         ))}
       </nav>
       <div className="flex flex-col items-center gap-2">
-        <ConnectionStatus compact />
+        <UserBlock collapsed />
         <ThemeCycleButton />
+        <NavLink
+          to={SETTINGS_ITEM.to}
+          aria-label={t('nav.ajustes')}
+          className={cn(
+            'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+            settingsActive ? 'bg-amber-500/15 text-amber-500' : 'border border-app bg-surface text-muted hover:text-app',
+          )}
+        >
+          <Settings size={16} strokeWidth={1.75} />
+        </NavLink>
       </div>
     </aside>
   );
