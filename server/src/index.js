@@ -6,6 +6,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(fs.readFileSync(path.join(dirname, '..', '..', 'app', 'package.json'), 'utf8'))
 const envPath = path.join(dirname, '..', '.env')
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
@@ -92,6 +93,28 @@ app.get('/health', (c) => {
     dbOk ? 200 : 503
   )
 })
+
+app.get('/api/system/info', (c) => {
+  const mem = process.memoryUsage()
+  return c.json({
+    app: {
+      version: pkg.version,
+      name: pkg.name,
+    },
+    node: {
+      version: process.version,
+      platform: process.platform,
+      arch: process.arch,
+    },
+    react: pkg.dependencies.react.replace(/^[\^~]/, ''),
+    uptime: Math.round(process.uptime()),
+    memory: {
+      rss: Math.round(mem.rss / 1024 / 1024),
+      heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+    },
+  })
+})
+
 
 // Security headers middleware
 app.use('*', async (c, next) => {
@@ -208,6 +231,48 @@ app.put('/api/auth/password', async (c) => {
   }
   const me = dbModule.getUserById(db, session.userId)
   audit(db, me?.username || session.userId, session.userId, 'user.password')
+  return c.json({ ok: true })
+})
+
+const AVATAR_MAX = 200 * 1024
+const avatarsDir = path.join(config.dataDir, 'avatars')
+fs.mkdirSync(avatarsDir, { recursive: true })
+
+app.get('/api/auth/avatar/:id', (c) => {
+  const id = c.req.param('id')
+  if (!id || /[^\w-]/.test(id)) return c.body(null, 400)
+  const file = path.join(avatarsDir, `${id}.webp`)
+  if (!fs.existsSync(file)) return c.body(null, 404)
+  const buf = fs.readFileSync(file)
+  return new Response(buf, {
+    headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=3600' },
+  })
+})
+
+const avatarSchema = z.object({ avatar: z.string().min(1) })
+
+app.put('/api/auth/profile/avatar', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const body = await c.req.json().catch(() => null)
+  const parsed = avatarSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'formato inválido' }, 400)
+  const match = parsed.data.avatar.match(/^data:image\/(webp|png|jpeg);base64,(.+)$/)
+  if (!match) return c.json({ error: 'formato de imagen inválido' }, 400)
+  const buf = Buffer.from(match[2], 'base64')
+  if (buf.length > AVATAR_MAX) return c.json({ error: 'imagen demasiado grande (máx 200 KB)' }, 413)
+  const file = path.join(avatarsDir, `${session.userId}.webp`)
+  fs.writeFileSync(file, buf)
+  const me = dbModule.getUserById(db, session.userId)
+  audit(db, me?.username || session.userId, session.userId, 'user.avatar')
+  return c.json({ ok: true })
+})
+
+app.delete('/api/auth/profile/avatar', (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const file = path.join(avatarsDir, `${session.userId}.webp`)
+  if (fs.existsSync(file)) fs.unlinkSync(file)
   return c.json({ ok: true })
 })
 

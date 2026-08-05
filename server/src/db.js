@@ -120,6 +120,12 @@ function migrate(db) {
     }
     db.pragma('user_version = 2')
   }
+
+  if (version < 3) {
+    const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name)
+    if (!cols.includes('display_name')) db.exec('ALTER TABLE users ADD COLUMN display_name TEXT')
+    db.pragma('user_version = 3')
+  }
 }
 
 export function openDb(dataDir) {
@@ -177,12 +183,16 @@ export function getUserByUsername(db, username) {
 }
 
 export function getUserById(db, id) {
-  return db.prepare('SELECT id, username, email, phone, language, role, created_at FROM users WHERE id = ?').get(id)
+  return db.prepare('SELECT id, username, display_name, email, phone, language, role, created_at FROM users WHERE id = ?').get(id)
 }
 
 export function updateUser(db, id, updates) {
   const fields = []
   const values = []
+  if (updates.display_name !== undefined) {
+    fields.push('display_name = ?')
+    values.push(updates.display_name)
+  }
   if (updates.email !== undefined) {
     fields.push('email = ?')
     values.push(updates.email)

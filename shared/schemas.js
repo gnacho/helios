@@ -18,6 +18,7 @@ export function createSchemas(z) {
     }),
 
     profileSchema: z.object({
+      display_name: z.string().min(1).max(50).optional().nullable(),
       email: z.string().email().optional().nullable(),
       phone: z.string().optional().nullable(),
       language: z.string().regex(/^(es|en|zh-CN)$/).optional(),
