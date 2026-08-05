@@ -29,15 +29,6 @@ export const SOLAR_GRADIENT = { from: '#F59E0B', to: '#F97316' } as const;
 /** Batería por debajo de la reserva (gauge). */
 export const BATTERY_LOW_COLOR = '#FB7185';
 
-/** Icono casa del flujo (SVG inline). */
-export const FLOW_HOME_COLORS = {
-  strokeFrom: '#3B82F6',
-  strokeTo: '#1D4ED8',
-  stroke: '#60A5FA',
-  sun: '#FBBF24',
-  sunStroke: '#B45309',
-} as const;
-
 /** Arco solar: cielo nocturno y estrellas. */
 export const SOLAR_ARC_COLORS = { nightFrom: '#101828', nightTo: '#182338', star: '#FFFFFF' } as const;
 
