@@ -14,14 +14,14 @@
   "dependencies": {
     "@hono/node-server": "^1.13.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.2.0",
-    "hono": "^4.8.0",
+    "better-sqlite3": "^13.0.3",
+    "hono": "^4.13.0",
     "web-push": "^3.6.7",
     "ws": "^8.18.0",
     "zod": "^4.4.3"
   },
   "allowScripts": {
-    "better-sqlite3@12.11.1": true,
+    "better-sqlite3@13.0.3": true,
     "bcrypt@6.0.0": true
   },
   "devDependencies": {
