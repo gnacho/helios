@@ -16,6 +16,7 @@ const MODE_KEY = `${SLUG}-theme-mode`;
 const LEGACY_MODE_KEY = `${SLUG}-theme`; // clave antigua, se migra a MODE_KEY
 const DENSITY_KEY = `${SLUG}-density`;
 const REDUCE_MOTION_KEY = `${SLUG}-reduce-motion`;
+const ACCENT_KEY = `${SLUG}-accent`;
 
 interface ThemeContextValue {
   mode: ThemeMode;
@@ -24,6 +25,8 @@ interface ThemeContextValue {
   isDark: boolean;
   density: Density;
   setDensity: (d: Density) => void;
+  accent: string | null;
+  setAccent: (rgb: string | null) => void;
   reduceMotion: boolean;
   setReduceMotion: (v: boolean) => void;
 }
@@ -69,6 +72,13 @@ function applyDensity(density: Density) {
   document.documentElement.style.fontSize = density === 'compact' ? '13.5px' : '16px';
 }
 
+/** Acento de marca: triplete RGB para --accent-rgb (null = naranja por defecto). */
+function applyAccent(rgb: string | null) {
+  const root = document.documentElement;
+  if (rgb) root.style.setProperty('--accent-rgb', rgb);
+  else root.style.removeProperty('--accent-rgb');
+}
+
 /** Anti-FOUC: aplicar preferencias antes del primer render (main.tsx). */
 export function applyBootPreferences() {
   try {
@@ -78,6 +88,7 @@ export function applyBootPreferences() {
     if (localStorage.getItem(REDUCE_MOTION_KEY) === '1') {
       document.documentElement.classList.add('reduce-motion');
     }
+    applyAccent(localStorage.getItem(ACCENT_KEY));
   } catch {
     /* sin localStorage */
   }
@@ -91,6 +102,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable';
     } catch {
       return 'comfortable';
+    }
+  });
+  const [accent, setAccentState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(ACCENT_KEY);
+    } catch {
+      return null;
     }
   });
   const [reduceMotion, setReduceMotionState] = useState<boolean>(() => {
@@ -117,6 +135,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     applyDensity(density);
   }, [density]);
+
+  useEffect(() => {
+    applyAccent(accent);
+  }, [accent]);
 
   const setMode = useCallback((next: ThemeMode) => {
     setModeState(next);
@@ -147,9 +169,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setAccent = useCallback((next: string | null) => {
+    setAccentState(next);
+    try {
+      if (next) localStorage.setItem(ACCENT_KEY, next);
+      else localStorage.removeItem(ACCENT_KEY);
+    } catch {
+      /* sin localStorage */
+    }
+  }, []);
+
   const value = useMemo<ThemeContextValue>(
-    () => ({ mode, setMode, effective, isDark: effective === 'dark', density, setDensity, reduceMotion, setReduceMotion }),
-    [mode, setMode, effective, density, setDensity, reduceMotion, setReduceMotion],
+    () => ({ mode, setMode, effective, isDark: effective === 'dark', density, setDensity, accent, setAccent, reduceMotion, setReduceMotion }),
+    [mode, setMode, effective, density, setDensity, accent, setAccent, reduceMotion, setReduceMotion],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

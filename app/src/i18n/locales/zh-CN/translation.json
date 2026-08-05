@@ -412,6 +412,13 @@
       "compact": "紧凑"
     },
     "reduceMotion": "减少动画",
+    "accent": {
+      "title": "强调色",
+      "naranja": "橙色",
+      "verde": "绿色",
+      "azul": "蓝色",
+      "violeta": "紫色"
+    },
     "notif": {
       "descripcion": "即使应用关闭也能在此设备上接收提醒：逆变器、电网停电、电池和每日总结。",
       "activar": "开启提醒",

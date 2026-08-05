@@ -109,11 +109,11 @@ function AdminZone() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.15 }}
       transition={{ duration: 0.5, ease: easeOutQuart }}
-      className="helios-card scroll-mt-20 border-l-4 border-l-amber-500 bg-amber-500/[0.03] p-5 shadow-card dark:shadow-card-dark"
+      className="helios-card scroll-mt-20 border-l-4 border-l-brand bg-brand/[0.03] p-5 shadow-card dark:shadow-card-dark"
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex h-9 items-center gap-2">
-          <ShieldCheck size={18} strokeWidth={1.75} className="text-amber-500" />
+          <ShieldCheck size={18} strokeWidth={1.75} className="text-brand" />
           <h2 className="font-display text-[15px] font-semibold text-app">{t('ajustes.sections.administracion')}</h2>
         </div>
         <div className="hidden h-6 w-px bg-app sm:block" />
@@ -124,7 +124,7 @@ function AdminZone() {
           className={cn(
             'ml-auto inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors',
             open
-              ? 'border-amber-500 bg-amber-500/10 text-amber-500'
+              ? 'border-brand bg-brand/10 text-brand'
               : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
           )}
         >
@@ -166,7 +166,7 @@ function HealthBadge({ ok }: { ok: boolean }) {
 function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
   const bg = variant === 'dark' ? 'bg-[#080D1A]' : variant === 'light' ? 'bg-[#F4F6FA]' : '';
   const surface = variant === 'dark' ? 'bg-[#0F1729]' : variant === 'light' ? 'bg-[#FFFFFF]' : '';
-  const accent = 'bg-amber-500';
+  const accent = 'bg-brand';
   if (variant === 'split') {
     return (
       <div className="flex h-[72px] w-full overflow-hidden rounded-lg border border-app">
@@ -175,7 +175,7 @@ function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
           <div className="flex flex-1 gap-1">
             <div className="w-1/4 rounded bg-[#1E293B]" />
             <div className="flex flex-1 flex-col gap-1">
-              <div className="h-2 w-3/4 rounded bg-amber-500/60" />
+              <div className="h-2 w-3/4 rounded bg-brand/60" />
               <div className="h-4 flex-1 rounded bg-[#1E293B]" />
             </div>
           </div>
@@ -185,7 +185,7 @@ function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
           <div className="flex flex-1 gap-1">
             <div className="w-1/4 rounded bg-slate-200" />
             <div className="flex flex-1 flex-col gap-1">
-              <div className="h-2 w-3/4 rounded bg-amber-500/60" />
+              <div className="h-2 w-3/4 rounded bg-brand/60" />
               <div className="h-4 flex-1 rounded bg-slate-200" />
             </div>
           </div>
@@ -208,8 +208,16 @@ function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
   );
 }
 
+/** Acenos disponibles (triplete RGB para --accent-rgb; null = naranja por defecto). */
+const ACCENTS = [
+  { id: 'naranja', rgb: null, hex: '#F59E0B' },
+  { id: 'verde', rgb: '34 197 94', hex: '#22C55E' },
+  { id: 'azul', rgb: '59 130 246', hex: '#3B82F6' },
+  { id: 'violeta', rgb: '139 92 246', hex: '#8B5CF6' },
+] as const;
+
 function ThemeSection() {
-  const { mode, setMode, density, setDensity, reduceMotion, setReduceMotion } = useTheme();
+  const { mode, setMode, density, setDensity, reduceMotion, setReduceMotion, accent, setAccent } = useTheme();
   const { t } = useTranslation();
 
   const themeOptions = [
@@ -233,20 +241,20 @@ function ThemeSection() {
               onClick={() => setMode(value)}
               className={cn(
                 'group relative flex flex-col gap-2 rounded-xl border-2 p-2 transition-all',
-                active ? 'border-amber-500 bg-amber-500/5' : 'border-app hover:border-amber-500/30',
+                active ? 'border-brand bg-brand/5' : 'border-app hover:border-brand/30',
               )}
             >
               <ThemePreview variant={value === 'auto' ? 'split' : value} />
               <div className="flex items-center justify-center gap-1.5">
-                <Icon size={14} className={active ? 'text-amber-500' : 'text-faint'} />
-                <span className={cn('text-xs font-medium', active ? 'text-amber-500' : 'text-muted')}>{label}</span>
+                <Icon size={14} className={active ? 'text-brand' : 'text-faint'} />
+                <span className={cn('text-xs font-medium', active ? 'text-brand' : 'text-muted')}>{label}</span>
               </div>
               {active && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white"
+                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"
                 >
                   <Check size={12} strokeWidth={3} />
                 </motion.span>
@@ -254,6 +262,34 @@ function ThemeSection() {
             </button>
           );
         })}
+      </div>
+
+      {/* Acento */}
+      <div>
+        <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.accent.title')}</p>
+        <div role="radiogroup" aria-label={t('ajustes.accent.title')} className="flex items-center gap-2.5">
+          {ACCENTS.map((acc) => {
+            const active = accent === acc.rgb;
+            return (
+              <button
+                key={acc.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={t(`ajustes.accent.${acc.id}`)}
+                title={t(`ajustes.accent.${acc.id}`)}
+                onClick={() => setAccent(acc.rgb)}
+                className={cn(
+                  'relative flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-110',
+                  active && 'ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]',
+                )}
+                style={{ backgroundColor: acc.hex }}
+              >
+                {active && <Check size={14} strokeWidth={3} className="text-white" />}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Densidad */}
@@ -568,10 +604,10 @@ function InstallationSection() {
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.24, ease: easeOutQuart }}
-          className="group rounded-xl border-2 border-amber-500/35 bg-surface p-4"
+          className="group rounded-xl border-2 border-brand/35 bg-surface p-4"
         >
           <div className="mb-3 flex h-10 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/12 text-amber-500 transition-transform group-hover:scale-110">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/12 text-brand transition-transform group-hover:scale-110">
               <Sun size={16} strokeWidth={2.2} />
             </span>
             <p className="min-w-0 truncate font-display text-[15px] font-semibold text-app" title={t('ajustes.install.totalLabel')}>
@@ -819,7 +855,7 @@ function ProfileSection() {
       {/* Línea principal compacta */}
       <div className="flex items-center gap-3">
         {/* Avatar con icono User */}
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500/12 text-amber-500">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
           <User size={20} />
         </div>
         
@@ -836,7 +872,7 @@ function ProfileSection() {
               <button
                 type="button"
                 onClick={saveName}
-                className="inline-flex h-8 items-center rounded bg-amber-500 px-2.5 text-xs font-semibold text-white"
+                className="inline-flex h-8 items-center rounded bg-brand px-2.5 text-xs font-semibold text-white"
               >
                 <Check size={14} />
               </button>
@@ -886,7 +922,7 @@ function ProfileSection() {
                 aria-expanded={showNotifs}
                 className={cn(
                   'flex h-9 items-center gap-1.5 rounded-lg px-2.5 transition-colors sm:px-3',
-                  showNotifs ? 'bg-amber-500/15 text-amber-500' : 'text-faint hover:bg-surface-2 hover:text-app',
+                  showNotifs ? 'bg-brand/15 text-brand' : 'text-faint hover:bg-surface-2 hover:text-app',
                 )}
                 title={t('ajustes.sections.notificaciones')}
               >
@@ -1510,7 +1546,7 @@ function AboutSection() {
         {tiles.map((tile, i) => {
           const Icon = tile.icon === 'github' ? Github : tile.icon === 'file' ? FileText : tile.icon === 'heart' ? Heart : ShieldCheck;
           const content = (
-            <div className="flex items-center gap-2.5 rounded-xl border border-app px-3.5 py-2.5 text-sm text-muted transition-colors hover:border-amber-500/40 hover:text-amber-500">
+            <div className="flex items-center gap-2.5 rounded-xl border border-app px-3.5 py-2.5 text-sm text-muted transition-colors hover:border-brand/40 hover:text-brand">
               <Icon size={16} className="shrink-0" />
               <span>{tile.label}</span>
             </div>
@@ -1578,29 +1614,30 @@ export default function Ajustes() {
 
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-5">
 
-        {/* 1. Tu instalación (izquierda) + columna derecha: Apariencia y debajo Conexión
-             (aprovecha la diferencia de altura entre instalación y apariencia) */}
-        <div className="grid items-start gap-5 lg:grid-cols-12">
+        {/* 1. Tu instalación | Apariencia (alturas igualadas: la fila estira ambas tarjetas) */}
+        <div className="grid gap-5 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <Section id="instalacion" title={t('ajustes.sections.instalacion')}>
+            <Section id="instalacion" title={t('ajustes.sections.instalacion')} className="h-full">
               <InstallationSection />
             </Section>
           </div>
-          <div className="flex flex-col gap-5 lg:col-span-5">
-            <Section id="apariencia" title={t('ajustes.sections.apariencia')}>
+          <div className="lg:col-span-5">
+            <Section id="apariencia" title={t('ajustes.sections.apariencia')} className="h-full">
               <ThemeSection />
-            </Section>
-            <Section
-              id="conexion"
-              title={t('ajustes.sections.conexionDatos')}
-              badge={<HealthBadge ok={connectionStatus === 'connected' && dataOk} />}
-            >
-              <ConnectionSection />
             </Section>
           </div>
         </div>
 
-        {/* 2. Mi perfil (span-12) */}
+        {/* 2. Conexión y datos (fila horizontal propia, span-12) */}
+        <Section
+          id="conexion"
+          title={t('ajustes.sections.conexionDatos')}
+          badge={<HealthBadge ok={connectionStatus === 'connected' && dataOk} />}
+        >
+          <ConnectionSection />
+        </Section>
+
+        {/* 3. Mi perfil (span-12) */}
         <Section id="perfil" title={t('ajustes.sections.perfil')}>
           <ProfileSection />
         </Section>

@@ -414,6 +414,13 @@
       "compact": "Compacta"
     },
     "reduceMotion": "Reducir animaciones",
+    "accent": {
+      "title": "Acento",
+      "naranja": "Naranja",
+      "verde": "Verde",
+      "azul": "Azul",
+      "violeta": "Violeta"
+    },
     "notif": {
       "descripcion": "Recibe avisos en este dispositivo aunque la app esté cerrada: inversor, cortes de red, batería y el resumen del día.",
       "activar": "Activar alertas",

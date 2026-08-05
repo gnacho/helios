@@ -414,6 +414,13 @@
       "compact": "Compact"
     },
     "reduceMotion": "Reduce animations",
+    "accent": {
+      "title": "Accent",
+      "naranja": "Orange",
+      "verde": "Green",
+      "azul": "Blue",
+      "violeta": "Purple"
+    },
     "notif": {
       "descripcion": "Get alerts on this device even when the app is closed: inverter, grid outages, battery and the daily summary.",
       "activar": "Enable alerts",

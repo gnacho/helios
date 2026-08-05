@@ -58,7 +58,7 @@ const TITLE_KEYS: [RegExp, string][] = [
   [/^\/ajustes/, 'nav.ajustes'],
 ];
 
-const ACTIVE = 'bg-surface-2 text-amber-500';
+const ACTIVE = 'bg-surface-2 text-brand';
 const IDLE = 'text-muted hover:bg-surface-2/50 hover:text-app';
 
 function isActive(pathname: string, to: string): boolean {
@@ -144,7 +144,7 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/12 text-amber-500">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/12 text-brand">
           <User size={16} />
         </span>
         <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-amber-500')} title={connected ? t('common.online') : t('ajustes.connection.reconnecting')} />
@@ -154,7 +154,7 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-app bg-surface-2/50 px-3 py-2">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/12 text-amber-500">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
         <User size={16} />
       </span>
       <div className="min-w-0 flex-1">
@@ -193,7 +193,7 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
               aria-label={t('nav.ajustes')}
               className={cn(
                 'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
-                settingsActive ? 'bg-amber-500/15 text-amber-500' : 'border border-app bg-surface text-muted hover:text-app',
+                settingsActive ? 'bg-brand/15 text-brand' : 'border border-app bg-surface text-muted hover:text-app',
               )}
             >
               <Settings size={16} strokeWidth={1.75} />
@@ -248,8 +248,8 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
             className={cn(
               'flex h-9 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors',
               settingsActive
-                ? 'bg-amber-500/15 text-amber-500'
-                : 'bg-amber-500/8 text-amber-600 hover:bg-amber-500/15 dark:text-amber-400',
+                ? 'bg-brand/15 text-brand'
+                : 'bg-brand/8 text-brand hover:bg-brand/15',
             )}
           >
             <Settings size={18} strokeWidth={1.75} />
@@ -289,7 +289,7 @@ function Rail() {
           aria-label={t('nav.ajustes')}
           className={cn(
             'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
-            settingsActive ? 'bg-amber-500/15 text-amber-500' : 'border border-app bg-surface text-muted hover:text-app',
+            settingsActive ? 'bg-brand/15 text-brand' : 'border border-app bg-surface text-muted hover:text-app',
           )}
         >
           <Settings size={16} strokeWidth={1.75} />
@@ -442,12 +442,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <motion.span
                   animate={active ? { scale: [1, 1.15, 1] } : { scale: 1 }}
                   transition={{ duration: 0.25, type: 'spring', stiffness: 500, damping: 20 }}
-                  className={cn('flex', active ? 'text-amber-500' : 'text-faint')}
+                  className={cn('flex', active ? 'text-brand' : 'text-faint')}
                 >
                   <Icon size={22} strokeWidth={active ? 2.4 : 2} />
                 </motion.span>
-                <span className={cn('text-[10px] font-medium', active ? 'text-amber-500' : 'text-faint')}>{t(labelKey)}</span>
-                {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-amber-500" />}
+                <span className={cn('text-[10px] font-medium', active ? 'text-brand' : 'text-faint')}>{t(labelKey)}</span>
+                {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-brand" />}
               </NavLink>
             );
           })}
