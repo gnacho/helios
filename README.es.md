@@ -130,6 +130,8 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 - Si la contraseña de admin se pierde: `curl -X POST
   http://127.0.0.1:<puerto>/api/auth/recover` **desde el propio host**
   (SSH) devuelve una temporal. No funciona a través de proxy.
+  ⚠️ El recover **resetea la contraseña de admin** a ese valor temporal:
+  tras usarlo, cambia la contraseña de nuevo en Ajustes.
 - Actualizar = desplegar el build nuevo y reiniciar el servicio; la BD y
   el `.env` (`/opt/helios/`) sobreviven siempre.
 

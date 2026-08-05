@@ -130,6 +130,8 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 - If the admin password is lost: `curl -X POST
   http://127.0.0.1:<port>/api/auth/recover` **from the host itself**
   (SSH) returns a temporary one. Doesn't work through a proxy.
+  ⚠️ The recover **resets the admin password** to that temporary value:
+  after using it, change the password again in Settings.
 - Update = deploy the new build and restart the service; the DB and the
   `.env` (`/opt/helios/`) always survive.
 
