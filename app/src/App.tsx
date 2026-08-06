@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { EnergyDataProvider } from '@/data/EnergyDataProvider';
 import AuthGate from '@/components/AuthGate';
