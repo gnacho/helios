@@ -16,6 +16,8 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 ### Fixed
 
 - **Vulnerabilidad HIGH (CSRF en modo RSC)**: GHSA-qwww-vcr4-c8h2, afectaba a react-router 7.12.0–8.2.0; cerrada con react-router 8.3.0.
+- **Backfill con huecos de datos**: un día sin fila de estadísticas en HAOS concentraba el delta del acumulador en el día posterior (varios días de consumo en uno). Ahora el delta se reparte uniformemente entre los días del hueco.
+- **SSE: limpieza de clientes zombies**: si el `write` del heartbeat falla (cliente caído sin disparar `onAbort`), el cliente se elimina del set y el intervalo se detiene (antes se quedaba ocupando un slot de `MAX_SSE_CLIENTS`).
 
 ## [0.6.0] - 2026-08-01
 

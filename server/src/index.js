@@ -477,8 +477,14 @@ guarded.get('/solar/stream', (c) => {
     sseClients.add(client)
     await stream.write(`data: ${JSON.stringify({ type: 'live', data: solar.computeLive(ha) })}\n\n`)
     const heartbeat = setInterval(() => {
-      // ping como mensaje data (no comentario): el cliente lo usa como prueba de vida del SSE
-      stream.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`).catch(() => {})
+      // ping como mensaje data (no comentario): el cliente lo usa como prueba de vida del SSE.
+      // Si el write falla (cliente caído sin disparar onAbort aún), se limpia el cliente y
+      // se detiene el intervalo: evita zombies que ocupen slot de MAX_SSE_CLIENTS (caza de
+      // bugs 6-Ago-2026).
+      stream.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`).catch(() => {
+        clearInterval(heartbeat)
+        sseClients.delete(client)
+      })
     }, 25000)
     stream.onAbort(() => {
       clearInterval(heartbeat)

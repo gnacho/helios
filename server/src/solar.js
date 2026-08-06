@@ -446,23 +446,43 @@ export async function backfillHistory(ha, db) {
       rows.sort((a, b) => a.start - b.start)
       const daily = new Map()
       let prev = 0
+      let prevKey = null // fecha de la fila anterior (para detectar huecos)
       for (const row of rows) {
         const key = dateKey(new Date(row.start))
         const raw = src.acc === 'sum' ? row.sum : row.state
         if (key === todayStr()) {
           prev = raw
+          prevKey = key
           continue
         }
-        let value
         if (src.acc === 'sum') {
-          value = Math.max(0, raw - prev)
-        } else {
-          const glitch = field === 'fox' ? FOX_GLITCH_OFFSETS[key] || 0 : 0
-          value = Math.max(0, raw - prev - glitch)
+          const value = Math.max(0, raw - prev)
+          prev = raw
+          prevKey = key
+          if (key < minKey) continue
+          daily.set(key, value)
+          continue
+        }
+        // acc:'state': acumulador creciente. El delta cubre desde prevKey
+        // hasta key; si faltan días entre ambos (hueco de datos en HAOS), el
+        // delta se REPARTE uniformemente entre los días sin fila + el día de
+        // la fila. Sin esto, un hueco de N días concentra N días de consumo
+        // en el día posterior (bug de backfill, caza de bugs 6-Ago-2026).
+        const glitch = field === 'fox' ? FOX_GLITCH_OFFSETS[key] || 0 : 0
+        let delta = Math.max(0, raw - prev - glitch)
+        const gapDays = gapBetween(prevKey, key) // días intermedios sin fila
+        if (prevKey && gapDays > 0) {
+          const share = delta / (gapDays + 1)
+          for (let d = 1; d <= gapDays; d++) {
+            const gk = dateKey(addDays(new Date(key + 'T00:00:00'), -d))
+            if (gk >= minKey && gk !== todayStr()) daily.set(gk, Math.max(daily.get(gk) || 0, share))
+          }
+          delta = share
         }
         prev = raw
+        prevKey = key
         if (key < minKey) continue
-        daily.set(key, value)
+        daily.set(key, Math.max(daily.get(key) || 0, delta))
       }
       perIdDaily.set(id, daily)
     }
@@ -522,6 +542,22 @@ function dateKey(d) {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+// gapBetween devuelve los días intermedios SIN fila entre dos fechas
+// consecutivas del acumulador (prevKey < key). null/igual → 0.
+function gapBetween(prevKey, key) {
+  if (!prevKey || prevKey >= key) return 0
+  const a = new Date(prevKey + 'T00:00:00')
+  const b = new Date(key + 'T00:00:00')
+  return Math.round((b - a) / 86400000) - 1
+}
+
+// addDays suma días a una fecha (para repartir el delta del hueco hacia atrás).
+function addDays(d, n) {
+  const out = new Date(d)
+  out.setDate(out.getDate() + n)
+  return out
 }
 
 const round1 = (n) => Math.round(n * 10) / 10
