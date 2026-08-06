@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { KeyRound, User } from 'lucide-react';

@@ -1,5 +1,5 @@
 import { memo, useId } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import { Sun, BatteryCharging, UtilityPole } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
