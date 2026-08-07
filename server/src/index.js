@@ -136,6 +136,7 @@ app.post('/api/update/apply', async (c) => {
   if (!user || user.role !== 'admin') {
     return c.json({ error: 'solo administradores pueden actualizar' }, 403)
   }
+  audit(db, user.username, user.id, 'update.apply', '')
   const ok = await applyUpdate()
   if (!ok) return c.json({ error: 'el script de actualización falló' }, 500)
   // El script con SKIP_RESTART=1 deja el server vivo hasta aquí; se sale y
