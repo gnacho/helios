@@ -240,6 +240,8 @@ export function deleteSession(db, id) {
 
 export function cleanSessions(db) {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now())
+  const oneHourAgo = Date.now() - 3600 * 1000
+  db.prepare('DELETE FROM login_attempts WHERE locked_until > 0 AND locked_until < ?').run(oneHourAgo)
 }
 
 // Audit log: toda mutación autenticada queda registrada. detail NUNCA lleva passwords/tokens.
