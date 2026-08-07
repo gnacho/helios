@@ -176,6 +176,20 @@ function AdminZone() {
   const [checking, setChecking] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'uptodate' | 'available' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
+  const [applying, setApplying] = useState(false);
+
+  const applyUpdate = async () => {
+    if (applying) return;
+    setApplying(true);
+    try {
+      await apiPost<{ ok: boolean }>('/api/update/apply');
+      // El servidor se reinicia; la app se recarga con el build nuevo.
+      setTimeout(() => window.location.reload(), 2500);
+    } catch {
+      setApplying(false);
+      setUpdateStatus('error');
+    }
+  };
 
   const checkUpdates = async () => {
     setChecking(true);
@@ -257,9 +271,19 @@ function AdminZone() {
             </span>
           )}
           {updateStatus === 'available' && (
-            <a href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer" className="text-[10px] font-medium text-brand">
-              {t('ajustes.about.updateAvailable', { version: latestVersion })}
-            </a>
+            <>
+              <a href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer" className="text-[10px] font-medium text-brand">
+                {t('ajustes.about.updateAvailable', { version: latestVersion })}
+              </a>
+              <button
+                type="button"
+                onClick={() => void applyUpdate()}
+                disabled={applying}
+                className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20 disabled:opacity-60"
+              >
+                {applying ? t('ajustes.about.applying') : t('ajustes.about.updateNow')}
+              </button>
+            </>
           )}
           {updateStatus === 'error' && (
             <span role="alert" className="text-[10px] font-medium text-destructive">

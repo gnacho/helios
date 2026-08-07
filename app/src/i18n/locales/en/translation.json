@@ -333,6 +333,8 @@
       "upToDate": "You're up to date — v{{version}} is the latest version",
       "updateAvailable": "New version available: v{{version}}",
       "viewRelease": "What's new",
+      "updateNow": "Update now",
+      "applying": "Updating…",
       "updateError": "Couldn't check for updates. Try again.",
       "made": "made at home"
     },

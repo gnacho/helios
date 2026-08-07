@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
-import { apiFetch } from '@/data/api-client';
+import { apiFetch, apiPost } from '@/data/api-client';
 import pkg from '../../package.json';
 
 const CHECK_KEY = 'helios-last-update-check';
@@ -21,13 +21,14 @@ function compareSemver(a: string, b: string): number {
 /**
  * Ribbon de actualización (patrón app-auto-update: check semanal + aviso si hay
  * versión nueva en el repo público). Solo admin. GET anónima a GitHub releases
- * (el repo es público), 1 vez por semana vía localStorage; aplicar = redesplegar
- * en el servidor, así que el ribbon enlaza a la release.
+ * (el repo es público), 1 vez por semana vía localStorage; aplicar ejecuta
+ * helios-update.sh en el servidor (POST /api/update/apply, solo admin).
  */
 export default function UpdateRibbon() {
   const { t } = useTranslation();
   const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
+  const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     let stale = false;
@@ -78,6 +79,18 @@ export default function UpdateRibbon() {
 
   if (state !== 'available') return null;
 
+  const apply = async () => {
+    if (applying) return;
+    setApplying(true);
+    try {
+      await apiPost<{ ok: boolean }>('/api/update/apply');
+      // El servidor se reinicia; la app se recarga con el build nuevo.
+      setTimeout(() => window.location.reload(), 2500);
+    } catch {
+      setApplying(false);
+    }
+  };
+
   return (
     <div
       role="status"
@@ -89,10 +102,18 @@ export default function UpdateRibbon() {
         href={`${REPO_URL}/releases`}
         target="_blank"
         rel="noreferrer"
-        className="ml-auto flex h-8 shrink-0 items-center rounded-lg border border-amber-500/40 px-3 text-xs font-medium text-amber-500 transition-colors hover:bg-amber-500/15"
+        className="hidden h-8 shrink-0 items-center rounded-lg border border-amber-500/40 px-3 text-xs font-medium text-amber-500 transition-colors hover:bg-amber-500/15 sm:flex"
       >
         {t('ajustes.about.viewRelease')}
       </a>
+      <button
+        type="button"
+        onClick={() => void apply()}
+        disabled={applying}
+        className="ml-auto flex h-8 shrink-0 items-center rounded-lg border border-amber-500/40 bg-amber-500 px-3 text-xs font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60"
+      >
+        {applying ? t('ajustes.about.applying') : t('ajustes.about.updateNow')}
+      </button>
     </div>
   );
 }

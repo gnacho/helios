@@ -27,6 +27,7 @@ const auth = await import('./auth.js')
 const push = await import('./push.js')
 const { registerPushRoutes } = await import('./routes-push.js')
 const alerts = await import('./alerts.js')
+const { updateStatus, applyUpdate } = await import('./update.js')
 const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
 const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema } = schemas
 
@@ -113,6 +114,34 @@ app.get('/api/system/info', (c) => {
       heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
     },
   })
+})
+
+// --- Actualizaciones (solo admin): detecta la última release estable del repo
+// (releases/latest) y la aplica ejecutando helios-update.sh (deploy/). El apply
+// no toca datos (SQLite está en $DATA_DIR, fuera del release).
+app.get('/api/update/status', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden consultar actualizaciones' }, 403)
+  }
+  return c.json(await updateStatus(db))
+})
+
+app.post('/api/update/apply', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden actualizar' }, 403)
+  }
+  const ok = await applyUpdate()
+  if (!ok) return c.json({ error: 'el script de actualización falló' }, 500)
+  // El script con SKIP_RESTART=1 deja el server vivo hasta aquí; se sale y
+  // systemd (Restart=always) relanza con el código nuevo.
+  setTimeout(() => process.exit(0), 1500)
+  return c.json({ ok: true, restarting: true }, 202)
 })
 
 

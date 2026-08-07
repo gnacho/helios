@@ -333,6 +333,8 @@
       "upToDate": "Estás al día — v{{version}} es la última versión",
       "updateAvailable": "Nueva versión disponible: v{{version}}",
       "viewRelease": "Ver novedades",
+      "updateNow": "Actualizar ahora",
+      "applying": "Actualizando…",
       "updateError": "No se pudo comprobar la actualización. Inténtalo de nuevo.",
       "made": "hecho en casa"
     },

@@ -1,0 +1,11 @@
+[Unit]
+Description=Helios — aplicar actualización semanal (releases estables + checksums)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/helios/helios-update.sh
+# Auto-update de la app: corre como root porque necesita systemctl restart y
+# chown -R helios. Nada de eso toca datos (SQLite en /opt/helios/data).
+TimeoutStartSec=600

@@ -331,6 +331,8 @@
       "upToDate": "已是最新版本 — v{{version}} 是最新版",
       "updateAvailable": "有新版本可用：v{{version}}",
       "viewRelease": "查看更新",
+      "updateNow": "立即更新",
+      "applying": "更新中…",
       "updateError": "无法检查更新。请重试。",
       "made": "在家制作"
     },
