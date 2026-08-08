@@ -446,7 +446,7 @@
         "corte_red": "电网停电",
         "corte_red_ok": "电网已恢复",
         "bateria_baja": "电池电量低",
-        "resumen_diario": "每日总结（21:00）"
+        "resumen_diario": "每日总结（日落时）"
       }
     }
   },

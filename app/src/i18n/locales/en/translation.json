@@ -448,7 +448,7 @@
         "corte_red": "Grid outage",
         "corte_red_ok": "Grid restored",
         "bateria_baja": "Low battery",
-        "resumen_diario": "Daily summary (9:00 PM)"
+        "resumen_diario": "Daily summary at sunset"
       }
     }
   },

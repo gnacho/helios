@@ -66,7 +66,8 @@ GET  /api/solar/stream    SSE: push live throttled 1s + heartbeat 25s (mensaje
 
 - Motor `server/src/alerts.js` (tick 60 s, flancos + anti-rebote): inversor_offline
   (solo de día + scraper fresco), fox_offline (pinza unavailable solo de día),
-  corte_red (heurística isla), bateria_baja (SOC ≤ reserva), resumen_diario 21:00.
+  corte_red (heurística isla), bateria_baja (SOC ≤ reserva), resumen_diario al
+  anochecer (sun.sun next_setting + offset, fallback 21:00 sin dato solar).
 - Web Push VAPID (`push.js`, `routes-push.js`): prefs por tipo, quiet hours con
   cola consolidada, i18n server-side es/en/zh. Sin VAPID arranca con push off.
 - Toda alerta disparada se audita (`audit_log`, action `alert:<tipo>`) para
