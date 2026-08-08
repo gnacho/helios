@@ -13,6 +13,7 @@ import {
   HeartPulse,
   House,
   KeyRound,
+  Languages,
   LayoutGrid,
   LogOut,
   MapPin,
@@ -931,7 +932,7 @@ const TIPOS_NOTIF_USUARIO = [
 
 function ProfileSection() {
   const { t, i18n } = useTranslation();
-  const { estado } = usePush();
+  const { estado, soporte, activar } = usePush();
   const [user, setUser] = useState<{ id: string; username: string; display_name?: string | null; email?: string | null; language: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -1004,6 +1005,7 @@ function ProfileSection() {
     } else {
       localStorage.setItem(LANG_MODE_KEY, 'manual');
       i18n.changeLanguage(value);
+      setUser((u) => (u ? { ...u, language: value } : u));
       apiPut('/api/auth/profile', { language: value }).catch(() => {});
     }
   };
@@ -1036,7 +1038,16 @@ function ProfileSection() {
   };
 
   const isAuto = localStorage.getItem(LANG_MODE_KEY) === 'auto';
-  const langValue = isAuto ? 'auto' : (user?.language ?? 'es');
+  // Valor mostrado por el Select: fuente de verdad = i18n.language (no user.language,
+  // que solo se carga al montar y quedaría stale tras cambiar). Normalizado a los
+  // códigos de las opciones por si el detector dio p.ej. 'en-US'.
+  const langValue = isAuto
+    ? 'auto'
+    : i18n.language.startsWith('en')
+      ? 'en'
+      : i18n.language.startsWith('zh')
+        ? 'zh-CN'
+        : 'es';
 
   return (
     <div className="flex flex-col gap-3">
@@ -1083,8 +1094,11 @@ function ProfileSection() {
                 <Pencil size={13} className="text-faint opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
               <Select value={langValue} onValueChange={handleLang}>
-                <SelectTrigger className="h-8 w-[120px] text-xs">
-                  <SelectValue />
+                <SelectTrigger className="h-8 w-9 justify-center text-xs sm:w-[120px] sm:justify-start">
+                  <Languages size={16} className="sm:hidden" />
+                  <span className="hidden sm:inline">
+                    <SelectValue />
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {languages.map((lang) => (
@@ -1177,18 +1191,46 @@ function ProfileSection() {
       )}
 
       {/* Notificaciones push por tipo (expandible) */}
-      {showNotifs && prefs && estado.suscrito && (
+      {showNotifs && prefs && (
         <div className="flex flex-col gap-1.5 border-t border-app pt-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.notif.tiposTitulo')}</p>
-          {TIPOS_NOTIF_USUARIO.map((tipo) => (
-            <div key={tipo} className="flex items-center justify-between rounded-lg bg-surface px-3 py-2">
-              <span className="text-sm text-app">{t(`ajustes.notif.tipos.${tipo}`)}</span>
-              <Switch
-                checked={prefs[tipo] !== false}
-                onCheckedChange={(checked) => cambiarPref(tipo, checked)}
-              />
+          {estado.suscrito ? (
+            <>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.notif.tiposTitulo')}</p>
+              {TIPOS_NOTIF_USUARIO.map((tipo) => (
+                <div key={tipo} className="flex items-center justify-between rounded-lg bg-surface px-3 py-2">
+                  <span className="text-sm text-app">{t(`ajustes.notif.tipos.${tipo}`)}</span>
+                  <Switch
+                    checked={prefs[tipo] !== false}
+                    onCheckedChange={(checked) => cambiarPref(tipo, checked)}
+                  />
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="flex flex-col gap-2 rounded-lg bg-surface px-3 py-2.5">
+              <p className="text-sm text-muted">{t('ajustes.notif.descripcion')}</p>
+              {soporte === 'ok' ? (
+                <button
+                  type="button"
+                  onClick={() => activar()}
+                  disabled={estado.cargando}
+                  className="bg-brand-gradient inline-flex h-8 items-center justify-center gap-1.5 self-start rounded px-3 text-xs font-semibold text-white disabled:opacity-60"
+                >
+                  <Bell size={14} /> {t('ajustes.notif.activar')}
+                </button>
+              ) : (
+                <p className="text-xs text-faint">
+                  {soporte === 'requiere-https'
+                    ? t('ajustes.notif.requiereHttps')
+                    : soporte === 'ios-necesita-instalacion'
+                      ? t('ajustes.notif.iosInstalacion')
+                      : soporte === 'no-configurado'
+                        ? t('ajustes.notif.noConfigurado')
+                        : t('ajustes.notif.noSoportado')}
+                </p>
+              )}
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
