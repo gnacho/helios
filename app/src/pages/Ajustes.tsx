@@ -1040,15 +1040,15 @@ function ProfileSection() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Línea principal compacta */}
-      <div className="flex items-center gap-3">
+      {/* Línea principal compacta (envuelve en móvil para no solapar) */}
+      <div className="flex flex-wrap items-center gap-3">
         {/* Avatar con icono User */}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
           <User size={20} />
         </div>
         
         {/* Nombre + idioma + acciones izquierda */}
-        <div className="min-w-0 flex-1 flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
           {editing ? (
             <div className="flex gap-2 flex-1">
               <Input
@@ -1129,7 +1129,7 @@ function ProfileSection() {
           title={t('common.logout')}
         >
           <LogOut size={16} />
-          <span className="text-sm font-medium">{t('common.logout')}</span>
+          <span className="hidden text-sm font-medium sm:inline">{t('common.logout')}</span>
         </button>
       </div>
 
