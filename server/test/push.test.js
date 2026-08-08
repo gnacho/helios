@@ -5,7 +5,7 @@ import Database from 'better-sqlite3'
 import webpush from 'web-push'
 import { initSchema } from '../src/db.js'
 import { configurePush, notifyUsers, flushNotificationQueue, _setSendFn, _resetForTests } from '../src/push.js'
-import { createAlertsEngine, enviarResumenDiario } from '../src/alerts.js'
+import { createAlertsEngine, enviarResumenDiario, proximoEnvioResumen, ejecutarResumenSiToca, RESUMEN_OFFSET_MIN, HORA_RESUMEN_DIARIO } from '../src/alerts.js'
 
 // Par VAPID real (setVapidDetails valida formato; claves fake no pasan).
 const KEYS = webpush.generateVAPIDKeys()
@@ -368,5 +368,62 @@ describe('motor de alertas', () => {
     expect(llamadas[0].tipo).toBe('resumen_diario')
     expect(llamadas[0].datos).toEqual({ produccion: 12.3, consumo: 8.4, autoconsumo: 61 })
     expect(llamadas[0].opciones.severity).toBe('normal')
+  })
+})
+
+// --- Scheduler del resumen: anochecer vs fallback -----------------------------
+
+function haConSun(nextSetting) {
+  return {
+    connected: true,
+    getState: (id) => (id === 'sun.sun' ? { state: 'above_horizon', attributes: { next_setting: nextSetting } } : null),
+  }
+}
+const haSinSun = { connected: true, getState: () => null }
+
+describe('proximoEnvioResumen (anochecer con fallback)', () => {
+  it('con sunset HOY → sunset + offset', () => {
+    const mediodia = new Date('2026-08-08T12:00:00+02:00')
+    const next = proximoEnvioResumen(haConSun('2026-08-08T21:30:00+02:00'), mediodia)
+    const esperado = new Date(`2026-08-08T21:30:00+02:00`).getTime() + RESUMEN_OFFSET_MIN * 60000
+    expect(next.getTime()).toBe(esperado)
+  })
+
+  it('con sunset MAÑANA (ya anocheció hoy) → sunset de mañana + offset (sigue al próximo anochecer)', () => {
+    const noche = new Date('2026-08-08T22:00:00+02:00')
+    const next = proximoEnvioResumen(haConSun('2026-08-09T21:14:00+02:00'), noche)
+    expect(next.getTime()).toBe(new Date('2026-08-09T21:14:00+02:00').getTime() + RESUMEN_OFFSET_MIN * 60000)
+  })
+
+  it('sin dato solar (HAOS caído) de día → fallback 21:00 local hoy', () => {
+    // Constructor Date(y,m,d,h) = hora LOCAL del runner: portable entre TZ.
+    const mediodia = new Date(2026, 7, 8, 12, 0, 0)
+    const next = proximoEnvioResumen(haSinSun, mediodia)
+    const esperado = new Date(2026, 7, 8, HORA_RESUMEN_DIARIO, 0, 0)
+    expect(next.getTime()).toBe(esperado.getTime())
+  })
+
+  it('sin dato solar pasado 21:00 local → fallback 21:00 local de mañana', () => {
+    const noche = new Date(2026, 7, 8, 22, 0, 0)
+    const next = proximoEnvioResumen(haSinSun, noche)
+    const esperado = new Date(2026, 7, 9, HORA_RESUMEN_DIARIO, 0, 0)
+    expect(next.getTime()).toBe(esperado.getTime())
+  })
+
+  it('el offset de asentamiento respeta RESUMEN_OFFSET_MIN y HORA_RESUMEN_DIARIO exportados', () => {
+    expect(RESUMEN_OFFSET_MIN).toBeGreaterThan(0)
+    expect(HORA_RESUMEN_DIARIO).toBe(21)
+  })
+})
+
+describe('ejecutarResumenSiToca (guarda anti-doble-envío)', () => {
+  it('envía una vez y la segunda llamada el mismo día se omite', async () => {
+    const llamadas = []
+    const notifyFn = async (db, tipo, datos, opciones) => llamadas.push({ tipo, datos, opciones })
+    const r1 = await ejecutarResumenSiToca(db, mockHa(), mockSolar(), notifyFn)
+    const r2 = await ejecutarResumenSiToca(db, mockHa(), mockSolar(), notifyFn)
+    expect(r1).toBe(true)
+    expect(r2).toBe(false)
+    expect(llamadas).toHaveLength(1)
   })
 })

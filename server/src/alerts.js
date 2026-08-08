@@ -25,13 +25,15 @@
 //   critical: la casa sigue funcionando, solo falta producción.
 // - bateria_baja: SOC ≤ reserva (install_config.batteryReservePct, defecto 20).
 //   Se rearma cuando SOC > reserva + 5.
-// - resumen_diario: scheduler propio a las 21:00 local con los KPI del día.
+// - resumen_diario: scheduler propio que se envía al ANOCHECER (next_setting de
+//   sun.sun + un offset para asentar las últimas lecturas) con los KPI del día.
+//   Fallback a hora fija si falta el dato solar. Ver proximoEnvioResumen.
 //
 // notifyFn inyectable para tests (defecto: notifyAll de push.js).
 // Cada disparo queda en audit_log (action 'alert:<tipo>') para poder ajustar
 // umbrales con historial real (2-Ago-2026: corte_red no tenía historial y no
 // se podía evaluar su tasa de falsos positivos).
-import { kvGet, audit } from './db.js'
+import { kvGet, kvSet, audit } from './db.js'
 import { ENTITIES } from './config.js'
 import { notifyAll } from './push.js'
 
@@ -40,7 +42,14 @@ const TICKS_FOX_OFFLINE = 3
 const TICKS_CORTE_RED = 3
 const TICKS_RED_RECUPERADA = 2
 const HISTERESIS_SOC = 5
-export const HORA_RESUMEN_DIARIO = 21 // hora local
+export const HORA_RESUMEN_DIARIO = 21 // hora local (fallback si no hay dato solar)
+// Minutos tras el anochecer antes de enviar el resumen: dejan que el último
+// intervalo de producción del día quede registrado antes de leer los KPI.
+export const RESUMEN_OFFSET_MIN = 10
+// Reintento breve mientras esperamos a que sun.sun llegue como estado al
+// arrancar/reconectar HAOS (el acuse de subscribe_entities precede a los
+// estados). Si el fallback aún queda lejos, reprogramamos al anochecer real.
+const RECHECK_BOOT_MS = 30_000
 
 export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
   const estado = {
@@ -169,20 +178,72 @@ export async function enviarResumenDiario(db, ha, solar, notifyFn = notifyAll) {
   }
 }
 
-// Scheduler del resumen: mismo patrón que scheduleNightly de index.js pero a
-// las 21:00 local (la consolidación nocturna corre a las 00:10).
+// Calcula el próximo momento de envío del resumen a partir del anochecer.
+// sun.sun.attributes.next_setting es SIEMPRE el próximo anochecer (instante
+// futuro, hoy si no ha anochecido o mañana si ya): disparamos sunset +
+// RESUMEN_OFFSET_MIN. Si no hay dato solar (HAOS caído), fallback a hora fija
+// HORA_RESUMEN_DIARIO (hoy si no ha pasado, mañana en caso contrario). Así nunca
+// se salta un día. La guarda anti-doble-envío del mismo día la lleva
+// ejecutarResumenSiToca (persistida en kv). `ahora` se inyecta para tests.
+export function proximoEnvioResumen(ha, ahora = new Date()) {
+  const sunsetIso = ha.getState(ENTITIES.sun)?.attributes?.next_setting
+  const sunset = sunsetIso ? new Date(sunsetIso) : null
+  if (sunset && Number.isFinite(sunset.getTime())) {
+    return new Date(sunset.getTime() + RESUMEN_OFFSET_MIN * 60000)
+  }
+  const fb = new Date(ahora)
+  fb.setHours(HORA_RESUMEN_DIARIO, 0, 0, 0)
+  if (fb.getTime() <= ahora.getTime()) fb.setDate(fb.getDate() + 1)
+  return fb
+}
+
+// Clave de día local (YYYY-MM-DD) — la hora del anochecer es local y la guarda
+// debe contar por día calendario del servidor.
+function fechaLocalKey(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dia}`
+}
+
+const KV_RESUMEN_FECHA = 'resumen_ultimo_envio'
+
+// Envía el resumen SOLO si no se ha enviado ya hoy (guarda persistida en kv,
+// sobrevive a reinicios). Devuelve true si envió. Evita el doble-envío cuando
+// el path fallback (21:00) y el path sunset (+offset) caen el mismo día.
+export async function ejecutarResumenSiToca(db, ha, solar, notifyFn = notifyAll) {
+  const ahora = new Date()
+  if (kvGet(db, KV_RESUMEN_FECHA) === fechaLocalKey(ahora)) return false
+  await enviarResumenDiario(db, ha, solar, notifyFn)
+  kvSet(db, KV_RESUMEN_FECHA, fechaLocalKey(ahora))
+  return true
+}
+
+// Scheduler del resumen: se envía al anochecer (ver proximoEnvioResumen); la
+// consolidación nocturna corre a las 00:10. Delay con suelo de 1 min por
+// seguridad anti-bucle cerrado.
 export function scheduleResumenDiario(db, ha, solar, notifyFn) {
-  const now = new Date()
-  const next = new Date(now)
-  next.setHours(HORA_RESUMEN_DIARIO, 0, 0, 0)
-  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1)
+  const ahora = new Date()
+  const next = proximoEnvioResumen(ha, ahora)
+  const sunsetDisponible = !!ha.getState(ENTITIES.sun)?.attributes?.next_setting
+  const delay = next.getTime() - ahora.getTime()
+  // Carrera de arranque: al iniciar (o justo tras reconectar HAOS) sun.sun
+  // puede no haber llegado todavía como estado. Si el dato no está y el
+  // fallback aún queda lejos, reintentamos en 30 s para programar al anochecer
+  // real; si sigue sin haber sunset al acercarnos al fallback, usamos la hora
+  // fija (HAOS caído todo el día).
+  if (!sunsetDisponible && delay > RECHECK_BOOT_MS) {
+    setTimeout(() => scheduleResumenDiario(db, ha, solar, notifyFn), RECHECK_BOOT_MS).unref()
+    return
+  }
+  console.log(`[helios] resumen diario programado para ${next.toISOString()}`)
   setTimeout(async () => {
     try {
-      await enviarResumenDiario(db, ha, solar, notifyFn)
-      console.log('[helios] resumen diario enviado')
+      const envio = await ejecutarResumenSiToca(db, ha, solar, notifyFn)
+      console.log(envio ? '[helios] resumen diario enviado' : '[helios] resumen diario ya enviado hoy, omitido')
     } catch (err) {
       console.error('[helios] resumen diario error:', err.message)
     }
     scheduleResumenDiario(db, ha, solar, notifyFn)
-  }, next.getTime() - now.getTime()).unref()
+  }, Math.max(delay, 60_000)).unref()
 }

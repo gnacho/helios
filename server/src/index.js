@@ -576,7 +576,7 @@ serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => 
 
 setInterval(() => cleanSessions(db), 3600 * 1000).unref()
 // Motor de alertas push (inversor/corte red/batería) cada minuto + resumen
-// diario a las 21:00. Flush de la cola de quiet hours con el tick horario.
+// diario al anochecer. Flush de la cola de quiet hours con el tick horario.
 const alertsEngine = alerts.createAlertsEngine({ db, ha, solar })
 setInterval(() => {
   try {
