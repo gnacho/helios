@@ -1139,7 +1139,7 @@ function ProfileSection() {
         <button
           type="button"
           onClick={doLogout}
-          className="flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 text-destructive/80 transition-colors hover:bg-destructive/20 hover:text-destructive sm:px-3"
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 text-destructive transition-colors hover:bg-destructive/20 hover:text-destructive sm:px-3"
           title={t('common.logout')}
         >
           <LogOut size={16} />
