@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import webpush from 'web-push'
 import { initSchema } from '../src/db.js'
+import { kvGet, kvSet } from '../src/db.js'
 import { configurePush, notifyUsers, flushNotificationQueue, _setSendFn, _resetForTests } from '../src/push.js'
 import { createAlertsEngine, enviarResumenDiario, proximoEnvioResumen, ejecutarResumenSiToca, RESUMEN_OFFSET_MIN, HORA_RESUMEN_DIARIO } from '../src/alerts.js'
 
@@ -173,6 +174,19 @@ function capturaNotifs() {
   return { llamadas, notifyFn: (db, tipo, datos, opciones) => llamadas.push({ tipo, datos, opciones }) }
 }
 
+// corte_red está desactivado por defecto (issue #19): los tests de la heurística
+// lo habilitan vía install_config.corteRedEnabled.
+function habilitaCorteRed() {
+  const prev = (() => {
+    try {
+      return JSON.parse(kvGet(db, 'install_config') || '{}')
+    } catch {
+      return {}
+    }
+  })()
+  kvSet(db, 'install_config', JSON.stringify({ ...prev, corteRedEnabled: true }))
+}
+
 describe('motor de alertas', () => {
   it('inversor offline: dispara al 2º tick, no repite, y avisa al recuperar', () => {
     const { llamadas, notifyFn } = capturaNotifs()
@@ -285,6 +299,7 @@ describe('motor de alertas', () => {
   })
 
   it('corte de red: firma sostenida 3 ticks dispara crítica y recupera a los 2', () => {
+    habilitaCorteRed()
     const { llamadas, notifyFn } = capturaNotifs()
     // Corte real: el circuito NO respaldado cae (~0), el respaldado sigue por EPS+batería
     const ha = mockHa({ gridPower: 0 })
@@ -305,6 +320,7 @@ describe('motor de alertas', () => {
   })
 
   it('corte de red: NO dispara con scraper antiguo (>15 min)', () => {
+    habilitaCorteRed()
     const { llamadas, notifyFn } = capturaNotifs()
     const viejo = new Date(Date.now() - 30 * 60000).toISOString()
     const ha = mockHa({ gridPower: 0, lastUpdate: viejo })
@@ -323,6 +339,7 @@ describe('motor de alertas', () => {
 
   it('corte de red: NO dispara en autoconsumo (grid=0 pero ambas pinzas >0)', () => {
     // El falso positivo canónico: casa autoabasteciéndose con red presente
+    habilitaCorteRed()
     const { llamadas, notifyFn } = capturaNotifs()
     const ha = mockHa({ gridPower: 0 })
     const engine = createAlertsEngine({
@@ -338,6 +355,7 @@ describe('motor de alertas', () => {
   it('corte de red: NO dispara en peak-shaving (batería descargando, grid=0, red presente)', () => {
     // El inversor descarga batería para no comprar en franja cara: grid≈0,
     // batería descargando — antes disparaba, ahora no
+    habilitaCorteRed()
     const { llamadas, notifyFn } = capturaNotifs()
     const ha = mockHa({ gridPower: 0 })
     const engine = createAlertsEngine({
@@ -353,6 +371,7 @@ describe('motor de alertas', () => {
   it('corte de red: NO dispara cuando el Fox pierde Modbus (incidente tipo 12-Jul-2025)', () => {
     // El Fox reporta r_volt≈0 durante horas, pero la vivienda sigue consumiendo:
     // caída de comms del Fox, no corte eléctrico. La firma diferencial lo descarta.
+    habilitaCorteRed()
     const { llamadas, notifyFn } = capturaNotifs()
     const ha = mockHa({ gridPower: 0 })
     const engine = createAlertsEngine({
@@ -367,6 +386,7 @@ describe('motor de alertas', () => {
 
   it('corte de red: NO dispara en apagón total sin EPS (ambas pinzas a 0)', () => {
     // Sin EPS, todo se apaga; esta alerta no es la responsable (la cubre inversor_offline)
+    habilitaCorteRed()
     const { llamadas, notifyFn } = capturaNotifs()
     const ha = mockHa({ gridPower: 0 })
     const engine = createAlertsEngine({
@@ -384,6 +404,7 @@ describe('motor de alertas', () => {
     // reportando 0 W mientras la red está perfecta (Fox on-grid, calentador a
     // 232 V) y la batería carga desde FV. La firma diferencial por sí sola
     // dispararía un crítico falso; la cláusula batteryPower < -0.05 lo filtra.
+    habilitaCorteRed()
     const { llamadas, notifyFn } = capturaNotifs()
     const ha = mockHa({ gridPower: 0 })
     const engine = createAlertsEngine({
@@ -394,6 +415,30 @@ describe('motor de alertas', () => {
     })
     for (let i = 0; i < 6; i++) engine.tick()
     expect(llamadas).toHaveLength(0)
+  })
+
+  it('corte de red: DESACTIVADO por defecto (issue #19), no dispara aunque la firma se cumpla', () => {
+    // Sin install_config.corteRedEnabled → la heurística no se evalúa: ni con la
+    // firma de "corte real" ni con la del falso positivo. Sin flags → 0 alarmas.
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ gridPower: 0 })
+    const solar = mockSolar({ respaldoKw: 0.4, noRespaldadaKw: 0.02, consumption: 0.42, batteryPower: -0.3 })
+    const engine = createAlertsEngine({ db, ha, solar, notifyFn })
+    for (let i = 0; i < 8; i++) engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('corte de red: habilitado, dispara con los datos del disparo en el audit', () => {
+    habilitaCorteRed()
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ gridPower: 0 })
+    const solar = mockSolar({ respaldoKw: 0.4, noRespaldadaKw: 0.02, consumption: 0.42, batteryPower: -0.3 })
+    const engine = createAlertsEngine({ db, ha, solar, notifyFn })
+    engine.tick()
+    engine.tick()
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['corte_red'])
+    expect(llamadas[0].datos).toMatchObject({ gridMag: 0, respaldoKw: 0.4, noRespaldadaKw: 0.02, batteryPower: -0.3, fresco: true })
   })
 
   it('batería baja: dispara al cruzar la reserva y se rearma con histéresis', () => {
