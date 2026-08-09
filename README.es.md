@@ -24,6 +24,14 @@ histórico, datos en vivo desde Home Assistant y el ahorro en euros
 calculado contra la tarifa eléctrica real. Un único servicio Node +
 SQLite corriendo en un LXC en casa. Sin nube.
 
+> **Hecho a medida para una instalación.** Helios corre mi propia
+> configuración — dos inversores concretos y una batería — y esos datos
+> están hardcodeados. No es un monitor solar genérico "plug-and-play", y de
+> momento no tengo interés inmediato en hacerlo (la configurabilidad del
+> hardware está en la [hoja de ruta](#hoja-de-ruta), pero sin hacer). Es
+> poco probable que te sirva tal cual. Forkea el repo y adáptalo a tu
+> instalación.
+
 ## ¿Por qué existe?
 
 Las apps de los fabricantes (Solis Cloud y similares):
@@ -134,6 +142,17 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
   tras usarlo, cambia la contraseña de nuevo en Ajustes.
 - Actualizar = desplegar el build nuevo y reiniciar el servicio; la BD y
   el `.env` (`/opt/helios/`) sobreviven siempre.
+
+## Hoja de ruta
+
+| Fase | Qué | Estado |
+|---|---|---|
+| 1 | Panel live de solo lectura (producción vs consumo) | Hecho |
+| 2 | Backend real, multiusuario, histórico, batería, alertas, PWA, endurecimiento | Hecho (~0.6.x) |
+| 3 | Inversores y placas configurables (siempre bajo HAOS) | Planificado |
+| 4 | Multi-instalación: varios HAOS o varios Helios vía API | En exploración |
+
+Ver [ROADMAP.md](ROADMAP.md) para más detalle.
 
 ## Licencia
 
