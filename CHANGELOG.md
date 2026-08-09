@@ -7,6 +7,8 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-08-09
+
 ### Changed
 
 - **`corte_red` desactivado por defecto (issue #19)**: la alerta de corte de red daba falsos críticos porque la firma diferencial no es fiable con los sensores actuales (la pinza del circuito no respaldado está casi siempre a ~0 W por consumo bajo, y el scraper no expone tensión de red ni flag de EPS). Se mantiene `inversor_offline` (apagón total) y `fox_offline`. Para rehabilitarla en el futuro: `install_config.corteRedEnabled = true`; al disparar, el `audit_log` guarda ahora los datos del disparo (gridMag, respaldoKw, noRespaldadaKw, batteryPower, fresco).
@@ -16,6 +18,7 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ### Fixed
 
+- **Login fallido mostraba "Sesión expirada" (issue #14)**: el manejador global de 401 trataba todo 401 como sesión caída y descartaba el mensaje real. `/api/auth/login` queda excluido del manejador global y `Login.tsx` mapea el 401 al mensaje localizado de credenciales incorrectas.
 - **Vulnerabilidad HIGH (CSRF en modo RSC)**: GHSA-qwww-vcr4-c8h2, afectaba a react-router 7.12.0–8.2.0; cerrada con react-router 8.3.0.
 - **Backfill con huecos de datos**: un día sin fila de estadísticas en HAOS concentraba el delta del acumulador en el día posterior (varios días de consumo en uno). Ahora el delta se reparte uniformemente entre los días del hueco.
 - **SSE: limpieza de clientes zombies**: si el `write` del heartbeat falla (cliente caído sin disparar `onAbort`), el cliente se elimina del set y el intervalo se detiene (antes se quedaba ocupando un slot de `MAX_SSE_CLIENTS`).
