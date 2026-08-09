@@ -7,6 +7,10 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+### Fixed
+
+- **Versión del server leída del package.json propio (issue #24)**: `index.js` leía `../../app/package.json`, que no existe en el layout plano de deploy (`/opt/helios/{server,public,shared}`) → en una instalación fresca el servidor no arrancaba, y en el CT daba una versión residual (0.5.0). Ahora la versión y el nombre salen del propio `server/package.json` (sincronizado con la app) y la versión de React se lee del frontend con fallback a `''`.
+
 ## [0.6.2] - 2026-08-09
 
 ### Changed
