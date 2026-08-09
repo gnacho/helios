@@ -19,12 +19,15 @@
 //   activo, el circuito NO respaldado (vivienda_medidor_power) cae a ~0 W
 //   mientras el circuito RESPALDADO (medidor_respaldo_power) sigue funcionando
 //   desde la batería. Firma: scraper fresco (<15 min) + gridMag bajo + pinza no
-//   respaldada <50 W + pinza respaldada >30 W, sostenido 3 ticks. NO usa la
-//   señal del Fox (foxess_r_volt / running_state) porque una caída del Modbus
-//   del Fox es indistinguible de un corte real (incidente 12-Jul-2025: r_volt≈0
-//   durante 20 h con la vivienda consumiendo 1.5 kW = dropout de comms, no
-//   corte eléctrico). En un apagón total sin EPS ambas pinzas caen a 0 y esta
-//   alerta no dispara; lo cubre inversor_offline por anti-isla.
+//   respaldada <50 W + pinza respaldada >30 W + batería DESCARGANDO (<-0.05 kW,
+//   porque sin red el respaldo se alimenta de la batería y cargarla sería
+//   imposible), sostenido 3 ticks. La cláusula de batería descargando filtra los
+//   dropouts Zigbee de la pinza no respaldada. NO usa la señal del Fox
+//   (foxess_r_volt / running_state) porque una caída del Modbus del Fox es
+//   indistinguible de un corte real (incidente 12-Jul-2025: r_volt≈0 durante
+//   20 h con la vivienda consumiendo 1.5 kW = dropout de comms, no corte
+//   eléctrico). En un apagón total sin EPS ambas pinzas caen a 0 y esta alerta
+//   no dispara; lo cubre inversor_offline por anti-isla.
 // - fox_offline / fox_ok: la pinza del Fox (pvFox) en 'unavailable'/'unknown'
 //   sostenido 3 ticks, SOLO de día (el Fox se apaga cada noche igual que el
 //   Solis; evaluar 24/7 sería falso positivo nocturno). Severidad high, no
@@ -132,11 +135,17 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     const gridMag = Math.abs(Number(attrs.currentGridPower)) || 0
     const respaldoKw = live.respaldoKw ?? 0
     const noRespaldadaKw = live.noRespaldadaKw ?? 0
+    // La batería debe estar DESCARGANDO: en un corte real con EPS del Solis
+    // sosteniendo el respaldo, la energía viene de la batería (sin red no se
+    // podría cargar). Esto filtra los dropouts de la pinza no respaldada
+    // (caso real 9-Ago-2026: pinza Zigbee en dropout reportando 0 W con la
+    // red perfecta y la batería cargando desde FV → disparó falso crítico).
     const sinRed =
       fresco &&
       gridMag < 0.05 &&
       noRespaldadaKw < 0.05 &&
-      respaldoKw > 0.03
+      respaldoKw > 0.03 &&
+      live.batteryPower < -0.05
     if (sinRed) {
       estado.red.mal++
       estado.red.ok = 0

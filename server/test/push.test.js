@@ -379,6 +379,23 @@ describe('motor de alertas', () => {
     expect(llamadas).toHaveLength(0)
   })
 
+  it('corte de red: NO dispara cuando la pinza no respaldada está en dropout pero la batería carga', () => {
+    // Caso real 9-Ago-2026: pinza Zigbee (vivienda_medidor_power) en dropout
+    // reportando 0 W mientras la red está perfecta (Fox on-grid, calentador a
+    // 232 V) y la batería carga desde FV. La firma diferencial por sí sola
+    // dispararía un crítico falso; la cláusula batteryPower < -0.05 lo filtra.
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ gridPower: 0 })
+    const engine = createAlertsEngine({
+      db,
+      ha,
+      solar: mockSolar({ respaldoKw: 1.7, noRespaldadaKw: 0.0, consumption: 1.7, production: 1.4, batteryPower: 0.3 }),
+      notifyFn,
+    })
+    for (let i = 0; i < 6; i++) engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
   it('batería baja: dispara al cruzar la reserva y se rearma con histéresis', () => {
     const { llamadas, notifyFn } = capturaNotifs()
     const solar = mockSolar({ soc: 19 })
