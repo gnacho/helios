@@ -1,13 +1,6 @@
-import { useTheme } from '@/theme/ThemeProvider';
+import BrandLogoIcon from './BrandLogoIcon';
 
-/** Logo de marca dual: versión clara en tema claro, oscura en tema oscuro. */
+/** Logo de marca vectorizado (sigue el tema vía currentColor, patrón FlowHomeIcon). */
 export default function BrandLogo({ className }: { className?: string }) {
-  const { isDark } = useTheme();
-  return (
-    <img
-      src={isDark ? '/icons/oscuro/helios-icon-192.png' : '/icons/claro/helios-icon-192.png'}
-      alt="Helios"
-      className={className}
-    />
-  );
+  return <BrandLogoIcon className={className} />;
 }
