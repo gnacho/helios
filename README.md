@@ -153,6 +153,14 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 
 See [ROADMAP.md](ROADMAP.md) for detail.
 
+## Big thanks
+
+Helios wouldn't exist without [Home Assistant](https://www.home-assistant.io/).
+It already does the hard part: talking to the inverters, handling their
+reconnects, and exposing clean sensors. Helios just reads what HAOS already
+collects. If this project is useful to you, the real credit goes to the people
+who keep Home Assistant running.
+
 ## License
 
 AGPL-3.0 — see [LICENSE](LICENSE).
