@@ -286,9 +286,9 @@ describe('motor de alertas', () => {
 
   it('corte de red: firma sostenida 3 ticks dispara crítica y recupera a los 2', () => {
     const { llamadas, notifyFn } = capturaNotifs()
-    // Noche: grid 0, consumo 0,5 kW, batería descargando
+    // Corte real: el circuito NO respaldado cae (~0), el respaldado sigue por EPS+batería
     const ha = mockHa({ gridPower: 0 })
-    const solar = mockSolar({ consumption: 0.5, batteryPower: -0.3, production: 0 })
+    const solar = mockSolar({ respaldoKw: 0.4, noRespaldadaKw: 0.02, consumption: 0.42, batteryPower: -0.3 })
     const engine = createAlertsEngine({ db, ha, solar, notifyFn })
     engine.tick()
     engine.tick()
@@ -296,8 +296,8 @@ describe('motor de alertas', () => {
     engine.tick()
     expect(llamadas.map((l) => l.tipo)).toEqual(['corte_red'])
     expect(llamadas[0].opciones.severity).toBe('critical')
-    // Vuelve la red
-    ha.getState = mockHa({ gridPower: 0.8 }).getState
+    // Vuelve la red: el circuito no respaldado recupera suministro
+    solar.computeLive = () => ({ production: 0, consumption: 1.4, respaldoKw: 0.4, noRespaldadaKw: 1.0, soc: 50, batteryPower: 0 })
     engine.tick()
     expect(llamadas).toHaveLength(1)
     engine.tick()
@@ -308,11 +308,74 @@ describe('motor de alertas', () => {
     const { llamadas, notifyFn } = capturaNotifs()
     const viejo = new Date(Date.now() - 30 * 60000).toISOString()
     const ha = mockHa({ gridPower: 0, lastUpdate: viejo })
-    const engine = createAlertsEngine({ db, ha, solar: mockSolar({ consumption: 0.5, batteryPower: -0.3 }), notifyFn })
+    const engine = createAlertsEngine({
+      db,
+      ha,
+      solar: mockSolar({ respaldoKw: 0.4, noRespaldadaKw: 0.02, consumption: 0.42, batteryPower: -0.3 }),
+      notifyFn,
+    })
     engine.tick()
     engine.tick()
     engine.tick()
     engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('corte de red: NO dispara en autoconsumo (grid=0 pero ambas pinzas >0)', () => {
+    // El falso positivo canónico: casa autoabasteciéndose con red presente
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ gridPower: 0 })
+    const engine = createAlertsEngine({
+      db,
+      ha,
+      solar: mockSolar({ respaldoKw: 0.4, noRespaldadaKw: 1.4, consumption: 1.85, production: 1.5, batteryPower: 0.4 }),
+      notifyFn,
+    })
+    for (let i = 0; i < 6; i++) engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('corte de red: NO dispara en peak-shaving (batería descargando, grid=0, red presente)', () => {
+    // El inversor descarga batería para no comprar en franja cara: grid≈0,
+    // batería descargando — antes disparaba, ahora no
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ gridPower: 0 })
+    const engine = createAlertsEngine({
+      db,
+      ha,
+      solar: mockSolar({ respaldoKw: 0.3, noRespaldadaKw: 0.7, consumption: 1.0, production: 0.2, batteryPower: -0.4 }),
+      notifyFn,
+    })
+    for (let i = 0; i < 6; i++) engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('corte de red: NO dispara cuando el Fox pierde Modbus (incidente tipo 12-Jul-2025)', () => {
+    // El Fox reporta r_volt≈0 durante horas, pero la vivienda sigue consumiendo:
+    // caída de comms del Fox, no corte eléctrico. La firma diferencial lo descarta.
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ gridPower: 0 })
+    const engine = createAlertsEngine({
+      db,
+      ha,
+      solar: mockSolar({ respaldoKw: 0.3, noRespaldadaKw: 1.5, consumption: 1.8, production: 0.5, batteryPower: 0.1 }),
+      notifyFn,
+    })
+    for (let i = 0; i < 6; i++) engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
+  it('corte de red: NO dispara en apagón total sin EPS (ambas pinzas a 0)', () => {
+    // Sin EPS, todo se apaga; esta alerta no es la responsable (la cubre inversor_offline)
+    const { llamadas, notifyFn } = capturaNotifs()
+    const ha = mockHa({ gridPower: 0 })
+    const engine = createAlertsEngine({
+      db,
+      ha,
+      solar: mockSolar({ respaldoKw: 0.0, noRespaldadaKw: 0.0, consumption: 0.0, production: 0, batteryPower: 0 }),
+      notifyFn,
+    })
+    for (let i = 0; i < 6; i++) engine.tick()
     expect(llamadas).toHaveLength(0)
   })
 

@@ -14,11 +14,17 @@
 //   información nueva (2-Ago: datos stale desde las 23:33 toda la noche).
 //   Si sun.sun no está disponible se evalúa igualmente (fail-open: es una
 //   alerta crítica y sun.sun es de las entidades más fiables de HAOS).
-// - corte_red / corte_red_ok: HEURÍSTICA — con red presente la pinza de red
-//   oscila siempre (import/export); en isla (backup Solis) grid ≈ 0 sostenido
-//   mientras la casa sigue consumiendo desde batería/PV. Firma: scraper fresco
-//   (<15 min) + grid < 0,02 kW + consumo > 0,1 kW + (batería descargando o PV
-//   cubriendo el consumo), sostenido 3 ticks. Ajustar si da falsos positivos.
+// - corte_red / corte_red_ok: FIRMA DIFERENCIAL con las pinzas Tongou del
+//   cuadro de la vivienda (no el inversor). En un corte real con EPS del Solis
+//   activo, el circuito NO respaldado (vivienda_medidor_power) cae a ~0 W
+//   mientras el circuito RESPALDADO (medidor_respaldo_power) sigue funcionando
+//   desde la batería. Firma: scraper fresco (<15 min) + gridMag bajo + pinza no
+//   respaldada <50 W + pinza respaldada >30 W, sostenido 3 ticks. NO usa la
+//   señal del Fox (foxess_r_volt / running_state) porque una caída del Modbus
+//   del Fox es indistinguible de un corte real (incidente 12-Jul-2025: r_volt≈0
+//   durante 20 h con la vivienda consumiendo 1.5 kW = dropout de comms, no
+//   corte eléctrico). En un apagón total sin EPS ambas pinzas caen a 0 y esta
+//   alerta no dispara; lo cubre inversor_offline por anti-isla.
 // - fox_offline / fox_ok: la pinza del Fox (pvFox) en 'unavailable'/'unknown'
 //   sostenido 3 ticks, SOLO de día (el Fox se apaga cada noche igual que el
 //   Solis; evaluar 24/7 sería falso positivo nocturno). Severidad high, no
@@ -122,13 +128,15 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
       }
     }
 
-    // ── Corte de red (heurística, ver cabecera) ─────────────────────────
+    // ── Corte de red (firma diferencial de pinzas, ver cabecera) ───────
     const gridMag = Math.abs(Number(attrs.currentGridPower)) || 0
+    const respaldoKw = live.respaldoKw ?? 0
+    const noRespaldadaKw = live.noRespaldadaKw ?? 0
     const sinRed =
       fresco &&
-      gridMag < 0.02 &&
-      live.consumption > 0.1 &&
-      (live.batteryPower < -0.05 || live.production > live.consumption)
+      gridMag < 0.05 &&
+      noRespaldadaKw < 0.05 &&
+      respaldoKw > 0.03
     if (sinRed) {
       estado.red.mal++
       estado.red.ok = 0

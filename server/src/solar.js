@@ -48,6 +48,11 @@ export function computeLive(ha) {
   let fox = entityNum(ha, ENTITIES.pvFox, 1000)
   if (fox < 0.02) fox = 0
   const consumption = consumptionKw(ha)
+  // Pinzas Tongou del cuadro de la vivienda por separado (kW). Se exponen para
+  // que el motor de alertas pueda aplicar la firma diferencial de corte de red:
+  // circuito respaldado (EPS del Solis+batería) vs no respaldado (cae con la red).
+  const respaldoKw = entityNum(ha, ENTITIES.consRespaldo, 1000)
+  const noRespaldadaKw = entityNum(ha, ENTITIES.consNoRespaldada, 1000)
 
   const batMag = entityNum(ha, ENTITIES.batteryPower)
   const batState = ha.getState(ENTITIES.batteryState)?.state || ''
@@ -89,6 +94,8 @@ export function computeLive(ha) {
   return {
     production,
     consumption: round3(consumption),
+    respaldoKw: round3(respaldoKw),
+    noRespaldadaKw: round3(noRespaldadaKw),
     batteryPower: round3(batteryPower),
     batteryStatus: batState || 'Desconocido',
     soc: round1(soc),
