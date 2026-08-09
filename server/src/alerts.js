@@ -86,6 +86,23 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     }
   }
 
+  // corte_red NO es detectable de forma fiable con los sensores actuales: la
+  // pinza del circuito NO respaldado está casi siempre a ~0 W por consumo bajo
+  // (no por corte), y el scraper no expone tensión de red ni flag de EPS/isla.
+  // Firma observada en producción (9-Ago-2026): disparos que siguen la ventana
+  // de descarga de la batería en autoconsumo nublado normal, sin evento de red.
+  // → Desactivado por defecto (9-Ago-2026, issue #19). `inversor_offline`
+  // cubre un apagón total y `fox_offline` la pérdida de la pinza del Fox.
+  // Para rehabilitarlo: `install_config.corteRedEnabled = true` (kv).
+  function corteRedEnabled() {
+    try {
+      const cfg = JSON.parse(kvGet(db, 'install_config') || '{}')
+      return cfg.corteRedEnabled === true
+    } catch {
+      return false
+    }
+  }
+
   function tick() {
     if (!ha.connected) return // sin HAOS no hay datos fiables; la alerta HAOS ya se ve por SSE
     const live = solar.computeLive(ha)
@@ -132,6 +149,9 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     }
 
     // ── Corte de red (firma diferencial de pinzas, ver cabecera) ───────
+    // Desactivado por defecto: ver corteRedEnabled(). El bloque solo se evalúa
+    // si el flag `install_config.corteRedEnabled` está en true.
+    if (corteRedEnabled()) {
     const gridMag = Math.abs(Number(attrs.currentGridPower)) || 0
     const respaldoKw = live.respaldoKw ?? 0
     const noRespaldadaKw = live.noRespaldadaKw ?? 0
@@ -151,7 +171,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
       estado.red.ok = 0
       if (!estado.red.alertado && estado.red.mal >= TICKS_CORTE_RED) {
         estado.red.alertado = true
-        disparar('corte_red', {}, { severity: 'critical' })
+        disparar('corte_red', { gridMag, respaldoKw, noRespaldadaKw, batteryPower: live.batteryPower, fresco }, { severity: 'critical' })
       }
     } else {
       estado.red.mal = 0
@@ -160,9 +180,10 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
         if (estado.red.ok >= TICKS_RED_RECUPERADA) {
           estado.red.alertado = false
           estado.red.ok = 0
-          disparar('corte_red_ok', {}, { severity: 'normal' })
+          disparar('corte_red_ok', { gridMag, respaldoKw, noRespaldadaKw, batteryPower: live.batteryPower, fresco }, { severity: 'normal' })
         }
       }
+    }
     }
 
     // ── Batería baja (SOC ≤ reserva) ────────────────────────────────────
