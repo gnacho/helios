@@ -135,6 +135,14 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 - Actualizar = desplegar el build nuevo y reiniciar el servicio; la BD y
   el `.env` (`/opt/helios/`) sobreviven siempre.
 
+## Gracias enormes
+
+Helios no existiría sin [Home Assistant](https://www.home-assistant.io/).
+Él hace la parte difícil: hablar con los inversores, gestionar sus
+reconexiones y exponer sensores limpios. Helios se limita a leer lo que HAOS
+ya recoge. Si este proyecto te sirve, el mérito real es de la gente que
+mantiene Home Assistant en marcha.
+
 ## Licencia
 
 AGPL-3.0 — ver [LICENSE](LICENSE).
