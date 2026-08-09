@@ -56,7 +56,11 @@ export default function Login({ onSuccess }: { onSuccess: () => void }) {
       navigate('/', { replace: true });
       onSuccess();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('login.error'));
+      if (err instanceof ApiError && err.status === 401) {
+        setError(t('login.error'));
+      } else {
+        setError(err instanceof ApiError ? err.message : t('login.error'));
+      }
     } finally {
       setBusy(false);
     }
