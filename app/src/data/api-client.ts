@@ -33,7 +33,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     headers: { Accept: 'application/json', ...init?.headers },
   });
 
-  if (res.status === 401) handleUnauthorized();
+  // Un 401 en el propio login son credenciales rechazadas, no sesión caída.
+  if (res.status === 401 && path !== '/api/auth/login') handleUnauthorized();
 
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
