@@ -6,7 +6,19 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
-const pkg = JSON.parse(fs.readFileSync(path.join(dirname, '..', '..', 'app', 'package.json'), 'utf8'))
+// Versión y nombre: del package.json PROPIO del server (app y server se
+// versionan en sincronía). El deploy plano (/opt/helios/{server,public,shared})
+// no trae app/, así que leer ../../app/package.json crasheaba en un deploy
+// fresco y daba una versión residual en el CT (issue #24).
+const pkg = JSON.parse(fs.readFileSync(path.join(dirname, '..', 'package.json'), 'utf8'))
+// React: vive en el package.json del frontend (app/); en el deploy plano puede
+// no existir → fallback a '' en vez de reventar.
+let appPkg = null
+try {
+  appPkg = JSON.parse(fs.readFileSync(path.join(dirname, '..', '..', 'app', 'package.json'), 'utf8'))
+} catch { /* sin app/ en el layout de deploy */ }
+const appName = appPkg?.name || pkg.name
+const reactVersion = appPkg?.dependencies?.react || ''
 const envPath = path.join(dirname, '..', '.env')
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
@@ -100,14 +112,14 @@ app.get('/api/system/info', (c) => {
   return c.json({
     app: {
       version: pkg.version,
-      name: pkg.name,
+      name: appName,
     },
     node: {
       version: process.version,
       platform: process.platform,
       arch: process.arch,
     },
-    react: pkg.dependencies.react.replace(/^[\^~]/, ''),
+    react: reactVersion.replace(/^[\^~]/, ''),
     uptime: Math.round(process.uptime()),
     memory: {
       rss: Math.round(mem.rss / 1024 / 1024),
