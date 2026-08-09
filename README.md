@@ -24,6 +24,13 @@ from Home Assistant, and savings in euros computed against the real
 electricity tariff. One Node + SQLite service running in an LXC at home.
 No cloud.
 
+> **Built for one install.** Helios runs my own setup — two specific
+> inverters and one battery — and those details are hardcoded. It is not a
+> generic, plug-and-play solar monitor, and I have no immediate plans to
+> make it one (configurable hardware is on the [roadmap](#roadmap), but not
+> done). It will probably not be useful to you as-is. Fork it and adapt it
+> to your own installation.
+
 ## Why does this exist?
 
 The manufacturers' apps (Solis Cloud and friends):
@@ -134,6 +141,17 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
   after using it, change the password again in Settings.
 - Update = deploy the new build and restart the service; the DB and the
   `.env` (`/opt/helios/`) always survive.
+
+## Roadmap
+
+| Phase | Focus | Status |
+|---|---|---|
+| 1 | Live read-only panel (production vs consumption) | Done |
+| 2 | Real backend, multi-user, history, battery, alerts, PWA, hardening | Done (~0.6.x) |
+| 3 | Configurable inverters and panels (still under HAOS) | Planned |
+| 4 | Multi-installation: several HAOS or several Helios via API | Exploring |
+
+See [ROADMAP.md](ROADMAP.md) for detail.
 
 ## Big thanks
 
