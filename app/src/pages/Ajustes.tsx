@@ -1851,19 +1851,15 @@ export default function Ajustes() {
 
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-5">
 
-        {/* 1. Tu instalación | Apariencia (alturas igualadas: la fila estira ambas tarjetas) */}
-        <div className="grid gap-5 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <Section id="instalacion" title={t('ajustes.sections.instalacion')} className="h-full">
-              <InstallationSection />
-            </Section>
-          </div>
-          <div className="lg:col-span-5">
-            <Section id="apariencia" title={t('ajustes.sections.apariencia')} className="h-full">
-              <ThemeSection />
-            </Section>
-          </div>
-        </div>
+        {/* 1. Tu instalación */}
+        <Section id="instalacion" title={t('ajustes.sections.instalacion')}>
+          <InstallationSection />
+        </Section>
+
+        {/* 1b. Apariencia */}
+        <Section id="apariencia" title={t('ajustes.sections.apariencia')}>
+          <ThemeSection />
+        </Section>
 
         {/* 2. Conexión y datos (fila horizontal propia, span-12) */}
         <Section
