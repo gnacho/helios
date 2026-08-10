@@ -16,6 +16,7 @@ import {
   Languages,
   LayoutGrid,
   LogOut,
+  Mail,
   MapPin,
   Moon,
   Pencil,
@@ -382,7 +383,7 @@ function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
 
   if (variant === 'split') {
     return (
-      <div className="flex h-[72px] w-full overflow-hidden rounded-lg border border-app">
+      <div className="flex h-[80px] w-full overflow-hidden rounded-lg border border-app">
         <PreviewBlock useLight={false} />
         <PreviewBlock useLight />
       </div>
@@ -390,7 +391,7 @@ function ThemePreview({ variant }: { variant: 'dark' | 'light' | 'split' }) {
   }
 
   return (
-    <div className="flex h-[72px] w-full flex-col rounded-lg border border-app p-1.5" style={{ backgroundColor: bg }}>
+    <div className="flex h-[80px] w-full flex-col rounded-lg border border-app p-1.5" style={{ backgroundColor: bg }}>
       <div className="mb-1 h-1.5 w-full rounded" style={{ backgroundColor: bar }} />
       <div className="flex flex-1 gap-1">
         <div className="w-1/4 rounded" style={{ backgroundColor: bar }} />
@@ -454,32 +455,38 @@ function ThemeSection() {
       </div>
 
       {/* Resto de controles */}
-      <div className="flex flex-col gap-4 sm:flex-1">
-        {/* Acento */}
+      <div className="flex flex-col gap-3 sm:flex-1">
+        {/* Acento y Animaciones en línea */}
         <div>
           <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.accent.title')}</p>
-          <div role="radiogroup" aria-label={t('ajustes.accent.title')} className="flex items-center gap-2.5">
-            {ACCENTS.map((acc) => {
-              const active = accent === acc.rgb;
-              return (
-                <button
-                  key={acc.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  aria-label={t(`ajustes.accent.${acc.id}`)}
-                  title={t(`ajustes.accent.${acc.id}`)}
-                  onClick={() => setAccent(acc.rgb)}
-                  className={cn(
-                    'relative flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-110',
-                    active && 'ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]',
-                  )}
-                  style={{ backgroundColor: acc.hex }}
-                >
-                  {active && <Check size={14} strokeWidth={3} className="text-white" />}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-3">
+            <div role="radiogroup" aria-label={t('ajustes.accent.title')} className="flex items-center gap-2">
+              {ACCENTS.map((acc) => {
+                const active = accent === acc.rgb;
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={t(`ajustes.accent.${acc.id}`)}
+                    title={t(`ajustes.accent.${acc.id}`)}
+                    onClick={() => setAccent(acc.rgb)}
+                    className={cn(
+                      'relative flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110',
+                      active && 'ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]',
+                    )}
+                    style={{ backgroundColor: acc.hex }}
+                  >
+                    {active && <Check size={12} strokeWidth={3} className="text-white" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-[13px] text-muted">{t('ajustes.reduceMotion')}</span>
+              <Switch checked={!reduceMotion} onCheckedChange={(v) => setReduceMotion(!v)} />
+            </div>
           </div>
         </div>
 
@@ -503,12 +510,6 @@ function ThemeSection() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Reducir animaciones */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-app">{t('ajustes.reduceMotion')}</span>
-          <Switch checked={reduceMotion} onCheckedChange={setReduceMotion} />
         </div>
       </div>
     </div>
@@ -936,17 +937,27 @@ const TIPOS_NOTIF_USUARIO = [
 function ProfileSection() {
   const { t, i18n } = useTranslation();
   const { estado, soporte, activar } = usePush();
-  const [user, setUser] = useState<{ id: string; username: string; display_name?: string | null; email?: string | null; language: string } | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [displayName, setDisplayName] = useState('');
+  const [user, setUser] = useState<{ id: string; username: string; display_name?: string | null; email?: string | null; language: string; role?: string } | null>(null);
   const [showPwd, setShowPwd] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
+  const [langError, setLangError] = useState<string | null>(null);
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailDraft, setEmailDraft] = useState('');
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   const [pwdCurrent, setPwdCurrent] = useState('');
   const [pwdNew, setPwdNew] = useState('');
   const [pwdConfirm, setPwdConfirm] = useState('');
   const [pwdBusy, setPwdBusy] = useState(false);
   const [pwdError, setPwdError] = useState<string | null>(null);
-  const [showNotifs, setShowNotifs] = useState(false);
-  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
 
   const languages = [
     { code: 'auto', name: t('ajustes.language.auto'), flag: '🌐' },
@@ -955,95 +966,7 @@ function ProfileSection() {
     { code: 'zh-CN', name: '简体中文', flag: '🇨🇳' },
   ];
 
-  useEffect(() => {
-    // Obtener username rápidamente de /api/auth/me
-    apiFetch<{ authenticated?: boolean; user?: { username?: string } }>('/api/auth/me')
-      .then((d) => {
-        if (d.authenticated && d.user?.username) {
-          setDisplayName(d.user.username);
-        }
-      })
-      .catch(() => {});
-    
-    // Obtener perfil completo de /api/auth/profile
-    apiFetch<{ authenticated?: boolean; user?: { id: string; username: string; display_name?: string | null; email?: string | null; language: string } }>(
-      '/api/auth/profile',
-    )
-      .then((d) => {
-        if (d.authenticated && d.user) {
-          setUser(d.user);
-          setDisplayName(d.user.display_name || d.user.username);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    apiFetch<{ prefs: Record<string, boolean> }>('/api/push/preferences')
-      .then((r) => setPrefs(r.prefs))
-      .catch(() => setPrefs(null));
-  }, []);
-
-  const cambiarPref = (tipo: string, enabled: boolean) => {
-    setPrefs((p) => (p ? { ...p, [tipo]: enabled } : p));
-    apiPut('/api/push/preferences', { tipo, enabled }).catch(() => {
-      setPrefs((p) => (p ? { ...p, [tipo]: !enabled } : p));
-    });
-  };
-
-  const saveName = async () => {
-    try {
-      await apiPut('/api/auth/profile', { display_name: displayName.trim() || null });
-      heliosToast(t('ajustes.profile.saved'), { tone: 'success' });
-      setEditing(false);
-    } catch {
-      heliosToast(t('common.error'), { tone: 'warning' });
-    }
-  };
-
-  const handleLang = (value: string) => {
-    if (value === 'auto') {
-      localStorage.setItem(LANG_MODE_KEY, 'auto');
-      i18n.changeLanguage(resolveNavigatorLanguage());
-    } else {
-      localStorage.setItem(LANG_MODE_KEY, 'manual');
-      i18n.changeLanguage(value);
-      setUser((u) => (u ? { ...u, language: value } : u));
-      apiPut('/api/auth/profile', { language: value }).catch(() => {});
-    }
-  };
-
-  const doLogout = async () => {
-    try {
-      await apiPost('/api/auth/logout');
-    } finally {
-      window.dispatchEvent(new Event('helios-unauthorized'));
-    }
-  };
-
-  const submitPwd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pwdBusy || pwdNew !== pwdConfirm || pwdNew.length < 6) return;
-    setPwdBusy(true);
-    setPwdError(null);
-    try {
-      await apiPut('/api/auth/password', { current: pwdCurrent, password: pwdNew });
-      heliosToast(t('ajustes.security.changed'), { tone: 'success' });
-      setShowPwd(false);
-      setPwdCurrent('');
-      setPwdNew('');
-      setPwdConfirm('');
-    } catch (err) {
-      setPwdError(err instanceof ApiError ? err.message : t('common.error'));
-    } finally {
-      setPwdBusy(false);
-    }
-  };
-
   const isAuto = localStorage.getItem(LANG_MODE_KEY) === 'auto';
-  // Valor mostrado por el Select: fuente de verdad = i18n.language (no user.language,
-  // que solo se carga al montar y quedaría stale tras cambiar). Normalizado a los
-  // códigos de las opciones por si el detector dio p.ej. 'en-US'.
   const langValue = isAuto
     ? 'auto'
     : i18n.language.startsWith('en')
@@ -1052,191 +975,274 @@ function ProfileSection() {
         ? 'zh-CN'
         : 'es';
 
+  useEffect(() => {
+    apiFetch<{ user?: { id: string; username: string; display_name?: string | null; email?: string | null; language: string; role?: string } }>('/api/auth/profile')
+      .then((d) => {
+        if (d.user) {
+          setUser(d.user);
+          setNameDraft(d.user.display_name || d.user.username);
+          setEmailDraft(d.user.email || '');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { if (!editingName) setNameDraft(user?.display_name || user?.username || ''); }, [user?.display_name, user?.username, editingName]);
+  useEffect(() => { if (!editingEmail) setEmailDraft(user?.email || ''); }, [user?.email, editingEmail]);
+
+  useEffect(() => {
+    apiFetch<{ prefs: Record<string, boolean> }>('/api/push/preferences')
+      .then((r) => setPrefs(r.prefs))
+      .catch(() => setPrefs(null));
+  }, []);
+
+  const handleLang = (value: string) => {
+    setLangError(null);
+    if (value === 'auto') {
+      localStorage.setItem(LANG_MODE_KEY, 'auto');
+      i18n.changeLanguage(resolveNavigatorLanguage());
+    } else {
+      localStorage.setItem(LANG_MODE_KEY, 'manual');
+      i18n.changeLanguage(value);
+    }
+    apiPut('/api/auth/profile', { language: value === 'auto' ? null : value }).catch(() => {
+      setLangError(t('ajustes.profile.profileError'));
+    });
+  };
+
+  const saveName = async () => {
+    const value = nameDraft.trim();
+    if (value === (user?.display_name || '')) { setEditingName(false); return; }
+    setNameBusy(true); setNameError(null);
+    try {
+      await apiPut('/api/auth/profile', { display_name: value || null });
+      setUser((u) => u ? { ...u, display_name: value || null } : u);
+      heliosToast(t('ajustes.profile.saved'), { tone: 'success' });
+      setEditingName(false);
+    } catch {
+      setNameError(t('ajustes.profile.profileError'));
+    } finally { setNameBusy(false); }
+  };
+
+  const saveEmail = async () => {
+    const value = emailDraft.trim();
+    if (value === (user?.email || '')) { setEditingEmail(false); return; }
+    setEmailBusy(true); setEmailError(null);
+    try {
+      await apiPut('/api/auth/profile', { email: value || null });
+      setUser((u) => u ? { ...u, email: value || null } : u);
+      setEditingEmail(false);
+    } catch {
+      setEmailError(t('ajustes.profile.profileError'));
+    } finally { setEmailBusy(false); }
+  };
+
+  const cancelName = () => { setNameDraft(user?.display_name || user?.username || ''); setNameError(null); setEditingName(false); };
+  const cancelEmail = () => { setEmailDraft(user?.email || ''); setEmailError(null); setEditingEmail(false); };
+
+  const cambiarPref = (tipo: string, enabled: boolean) => {
+    setPrefs((p) => (p ? { ...p, [tipo]: enabled } : p));
+    apiPut('/api/push/preferences', { tipo, enabled }).catch(() => {
+      setPrefs((p) => (p ? { ...p, [tipo]: !enabled } : p));
+    });
+  };
+
+  const doLogout = async () => {
+    try { await apiPost('/api/auth/logout'); } finally {
+      window.dispatchEvent(new Event('helios-unauthorized'));
+    }
+  };
+
+  const submitPwd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwdBusy || pwdNew !== pwdConfirm || pwdNew.length < 6) return;
+    setPwdBusy(true); setPwdError(null);
+    try {
+      await apiPut('/api/auth/password', { current: pwdCurrent, password: pwdNew });
+      heliosToast(t('ajustes.security.changed'), { tone: 'success' });
+      setShowPwd(false);
+      setPwdCurrent(''); setPwdNew(''); setPwdConfirm('');
+    } catch (err) {
+      setPwdError(err instanceof ApiError ? err.message : t('common.error'));
+    } finally { setPwdBusy(false); }
+  };
+
+  const displayName = user?.display_name || user?.username || '';
+  const actionBtnCls = 'inline-flex h-9 items-center gap-1.5 rounded-lg border border-app px-2.5 sm:px-3 text-[13px] font-medium text-faint transition-colors hover:bg-surface-2 hover:text-app';
+  const actionTextCls = 'hidden sm:inline';
+
   return (
-    <div className="flex flex-col gap-3">
-      {/* Línea principal compacta (envuelve en móvil para no solapar) */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Avatar con icono User */}
+    <>
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 min-w-0">
+        {/* Avatar */}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
-          <User size={20} />
+          <User className="h-5 w-5" />
         </div>
-        
-        {/* Nombre + idioma + acciones izquierda */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-          {editing ? (
-            <div className="flex gap-2 flex-1">
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+
+        {/* Nombre + rol */}
+        <div className="min-w-0 flex-1">
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text" value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveName(); if (e.key === 'Escape') cancelName(); }}
+                disabled={nameBusy}
+                className="h-9 w-full rounded-xl border border-app bg-surface-2 px-3 py-1 text-[15px] text-app outline-none focus:border-brand"
                 placeholder={user?.username}
-                className="h-8 flex-1"
+                autoFocus
               />
-              <button
-                type="button"
-                onClick={saveName}
-                className="inline-flex h-8 items-center rounded bg-brand px-2.5 text-xs font-semibold text-white"
-              >
-                <Check size={14} />
+              <button type="button" onClick={() => void saveName()} disabled={nameBusy} aria-label={t('common.save')}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white transition-colors hover:brightness-110 disabled:opacity-50">
+                <Check className="h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => { setEditing(false); setDisplayName(user?.display_name || user?.username || ''); }}
-                className="inline-flex h-8 items-center rounded border border-app px-2.5 text-xs text-muted"
-              >
-                <X size={14} />
+              <button type="button" onClick={cancelName} disabled={nameBusy} aria-label={t('common.cancel')}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-app bg-surface-2 text-faint transition-colors hover:bg-surface hover:text-app">
+                <X className="h-4 w-4" />
               </button>
             </div>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="flex items-center gap-2 min-w-0 group"
-              >
-                <p className="font-display text-base font-semibold text-app truncate">{displayName || user?.username || ''}</p>
-                <Pencil size={13} className="text-faint opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-              <Select value={langValue} onValueChange={handleLang}>
-                <SelectTrigger className="h-8 w-9 justify-center text-xs sm:w-[120px] sm:justify-start">
-                  <Languages size={16} className="sm:hidden" />
-                  <span className="hidden sm:inline">
-                    <SelectValue />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      <span className="flex items-center gap-2"><span>{lang.flag}</span><span>{lang.name}</span></span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <button
-                type="button"
-                onClick={() => setShowPwd((v) => !v)}
-                aria-expanded={showPwd}
-                className="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-faint transition-colors hover:bg-surface-2 hover:text-app sm:px-3"
-                title={t('ajustes.security.change')}
-              >
-                <KeyRound size={16} />
-                <span className="hidden text-sm font-medium sm:inline">Contraseña</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowNotifs((v) => !v)}
-                aria-expanded={showNotifs}
-                className={cn(
-                  'flex h-9 items-center gap-1.5 rounded-lg px-2.5 transition-colors sm:px-3',
-                  showNotifs ? 'bg-brand/15 text-brand' : 'text-faint hover:bg-surface-2 hover:text-app',
-                )}
-                title={t('ajustes.sections.notificaciones')}
-              >
-                <Bell size={16} />
-                <span className="hidden text-sm font-medium sm:inline">{t('ajustes.sections.notificaciones')}</span>
-              </button>
-            </>
+            <button type="button" onClick={() => setEditingName(true)} className="group flex items-center gap-1.5 min-w-0" title={t('ajustes.profile.editName')}>
+              <p className="text-base font-semibold leading-tight truncate">{displayName || user?.username || ''}</p>
+              <Pencil className="h-3.5 w-3.5 text-faint opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
           )}
+          {user?.role === 'admin' && <p className="text-[13px] text-faint leading-tight mt-0.5">{t('ajustes.role.admin', { defaultValue: 'Administrador' })}</p>}
+          {nameError && <p role="alert" className="text-xs text-destructive mt-1">{nameError}</p>}
         </div>
 
-        {/* Cerrar sesión a la derecha */}
-        <button
-          type="button"
-          onClick={doLogout}
-          className="flex h-9 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 text-destructive transition-colors hover:bg-destructive/20 hover:text-destructive sm:px-3"
-          title={t('common.logout')}
-        >
-          <LogOut size={16} />
-          <span className="hidden text-sm font-medium sm:inline">{t('common.logout')}</span>
+        {/* Email + acciones */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+          {editingEmail ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="email" value={emailDraft}
+                onChange={(e) => setEmailDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveEmail(); if (e.key === 'Escape') cancelEmail(); }}
+                disabled={emailBusy}
+                className="h-9 w-[180px] sm:w-[220px] rounded-xl border border-app bg-surface-2 px-3 py-1 text-[13px] text-app outline-none focus:border-brand"
+                placeholder={t('ajustes.profile.emailPlaceholder')}
+                autoFocus
+              />
+              <button type="button" onClick={() => void saveEmail()} disabled={emailBusy} aria-label={t('common.save')}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white transition-colors hover:brightness-110 disabled:opacity-50">
+                <Check className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={cancelEmail} disabled={emailBusy} aria-label={t('common.cancel')}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-app bg-surface-2 text-faint transition-colors hover:bg-surface hover:text-app">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setEditingEmail(true)}
+              className={cn('inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors',
+                user?.email
+                  ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                  : 'border border-app text-faint hover:bg-surface-2 hover:text-app')}
+              title={user?.email || t('ajustes.profile.addEmail')}
+              aria-label={user?.email ? t('ajustes.profile.editEmail') : t('ajustes.profile.addEmail')}>
+              <Mail className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Idioma — icono en móvil, select completo en desktop */}
+          <label htmlFor="profile-lang" className="sm:hidden inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-app text-faint cursor-pointer hover:bg-surface-2 hover:text-app" title={t('ajustes.language.title')}>
+            <Languages className="h-4 w-4" />
+          </label>
+          <select
+            id="profile-lang"
+            value={langValue}
+            onChange={(e) => void handleLang(e.target.value)}
+            className="hidden sm:inline h-9 w-[120px] shrink-0 rounded-lg border border-app bg-surface-2 px-2 text-[13px] text-app outline-none focus:border-brand"
+          >
+            {languages.map((l) => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
+          </select>
+
+          {/* Contraseña */}
+          <button type="button" aria-expanded={showPwd} onClick={() => setShowPwd((v) => !v)} className={actionBtnCls} title={t('ajustes.security.change')}>
+            <KeyRound className="h-4 w-4" />
+            <span className={actionTextCls}>{t('common.password')}</span>
+          </button>
+
+          {/* Notificaciones */}
+          <button type="button" aria-expanded={showNotifs} onClick={() => setShowNotifs((v) => !v)}
+            className={cn(actionBtnCls, showNotifs && 'border-brand/30 bg-brand/5 text-brand hover:bg-brand/10')}
+            title={t('ajustes.sections.notificaciones')}>
+            <Bell className="h-4 w-4" />
+            <span className={actionTextCls}>{t('ajustes.sections.notificaciones')}</span>
+          </button>
+        </div>
+
+        {/* Cerrar sesión */}
+        <button type="button" onClick={() => void doLogout()}
+          className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 sm:px-3 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/15">
+          <LogOut className="h-4 w-4" />
+          <span className={actionTextCls}>{t('common.logout')}</span>
         </button>
       </div>
 
+      {emailError && <p role="alert" className="text-xs text-destructive mt-3">{emailError}</p>}
+      {langError && <p role="alert" className="text-xs text-destructive mt-3">{langError}</p>}
+
       {/* Formulario de contraseña (expandible) */}
       {showPwd && (
-        <form onSubmit={submitPwd} className="flex flex-col gap-2 border-t border-app pt-3">
-          <Input
-            type="password"
-            autoComplete="current-password"
-            placeholder={t('ajustes.security.current')}
-            value={pwdCurrent}
-            onChange={(e) => setPwdCurrent(e.target.value)}
-            className="h-8 text-sm"
-          />
+        <form onSubmit={submitPwd} className="mt-4 flex flex-col gap-2 border-t border-app pt-4">
+          <input type="password" autoComplete="current-password" placeholder={t('ajustes.security.current', { defaultValue: 'Contraseña actual' })}
+            value={pwdCurrent} onChange={(e) => setPwdCurrent(e.target.value)}
+            className="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand" />
           <div className="grid gap-2 sm:grid-cols-2">
-            <Input
-              type="password"
-              autoComplete="new-password"
-              placeholder={t('ajustes.security.new')}
-              value={pwdNew}
-              onChange={(e) => setPwdNew(e.target.value)}
-              className="h-8 text-sm"
-            />
-            <Input
-              type="password"
-              autoComplete="new-password"
-              placeholder={t('ajustes.security.confirm')}
-              value={pwdConfirm}
-              onChange={(e) => setPwdConfirm(e.target.value)}
-              className="h-8 text-sm"
-            />
+            <input type="password" autoComplete="new-password" placeholder={t('ajustes.security.new', { defaultValue: 'Nueva contraseña' })}
+              value={pwdNew} onChange={(e) => setPwdNew(e.target.value)}
+              className="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand" />
+            <input type="password" autoComplete="new-password" placeholder={t('ajustes.security.confirm', { defaultValue: 'Confirmar' })}
+              value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)}
+              className="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand" />
           </div>
           {pwdNew.length > 0 && pwdNew !== pwdConfirm && (
             <p className="text-xs text-destructive">{t('ajustes.security.mismatch')}</p>
           )}
-          {pwdError && <p className="text-xs text-destructive">{pwdError}</p>}
-          <button
-            type="submit"
-            disabled={pwdBusy || !pwdCurrent || pwdNew.length < 6 || pwdNew !== pwdConfirm}
-            className="bg-brand-gradient inline-flex h-8 self-start items-center rounded px-4 text-xs font-semibold text-white disabled:opacity-60"
-          >
-            {t('ajustes.security.submit')}
+          {pwdError && <p role="alert" className="text-xs text-destructive">{pwdError}</p>}
+          <button type="submit" disabled={pwdBusy || !pwdCurrent || pwdNew.length < 6 || pwdNew !== pwdConfirm}
+            className="bg-brand-gradient inline-flex h-9 self-start items-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60">
+            {t('ajustes.security.submit', { defaultValue: 'Cambiar contraseña' })}
           </button>
         </form>
       )}
 
-      {/* Notificaciones push por tipo (expandible) */}
+      {/* Notificaciones push (expandible) */}
       {showNotifs && prefs && (
-        <div className="flex flex-col gap-1.5 border-t border-app pt-3">
+        <div className="mt-4 flex flex-col gap-1.5 border-t border-app pt-4">
           {estado.suscrito ? (
             <>
               <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.notif.tiposTitulo')}</p>
               {TIPOS_NOTIF_USUARIO.map((tipo) => (
-                <div key={tipo} className="flex items-center justify-between rounded-lg bg-surface px-3 py-2">
+                <div key={tipo} className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
                   <span className="text-sm text-app">{t(`ajustes.notif.tipos.${tipo}`)}</span>
-                  <Switch
-                    checked={prefs[tipo] !== false}
-                    onCheckedChange={(checked) => cambiarPref(tipo, checked)}
-                  />
+                  <Switch checked={prefs[tipo] !== false} onCheckedChange={(checked) => cambiarPref(tipo, checked)} />
                 </div>
               ))}
             </>
           ) : (
-            <div className="flex flex-col gap-2 rounded-lg bg-surface px-3 py-2.5">
+            <div className="flex flex-col gap-2 rounded-lg bg-surface-2 px-3 py-2.5">
               <p className="text-sm text-muted">{t('ajustes.notif.descripcion')}</p>
               {soporte === 'ok' ? (
-                <button
-                  type="button"
-                  onClick={() => activar()}
-                  disabled={estado.cargando}
-                  className="bg-brand-gradient inline-flex h-8 items-center justify-center gap-1.5 self-start rounded px-3 text-xs font-semibold text-white disabled:opacity-60"
-                >
+                <button type="button" onClick={() => activar()} disabled={estado.cargando}
+                  className="bg-brand-gradient inline-flex h-8 items-center justify-center gap-1.5 self-start rounded px-3 text-xs font-semibold text-white disabled:opacity-60">
                   <Bell size={14} /> {t('ajustes.notif.activar')}
                 </button>
               ) : (
                 <p className="text-xs text-faint">
-                  {soporte === 'requiere-https'
-                    ? t('ajustes.notif.requiereHttps')
-                    : soporte === 'ios-necesita-instalacion'
-                      ? t('ajustes.notif.iosInstalacion')
-                      : soporte === 'no-configurado'
-                        ? t('ajustes.notif.noConfigurado')
-                        : t('ajustes.notif.noSoportado')}
+                  {soporte === 'requiere-https' ? t('ajustes.notif.requiereHttps')
+                    : soporte === 'ios-necesita-instalacion' ? t('ajustes.notif.iosInstalacion')
+                    : soporte === 'no-configurado' ? t('ajustes.notif.noConfigurado')
+                    : t('ajustes.notif.noSoportado')}
                 </p>
               )}
             </div>
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -1874,9 +1880,13 @@ export default function Ajustes() {
         </Section>
 
         {/* 3. Mi perfil (span-12) */}
-        <Section id="perfil" title={t('ajustes.sections.perfil')}>
+        <motion.section
+          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="helios-card rounded-2xl p-5"
+        >
           <ProfileSection />
-        </Section>
+        </motion.section>
 
         {/* 3. Zona administración (solo admin): barra AdminBar con Usuarios desplegable */}
         {userRole === 'admin' && <AdminZone />}

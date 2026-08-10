@@ -20,7 +20,8 @@
     "discharging": "Discharging",
     "idle": "Idle",
     "confirm": "Confirm",
-    "edit": "Edit"
+    "edit": "Edit",
+    "password": "Password"
   },
   "nav": {
     "dashboard": "Today",
@@ -320,7 +321,12 @@
     "profile": {
       "displayName": "Display name",
       "email": "Email (optional)",
-      "saved": "Profile saved"
+      "saved": "Profile saved",
+      "editName": "Edit name",
+      "addEmail": "Add email",
+      "editEmail": "Edit email",
+      "emailPlaceholder": "you@email.com",
+      "profileError": "Error saving profile"
     },
     "about": {
       "desc": "Self-hosted solar dashboard: production, consumption, battery and inverters in real time from your Home Assistant. No cloud, no third-party accounts.",
@@ -421,7 +427,7 @@
       "comfortable": "Comfortable",
       "compact": "Compact"
     },
-    "reduceMotion": "Reduce animations",
+    "reduceMotion": "Animations",
     "accent": {
       "title": "Accent",
       "naranja": "Orange",

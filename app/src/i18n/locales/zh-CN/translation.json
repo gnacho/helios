@@ -20,7 +20,8 @@
     "discharging": "放电中",
     "idle": "空闲",
     "confirm": "确认",
-    "edit": "编辑"
+    "edit": "编辑",
+    "password": "密码"
   },
   "nav": {
     "dashboard": "今日",
@@ -318,7 +319,12 @@
     "profile": {
       "displayName": "显示名称",
       "email": "电子邮件（可选）",
-      "saved": "资料已保存"
+      "saved": "资料已保存",
+      "editName": "编辑名称",
+      "addEmail": "添加邮箱",
+      "editEmail": "编辑邮箱",
+      "emailPlaceholder": "you@email.com",
+      "profileError": "保存资料时出错"
     },
     "about": {
       "desc": "自托管太阳能仪表板：从您的 Home Assistant 实时获取发电量、用电量、电池和逆变器数据。无云，无第三方账户。",
@@ -419,7 +425,7 @@
       "comfortable": "舒适",
       "compact": "紧凑"
     },
-    "reduceMotion": "减少动画",
+    "reduceMotion": "动画",
     "accent": {
       "title": "强调色",
       "naranja": "橙色",

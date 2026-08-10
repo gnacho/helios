@@ -20,7 +20,8 @@
     "discharging": "Descargando",
     "idle": "En reposo",
     "confirm": "Confirmar",
-    "edit": "Editar"
+    "edit": "Editar",
+    "password": "Contraseña"
   },
   "nav": {
     "dashboard": "Hoy",
@@ -320,7 +321,12 @@
     "profile": {
       "displayName": "Nombre visible",
       "email": "Email (opcional)",
-      "saved": "Perfil guardado"
+      "saved": "Perfil guardado",
+      "editName": "Editar nombre",
+      "addEmail": "Añadir email",
+      "editEmail": "Editar email",
+      "emailPlaceholder": "tu@email.com",
+      "profileError": "Error al guardar el perfil"
     },
     "about": {
       "desc": "Dashboard solar autoalojado: producción, consumo, batería e inversores en tiempo real desde tu Home Assistant. Sin nube, sin cuentas de terceros.",
@@ -421,7 +427,7 @@
       "comfortable": "Cómoda",
       "compact": "Compacta"
     },
-    "reduceMotion": "Reducir animaciones",
+    "reduceMotion": "Animaciones",
     "accent": {
       "title": "Acento",
       "naranja": "Naranja",
