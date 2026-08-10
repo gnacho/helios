@@ -6,10 +6,9 @@ import pkg from '../../package.json';
 
 const CHECK_KEY = 'helios-last-update-check';
 const DISMISS_KEY = 'helios-release-dismissed';
-const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 1 vez por semana (regla app-auto-update)
+const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000;
 const REPO_URL = 'https://github.com/gnacho/helios';
 
-/** a vs b semver ('1.10.0' > '1.9.0'); prefijos 'v' ignorados. */
 function compareSemver(a: string, b: string): number {
   const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
   const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
@@ -23,31 +22,21 @@ function getDismissed(): string {
   try { return window.localStorage.getItem(DISMISS_KEY) ?? ''; } catch { return ''; }
 }
 
-/**
- * Ribbon de actualización (patrón app-auto-update: check semanal + aviso si hay
- * versión nueva en el repo público). Solo admin. GET anónima a GitHub releases
- * (el repo es público), 1 vez por semana vía localStorage; aplicar ejecuta
- * helios-update.sh en el servidor (POST /api/update/apply, solo admin).
- * Incluye dismiss por versión (#35): se puede descartar y vuelve a salir
- * solo si aparece una más nueva.
- */
 export default function UpdateRibbon() {
   const { t } = useTranslation();
   const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
   const [applying, setApplying] = useState(false);
-  const [dismissed, setDismissed] = useState(getDismissed());
 
   useEffect(() => {
     let stale = false;
     const run = async () => {
       try {
-        // Solo admin ve el ribbon (como el resto de la zona de actualizaciones).
         const me = await apiFetch<{ user?: { role?: string } }>('/api/auth/me').catch(() => null);
         if (me?.user?.role !== 'admin') return;
 
         const last = Number(window.localStorage.getItem(CHECK_KEY) || 0);
-        if (Date.now() - last < CHECK_INTERVAL) return; // ya se comprobó esta semana
+        if (Date.now() - last < CHECK_INTERVAL) return;
         window.localStorage.setItem(CHECK_KEY, String(Date.now()));
 
         const repo = REPO_URL.match(/github\.com\/([^/]+\/[^/.]+)/)?.[1];
@@ -72,7 +61,7 @@ export default function UpdateRibbon() {
         if (stale) return;
         const ver = version.replace(/^v/, '');
         if (!version || compareSemver(version, pkg.version) <= 0) setState('uptodate');
-        else if (ver === getDismissed()) setState('uptodate'); // descartada
+        else if (ver === getDismissed()) setState('uptodate');
         else {
           setLatestVersion(ver);
           setState('available');
@@ -82,14 +71,11 @@ export default function UpdateRibbon() {
       }
     };
     void run();
-    return () => {
-      stale = true;
-    };
+    return () => { stale = true; };
   }, []);
 
   const dismissVersion = useCallback(() => {
     try { window.localStorage.setItem(DISMISS_KEY, latestVersion); } catch { /* sin storage */ }
-    setDismissed(latestVersion);
     setState('uptodate');
   }, [latestVersion]);
 
@@ -100,7 +86,6 @@ export default function UpdateRibbon() {
     setApplying(true);
     try {
       await apiPost<{ ok: boolean }>('/api/update/apply');
-      // El servidor se reinicia; la app se recarga con el build nuevo.
       setTimeout(() => window.location.reload(), 2500);
     } catch {
       setApplying(false);
