@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { apiFetch, apiPost } from '@/data/api-client';
 import pkg from '../../package.json';
 
 const CHECK_KEY = 'helios-last-update-check';
+const DISMISS_KEY = 'helios-release-dismissed';
 const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 1 vez por semana (regla app-auto-update)
 const REPO_URL = 'https://github.com/gnacho/helios';
 
@@ -18,17 +19,24 @@ function compareSemver(a: string, b: string): number {
   return 0;
 }
 
+function getDismissed(): string {
+  try { return window.localStorage.getItem(DISMISS_KEY) ?? ''; } catch { return ''; }
+}
+
 /**
  * Ribbon de actualización (patrón app-auto-update: check semanal + aviso si hay
  * versión nueva en el repo público). Solo admin. GET anónima a GitHub releases
  * (el repo es público), 1 vez por semana vía localStorage; aplicar ejecuta
  * helios-update.sh en el servidor (POST /api/update/apply, solo admin).
+ * Incluye dismiss por versión (#35): se puede descartar y vuelve a salir
+ * solo si aparece una más nueva.
  */
 export default function UpdateRibbon() {
   const { t } = useTranslation();
   const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
   const [applying, setApplying] = useState(false);
+  const [dismissed, setDismissed] = useState(getDismissed());
 
   useEffect(() => {
     let stale = false;
@@ -62,9 +70,11 @@ export default function UpdateRibbon() {
           }
         }
         if (stale) return;
+        const ver = version.replace(/^v/, '');
         if (!version || compareSemver(version, pkg.version) <= 0) setState('uptodate');
+        else if (ver === getDismissed()) setState('uptodate'); // descartada
         else {
-          setLatestVersion(version.replace(/^v/, ''));
+          setLatestVersion(ver);
           setState('available');
         }
       } catch {
@@ -76,6 +86,12 @@ export default function UpdateRibbon() {
       stale = true;
     };
   }, []);
+
+  const dismissVersion = useCallback(() => {
+    try { window.localStorage.setItem(DISMISS_KEY, latestVersion); } catch { /* sin storage */ }
+    setDismissed(latestVersion);
+    setState('uptodate');
+  }, [latestVersion]);
 
   if (state !== 'available') return null;
 
@@ -113,6 +129,14 @@ export default function UpdateRibbon() {
         className="ml-auto flex h-8 shrink-0 items-center rounded-lg border border-amber-500/40 bg-amber-500 px-3 text-xs font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60"
       >
         {applying ? t('ajustes.about.applying') : t('ajustes.about.updateNow')}
+      </button>
+      <button
+        type="button"
+        onClick={dismissVersion}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 text-amber-500 transition-colors hover:bg-amber-500/10"
+        aria-label={t('ajustes.about.dismiss')}
+      >
+        <X className="h-4 w-4" />
       </button>
     </div>
   );

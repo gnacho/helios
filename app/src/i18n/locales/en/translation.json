@@ -342,6 +342,7 @@
       "updateNow": "Update now",
       "applying": "Updating…",
       "updateError": "Couldn't check for updates. Try again.",
+      "dismiss": "Dismiss",
       "made": "made at home"
     },
     "connection": {
