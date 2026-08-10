@@ -416,9 +416,9 @@ function ThemeSection() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Tema: radiogroup con mini-previews */}
-      <div role="radiogroup" aria-label={t('theme.label')} className="grid grid-cols-3 gap-2">
+    <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+      {/* Tema: radiogroup con mini-previews (máx 50% ancho) */}
+      <div role="radiogroup" aria-label={t('theme.label')} className="grid grid-cols-3 gap-2 sm:w-1/2 sm:flex-shrink-0">
         {themeOptions.map(({ value, label, icon: Icon }) => {
           const active = mode === value;
           return (
@@ -453,60 +453,63 @@ function ThemeSection() {
         })}
       </div>
 
-      {/* Acento */}
-      <div>
-        <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.accent.title')}</p>
-        <div role="radiogroup" aria-label={t('ajustes.accent.title')} className="flex items-center gap-2.5">
-          {ACCENTS.map((acc) => {
-            const active = accent === acc.rgb;
-            return (
+      {/* Resto de controles */}
+      <div className="flex flex-col gap-4 sm:flex-1">
+        {/* Acento */}
+        <div>
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.accent.title')}</p>
+          <div role="radiogroup" aria-label={t('ajustes.accent.title')} className="flex items-center gap-2.5">
+            {ACCENTS.map((acc) => {
+              const active = accent === acc.rgb;
+              return (
+                <button
+                  key={acc.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  aria-label={t(`ajustes.accent.${acc.id}`)}
+                  title={t(`ajustes.accent.${acc.id}`)}
+                  onClick={() => setAccent(acc.rgb)}
+                  className={cn(
+                    'relative flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-110',
+                    active && 'ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]',
+                  )}
+                  style={{ backgroundColor: acc.hex }}
+                >
+                  {active && <Check size={14} strokeWidth={3} className="text-white" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Densidad */}
+        <div>
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.density.title')}</p>
+          <div role="radiogroup" aria-label={t('ajustes.density.title')} className="flex rounded-xl border border-app p-0.5">
+            {(['comfortable', 'compact'] as const).map((d) => (
               <button
-                key={acc.id}
+                key={d}
                 type="button"
                 role="radio"
-                aria-checked={active}
-                aria-label={t(`ajustes.accent.${acc.id}`)}
-                title={t(`ajustes.accent.${acc.id}`)}
-                onClick={() => setAccent(acc.rgb)}
+                aria-checked={density === d}
+                onClick={() => setDensity(d)}
                 className={cn(
-                  'relative flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-110',
-                  active && 'ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]',
+                  'h-8 flex-1 rounded-lg text-[13px] transition-colors',
+                  density === d ? 'bg-surface-2 font-semibold text-app' : 'text-faint hover:text-muted',
                 )}
-                style={{ backgroundColor: acc.hex }}
               >
-                {active && <Check size={14} strokeWidth={3} className="text-white" />}
+                {t(`ajustes.density.${d}`)}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Densidad */}
-      <div>
-        <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.density.title')}</p>
-        <div role="radiogroup" aria-label={t('ajustes.density.title')} className="flex rounded-xl border border-app p-0.5">
-          {(['comfortable', 'compact'] as const).map((d) => (
-            <button
-              key={d}
-              type="button"
-              role="radio"
-              aria-checked={density === d}
-              onClick={() => setDensity(d)}
-              className={cn(
-                'h-8 flex-1 rounded-lg text-[13px] transition-colors',
-                density === d ? 'bg-surface-2 font-semibold text-app' : 'text-faint hover:text-muted',
-              )}
-            >
-              {t(`ajustes.density.${d}`)}
-            </button>
-          ))}
+        {/* Reducir animaciones */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-app">{t('ajustes.reduceMotion')}</span>
+          <Switch checked={reduceMotion} onCheckedChange={setReduceMotion} />
         </div>
-      </div>
-
-      {/* Reducir animaciones */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-app">{t('ajustes.reduceMotion')}</span>
-        <Switch checked={reduceMotion} onCheckedChange={setReduceMotion} />
       </div>
     </div>
   );
