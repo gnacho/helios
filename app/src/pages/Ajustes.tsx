@@ -493,7 +493,7 @@ function ThemeSection() {
         {/* Densidad */}
         <div>
           <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.density.title')}</p>
-          <div role="radiogroup" aria-label={t('ajustes.density.title')} className="flex rounded-xl border border-app p-0.5">
+          <div role="radiogroup" aria-label={t('ajustes.density.title')} className="flex rounded-xl border border-app bg-surface p-0.5">
             {(['comfortable', 'compact'] as const).map((d) => (
               <button
                 key={d}
@@ -503,7 +503,7 @@ function ThemeSection() {
                 onClick={() => setDensity(d)}
                 className={cn(
                   'h-8 flex-1 rounded-lg text-[13px] transition-colors',
-                  density === d ? 'bg-surface-2 font-semibold text-app' : 'text-faint hover:text-muted',
+                  density === d ? 'bg-surface-2 font-semibold text-app shadow-soft' : 'text-faint hover:text-muted',
                 )}
               >
                 {t(`ajustes.density.${d}`)}
