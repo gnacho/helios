@@ -342,6 +342,7 @@
       "updateNow": "Actualizar ahora",
       "applying": "Actualizando…",
       "updateError": "No se pudo comprobar la actualización. Inténtalo de nuevo.",
+      "dismiss": "Descartar",
       "made": "hecho en casa"
     },
     "connection": {
