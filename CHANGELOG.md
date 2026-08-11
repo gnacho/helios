@@ -7,6 +7,14 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-08-11
+
+### Changed
+
+- **Ajustes → Acerca de**: los cuatro tiles enlazan ahora a su destino
+  (GitHub, la web del proyecto, Ko-fi y el Club Cloudless). El README gana
+  los badges de web, demo y Ko-fi (EN+ES). #51
+
 ## [0.7.3] - 2026-08-11
 
 ### Added
