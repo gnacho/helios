@@ -1,15 +1,14 @@
 # Roadmap
 
 This is a personal project. The roadmap reflects the direction I have in mind,
-not promises or dates. Phases 1 and 2 are done; 3 is mostly done; 4 is an idea
-I want to explore.
+not promises or dates. Phases 1 to 3 are done; phase 4 is up next.
 
 | Phase | Focus | Status |
 |---|---|---|
 | 1 | Live read-only panel (production vs consumption) | Done |
 | 2 | Real backend, multi-user, history, battery, alerts, PWA, hardening | Done (~0.6.x) |
-| 3 | Configurable hardware (still under HAOS) | Mostly done (0.7.x) |
-| 4 | Multi-installation: several HAOS or several Helios via API | Exploring |
+| 3 | Configurable hardware (still under HAOS) | Done (0.7.x) |
+| 4 | Multi-installation: several HAOS or several Helios via API | Up next |
 
 ## Phase 3 — Configurable hardware, still under HAOS
 
@@ -27,12 +26,13 @@ without touching code:
   the legacy Solis/Fox/scraper profile automatically, so nothing breaks.
 
 HAOS stays the source of truth for live data: Helios consumes, it does not
-talk to the inverters directly. Remaining gap: no UI yet to *edit* the topology
-in Settings (config is written via the API/config endpoint or env).
+talk to the inverters directly. The topology is editable from Settings
+(admin) since 0.7.2, no code or env changes required.
 
 ## Phase 4 — Multi-installation
 
-One Helios instance watching a single installation is fine for one home. Phase 4
-explores monitoring several installations from one place: either one Helios
-talking to several HAOS instances, or several Helios instances exposing their
-data over an API and aggregating into a single view.
+Up next. One Helios instance watching a single installation is fine for one
+home. Phase 4 adds monitoring several installations from one place: either one
+Helios talking to several HAOS instances, or several Helios instances exposing
+their data over an API and aggregating into a single view. Tracked in
+issue #43.
