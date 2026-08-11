@@ -205,7 +205,7 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
   padding-top: clamp(64px, 10vh, 120px); padding-bottom: clamp(64px, 10vh, 120px);
   background: rgb(var(--canvas));
 }
-.section-head { max-width: 720px; margin-bottom: 48px; }
+.section-head { max-width: 720px; margin: 0 auto 48px; text-align: center; }
 .section-title {
   font-family: var(--font-display);
   font-weight: 620;
@@ -261,6 +261,10 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
   padding: 26px 28px;
   color: rgb(var(--text-primary));
 }
+.section.thanks .thanks-card {
+  max-width: 860px; margin: 0 auto; text-align: center; border-radius: var(--radius-card);
+}
+.section.thanks .thanks-card p { margin-inline: auto; }
 .thanks-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
 .thanks-card p { color: rgb(var(--text-secondary)); font-size: 0.95rem; max-width: 70ch; }
 .thanks-link { display: inline-block; margin-top: 12px; color: rgb(var(--amber)); }
@@ -279,16 +283,20 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 .theater-eyebrow { margin-bottom: 6px; text-shadow: 0 2px 14px rgb(0 0 0 / 0.55); }
 .theater-title {
   font-family: var(--font-display); font-weight: 620;
-  font-size: clamp(1.7rem, 3.2vw, 2.6rem); letter-spacing: -0.015em;
+  font-size: clamp(2.2rem, 4vw, 3.2rem); letter-spacing: -0.015em;
   text-shadow: 0 2px 18px rgb(0 0 0 / 0.5);
 }
-.theater-sub { color: rgb(255 255 255 / 0.75); margin-top: 4px; font-size: 0.95rem; text-shadow: 0 1px 10px rgb(0 0 0 / 0.4); }
+.theater-sub { color: rgb(255 255 255 / 0.8); margin-top: 4px; font-size: 1.05rem; text-shadow: 0 1px 10px rgb(0 0 0 / 0.4); }
 .theater-widgets {
   display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto;
   gap: 14px;
   margin-top: 22px; text-align: left;
 }
 .widget { padding: 16px 18px; min-height: 0; }
+.theater-widgets .widget {
+  background: rgb(var(--night) / 0.55);
+  border-color: rgb(255 255 255 / 0.18);
+}
 .live-widget, .history-widget { display: flex; flex-direction: column; }
 .live-widget canvas { height: 220px; }
 .history-widget canvas { height: 200px; }
@@ -341,10 +349,10 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 .flow-node.active .node-glow { opacity: 1; }
 .flow-node.active .node-ring { stroke-width: 2; }
 .flow-label {
-  font-family: var(--font-mono); font-size: 9px; font-weight: 500;
-  fill: rgb(255 255 255 / 0.55); letter-spacing: 0.08em; text-transform: uppercase;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  fill: rgb(255 255 255 / 0.85); letter-spacing: 0.08em; text-transform: uppercase;
 }
-.flow-value { font-family: var(--font-display); font-size: 12.5px; font-weight: 600; fill: #fff; }
+.flow-value { font-family: var(--font-display); font-size: 13.5px; font-weight: 600; fill: #fff; }
 
 /* ── Leyenda del histórico ── */
 .chart-legend {
@@ -489,10 +497,14 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
   font-size: 0.74rem; color: rgb(255 255 255 / 0.9);
 }
 .footer-links {
-  display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 30px;
+  display: flex; gap: 26px; flex-wrap: wrap; margin-bottom: 30px;
 }
-.footer-links a { color: rgb(255 255 255 / 0.8); transition: color 0.2s; }
+.footer-links a {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: rgb(255 255 255 / 0.8); transition: color 0.2s;
+}
 .footer-links a:hover { color: rgb(var(--amber-2)); }
+.footer-icon { width: 15px; height: 15px; flex: 0 0 auto; }
 .footer-license { color: rgb(255 255 255 / 0.5); font-size: 0.72rem; }
 
 /* ── Lightbox ── */
