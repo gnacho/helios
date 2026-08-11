@@ -356,9 +356,9 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 .legend-item i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 
 /* ── Principios del club ── */
-.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 16px; }
+ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 900px) {
-  .statutes { grid-template-columns: repeat(3, 1fr); }
+  ol.statutes { grid-template-columns: repeat(3, 1fr); }
 }
 .statute {
   background: rgb(var(--surface)); border: 1px solid rgb(var(--border));
@@ -375,6 +375,20 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 }
 .statute h3 { font-family: var(--font-display); font-weight: 620; font-size: 1.15rem; margin-bottom: 6px; }
 .statute p { color: rgb(var(--text-secondary)); font-size: 0.95rem; }
+.statutes-cta { margin-top: 44px; text-align: center; }
+.statutes-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 30px; font-size: 1.02rem;
+  background: linear-gradient(135deg, rgb(var(--amber-2)), rgb(var(--amber)));
+  color: #2b1a00; box-shadow: 0 4px 16px rgb(var(--amber) / 0.35);
+}
+.statutes-btn::after {
+  content: '→';
+  font-family: var(--font-mono);
+  transition: transform 0.2s var(--ease-out);
+}
+.statutes-btn:hover { box-shadow: 0 8px 24px rgb(var(--amber) / 0.5); }
+.statutes-btn:hover::after { transform: translateX(4px); }
 
 /* ── Slider ── */
 .slider { max-width: 900px; margin: 0 auto; }
