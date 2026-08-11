@@ -122,7 +122,7 @@
     "producingNow": "当前发电",
     "solarField": "光伏阵列",
     "orientation": "朝向",
-    "batteryCoupled": "已连接 Soluna 5 kWh 电池",
+    "batteryCoupled": "已连接电池",
     "temperature": "温度",
     "today": "今天",
     "shareToday": "今日占比",
@@ -130,7 +130,7 @@
   },
   "bateria": {
     "title": "电池",
-    "subtitle": "Soluna 5 kWh · 连接至 Solis",
+    "subtitle": "已连接电池",
     "chargedToday": "今日充电",
     "dischargedToday": "今日放电",
     "cycles": "循环次数",
@@ -167,7 +167,7 @@
   },
   "inversores": {
     "title": "逆变器",
-    "subtitle": "共 7.1 kWp · 2 套系统",
+    "subtitle": "每台逆变器的发电量",
     "compare": "对比",
     "today": "今天",
     "thisMonth": "本月",
@@ -183,11 +183,11 @@
     "compareYesterday": "与昨日对比",
     "forecastToday": "今天（预测）",
     "yesterday": "昨天",
-    "curvesTitle": "今日曲线 · Solis 对比 Fox",
+    "curvesTitle": "今日曲线",
     "specificYield": "单位效率 · kW/kWp",
     "instantPower": "瞬时功率 · kW",
     "normalize": "按 kWp 归一化",
-    "foxBetter": "Fox 今日每 kWp 效率高 4%",
+    "foxBetter": "主逆变器今日每 kWp 效率更高",
     "metricsTitle": "今日指标",
     "metricsAria": "今日指标并排对比",
     "metric": "指标",
@@ -201,7 +201,7 @@
     "shareAria": "今日发电量分配",
     "bars": "条形图",
     "kwhToday": "今日 kWh",
-    "shareInsight": "Solis 今天贡献了近三分之二的发电量。",
+    "shareInsight": "今日发电量在各逆变器之间的分配。",
     "localData": "通过 Home Assistant 本地获取数据 · 每 5 秒更新",
     "kpisAria": "{{name}} 指标",
     "compareAria": "逆变器对比",
@@ -226,7 +226,7 @@
     "todayLower": "今天",
     "thisWeek": "本周",
     "powerCurves": "功率曲线",
-    "estimatedNote": "Solis 曲线根据 Fox 估算：当天没有 Solis 功率记录。",
+    "estimatedNote": "发电量曲线为估算：当天没有逆变器的功率记录。",
     "drillDay": "点击柱状图查看当日详情。",
     "drillMonth": "点击柱状图查看当月详情。",
     "donutTitle": "您的电力来自哪里？",
@@ -459,8 +459,8 @@
       "tipos": {
         "inversor_offline": "逆变器离线",
         "inversor_ok": "逆变器已恢复",
-        "fox_offline": "Fox 逆变器离线",
-        "fox_ok": "Fox 逆变器已恢复",
+        "fox_offline": "辅助逆变器离线",
+        "fox_ok": "辅助逆变器已恢复",
         "corte_red": "电网停电",
         "corte_red_ok": "电网已恢复",
         "bateria_baja": "电池电量低",
@@ -470,7 +470,7 @@
   },
   "footer": {
     "line1": "Helios · 太阳能监控 — 通过 Home Assistant 本地获取数据",
-    "line2": "Solis 4.4 kWp + Fox 2.7 kWp · Soluna 5 kWh"
+    "line2": "本地安装 · 通过 Home Assistant 获取数据"
   },
   "stub": {
     "title": "页面未找到",

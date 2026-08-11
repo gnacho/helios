@@ -122,7 +122,7 @@
     "producingNow": "Producing now",
     "solarField": "Solar array",
     "orientation": "Orientation",
-    "batteryCoupled": "Soluna 5 kWh coupled",
+    "batteryCoupled": "Coupled battery",
     "temperature": "Temperature",
     "today": "Today",
     "shareToday": "Today's share",
@@ -130,7 +130,7 @@
   },
   "bateria": {
     "title": "Battery",
-    "subtitle": "Soluna 5 kWh · coupled to the Solis",
+    "subtitle": "Coupled battery",
     "chargedToday": "Charged today",
     "dischargedToday": "Discharged today",
     "cycles": "Cycles",
@@ -167,7 +167,7 @@
   },
   "inversores": {
     "title": "Inverters",
-    "subtitle": "7.1 kWp total · 2 systems",
+    "subtitle": "Production per inverter",
     "compare": "Comparison",
     "today": "Today",
     "thisMonth": "This month",
@@ -183,11 +183,11 @@
     "compareYesterday": "Compare with yesterday",
     "forecastToday": "Today (forecast)",
     "yesterday": "Yesterday",
-    "curvesTitle": "Today's curves · Solis vs Fox",
+    "curvesTitle": "Today's curves",
     "specificYield": "Specific yield · kW/kWp",
     "instantPower": "Instant power · kW",
     "normalize": "Normalize per kWp",
-    "foxBetter": "The Fox yields 4 % better per kWp today",
+    "foxBetter": "The primary inverter performs better per kWp today",
     "metricsTitle": "Today's metrics",
     "metricsAria": "Today's metrics side by side",
     "metric": "Metric",
@@ -201,7 +201,7 @@
     "shareAria": "Today's production split",
     "bars": "Bars",
     "kwhToday": "kWh today",
-    "shareInsight": "The Solis provides almost two thirds of your energy today.",
+    "shareInsight": "How today's production is split between the installation's inverters.",
     "localData": "Local data via Home Assistant · updates every 5 s",
     "kpisAria": "{{name}} indicators",
     "compareAria": "Inverter comparison",
@@ -227,7 +227,7 @@
     "todayLower": "today",
     "thisWeek": "this week",
     "powerCurves": "Power curves",
-    "estimatedNote": "Solis curve estimated from the Fox: there is no Solis power record for that day.",
+    "estimatedNote": "Estimated production curve: there is no power record from an inverter that day.",
     "drillDay": "Click a bar to see the day detail.",
     "drillMonth": "Click a bar to see the month detail.",
     "donutTitle": "Where did your energy come from?",
@@ -462,8 +462,8 @@
       "tipos": {
         "inversor_offline": "Inverter offline",
         "inversor_ok": "Inverter recovered",
-        "fox_offline": "Fox inverter offline",
-        "fox_ok": "Fox inverter recovered",
+        "fox_offline": "Secondary inverter offline",
+        "fox_ok": "Secondary inverter recovered",
         "corte_red": "Grid outage",
         "corte_red_ok": "Grid restored",
         "bateria_baja": "Low battery",
@@ -473,7 +473,7 @@
   },
   "footer": {
     "line1": "Helios · Solar Monitor — local data via Home Assistant",
-    "line2": "Solis 4.4 kWp + Fox 2.7 kWp · Soluna 5 kWh"
+    "line2": "Local installation · data via Home Assistant"
   },
   "stub": {
     "title": "Not found",

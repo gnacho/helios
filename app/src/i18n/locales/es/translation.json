@@ -122,7 +122,7 @@
     "producingNow": "Produciendo ahora",
     "solarField": "Campo solar",
     "orientation": "Orientación",
-    "batteryCoupled": "Soluna 5 kWh acoplada",
+    "batteryCoupled": "Batería acoplada",
     "temperature": "Temperatura",
     "today": "Hoy",
     "shareToday": "Aporte de hoy",
@@ -130,7 +130,7 @@
   },
   "bateria": {
     "title": "Batería",
-    "subtitle": "Soluna 5 kWh · acoplada al Solis",
+    "subtitle": "Batería acoplada",
     "chargedToday": "Cargada hoy",
     "dischargedToday": "Descargada hoy",
     "cycles": "Ciclos",
@@ -167,7 +167,7 @@
   },
   "inversores": {
     "title": "Inversores",
-    "subtitle": "7,1 kWp en total · 2 sistemas",
+    "subtitle": "Producción por inversor",
     "compare": "Comparativa",
     "today": "Hoy",
     "thisMonth": "Este mes",
@@ -183,11 +183,11 @@
     "compareYesterday": "Comparar con ayer",
     "forecastToday": "Hoy (previsión)",
     "yesterday": "Ayer",
-    "curvesTitle": "Curvas de hoy · Solis vs Fox",
+    "curvesTitle": "Curvas de hoy",
     "specificYield": "Rendimiento específico · kW/kWp",
     "instantPower": "Potencia instantánea · kW",
     "normalize": "Normalizar por kWp",
-    "foxBetter": "El Fox rinde un 4 % mejor por kWp hoy",
+    "foxBetter": "El inversor principal rinde mejor por kWp hoy",
     "metricsTitle": "Métricas de hoy",
     "metricsAria": "Métricas de hoy lado a lado",
     "metric": "Métrica",
@@ -201,7 +201,7 @@
     "shareAria": "Reparto de la producción de hoy",
     "bars": "Barras",
     "kwhToday": "kWh hoy",
-    "shareInsight": "El Solis aporta casi dos tercios de tu energía hoy.",
+    "shareInsight": "Reparto de la producción del día entre los inversores de la instalación.",
     "localData": "Datos locales vía Home Assistant · actualización cada 5 s",
     "kpisAria": "Indicadores del {{name}}",
     "compareAria": "Comparativa de inversores",
@@ -227,7 +227,7 @@
     "todayLower": "hoy",
     "thisWeek": "esta semana",
     "powerCurves": "Curvas de potencia",
-    "estimatedNote": "Curva del Solis estimada a partir del Fox: ese día no hay registro de potencia del Solis.",
+    "estimatedNote": "Curva de producción estimada: ese día no hay registro de potencia de un inversor.",
     "drillDay": "Pulsa una barra para ver el detalle del día.",
     "drillMonth": "Pulsa una barra para ver el detalle del mes.",
     "donutTitle": "¿De dónde vino tu energía?",
@@ -462,8 +462,8 @@
       "tipos": {
         "inversor_offline": "Inversor offline",
         "inversor_ok": "Inversor recuperado",
-        "fox_offline": "Inversor Fox offline",
-        "fox_ok": "Inversor Fox recuperado",
+        "fox_offline": "Inversor secundario offline",
+        "fox_ok": "Inversor secundario recuperado",
         "corte_red": "Corte de red",
         "corte_red_ok": "Red recuperada",
         "bateria_baja": "Batería baja",
@@ -473,7 +473,7 @@
   },
   "footer": {
     "line1": "Helios · Monitor Solar — datos locales vía Home Assistant",
-    "line2": "Solis 4,4 kWp + Fox 2,7 kWp · Soluna 5 kWh"
+    "line2": "Instalación local · datos vía Home Assistant"
   },
   "stub": {
     "title": "No encontrado",

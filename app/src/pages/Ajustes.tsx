@@ -732,7 +732,7 @@ function LocationField() {
   );
 }
 
-const INVERTERS = [
+const LEGACY_INVERTERS = [
   {
     key: 'solis',
     name: 'Solis S5-EH1P5K-L',
@@ -753,18 +753,49 @@ const INVERTERS = [
   },
 ] as const;
 
-const TOTAL_KWP = INVERTERS.reduce((acc, inv) => acc + inv.kwp, 0);
+// Parse de "N × W W" (panels de la topología) → {panels, panelW}. Fallback 0.
+function parsePanels(s: string): { panels: number; panelW: number } {
+  const m = s.match(/(\d+)\s*×\s*(\d+)\s*W/i);
+  if (!m) return { panels: 0, panelW: 0 };
+  return { panels: Number(m[1]), panelW: Number(m[2]) };
+}
 
-const fmtKwp = (v: number) => new Intl.NumberFormat(numLocale(), { maximumFractionDigits: 1 }).format(v);
+function fmtKwp(v: number) {
+  return new Intl.NumberFormat(numLocale(), { maximumFractionDigits: 1 }).format(v);
+}
 
 function InstallationSection() {
+  const install = useInstall();
   const [settings, update] = useEnergySettings();
   const { t } = useTranslation();
+
+  // Inversores desde la topología resuelta (issue #37); fallback al clásico
+  // Solis/Fox solo si la API no ha respondido aún.
+  const inverters = useMemo(() => {
+    if (install && install.inverters.length > 0) {
+      return install.inverters.map((inv) => {
+        const p = parsePanels(inv.panels || '');
+        return {
+          key: inv.key,
+          name: inv.model || inv.name,
+          color: inv.key === 'solis' ? 'var(--c-solis)' : inv.key === 'fox' ? 'var(--c-fox)' : 'var(--brand)',
+          panels: p.panels,
+          panelW: p.panelW,
+          kwp: inv.kwp,
+          battery: inv.hasBattery ? { name: t('common.battery'), kwh: inv.batteryKwh } : null,
+        };
+      });
+    }
+    return LEGACY_INVERTERS.map((inv) => ({ ...inv }));
+  }, [install, t]);
+
+  const totalKwp = inverters.reduce((acc, inv) => acc + inv.kwp, 0);
+  const totalPanels = inverters.reduce((acc, inv) => acc + inv.panels, 0);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 md:grid-cols-3">
-        {INVERTERS.map((inv, i) => (
+        {inverters.map((inv, i) => (
           <motion.div
             key={inv.key}
             initial={{ opacity: 0, x: i === 0 ? -24 : 24 }}
@@ -792,10 +823,12 @@ function InstallationSection() {
             </p>
 
             <div className="mt-3 flex flex-col gap-2">
-              <p className="flex items-center gap-2 text-[13px] text-muted">
-                <LayoutGrid size={15} className="shrink-0 text-faint" />
-                {t('ajustes.install.panels', { count: inv.panels, watts: inv.panelW })}
-              </p>
+              {inv.panels > 0 && (
+                <p className="flex items-center gap-2 text-[13px] text-muted">
+                  <LayoutGrid size={15} className="shrink-0 text-faint" />
+                  {t('ajustes.install.panels', { count: inv.panels, watts: inv.panelW })}
+                </p>
+              )}
               {inv.battery && (
                 <p className="flex items-center gap-2 text-[13px] text-muted">
                   <BatteryCharging size={15} className="shrink-0 text-faint" />
@@ -826,18 +859,20 @@ function InstallationSection() {
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('ajustes.install.theoretical')}</p>
             <p className="font-display text-3xl font-bold leading-tight text-app">
-              {fmtKwp(TOTAL_KWP)} <span className="text-base font-medium text-faint">kWp</span>
+              {fmtKwp(totalKwp)} <span className="text-base font-medium text-faint">kWp</span>
             </p>
 
             <div className="mt-3 flex flex-col gap-2">
               <p className="flex items-center gap-2 text-[13px] text-muted">
                 <Zap size={15} className="shrink-0 text-faint" />
-                {INVERTERS.length} {t('ajustes.install.inverters')}
+                {inverters.length} {t('ajustes.install.inverters')}
               </p>
-              <p className="flex items-center gap-2 text-[13px] text-muted">
-                <LayoutGrid size={15} className="shrink-0 text-faint" />
-                {INVERTERS.reduce((a, inv) => a + inv.panels, 0)} {t('ajustes.install.panelsShort')}
-              </p>
+              {totalPanels > 0 && (
+                <p className="flex items-center gap-2 text-[13px] text-muted">
+                  <LayoutGrid size={15} className="shrink-0 text-faint" />
+                  {totalPanels} {t('ajustes.install.panelsShort')}
+                </p>
+              )}
             </div>
           </div>
         </motion.div>

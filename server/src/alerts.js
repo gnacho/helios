@@ -133,21 +133,23 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     }
 
     // ── Inversor 2 offline (fox): pinza unavailable/unknown, solo de día ──
-    // Solo si la topología tiene un 2º inversor (la alerta fox_offline está
-    // pensada para la pinza local del Fox).
+    // Solo si la topología tiene un 2º inversor. El nombre real sale de la
+    // topología (issue #39) para que la notificación no diga "Fox" en otra
+    // instalación.
     const inv2 = t.inverters[1]
     if (deDia && inv2?.powerId) {
       const inv2State = ha.getState(inv2.powerId)?.state
+      const inv2Datos = { nombre: inv2.name }
       if (inv2State === 'unavailable' || inv2State === 'unknown') {
         estado.fox.mal++
         if (!estado.fox.alertado && estado.fox.mal >= TICKS_FOX_OFFLINE) {
           estado.fox.alertado = true
-          disparar('fox_offline', {}, { severity: 'high' })
+          disparar('fox_offline', inv2Datos, { severity: 'high' })
         }
       } else {
         if (estado.fox.alertado) {
           estado.fox.alertado = false
-          disparar('fox_ok', {}, { severity: 'normal' })
+          disparar('fox_ok', inv2Datos, { severity: 'normal' })
         }
         estado.fox.mal = 0
       }

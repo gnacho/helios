@@ -122,16 +122,17 @@ export function computeLive(ha) {
   if (!ha.connected) alerts.push({ id: 'haos', severity: 'critical', text: 'Sin conexión con Home Assistant' })
 
   // Estado del inversor: desde statusAttrsId (opcional). Si no hay sensor con
-  // esos atributos, no hay alerta de inversor/scraper (genérico).
+  // esos atributos, no hay alerta de inversor/scraper (genérico). Textos sin
+  // marca: el nombre real vive en la topología, no aquí (issue #39).
   const statusAttrs = t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes || {} : {}
   if (t.statusAttrsId && statusAttrs.inverterOnline === 0)
-    alerts.push({ id: 'inversor', severity: 'critical', text: 'Inversor Solis offline' })
+    alerts.push({ id: 'inversor', severity: 'critical', text: 'Inversor offline' })
   const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate).getTime() : null
   if (t.statusAttrsId && lastUpd && (Date.now() - lastUpd) / 60000 > 15)
     alerts.push({
       id: 'scraper',
       severity: 'warning',
-      text: `Datos del Solis antiguos (hace ${Math.round((Date.now() - lastUpd) / 60000)} min)`,
+      text: `Datos de producción antiguos (hace ${Math.round((Date.now() - lastUpd) / 60000)} min)`,
     })
 
   if (soc > 0 && soc <= 20) alerts.push({ id: 'bateria', severity: 'info', text: `Batería en reserva (${round1(soc)}%)` })
