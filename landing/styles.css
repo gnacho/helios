@@ -284,14 +284,14 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 }
 .theater-sub { color: rgb(255 255 255 / 0.75); margin-top: 4px; font-size: 0.95rem; text-shadow: 0 1px 10px rgb(0 0 0 / 0.4); }
 .theater-widgets {
-  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, minmax(0, 1fr));
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto;
   gap: 14px;
   margin-top: 22px; text-align: left;
 }
-.widget { padding: 16px 18px; height: 100%; min-height: 0; }
+.widget { padding: 16px 18px; min-height: 0; }
 .live-widget, .history-widget { display: flex; flex-direction: column; }
-.live-widget canvas { flex: 1; min-height: 120px; }
-.history-widget canvas { flex: 1; min-height: 110px; }
+.live-widget canvas { height: 220px; }
+.history-widget canvas { height: 200px; }
 .flow-widget .flow-diagram { margin: auto; }
 .widget-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -299,7 +299,7 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 }
 .widget canvas { width: 100%; display: block; }
 .battery-widget { display: flex; flex-direction: column; padding: 16px 18px; }
-.battery-body { display: flex; gap: 18px; align-items: center; flex: 1; min-height: 0; }
+.battery-body { display: flex; gap: 18px; align-items: center; min-height: 0; }
 .battery-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
 .battery-ring { position: relative; }
 .ring-bg { fill: none; stroke: rgb(255 255 255 / 0.12); stroke-width: 8; }
@@ -314,7 +314,7 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 }
 .battery-center small { font-size: 0.9rem; color: rgb(255 255 255 / 0.6); margin-left: 2px; }
 .battery-status { color: rgb(255 255 255 / 0.7); font-size: 0.75rem; }
-.battery-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; min-width: 0; }
+.battery-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
 .battery-metric {
   display: flex; flex-direction: column; gap: 2px;
   background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.1);
