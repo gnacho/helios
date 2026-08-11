@@ -7,6 +7,7 @@ import { initSchema } from '../src/db.js'
 import { kvGet, kvSet } from '../src/db.js'
 import { configurePush, notifyUsers, flushNotificationQueue, _setSendFn, _resetForTests } from '../src/push.js'
 import { createAlertsEngine, enviarResumenDiario, proximoEnvioResumen, ejecutarResumenSiToca, RESUMEN_OFFSET_MIN, HORA_RESUMEN_DIARIO } from '../src/alerts.js'
+import { _setForTests, LEGACY_TOPOLOGY } from '../src/install.js'
 
 // Par VAPID real (setVapidDetails valida formato; claves fake no pasan).
 const KEYS = webpush.generateVAPIDKeys()
@@ -18,9 +19,13 @@ function configura() {
 let db
 beforeEach(() => {
   _resetForTests()
+  _setForTests(LEGACY_TOPOLOGY)
   db = initSchema(new Database(':memory:'))
 })
-afterEach(() => _resetForTests())
+afterEach(() => {
+  _resetForTests()
+  _setForTests(LEGACY_TOPOLOGY)
+})
 
 function insertUser(username, language = 'es') {
   const id = crypto.randomUUID()
@@ -232,6 +237,43 @@ describe('motor de alertas', () => {
     haFox.getState = mockHa({ foxState: '120.0' }).getState
     engine.tick()
     expect(llamadas.map((l) => l.tipo)).toEqual(['fox_offline', 'fox_ok'])
+  })
+
+  it('fox offline: el nombre del inversor sale de la topología (issue #39, no "Fox" hardcodeado)', () => {
+    _setForTests({
+      ...LEGACY_TOPOLOGY,
+      inverters: [
+        LEGACY_TOPOLOGY.inverters[0],
+        { ...LEGACY_TOPOLOGY.inverters[1], key: 'inv2', name: 'Secundario', powerId: 'sensor.almacen_pinza_power_b' },
+      ],
+    })
+    const { llamadas, notifyFn } = capturaNotifs()
+    const engine = createAlertsEngine({ db, ha: mockHa({ foxState: 'unavailable' }), solar: mockSolar(), notifyFn })
+    engine.tick()
+    engine.tick()
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['fox_offline'])
+    expect(llamadas[0].datos.nombre).toBe('Secundario')
+  })
+
+  it('fox offline: el cuerpo push usa el nombre de la topología, sin marca (issue #39)', async () => {
+    _setForTests({
+      ...LEGACY_TOPOLOGY,
+      inverters: [
+        LEGACY_TOPOLOGY.inverters[0],
+        { ...LEGACY_TOPOLOGY.inverters[1], key: 'inv2', name: 'Secundario', powerId: 'sensor.almacen_pinza_power_b' },
+      ],
+    })
+    const u = insertUser('ana')
+    insertSub(u)
+    const enviados = []
+    _setSendFn(async (sub, payload) => enviados.push({ sub, payload: JSON.parse(payload) }))
+    configura()
+    await notifyUsers(db, [u], 'fox_offline', { nombre: 'Secundario' }, { severity: 'high' })
+    expect(enviados).toHaveLength(1)
+    const body = enviados[0].payload.body
+    expect(body).toContain('Secundario')
+    expect(body).not.toMatch(/Fox|Solis/)
   })
 
   it('fox offline: NO se evalúa de noche (sun below_horizon)', () => {
