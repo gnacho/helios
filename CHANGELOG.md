@@ -7,6 +7,13 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-11
+
+### Changed
+
+- **Alertas y notificaciones sin marcas de inversor (issue #39)**: los textos de usuario ya no mencionan "Solis"/"Fox"/"Soluna". `computeLive` emite "Inversor offline" y "Datos de producción antiguos"; el catálogo push de `inversor_offline`/`inversor_ok` es genérico y `fox_offline`/`fox_ok` usan el nombre del 2º inversor desde la topología (fallback "secundario"). Textos de UI (curvas, reparto, nota de estimación, batería, footer, tipos de notificación) genéricos.
+- **Ajustes → Tu instalación y Footer desde la topología**: tarjetas de inversores, kWp total y placas se construyen con `useInstall()`; el footer resume "N inversores · Batería X kWh" en vez del texto específico de la casa.
+
 ## [0.7.0] - 2026-08-11
 
 ### Added
