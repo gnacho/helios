@@ -42,7 +42,7 @@ const alerts = await import('./alerts.js')
 const { updateStatus, applyUpdate } = await import('./update.js')
 const install = await import('./install.js')
 const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
-const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema } = schemas
+const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema, topologySchema } = schemas
 
 const db = dbModule.openDb(config.dataDir)
 const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet, audit, auditRange, auditCount, purgeAudit } = dbModule
@@ -599,6 +599,9 @@ guarded.get('/install', (c) => {
   if (resolved.weatherTemp) rows.push({ role: 'weather_temp', entidad: resolved.weatherTemp })
   return c.json({
     configured,
+    // Topología completa resuelta (issue #41): el editor de Ajustes la carga
+    // tal cual y la guarda con PUT /api/config → { topology }.
+    topology: resolved,
     inverters: resolved.inverters.map((inv) => ({
       key: inv.key,
       name: inv.name,
@@ -621,10 +624,26 @@ guarded.get('/install', (c) => {
 guarded.put('/config', async (c) => {
   const body = await c.req.json().catch(() => null)
   if (!body || typeof body !== 'object') return c.json({ error: 'body inválido' }, 400)
+  // El admin puede escribir la topología completa (issue #41). Se valida con el
+  // schema antes de guardarla; si llega vacía/rota, se rechaza con 400.
+  if (body.topology !== undefined) {
+    const parsed = topologySchema.safeParse(body.topology)
+    if (!parsed.success) {
+      const first = parsed.error.issues[0]
+      const path = first?.path?.join('.') || 'topology'
+      const reason = first?.message || 'topología inválida'
+      return c.json({ error: `topología inválida en ${path}: ${reason}` }, 400)
+    }
+    body.topology = parsed.data
+  }
   kvSet(db, 'install_config', JSON.stringify(body))
+  // Re-resuelve la topología en memoria para que GET /api/install devuelva la
+  // configurada. Las suscripciones de entidades con HAOS se fijan al arrancar,
+  // así que un cambio pleno sigue requiriendo reinicio (restartNeeded).
+  install.resolveAndSet(db)
   const me = dbModule.getUserById(db, c.get('userId'))
   audit(db, me?.username || 'unknown', c.get('userId'), 'settings.change', { keys: Object.keys(body) })
-  return c.json({ ok: true })
+  return c.json({ ok: true, restartNeeded: body.topology !== undefined })
 })
 
 app.route('/api', guarded)

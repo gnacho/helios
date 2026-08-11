@@ -2,6 +2,7 @@
 // N inversores, grid sin scraper, estados de batería en varios idiomas.
 import { describe, it, expect, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
+import { z } from 'zod'
 import { initSchema, kvSet } from '../src/db.js'
 import {
   resolveInstall,
@@ -14,6 +15,9 @@ import {
   LEGACY_TOPOLOGY,
   GENERIC_TOPOLOGY,
 } from '../src/install.js'
+import { createSchemas } from '../../shared/schemas.js'
+
+const { topologySchema } = createSchemas(z)
 
 afterEach(() => {
   // Volver al perfil legacy por defecto (los tests existentes dependen de él).
@@ -89,6 +93,44 @@ describe('normalizeTopology', () => {
     expect(t.inverters[0].name).toBe('Inverter 1')
     expect(t.inverters[0].powerUnit).toBe('kW')
     expect(t.grid).toEqual(LEGACY_TOPOLOGY.grid)
+  })
+})
+
+describe('topologySchema (PUT /api/config, issue #41)', () => {
+  it('acepta la topología legacy completa sin cambios', () => {
+    const r = topologySchema.safeParse(LEGACY_TOPOLOGY)
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.inverters).toHaveLength(2)
+      expect(r.data.grid.mode).toBe('attrs')
+    }
+  })
+
+  it('acepta una topología genérica con batería desactivada', () => {
+    const r = topologySchema.safeParse(GENERIC_TOPOLOGY)
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.battery.enabled).toBe(false)
+  })
+
+  it('rechaza una topología sin inversores (inverters vacío)', () => {
+    const r = topologySchema.safeParse({ ...LEGACY_TOPOLOGY, inverters: [] })
+    expect(r.success).toBe(false)
+  })
+
+  it('rechaza powerUnit no reconocido', () => {
+    const r = topologySchema.safeParse({
+      ...LEGACY_TOPOLOGY,
+      inverters: [{ ...LEGACY_TOPOLOGY.inverters[0], powerUnit: 'MW' }],
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it('rechaza grid.mode inválido', () => {
+    const r = topologySchema.safeParse({
+      ...LEGACY_TOPOLOGY,
+      grid: { ...LEGACY_TOPOLOGY.grid, mode: 'magic' },
+    })
+    expect(r.success).toBe(false)
   })
 })
 

@@ -42,5 +42,63 @@ export function createSchemas(z) {
     adminPasswordSchema: z.object({ password: z.string().min(6) }),
     adminLanguageSchema: z.object({ language: z.string().regex(/^(es|en|zh-CN)$/) }),
     adminRoleSchema: z.object({ role: z.enum(['user', 'admin']) }),
+
+    // Topología de la instalación (issue #41): lo que el admin edita desde la
+    // UI de Ajustes y se guarda como `install_config.topology`.
+    topologySchema: z.object({
+      inverters: z.array(
+        z.object({
+          key: z.string().min(1),
+          name: z.string().min(1),
+          model: z.string().optional().default(''),
+          kwp: z.number().min(0).optional().default(0),
+          panels: z.string().optional().default(''),
+          tempC: z.number().optional().default(0),
+          hasBattery: z.boolean().optional().default(false),
+          batteryKwh: z.number().min(0).optional().default(0),
+          powerId: z.string().optional().default(''),
+          powerUnit: z.enum(['kW', 'W']).optional().default('kW'),
+          energyId: z.string().optional().default(''),
+          energyAcc: z.enum(['sum', 'state']).optional().default('state'),
+          energyCap: z.number().min(0).optional().default(100),
+          deepIds: z.array(z.string()).optional().default([]),
+          glitchOffsets: z.record(z.string(), z.number()).optional().default({}),
+        })
+      ).min(1),
+      battery: z.object({
+        enabled: z.boolean().optional().default(false),
+        powerId: z.string().optional().default(''),
+        stateId: z.string().optional().default(''),
+        socId: z.string().optional().default(''),
+        capacityKwh: z.number().min(0).optional().default(0),
+        chargingStates: z.array(z.string()).optional().default([]),
+        dischargingStates: z.array(z.string()).optional().default([]),
+      }).optional().default({}),
+      grid: z.object({
+        mode: z.enum(['attrs', 'sensor']).optional().default('sensor'),
+        attrsId: z.string().nullable().optional().default(null),
+        sensorId: z.string().nullable().optional().default(null),
+        importId: z.string().nullable().optional().default(null),
+        exportId: z.string().nullable().optional().default(null),
+      }).optional().default({}),
+      statusAttrsId: z.string().nullable().optional().default(null),
+      consumption: z.object({
+        powerIds: z.array(z.string()).optional().default([]),
+        powerUnit: z.enum(['W', 'kW']).optional().default('W'),
+        energyIds: z.array(z.string()).optional().default([]),
+        respaldoId: z.string().nullable().optional().default(null),
+        noRespaldadaId: z.string().nullable().optional().default(null),
+      }).optional().default({}),
+      energy: z.object({
+        gridImportId: z.string().optional().default(''),
+        gridExportId: z.string().optional().default(''),
+        batChargeId: z.string().optional().default(''),
+        batDischargeId: z.string().optional().default(''),
+        consumptionId: z.string().optional().default(''),
+      }).optional().default({}),
+      sun: z.string().optional().default('sun.sun'),
+      weather: z.string().optional().default(''),
+      weatherTemp: z.string().optional().default(''),
+    }),
   }
 }
