@@ -27,6 +27,8 @@ interface KpiCardProps {
   delta?: KpiDelta;
   /** Barra de progreso fina (3px) bajo la cifra, 0–100. */
   progress?: number;
+  /** Color directo (hex) que sobreescribe la paleta semántica (inversores genéricos). */
+  colorHex?: string;
   /** Líneas extra bajo la cifra (p. ej. balance de red). */
   children?: ReactNode;
   onClick?: () => void;
@@ -44,13 +46,14 @@ export default function KpiCard({
   live = false,
   delta,
   progress,
+  colorHex,
   children,
   onClick,
   index = 0,
 }: KpiCardProps) {
   const palette = useEnergyColors();
   const { i18n } = useTranslation();
-  const accent = palette[color];
+  const accent = colorHex ?? palette[color];
   const animated = useAnimatedNumber(value);
   const formatted = new Intl.NumberFormat(numLocale(), {
     minimumFractionDigits: decimals,

@@ -14,7 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { fmtWeekdayDate } from '@/i18n';
 import type { PowerPoint } from '@/data/types';
-import { STEP_MIN } from '@/data/types';
+import { STEP_MIN, seriesInvValue } from '@/data/types';
 import { fmtKw, fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +22,7 @@ const AXIS_TICKS = [0, 180, 360, 540, 720, 900, 1080, 1260, 1440];
 
 interface InverterDayChartProps {
   data: PowerPoint[];
-  dataKey: 'solis' | 'fox';
+  dataKey: string;
   color: string;
   /** "Ahora" simulado (minutos): separa curva real de previsión. */
   nowMin: number;
@@ -59,12 +59,13 @@ export default function InverterDayChart({ data, dataKey, color, nowMin, today, 
 
   const rows = useMemo(() => {
     const nowIdx = Math.round(nowMin / STEP_MIN);
+    const value = (p: PowerPoint) => seriesInvValue(p, dataKey);
     return data.map((p, i) => ({
       t: p.t,
-      past: i <= nowIdx ? p[dataKey] : null,
-      future: i >= nowIdx ? p[dataKey] : null,
+      past: i <= nowIdx ? value(p) : null,
+      future: i >= nowIdx ? value(p) : null,
       // Curva de ayer (mock −8 %)
-      yesterday: p[dataKey] * 0.92,
+      yesterday: value(p) * 0.92,
     }));
   }, [data, dataKey, nowMin]);
 

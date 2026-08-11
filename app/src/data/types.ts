@@ -3,6 +3,7 @@ export interface PowerPoint {
   label: string;
   solis: number;
   fox: number;
+  inverters?: Record<string, number>;
   production: number;
   consumption: number;
   batteryPower: number;
@@ -10,10 +11,22 @@ export interface PowerPoint {
   grid: number;
 }
 
+/** Valor de serie de un inversor por clave: p.inverters[key] o p[key] (solis/fox). */
+export function seriesInvValue(p: PowerPoint, key: string): number {
+  if (p.inverters && key in p.inverters) return p.inverters[key];
+  return (p as unknown as Record<string, number>)[key] ?? 0;
+}
+
 export interface LiveAlert {
   id: string;
   severity: 'critical' | 'warning' | 'info';
   text: string;
+}
+
+export interface LiveInverter {
+  key: string;
+  name: string;
+  kw: number;
 }
 
 export interface LivePower {
@@ -24,6 +37,7 @@ export interface LivePower {
   grid: number;
   solis: number;
   fox: number;
+  inverters?: LiveInverter[];
   at: number;
   alerts?: LiveAlert[];
   batteryStatus?: string;
@@ -56,6 +70,33 @@ export interface DayKpis {
   peakAt: number;
   solisKwh?: number;
   foxKwh?: number;
+  invertersKwh?: Record<string, number>;
+}
+
+export interface InstallInfo {
+  configured: boolean;
+  inverters: {
+    key: string;
+    name: string;
+    model: string;
+    kwp: number;
+    panels: string;
+    hasBattery: boolean;
+    batteryKwh: number;
+  }[];
+  battery: {
+    enabled: boolean;
+    capacityKwh: number;
+  };
+  grid: {
+    mode: 'attrs' | 'sensor';
+  };
+  entities: {
+    role: string;
+    entidad: string;
+    key?: string;
+    name?: string;
+  }[];
 }
 
 export interface HistoryDay {

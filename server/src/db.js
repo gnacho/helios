@@ -126,6 +126,15 @@ function migrate(db) {
     if (!cols.includes('display_name')) db.exec('ALTER TABLE users ADD COLUMN display_name TEXT')
     db.pragma('user_version = 3')
   }
+
+  if (version < 4) {
+    // v4: daily gana inverters_kwh (JSON "clave inversor" → kWh) para topologías
+    // con N inversores (issue #37). solis_kwh/fox_kwh se siguen escribiendo
+    // (los 2 primeros inversores) por compatibilidad con el frontend existente.
+    const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
+    if (!cols.includes('inverters_kwh')) db.exec('ALTER TABLE daily ADD COLUMN inverters_kwh TEXT')
+    db.pragma('user_version = 4')
+  }
 }
 
 export function openDb(dataDir) {
@@ -136,8 +145,8 @@ export function openDb(dataDir) {
 
 export function upsertDaily(db, row) {
   db.prepare(
-    `INSERT INTO daily (date, production_kwh, consumption_kwh, grid_import_kwh, grid_export_kwh, battery_charged_kwh, battery_discharged_kwh, solis_kwh, fox_kwh)
-     VALUES (@date, @production_kwh, @consumption_kwh, @grid_import_kwh, @grid_export_kwh, @battery_charged_kwh, @battery_discharged_kwh, @solis_kwh, @fox_kwh)
+    `INSERT INTO daily (date, production_kwh, consumption_kwh, grid_import_kwh, grid_export_kwh, battery_charged_kwh, battery_discharged_kwh, solis_kwh, fox_kwh, inverters_kwh)
+     VALUES (@date, @production_kwh, @consumption_kwh, @grid_import_kwh, @grid_export_kwh, @battery_charged_kwh, @battery_discharged_kwh, @solis_kwh, @fox_kwh, @inverters_kwh)
      ON CONFLICT(date) DO UPDATE SET
        production_kwh=excluded.production_kwh,
        consumption_kwh=excluded.consumption_kwh,
@@ -146,7 +155,8 @@ export function upsertDaily(db, row) {
        battery_charged_kwh=excluded.battery_charged_kwh,
        battery_discharged_kwh=excluded.battery_discharged_kwh,
        solis_kwh=excluded.solis_kwh,
-       fox_kwh=excluded.fox_kwh`
+       fox_kwh=excluded.fox_kwh,
+       inverters_kwh=excluded.inverters_kwh`
   ).run(row)
 }
 

@@ -31,7 +31,7 @@ const { serve } = await import('@hono/node-server')
 const { serveStatic } = await import('@hono/node-server/serve-static')
 const { Hono } = await import('hono')
 const { streamSSE } = await import('hono/streaming')
-const { config, LIVE_ENTITIES } = await import('./config.js')
+const { config } = await import('./config.js')
 const { HAClient } = await import('./ha.js')
 const dbModule = await import('./db.js')
 const solar = await import('./solar.js')
@@ -40,11 +40,21 @@ const push = await import('./push.js')
 const { registerPushRoutes } = await import('./routes-push.js')
 const alerts = await import('./alerts.js')
 const { updateStatus, applyUpdate } = await import('./update.js')
+const install = await import('./install.js')
 const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
 const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema } = schemas
 
 const db = dbModule.openDb(config.dataDir)
 const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet, audit, auditRange, auditCount, purgeAudit } = dbModule
+// Topología resuelta: install_config (kv) > instalación existente (legacy) >
+// instalación nueva (genérica). Se instala ANTES de conectar con HAOS para que
+// LIVE_ENTITIES y el motor de alertas usen los sensores correctos.
+const topology = install.resolveAndSet(db)
+console.log(
+  `[helios] topología: ${topology.inverters.length} inversor(es)` +
+    (topology.battery.enabled ? ', batería' : ', sin batería') +
+    `, grid=${topology.grid.mode}`
+)
 await auth.ensureBootstrapAdmin(db)
 push.configurePush({
   publicKey: process.env.VAPID_PUBLIC_KEY,
@@ -58,7 +68,7 @@ let backfillState = 'pending'
 
 ha.on('connected', async () => {
   console.log('[helios] HAOS conectado')
-  await ha.subscribeEntities(LIVE_ENTITIES)
+  await ha.subscribeEntities(install.liveEntities())
   haReady = true
   if (backfillState === 'pending') {
     backfillState = 'running'
@@ -551,6 +561,61 @@ guarded.get('/config', (c) => {
           co2KgPerKwh: config.co2PerKwh,
         }
   )
+})
+
+// Topología resuelta + entidades en uso. Fuente de verdad para el frontend
+// (Ajustes "Conexión y datos"): sustituye la lista ENTIDADES hardcodeada.
+// `configured` indica si el admin guardó una topología explícita en kv.
+guarded.get('/install', (c) => {
+  const resolved = install.getInstall()
+  const raw = kvGet(db, 'install_config')
+  let configured = false
+  if (raw) {
+    try {
+      configured = !!(JSON.parse(raw).topology)
+    } catch {}
+  }
+  const entities = install.getEntities()
+  const rows = []
+  for (const inv of resolved.inverters) {
+    rows.push({ role: 'inverter', key: inv.key, entidad: inv.powerId, name: inv.name })
+    if (inv.energyId) rows.push({ role: 'inverter_energy', key: inv.key, entidad: inv.energyId, name: inv.name })
+  }
+  for (const id of resolved.consumption.powerIds) rows.push({ role: 'consumption', entidad: id })
+  if (resolved.battery.enabled) {
+    if (resolved.battery.powerId) rows.push({ role: 'battery_power', entidad: resolved.battery.powerId })
+    if (resolved.battery.socId) rows.push({ role: 'battery_soc', entidad: resolved.battery.socId })
+    if (resolved.battery.stateId) rows.push({ role: 'battery_state', entidad: resolved.battery.stateId })
+  }
+  if (resolved.grid.mode === 'attrs' && resolved.grid.attrsId) rows.push({ role: 'grid_attrs', entidad: resolved.grid.attrsId })
+  else {
+    if (resolved.grid.sensorId) rows.push({ role: 'grid_sensor', entidad: resolved.grid.sensorId })
+    if (resolved.grid.importId) rows.push({ role: 'grid_import', entidad: resolved.grid.importId })
+    if (resolved.grid.exportId) rows.push({ role: 'grid_export', entidad: resolved.grid.exportId })
+  }
+  if (resolved.statusAttrsId) rows.push({ role: 'inverter_status', entidad: resolved.statusAttrsId })
+  rows.push({ role: 'sun', entidad: resolved.sun })
+  if (resolved.weather) rows.push({ role: 'weather', entidad: resolved.weather })
+  if (resolved.weatherTemp) rows.push({ role: 'weather_temp', entidad: resolved.weatherTemp })
+  return c.json({
+    configured,
+    inverters: resolved.inverters.map((inv) => ({
+      key: inv.key,
+      name: inv.name,
+      model: inv.model,
+      kwp: inv.kwp,
+      panels: inv.panels,
+      hasBattery: inv.hasBattery,
+      batteryKwh: inv.batteryKwh,
+    })),
+    battery: {
+      enabled: resolved.battery.enabled,
+      capacityKwh: resolved.battery.capacityKwh,
+    },
+    grid: { mode: resolved.grid.mode },
+    entities: rows,
+    energyEntities: entities,
+  })
 })
 
 guarded.put('/config', async (c) => {

@@ -366,7 +366,19 @@
       "desc_solis_bateria_soc": "Soluna battery (%)",
       "desc_solis_bateria_potencia": "Charge/discharge power (kW)",
       "desc_solis_scraper": "Solis grid: direction and power (attributes)",
-      "desc_sun": "Sunrise/sunset"
+      "desc_sun": "Sunrise/sunset",
+      "desc_inverter": "Production of {{name}} (kW)",
+      "desc_inverter_energy": "Energy of {{name}} today (kWh)",
+      "desc_consumption": "Home consumption (W)",
+      "desc_battery_power": "Battery charge/discharge power (kW)",
+      "desc_battery_state": "Battery state",
+      "desc_grid_sensor": "Grid: signed power (+ import / − export)",
+      "desc_grid_attrs": "Grid: direction and power (attributes)",
+      "desc_grid_import": "Grid import power",
+      "desc_grid_export": "Grid export power",
+      "desc_inverter_status": "Inverter status (online, station)",
+      "desc_weather": "Weather",
+      "desc_weather_temp": "Outdoor temperature"
     },
     "install": {
       "name": "Installation name",

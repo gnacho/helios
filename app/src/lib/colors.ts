@@ -67,3 +67,23 @@ export function useEnergyColors(): EnergyPalette {
     fox: energyColor('fox', isDark),
   };
 }
+
+/**
+ * Color de un inversor por clave (issue #37). Los dos primeros (solis/fox)
+ * mantienen su color semántico; los adicionales usan una paleta cíclica.
+ */
+const EXTRA_INV_COLORS: { light: string; dark: string }[] = [
+  { light: '#10B981', dark: '#34D399' },
+  { light: '#F43F5E', dark: '#FB7185' },
+  { light: '#06B6D4', dark: '#22D3EE' },
+  { light: '#F59E0B', dark: '#FBBF24' },
+  { light: '#EC4899', dark: '#F472B6' },
+  { light: '#84CC16', dark: '#A3E635' },
+];
+
+export function inverterColor(key: string, isDark: boolean, index = 0): string {
+  if (key === 'solis') return energyColor('solis', isDark);
+  if (key === 'fox') return energyColor('fox', isDark);
+  const c = EXTRA_INV_COLORS[index % EXTRA_INV_COLORS.length];
+  return isDark ? c.dark : c.light;
+}

@@ -43,7 +43,7 @@
 // umbrales con historial real (2-Ago-2026: corte_red no tenía historial y no
 // se podía evaluar su tasa de falsos positivos).
 import { kvGet, kvSet, audit } from './db.js'
-import { ENTITIES } from './config.js'
+import { getInstall } from './install.js'
 import { notifyAll } from './push.js'
 
 const TICKS_INVERSOR_OFFLINE = 2
@@ -105,17 +105,19 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
 
   function tick() {
     if (!ha.connected) return // sin HAOS no hay datos fiables; la alerta HAOS ya se ve por SSE
+    const t = getInstall()
     const live = solar.computeLive(ha)
-    const scraper = ha.getState(ENTITIES.scraper)
-    const attrs = scraper?.attributes || {}
-    const lastUpd = attrs.lastUpdate ? new Date(attrs.lastUpdate).getTime() : null
+    // Estado del inversor: sensor HAOS con atributos (statusAttrsId, opcional).
+    // Sin él no hay señal de online/scraper → la alerta inversor no se evalúa.
+    const statusAttrs = t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes || {} : {}
+    const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate).getTime() : null
     const fresco = lastUpd !== null && Date.now() - lastUpd < 15 * 60000
 
-    // ── Inversor offline: solo de día y con scraper fresco ──────────────
-    const sun = ha.getState(ENTITIES.sun)
+    // ── Inversor offline: solo con statusAttrs, de día y con datos frescos ──
+    const sun = ha.getState(t.sun)
     const deDia = !sun || sun.state === 'above_horizon' // fail-open si falta sun.sun
-    if (fresco && deDia) {
-      if (attrs.inverterOnline === 0) {
+    if (t.statusAttrsId && fresco && deDia) {
+      if (statusAttrs.inverterOnline === 0) {
         estado.inversor.mal++
         if (!estado.inversor.alertado && estado.inversor.mal >= TICKS_INVERSOR_OFFLINE) {
           estado.inversor.alertado = true
@@ -130,10 +132,13 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
       }
     }
 
-    // ── Fox offline: pinza unavailable/unknown, solo de día ─────────────
-    if (deDia) {
-      const foxState = ha.getState(ENTITIES.pvFox)?.state
-      if (foxState === 'unavailable' || foxState === 'unknown') {
+    // ── Inversor 2 offline (fox): pinza unavailable/unknown, solo de día ──
+    // Solo si la topología tiene un 2º inversor (la alerta fox_offline está
+    // pensada para la pinza local del Fox).
+    const inv2 = t.inverters[1]
+    if (deDia && inv2?.powerId) {
+      const inv2State = ha.getState(inv2.powerId)?.state
+      if (inv2State === 'unavailable' || inv2State === 'unknown') {
         estado.fox.mal++
         if (!estado.fox.alertado && estado.fox.mal >= TICKS_FOX_OFFLINE) {
           estado.fox.alertado = true
@@ -149,10 +154,11 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     }
 
     // ── Corte de red (firma diferencial de pinzas, ver cabecera) ───────
-    // Desactivado por defecto: ver corteRedEnabled(). El bloque solo se evalúa
-    // si el flag `install_config.corteRedEnabled` está en true.
-    if (corteRedEnabled()) {
-    const gridMag = Math.abs(Number(attrs.currentGridPower)) || 0
+    // Desactivado por defecto: ver corteRedEnabled(). Requiere además la
+    // topología con circuitos respaldado/no-respaldado y grid por atributos
+    // (si no, no hay firma).
+    if (corteRedEnabled() && t.grid.mode === 'attrs' && t.consumption.respaldoId && t.consumption.noRespaldadaId) {
+    const gridMag = Math.abs(Number(statusAttrs.currentGridPower)) || 0
     const respaldoKw = live.respaldoKw ?? 0
     const noRespaldadaKw = live.noRespaldadaKw ?? 0
     // La batería debe estar DESCARGANDO: en un corte real con EPS del Solis
@@ -224,7 +230,7 @@ export async function enviarResumenDiario(db, ha, solar, notifyFn = notifyAll) {
 // se salta un día. La guarda anti-doble-envío del mismo día la lleva
 // ejecutarResumenSiToca (persistida en kv). `ahora` se inyecta para tests.
 export function proximoEnvioResumen(ha, ahora = new Date()) {
-  const sunsetIso = ha.getState(ENTITIES.sun)?.attributes?.next_setting
+  const sunsetIso = ha.getState(getInstall().sun)?.attributes?.next_setting
   const sunset = sunsetIso ? new Date(sunsetIso) : null
   if (sunset && Number.isFinite(sunset.getTime())) {
     return new Date(sunset.getTime() + RESUMEN_OFFSET_MIN * 60000)
@@ -263,7 +269,7 @@ export async function ejecutarResumenSiToca(db, ha, solar, notifyFn = notifyAll)
 export function scheduleResumenDiario(db, ha, solar, notifyFn) {
   const ahora = new Date()
   const next = proximoEnvioResumen(ha, ahora)
-  const sunsetDisponible = !!ha.getState(ENTITIES.sun)?.attributes?.next_setting
+  const sunsetDisponible = !!ha.getState(getInstall().sun)?.attributes?.next_setting
   const delay = next.getTime() - ahora.getTime()
   // Carrera de arranque: al iniciar (o justo tras reconectar HAOS) sun.sun
   // puede no haber llegado todavía como estado. Si el dato no está y el

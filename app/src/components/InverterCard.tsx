@@ -20,7 +20,7 @@ interface InverterCardProps {
   /** Porcentaje que aporta al total de hoy (0–100). */
   sharePct: number;
   color: string;
-  tab: 'solis' | 'fox';
+  tab: string;
   index?: number;
 }
 

@@ -319,6 +319,9 @@ export function EnergyDataProvider({ children }: { children: ReactNode }) {
               grid: p.grid,
               solis: p.solis,
               fox: p.fox,
+              inverters: p.inverters
+                ? Object.entries(p.inverters).map(([key, kw]) => ({ key, name: key, kw }))
+                : undefined,
               at: p.t,
               sun: live.sun,
               weather: live.weather,

@@ -24,12 +24,15 @@ from Home Assistant, and savings in euros computed against the real
 electricity tariff. One Node + SQLite service running in an LXC at home.
 No cloud.
 
-> **Built for one install.** Helios runs my own setup — two specific
-> inverters and one battery — and those details are hardcoded. It is not a
-> generic, plug-and-play solar monitor, and I have no immediate plans to
-> make it one (configurable hardware is on the [roadmap](#roadmap), but not
-> done). It will probably not be useful to you as-is. Fork it and adapt it
-> to your own installation.
+> **Started as one install, now mostly configurable.** Helios began as my own
+> setup (two specific inverters and one battery) and those details were
+> hardcoded. Since 0.7.x the installation topology (inverters, battery, grid
+> source, sensor mapping) is resolved from `install_config` — any HAOS
+> installation can run it by configuring its sensors, without touching code.
+> The dashboard, inverters page and settings adapt to the resolved topology
+> (N inverters). That said, it is not a fully polished plug-and-play product
+> yet (no in-app topology editor), so a fresh install still requires editing a
+> JSON config. Fork it and adapt it to your own installation.
 
 ## Why does this exist?
 
@@ -142,13 +145,45 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 - Update = deploy the new build and restart the service; the DB and the
   `.env` (`/opt/helios/`) always survive.
 
+## Configuring the installation (topology)
+
+Helios reads the installation topology (inverters, battery, grid source, HAOS
+sensor mapping) from `install_config`, a JSON in the kv store. On first boot it
+auto-resolves it: an existing DB keeps the legacy profile (scraper + Solis/Fox
++ battery), an empty DB gets a generic profile (no scraper, grid from plain
+sensors). To set your own sensors, write a `topology` object:
+
+```
+PUT /api/config  (auth admin)
+{
+  "topology": {
+    "inverters": [
+      { "key": "inv1", "name": "My inverter", "kwp": 5.0, "powerId": "sensor.inverter_power", "powerUnit": "kW", "energyId": "sensor.inverter_energy_today", "energyAcc": "state", "deepIds": ["sensor.inverter_energy_total"] }
+    ],
+    "battery": { "enabled": false },
+    "grid": { "mode": "sensor", "sensorId": "sensor.grid_net" },
+    "consumption": { "powerIds": ["sensor.house_power"], "powerUnit": "W", "energyIds": ["sensor.house_energy"] },
+    "sun": "sun.sun",
+    "weather": "weather.forecast"
+  }
+}
+```
+
+`GET /api/install` returns the resolved topology and the entity list the UI
+shows in Settings. `powerUnit` is `kW` or `W`; battery charge/discharge states
+(`chargingStates`/`dischargingStates`) accept any strings so HAOS languages
+other than Spanish work. Everything comes from HAOS: `grid.mode: "attrs"`
+reads grid power/direction from a sensor's attributes (the Solis scraper is
+just such a sensor), `grid.mode: "sensor"` reads plain grid sensors, and
+`statusAttrsId` optionally provides inverter online/station status.
+
 ## Roadmap
 
 | Phase | Focus | Status |
 |---|---|---|
 | 1 | Live read-only panel (production vs consumption) | Done |
 | 2 | Real backend, multi-user, history, battery, alerts, PWA, hardening | Done (~0.6.x) |
-| 3 | Configurable inverters and panels (still under HAOS) | Planned |
+| 3 | Configurable hardware (still under HAOS) | Mostly done (0.7.x) |
 | 4 | Multi-installation: several HAOS or several Helios via API | Exploring |
 
 See [ROADMAP.md](ROADMAP.md) for detail.

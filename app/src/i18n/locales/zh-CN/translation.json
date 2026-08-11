@@ -363,7 +363,19 @@
       "desc_solis_bateria_soc": "Soluna 电池 (%)",
       "desc_solis_bateria_potencia": "充放电功率 (kW)",
       "desc_solis_scraper": "Solis 电网：方向和功率（属性）",
-      "desc_sun": "日出/日落"
+      "desc_sun": "日出/日落",
+      "desc_inverter": "{{name}} 发电 (kW)",
+      "desc_inverter_energy": "{{name}} 今日发电 (kWh)",
+      "desc_consumption": "家庭用电 (W)",
+      "desc_battery_power": "电池充放电功率 (kW)",
+      "desc_battery_state": "电池状态",
+      "desc_grid_sensor": "电网：带符号功率（+ 输入 / − 输出）",
+      "desc_grid_attrs": "电网：方向和功率（属性）",
+      "desc_grid_import": "电网输入功率",
+      "desc_grid_export": "电网输出功率",
+      "desc_inverter_status": "逆变器状态（在线，站点）",
+      "desc_weather": "天气",
+      "desc_weather_temp": "室外温度"
     },
     "install": {
       "name": "设备名称",
