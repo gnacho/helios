@@ -79,7 +79,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[88vh] max-w-4xl overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{t('ajustes.topology.title')}</DialogTitle>
           <DialogDescription>{t('ajustes.topology.desc')}</DialogDescription>
@@ -109,12 +109,19 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                     </button>
                   )}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <Field label={t('ajustes.topology.name')}>
                     <Input value={inv.name} onChange={(e) => kv.inv(i, { name: e.target.value })} />
                   </Field>
                   <Field label={t('ajustes.topology.model')}>
                     <Input value={inv.model} onChange={(e) => kv.inv(i, { model: e.target.value })} />
+                  </Field>
+                  <Field label={t('ajustes.topology.panels')}>
+                    <Input
+                      value={inv.panels}
+                      placeholder="10 × 440 W"
+                      onChange={(e) => kv.inv(i, { panels: e.target.value })}
+                    />
                   </Field>
                   <Field label={t('ajustes.topology.kwp')}>
                     <Input
@@ -123,13 +130,6 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                       min={0}
                       value={inv.kwp || ''}
                       onChange={(e) => kv.inv(i, { kwp: Number(e.target.value) || 0 })}
-                    />
-                  </Field>
-                  <Field label={t('ajustes.topology.panels')}>
-                    <Input
-                      value={inv.panels}
-                      placeholder="10 × 440 W"
-                      onChange={(e) => kv.inv(i, { panels: e.target.value })}
                     />
                   </Field>
                   <Field label={t('ajustes.topology.powerId')}>
@@ -197,7 +197,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                       </label>
                     </div>
                   </div>
-                  <Field label={t('ajustes.topology.deepIds')} className="sm:col-span-2">
+                  <Field label={t('ajustes.topology.deepIds')} className="sm:col-span-3">
                     <Input
                       value={arrToCsv(inv.deepIds)}
                       placeholder="sensor.inverter_energy_total"
@@ -263,8 +263,8 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
           <fieldset className="flex flex-col gap-3">
             <legend className="text-[13px] font-semibold text-app">{t('ajustes.topology.battery')}</legend>
             <div className="rounded-xl border border-app bg-surface p-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex items-center gap-2 sm:col-span-2">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="flex items-center gap-2 sm:col-span-3">
                   <Switch
                     checked={draft.battery.enabled}
                     onCheckedChange={(v) => kv.set({ battery: { ...draft.battery, enabled: v } })}
@@ -332,7 +332,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
           <fieldset className="flex flex-col gap-3">
             <legend className="text-[13px] font-semibold text-app">{t('ajustes.topology.grid')}</legend>
             <div className="rounded-xl border border-app bg-surface p-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <Field label={t('ajustes.topology.gridMode')}>
                   <Select value={draft.grid.mode} onValueChange={(v) => kv.set({ grid: { ...draft.grid, mode: v as 'attrs' | 'sensor' } })}>
                     <SelectTrigger>
@@ -344,7 +344,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label={t('ajustes.topology.statusAttrsId')}>
+                <Field label={t('ajustes.topology.statusAttrsId')} className="sm:col-span-2">
                   <Input
                     value={draft.statusAttrsId || ''}
                     placeholder="sensor.inverter_status"
@@ -353,7 +353,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                   />
                 </Field>
                 {draft.grid.mode === 'attrs' ? (
-                  <Field label={t('ajustes.topology.attrsId')} className="sm:col-span-2">
+                  <Field label={t('ajustes.topology.attrsId')} className="sm:col-span-3">
                     <Input
                       value={draft.grid.attrsId || ''}
                       placeholder="sensor.grid_scraper"
@@ -371,7 +371,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                         onChange={(e) => kv.set({ grid: { ...draft.grid, sensorId: e.target.value || null } })}
                       />
                     </Field>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 sm:col-span-2">
                       <Field label={t('ajustes.topology.importId')}>
                         <Input
                           value={draft.grid.importId || ''}
@@ -399,8 +399,8 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
           <fieldset className="flex flex-col gap-3">
             <legend className="text-[13px] font-semibold text-app">{t('ajustes.topology.consumption')}</legend>
             <div className="rounded-xl border border-app bg-surface p-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label={t('ajustes.topology.powerIds')} className="sm:col-span-2">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label={t('ajustes.topology.powerIds')} className="sm:col-span-3">
                   <Input
                     value={arrToCsv(draft.consumption.powerIds)}
                     placeholder="sensor.house_power, sensor.garage_power"
@@ -408,7 +408,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                     onChange={(e) => kv.set({ consumption: { ...draft.consumption, powerIds: csvToArr(e.target.value) } })}
                   />
                 </Field>
-                <Field label={t('ajustes.topology.energyIds')} className="sm:col-span-2">
+                <Field label={t('ajustes.topology.energyIds')} className="sm:col-span-3">
                   <Input
                     value={arrToCsv(draft.consumption.energyIds)}
                     placeholder="sensor.house_energy"
@@ -424,7 +424,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                     onChange={(e) => kv.set({ consumption: { ...draft.consumption, respaldoId: e.target.value || null } })}
                   />
                 </Field>
-                <Field label={t('ajustes.topology.noRespaldadaId')}>
+                <Field label={t('ajustes.topology.noRespaldadaId')} className="sm:col-span-2">
                   <Input
                     value={draft.consumption.noRespaldadaId || ''}
                     placeholder="sensor.non_backup_power"
@@ -440,7 +440,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
           <fieldset className="flex flex-col gap-3">
             <legend className="text-[13px] font-semibold text-app">{t('ajustes.topology.energy')}</legend>
             <div className="rounded-xl border border-app bg-surface p-3">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <Field label={t('ajustes.topology.gridImportId')}>
                   <Input
                     value={draft.energy.gridImportId}
@@ -457,6 +457,14 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                     onChange={(e) => kv.set({ energy: { ...draft.energy, gridExportId: e.target.value } })}
                   />
                 </Field>
+                <Field label={t('ajustes.topology.consumptionId')}>
+                  <Input
+                    value={draft.energy.consumptionId}
+                    placeholder="sensor.house_energy_today"
+                    className="font-mono text-xs"
+                    onChange={(e) => kv.set({ energy: { ...draft.energy, consumptionId: e.target.value } })}
+                  />
+                </Field>
                 <Field label={t('ajustes.topology.batChargeId')}>
                   <Input
                     value={draft.energy.batChargeId}
@@ -465,20 +473,12 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                     onChange={(e) => kv.set({ energy: { ...draft.energy, batChargeId: e.target.value } })}
                   />
                 </Field>
-                <Field label={t('ajustes.topology.batDischargeId')}>
+                <Field label={t('ajustes.topology.batDischargeId')} className="sm:col-span-2">
                   <Input
                     value={draft.energy.batDischargeId}
                     placeholder="sensor.battery_discharge_energy"
                     className="font-mono text-xs"
                     onChange={(e) => kv.set({ energy: { ...draft.energy, batDischargeId: e.target.value } })}
-                  />
-                </Field>
-                <Field label={t('ajustes.topology.consumptionId')} className="sm:col-span-2">
-                  <Input
-                    value={draft.energy.consumptionId}
-                    placeholder="sensor.house_energy_today"
-                    className="font-mono text-xs"
-                    onChange={(e) => kv.set({ energy: { ...draft.energy, consumptionId: e.target.value } })}
                   />
                 </Field>
               </div>
@@ -488,7 +488,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
           {/* ── Sol y tiempo ── */}
           <fieldset className="flex flex-col gap-3">
             <legend className="text-[13px] font-semibold text-app">{t('ajustes.topology.environment')}</legend>
-            <div className="grid gap-3 rounded-xl border border-app bg-surface p-3 sm:grid-cols-2">
+                        <div className="grid gap-3 rounded-xl border border-app bg-surface p-3 sm:grid-cols-3">
               <Field label={t('ajustes.topology.sun')}>
                 <Input
                   value={draft.sun}
@@ -498,6 +498,8 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                 />
               </Field>
               <Field label={t('ajustes.topology.weather')}>
+
+
                 <Input
                   value={draft.weather}
                   placeholder="weather.forecast"
@@ -505,7 +507,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                   onChange={(e) => kv.set({ weather: e.target.value })}
                 />
               </Field>
-              <Field label={t('ajustes.topology.weatherTemp')} className="sm:col-span-2">
+              <Field label={t('ajustes.topology.weatherTemp')}>
                 <Input
                   value={draft.weatherTemp}
                   placeholder="sensor.outdoor_temperature"
