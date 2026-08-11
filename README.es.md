@@ -6,6 +6,12 @@
 </p>
 
 <p align="center">
+  <a href="https://helios.cloudless.club"><img alt="Sitio web" src="https://img.shields.io/badge/Website-helios.cloudless.club-blue"></a>
+  <a href="https://demo.helios.cloudless.club"><img alt="Demo en vivo" src="https://img.shields.io/badge/Live%20demo-demo.helios.cloudless.club-blue"></a>
+  <a href="https://ko-fi.com/gnacho"><img alt="Apóyame en Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
+</p>
+
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-es-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="assets/hero-es-light.png">

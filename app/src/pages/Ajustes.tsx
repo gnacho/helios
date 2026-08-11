@@ -1819,9 +1819,9 @@ function AboutSection() {
 
   const tiles = [
     { icon: 'github' as const, label: t('ajustes.about.code'), href: REPO_URL },
-    { icon: 'file' as const, label: t('ajustes.about.changes'), href: `${REPO_URL}/commits/main` },
-    { icon: 'heart' as const, label: t('ajustes.about.kofi'), href: null },
-    { icon: 'shield' as const, label: t('ajustes.about.privacy'), href: null },
+    { icon: 'file' as const, label: t('ajustes.about.changes'), href: 'https://helios.cloudless.club' },
+    { icon: 'heart' as const, label: t('ajustes.about.kofi'), href: 'https://ko-fi.com/gnacho' },
+    { icon: 'shield' as const, label: t('ajustes.about.privacy'), href: 'https://cloudless.club' },
   ];
 
   return (
