@@ -105,11 +105,22 @@
   const skyCtx = skyCanvas.getContext('2d')
   let SW = 0, SH = 0
   const dprOf = () => Math.min(3, window.devicePixelRatio || 1)
-  function resizeSky() {
+  const MAX_CSS = 4096
+  const MAX_PHYS = 8192
+  function fitCanvas(canvas, cw, ch, maxCss) {
     const dpr = dprOf()
-    SW = window.innerWidth; SH = window.innerHeight
-    skyCanvas.width = SW * dpr; skyCanvas.height = SH * dpr
-    skyCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    const w = cw != null ? cw : canvas.clientWidth
+    const h = ch != null ? ch : canvas.clientHeight
+    if (!w || !h || w > maxCss || h > maxCss) return null
+    canvas.width = Math.min(w * dpr, MAX_PHYS)
+    canvas.height = Math.min(h * dpr, MAX_PHYS)
+    return { w, h, dpr }
+  }
+  function resizeSky() {
+    const f = fitCanvas(skyCanvas, window.innerWidth, window.innerHeight, MAX_PHYS)
+    if (!f) return
+    SW = f.w; SH = f.h
+    skyCtx.setTransform(f.dpr, 0, 0, f.dpr, 0, 0)
   }
 
   const rnd = mulberry32(20260811)
@@ -238,10 +249,9 @@
 
   /* ── Gráfica del día ── */
   function drawDayChart(canvas, labels) {
-    const dpr = dprOf()
-    const w = canvas.clientWidth, h = canvas.clientHeight
-    if (!w || !h) return
-    canvas.width = w * dpr; canvas.height = h * dpr
+    const f = fitCanvas(canvas, null, null, MAX_CSS)
+    if (!f) return
+    const dpr = f.dpr, w = f.w, h = f.h
     const ctx = canvas.getContext('2d')
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     const L = labels ? 34 : 8, R = 10, T = 10, B = labels ? 20 : 8
@@ -308,10 +318,9 @@
     ctx.closePath()
   }
   function drawHist(canvas) {
-    const dpr = dprOf()
-    const w = canvas.clientWidth, h = canvas.clientHeight
-    if (!w || !h) return
-    canvas.width = w * dpr; canvas.height = h * dpr
+    const f = fitCanvas(canvas, null, null, MAX_CSS)
+    if (!f) return
+    const dpr = f.dpr, w = f.w, h = f.h
     const ctx = canvas.getContext('2d')
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     const lang = document.documentElement.lang || 'es'

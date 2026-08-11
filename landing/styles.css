@@ -419,6 +419,28 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 
 /* ── CTA final ── */
 .cta-final { text-align: center; background: rgb(var(--canvas)); }
+.cta-kofi {
+  margin-top: 34px;
+  max-width: 560px;
+  margin-left: auto; margin-right: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.cta-kofi-note {
+  color: rgb(var(--text-secondary));
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.kofi {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-weight: 600; font-size: 0.92rem;
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--border));
+  border-radius: 999px;
+  padding: 0.6rem 1.2rem;
+  transition: background 0.2s;
+}
+.kofi svg { width: 17px; height: 17px; color: rgb(var(--amber)); }
+.kofi:hover { background: rgb(var(--amber) / 0.08); text-decoration: none; }
 .cta-title {
   font-family: var(--font-display); font-weight: 620;
   font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin-bottom: 30px;
