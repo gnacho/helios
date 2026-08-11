@@ -107,17 +107,17 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     if (!ha.connected) return // sin HAOS no hay datos fiables; la alerta HAOS ya se ve por SSE
     const t = getInstall()
     const live = solar.computeLive(ha)
-    const useScraper = t.grid.source === 'scraper' && t.grid.scraperId
-    const scraper = useScraper ? ha.getState(t.grid.scraperId) : undefined
-    const attrs = scraper?.attributes || {}
-    const lastUpd = attrs.lastUpdate ? new Date(attrs.lastUpdate).getTime() : null
+    // Estado del inversor: sensor HAOS con atributos (statusAttrsId, opcional).
+    // Sin él no hay señal de online/scraper → la alerta inversor no se evalúa.
+    const statusAttrs = t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes || {} : {}
+    const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate).getTime() : null
     const fresco = lastUpd !== null && Date.now() - lastUpd < 15 * 60000
 
-    // ── Inversor offline: solo con scraper, de día y con datos frescos ─────
+    // ── Inversor offline: solo con statusAttrs, de día y con datos frescos ──
     const sun = ha.getState(t.sun)
     const deDia = !sun || sun.state === 'above_horizon' // fail-open si falta sun.sun
-    if (useScraper && fresco && deDia) {
-      if (attrs.inverterOnline === 0) {
+    if (t.statusAttrsId && fresco && deDia) {
+      if (statusAttrs.inverterOnline === 0) {
         estado.inversor.mal++
         if (!estado.inversor.alertado && estado.inversor.mal >= TICKS_INVERSOR_OFFLINE) {
           estado.inversor.alertado = true
@@ -155,9 +155,10 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
 
     // ── Corte de red (firma diferencial de pinzas, ver cabecera) ───────
     // Desactivado por defecto: ver corteRedEnabled(). Requiere además la
-    // topología con circuitos respaldado/no-respaldado (si no, no hay firma).
-    if (corteRedEnabled() && t.consumption.respaldoId && t.consumption.noRespaldadaId) {
-    const gridMag = Math.abs(Number(attrs.currentGridPower)) || 0
+    // topología con circuitos respaldado/no-respaldado y grid por atributos
+    // (si no, no hay firma).
+    if (corteRedEnabled() && t.grid.mode === 'attrs' && t.consumption.respaldoId && t.consumption.noRespaldadaId) {
+    const gridMag = Math.abs(Number(statusAttrs.currentGridPower)) || 0
     const respaldoKw = live.respaldoKw ?? 0
     const noRespaldadaKw = live.noRespaldadaKw ?? 0
     // La batería debe estar DESCARGANDO: en un corte real con EPS del Solis

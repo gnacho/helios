@@ -89,7 +89,7 @@ export interface InstallInfo {
     capacityKwh: number;
   };
   grid: {
-    source: 'scraper' | 'sensor';
+    mode: 'attrs' | 'sensor';
   };
   entities: {
     role: string;

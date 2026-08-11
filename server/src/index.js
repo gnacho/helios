@@ -53,7 +53,7 @@ const topology = install.resolveAndSet(db)
 console.log(
   `[helios] topología: ${topology.inverters.length} inversor(es)` +
     (topology.battery.enabled ? ', batería' : ', sin batería') +
-    `, grid=${topology.grid.source}`
+    `, grid=${topology.grid.mode}`
 )
 await auth.ensureBootstrapAdmin(db)
 push.configurePush({
@@ -587,12 +587,13 @@ guarded.get('/install', (c) => {
     if (resolved.battery.socId) rows.push({ role: 'battery_soc', entidad: resolved.battery.socId })
     if (resolved.battery.stateId) rows.push({ role: 'battery_state', entidad: resolved.battery.stateId })
   }
-  if (resolved.grid.source === 'scraper') rows.push({ role: 'grid_scraper', entidad: resolved.grid.scraperId })
+  if (resolved.grid.mode === 'attrs' && resolved.grid.attrsId) rows.push({ role: 'grid_attrs', entidad: resolved.grid.attrsId })
   else {
     if (resolved.grid.sensorId) rows.push({ role: 'grid_sensor', entidad: resolved.grid.sensorId })
     if (resolved.grid.importId) rows.push({ role: 'grid_import', entidad: resolved.grid.importId })
     if (resolved.grid.exportId) rows.push({ role: 'grid_export', entidad: resolved.grid.exportId })
   }
+  if (resolved.statusAttrsId) rows.push({ role: 'inverter_status', entidad: resolved.statusAttrsId })
   rows.push({ role: 'sun', entidad: resolved.sun })
   if (resolved.weather) rows.push({ role: 'weather', entidad: resolved.weather })
   if (resolved.weatherTemp) rows.push({ role: 'weather_temp', entidad: resolved.weatherTemp })
@@ -611,7 +612,7 @@ guarded.get('/install', (c) => {
       enabled: resolved.battery.enabled,
       capacityKwh: resolved.battery.capacityKwh,
     },
-    grid: { source: resolved.grid.source },
+    grid: { mode: resolved.grid.mode },
     entities: rows,
     energyEntities: entities,
   })

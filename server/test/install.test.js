@@ -34,17 +34,20 @@ function dbWithDaily() {
 }
 
 describe('resolveInstall', () => {
-  it('instalación con datos SIN install_config → perfil LEGACY (scraper + 2 inversores)', () => {
+  it('instalación con datos SIN install_config → perfil LEGACY (attrs grid + 2 inversores)', () => {
     const t = resolveInstall(dbWithDaily())
-    expect(t.grid.source).toBe('scraper')
+    expect(t.grid.mode).toBe('attrs')
+    expect(t.grid.attrsId).toBe('sensor.solis_scraper')
+    expect(t.statusAttrsId).toBe('sensor.solis_scraper')
     expect(t.inverters).toHaveLength(2)
     expect(t.battery.enabled).toBe(true)
   })
 
-  it('instalación nueva SIN install_config → perfil GENERIC (sin scraper)', () => {
+  it('instalación nueva SIN install_config → perfil GENERIC (sin attrs, grid sensor)', () => {
     const t = resolveInstall(emptyDb())
-    expect(t.grid.source).toBe('sensor')
-    expect(t.grid.scraperId).toBeNull()
+    expect(t.grid.mode).toBe('sensor')
+    expect(t.grid.attrsId).toBeNull()
+    expect(t.statusAttrsId).toBeNull()
     expect(t.inverters).toHaveLength(1)
     expect(t.battery.enabled).toBe(false)
   })
@@ -58,7 +61,7 @@ describe('resolveInstall', () => {
           { key: 'b', name: 'Beta', powerId: 'sensor.beta_power' },
           { key: 'c', name: 'Gamma', powerId: 'sensor.gamma_power' },
         ],
-        grid: { source: 'sensor', sensorId: 'sensor.grid_net' },
+        grid: { mode: 'sensor', sensorId: 'sensor.grid_net' },
         battery: { enabled: false },
       },
     }))
@@ -66,7 +69,7 @@ describe('resolveInstall', () => {
     expect(t.inverters).toHaveLength(3)
     expect(t.inverters[0].powerUnit).toBe('W')
     expect(t.inverters[2].name).toBe('Gamma')
-    expect(t.grid.source).toBe('sensor')
+    expect(t.grid.mode).toBe('sensor')
     expect(t.grid.sensorId).toBe('sensor.grid_net')
     expect(t.battery.enabled).toBe(false)
   })
@@ -75,7 +78,7 @@ describe('resolveInstall', () => {
     const db = dbWithDaily()
     kvSet(db, 'install_config', '{no-json')
     const t = resolveInstall(db)
-    expect(t.grid.source).toBe('scraper')
+    expect(t.grid.mode).toBe('attrs')
   })
 })
 

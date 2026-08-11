@@ -58,7 +58,7 @@ describe('computeLive — topología genérica (issue #37)', () => {
   })
 
   it('grid sin scraper (sensor plano con signo): import = positivo, export = negativo', () => {
-    const t = { ...GENERIC_TOPOLOGY, grid: { ...GENERIC_TOPOLOGY.grid, source: 'sensor', sensorId: 'sensor.grid_net' } }
+    const t = { ...GENERIC_TOPOLOGY, grid: { ...GENERIC_TOPOLOGY.grid, mode: 'sensor', sensorId: 'sensor.grid_net' } }
     _setForTests(t)
     const live = computeLive(ha())
     expect(live.grid).toBeCloseTo(-1.2, 2)

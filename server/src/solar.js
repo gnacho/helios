@@ -89,13 +89,14 @@ export function computeLive(ha) {
   const soc = b.enabled ? entityNum(ha, b.socId) : 0
   const batState = b.enabled ? (ha.getState(b.stateId)?.state || '') : ''
 
-  // Grid: fuente configurable. 'scraper' → atributos del scraper Solis (signo
-  // por gridDirection). 'sensor' → sensor plano con signo o pares import/export.
+  // Grid: fuente configurable. 'attrs' → atributos de un sensor HAOS con
+  // potencia/dirección en attrs (caso del sensor del scraper Solis). 'sensor'
+  // → estados: sensor plano con signo o pares import/export.
   let grid = 0
-  if (t.grid.source === 'scraper' && t.grid.scraperId) {
-    const scraper = ha.getState(t.grid.scraperId)
-    const gridMag = Math.abs(num(scraper?.attributes?.currentGridPower))
-    const gridDir = scraper?.attributes?.gridDirection || 'none'
+  if (t.grid.mode === 'attrs' && t.grid.attrsId) {
+    const attrs = ha.getState(t.grid.attrsId)
+    const gridMag = Math.abs(num(attrs?.attributes?.currentGridPower))
+    const gridDir = attrs?.attributes?.gridDirection || 'none'
     grid = gridDir === 'import' ? gridMag : gridDir === 'export' ? -gridMag : 0
   } else {
     if (t.grid.sensorId) {
@@ -120,18 +121,18 @@ export function computeLive(ha) {
   const alerts = []
   if (!ha.connected) alerts.push({ id: 'haos', severity: 'critical', text: 'Sin conexión con Home Assistant' })
 
-  if (t.grid.source === 'scraper' && t.grid.scraperId) {
-    const scraper = ha.getState(t.grid.scraperId)
-    if (scraper?.attributes?.inverterOnline === 0)
-      alerts.push({ id: 'inversor', severity: 'critical', text: 'Inversor Solis offline' })
-    const lastUpd = scraper?.attributes?.lastUpdate ? new Date(scraper.attributes.lastUpdate).getTime() : null
-    if (lastUpd && (Date.now() - lastUpd) / 60000 > 15)
-      alerts.push({
-        id: 'scraper',
-        severity: 'warning',
-        text: `Datos del Solis antiguos (hace ${Math.round((Date.now() - lastUpd) / 60000)} min)`,
-      })
-  }
+  // Estado del inversor: desde statusAttrsId (opcional). Si no hay sensor con
+  // esos atributos, no hay alerta de inversor/scraper (genérico).
+  const statusAttrs = t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes || {} : {}
+  if (t.statusAttrsId && statusAttrs.inverterOnline === 0)
+    alerts.push({ id: 'inversor', severity: 'critical', text: 'Inversor Solis offline' })
+  const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate).getTime() : null
+  if (t.statusAttrsId && lastUpd && (Date.now() - lastUpd) / 60000 > 15)
+    alerts.push({
+      id: 'scraper',
+      severity: 'warning',
+      text: `Datos del Solis antiguos (hace ${Math.round((Date.now() - lastUpd) / 60000)} min)`,
+    })
 
   if (soc > 0 && soc <= 20) alerts.push({ id: 'bateria', severity: 'info', text: `Batería en reserva (${round1(soc)}%)` })
   if (elevation > 15 && production < 0.1)
@@ -162,8 +163,8 @@ export function computeLive(ha) {
     },
     weather: weather?.state || 'unknown',
     weatherTemp: entityNum(ha, t.weatherTemp),
-    station: t.grid.source === 'scraper' ? ha.getState(t.grid.scraperId)?.attributes?.stationName || '' : '',
-    inverterOnline: t.grid.source === 'scraper' ? ha.getState(t.grid.scraperId)?.attributes?.inverterOnline === 1 : true,
+    station: t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes?.stationName || '' : '',
+    inverterOnline: t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes?.inverterOnline === 1 : true,
     ts: now.toISOString(),
   }
 }

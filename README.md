@@ -161,7 +161,7 @@ PUT /api/config  (auth admin)
       { "key": "inv1", "name": "My inverter", "kwp": 5.0, "powerId": "sensor.inverter_power", "powerUnit": "kW", "energyId": "sensor.inverter_energy_today", "energyAcc": "state", "deepIds": ["sensor.inverter_energy_total"] }
     ],
     "battery": { "enabled": false },
-    "grid": { "source": "sensor", "sensorId": "sensor.grid_net" },
+    "grid": { "mode": "sensor", "sensorId": "sensor.grid_net" },
     "consumption": { "powerIds": ["sensor.house_power"], "powerUnit": "W", "energyIds": ["sensor.house_energy"] },
     "sun": "sun.sun",
     "weather": "weather.forecast"
@@ -172,7 +172,10 @@ PUT /api/config  (auth admin)
 `GET /api/install` returns the resolved topology and the entity list the UI
 shows in Settings. `powerUnit` is `kW` or `W`; battery charge/discharge states
 (`chargingStates`/`dischargingStates`) accept any strings so HAOS languages
-other than Spanish work.
+other than Spanish work. Everything comes from HAOS: `grid.mode: "attrs"`
+reads grid power/direction from a sensor's attributes (the Solis scraper is
+just such a sensor), `grid.mode: "sensor"` reads plain grid sensors, and
+`statusAttrsId` optionally provides inverter online/station status.
 
 ## Roadmap
 

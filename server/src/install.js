@@ -75,13 +75,21 @@ export const LEGACY_TOPOLOGY = {
     chargingStates: ['Cargando'],
     dischargingStates: ['Descargando'],
   },
+  // Todo viene de HAOS. grid.mode decide CÓMO se lee la red:
+  //  - 'attrs': potencia/dirección en los ATRIBUTOS de un sensor (attrsId).
+  //    Es el caso del sensor expuesto por un scraper Solis, pero es un sensor
+  //    de HAOS cualquiera: si no existe, se usa otro sensor sin tocar la app.
+  //  - 'sensor': de estados (sensorId con signo, o importId/exportId).
+  // statusAttrsId (opcional) = sensor cuyos atributos dan el estado del
+  // inversor (inverterOnline/stationName/lastUpdate). Desacoplado del grid.
   grid: {
-    source: 'scraper', // 'scraper' | 'sensor'
-    scraperId: 'sensor.solis_scraper',
+    mode: 'attrs', // 'attrs' | 'sensor'
+    attrsId: 'sensor.solis_scraper',
     sensorId: null,
     importId: null,
     exportId: null,
   },
+  statusAttrsId: 'sensor.solis_scraper',
   consumption: {
     powerIds: [
       'sensor.medidor_respaldo_power',
@@ -140,12 +148,13 @@ export const GENERIC_TOPOLOGY = {
     dischargingStates: ['discharging', 'Descargando'],
   },
   grid: {
-    source: 'sensor',
-    scraperId: null,
+    mode: 'sensor',
+    attrsId: null,
     sensorId: 'sensor.grid_power',
     importId: 'sensor.grid_import_power',
     exportId: 'sensor.grid_export_power',
   },
+  statusAttrsId: null,
   consumption: {
     powerIds: ['sensor.house_power'],
     powerUnit: 'W',
@@ -211,6 +220,7 @@ export function normalizeTopology(cfg, base = GENERIC_TOPOLOGY) {
     sun: cfg.sun || base.sun,
     weather: cfg.weather || base.weather,
     weatherTemp: cfg.weatherTemp || base.weatherTemp,
+    statusAttrsId: cfg.statusAttrsId !== undefined ? cfg.statusAttrsId : base.statusAttrsId,
   }
   out.inverters = out.inverters.map((inv, i) => ({
     ...(base.inverters[i] || {}),
@@ -248,7 +258,8 @@ export function getEntities() {
     batteryPower: b.powerId,
     batteryState: b.stateId,
     batterySoc: b.socId,
-    scraper: t.grid.scraperId,
+    scraper: t.grid.attrsId,
+    statusAttrsId: t.statusAttrsId,
     sun: t.sun,
     weather: t.weather,
     weatherTemp: t.weatherTemp,
@@ -279,12 +290,13 @@ export function liveEntities() {
     if (t.battery.stateId) ids.add(t.battery.stateId)
     if (t.battery.socId) ids.add(t.battery.socId)
   }
-  if (t.grid.source === 'scraper' && t.grid.scraperId) ids.add(t.grid.scraperId)
+  if (t.grid.mode === 'attrs' && t.grid.attrsId) ids.add(t.grid.attrsId)
   else {
     if (t.grid.sensorId) ids.add(t.grid.sensorId)
     if (t.grid.importId) ids.add(t.grid.importId)
     if (t.grid.exportId) ids.add(t.grid.exportId)
   }
+  if (t.statusAttrsId && t.statusAttrsId !== t.grid.attrsId) ids.add(t.statusAttrsId)
   if (t.energy.gridImportId) ids.add(t.energy.gridImportId)
   if (t.energy.gridExportId) ids.add(t.energy.gridExportId)
   if (t.battery.enabled) {
