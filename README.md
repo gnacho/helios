@@ -30,9 +30,10 @@ No cloud.
 > source, sensor mapping) is resolved from `install_config` — any HAOS
 > installation can run it by configuring its sensors, without touching code.
 > The dashboard, inverters page and settings adapt to the resolved topology
-> (N inverters). That said, it is not a fully polished plug-and-play product
-> yet (no in-app topology editor), so a fresh install still requires editing a
-> JSON config. Fork it and adapt it to your own installation.
+> (N inverters). It is not a fully polished plug-and-play product, but since
+> 0.7.2 an admin can edit the topology (inverters, battery, grid source, HAOS
+> sensor mapping) from Settings, no code or JSON required. Fork it and adapt
+> it to your own installation.
 
 ## Why does this exist?
 
@@ -131,6 +132,24 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 - `shared/schemas.js`: zod contract server↔front.
 - Full detail in `ARCHITECTURE.md` and `STACK.md`.
 
+## Installation
+
+Helios is a Node service with an embedded SQLite DB. It does **not** talk to
+the inverters directly: it connects to your Home Assistant over its WebSocket
+API and reads the sensors HAOS already exposes. Only two HAOS settings matter:
+
+- `HAOS_URL` — your HAOS address, e.g. `http://192.168.10.244:8123`
+  (`http://` is upgraded to `ws://` internally).
+- `HAOS_TOKEN` — a **long-lived access token**, generated in HAOS under
+  Profile → Security → Long-lived access tokens.
+
+Copy `server/.env.example` to `.env` and fill those two values (plus the auth
+ones). On startup Helios authenticates with the token and subscribes to the
+entities declared in the topology. You can see the resolved entity list and
+test the connection under Settings → Connection & data; an admin edits the
+topology itself from Settings. The DB lives in `server/data/` (or `DATA_DIR`)
+and the `.env` always survives updates.
+
 ## Operations (just enough to not break anything)
 
 - Production: a Proxmox CT, `helios.service`, port 80 (LAN
@@ -183,8 +202,8 @@ just such a sensor), `grid.mode: "sensor"` reads plain grid sensors, and
 |---|---|---|
 | 1 | Live read-only panel (production vs consumption) | Done |
 | 2 | Real backend, multi-user, history, battery, alerts, PWA, hardening | Done (~0.6.x) |
-| 3 | Configurable hardware (still under HAOS) | Mostly done (0.7.x) |
-| 4 | Multi-installation: several HAOS or several Helios via API | Exploring |
+| 3 | Configurable hardware (still under HAOS) | Done (0.7.x) |
+| 4 | Multi-installation: several HAOS or several Helios via API | Up next |
 
 See [ROADMAP.md](ROADMAP.md) for detail.
 
