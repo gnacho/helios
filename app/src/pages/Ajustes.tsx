@@ -39,6 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
+import { useInstall } from '@/hooks/useInstall';
 import { THEME_BG, THEME_SURFACE, THEME_BAR, ACCENTS } from '@/lib/colors';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
 import { usePush } from '@/hooks/usePush';
@@ -51,18 +52,6 @@ import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-clien
 import pkg from '../../package.json';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
-
-const ENTIDADES: { entidad: string; descKey: string }[] = [
-  { entidad: 'sensor.solis_potencia_actual', descKey: 'desc_solis_potencia_actual' },
-  { entidad: 'sensor.almacen_pinza_power_b', descKey: 'desc_almacen_pinza_power_b' },
-  { entidad: 'sensor.medidor_respaldo_power', descKey: 'desc_medidor_respaldo_power' },
-  { entidad: 'sensor.vivienda_medidor_power', descKey: 'desc_vivienda_medidor_power' },
-  { entidad: 'sensor.almacen_pinza_power_a', descKey: 'desc_almacen_pinza_power_a' },
-  { entidad: 'sensor.solis_bateria_soc', descKey: 'desc_solis_bateria_soc' },
-  { entidad: 'sensor.solis_bateria_potencia', descKey: 'desc_solis_bateria_potencia' },
-  { entidad: 'sensor.solis_scraper', descKey: 'desc_solis_scraper' },
-  { entidad: 'sun.sun', descKey: 'desc_sun' },
-];
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -521,6 +510,7 @@ function ThemeSection() {
 function ConnectionSection() {
   const { connectionStatus, getLivePower } = useEnergyData();
   const { t } = useTranslation();
+  const install = useInstall();
   const [testing, setTesting] = useState(false);
   const live = getLivePower();
   const connected = connectionStatus === 'connected';
@@ -540,6 +530,29 @@ function ConnectionSection() {
     } finally {
       setTesting(false);
     }
+  };
+
+  // Descripción por rol: las entidades vienen resueltas del backend (topología),
+  // no hardcodeadas. Los roles legacy mantienen su traducción; los roles de
+  // inversores genéricos usan el nombre del inversor.
+  const descKeyFor = (role: string, name?: string) => {
+    const legacy: Record<string, string> = {
+      inverter: name ? `desc_inverter` : 'desc_inverter',
+      inverter_energy: name ? `desc_inverter_energy` : 'desc_inverter_energy',
+      consumption: 'desc_consumption',
+      battery_power: 'desc_battery_power',
+      battery_soc: 'desc_solis_bateria_soc',
+      battery_state: 'desc_battery_state',
+      grid_scraper: 'desc_solis_scraper',
+      grid_sensor: 'desc_grid_sensor',
+      grid_import: 'desc_grid_import',
+      grid_export: 'desc_grid_export',
+      sun: 'desc_sun',
+      weather: 'desc_weather',
+      weather_temp: 'desc_weather_temp',
+    };
+    const key = legacy[role] || 'desc_consumption';
+    return t(`ajustes.connection.${key}`, name ? { name } : undefined);
   };
 
   return (
@@ -586,10 +599,10 @@ function ConnectionSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ENTIDADES.map((e) => (
-                  <TableRow key={e.entidad}>
+                {(install?.entities ?? []).map((e, i) => (
+                  <TableRow key={`${e.role}-${e.entidad}-${i}`}>
                     <TableCell className="py-2 font-mono text-xs text-app">{e.entidad}</TableCell>
-                    <TableCell className="py-2 text-xs text-muted">{t(`ajustes.connection.${e.descKey}`)}</TableCell>
+                    <TableCell className="py-2 text-xs text-muted">{descKeyFor(e.role, e.name)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

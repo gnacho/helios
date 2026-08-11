@@ -366,7 +366,17 @@
       "desc_solis_bateria_soc": "Batería Soluna (%)",
       "desc_solis_bateria_potencia": "Potencia carga/descarga (kW)",
       "desc_solis_scraper": "Red Solis: dirección y potencia (atributos)",
-      "desc_sun": "Amanecer/atardecer"
+      "desc_sun": "Amanecer/atardecer",
+      "desc_inverter": "Producción de {{name}} (kW)",
+      "desc_inverter_energy": "Energía de {{name}} hoy (kWh)",
+      "desc_consumption": "Consumo de la vivienda (W)",
+      "desc_battery_power": "Potencia carga/descarga de la batería (kW)",
+      "desc_battery_state": "Estado de la batería",
+      "desc_grid_sensor": "Red: potencia con signo (+ importación / − exportación)",
+      "desc_grid_import": "Potencia importada de la red",
+      "desc_grid_export": "Potencia exportada a la red",
+      "desc_weather": "Tiempo",
+      "desc_weather_temp": "Temperatura exterior"
     },
     "install": {
       "name": "Nombre de la instalación",

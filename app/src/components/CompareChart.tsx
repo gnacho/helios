@@ -14,15 +14,22 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { PowerPoint } from '@/data/types';
-import { FOX_KWP, SOLIS_KWP, STEP_MIN } from '@/data/types';
-import { useEnergyColors } from '@/lib/colors';
+import { STEP_MIN, seriesInvValue } from '@/data/types';
 import { fmtKw, fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const AXIS_TICKS = [0, 180, 360, 540, 720, 900, 1080, 1260, 1440];
 
+export interface CompareInverter {
+  key: string;
+  name: string;
+  color: string;
+  kwp: number;
+}
+
 interface CompareChartProps {
   data: PowerPoint[];
+  inverters: CompareInverter[];
   nowMin: number;
   height?: number;
 }
@@ -58,27 +65,32 @@ function CompareTooltip({
   );
 }
 
+const seriesValue = (p: PowerPoint, key: string): number => seriesInvValue(p, key);
+
 /**
- * §7 Gráfica superpuesta Solis vs Fox con toggle "Normalizar por kWp"
- * (divide cada curva por su potencia pico instalada: Solis/4,4 · Fox/2,7).
+ * §7 Gráfica superpuesta de los inversores con toggle "Normalizar por kWp"
+ * (divide cada curva por su potencia pico instalada).
  */
-export default function CompareChart({ data, nowMin, height = 340 }: CompareChartProps) {
-  const palette = useEnergyColors();
+export default function CompareChart({ data, inverters, nowMin, height = 340 }: CompareChartProps) {
   const { t } = useTranslation();
   const [normalized, setNormalized] = useState(false);
 
-  // Mismas keys de datos en ambos modos → Recharts hace tween de valores al normalizar.
   const rows = useMemo(
     () =>
-      data.map((p) => ({
-        t: p.t,
-        solis: normalized ? p.solis / SOLIS_KWP : p.solis,
-        fox: normalized ? p.fox / FOX_KWP : p.fox,
-      })),
-    [data, normalized],
+      data.map((p) => {
+        const row: Record<string, number> = { t: p.t };
+        for (const inv of inverters) {
+          row[inv.key] = normalized && inv.kwp > 0 ? seriesValue(p, inv.key) / inv.kwp : seriesValue(p, inv.key);
+        }
+        return row;
+      }),
+    [data, inverters, normalized],
   );
 
   const nowT = Math.round(nowMin / STEP_MIN) * STEP_MIN;
+  // En topologías de 2 inversores se puede comparar rendimiento normalizado;
+  // con más, el aviso es menos informativo → solo con exactamente 2.
+  const twoInv = inverters.length === 2;
 
   return (
     <section className="helios-card shadow-card dark:shadow-card-dark" aria-label={t('inversores.curvesTitle')}>
@@ -87,12 +99,11 @@ export default function CompareChart({ data, nowMin, height = 340 }: CompareChar
           <h2 className="text-[15px] font-semibold text-app">{t('inversores.curvesTitle')}</h2>
           <p className="text-xs text-faint">{normalized ? t('inversores.specificYield') : t('inversores.instantPower')}</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.solis }} /> Solis
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.fox }} /> Fox
-        </span>
+        {inverters.map((inv) => (
+          <span key={inv.key} className="inline-flex items-center gap-1.5 text-xs text-muted">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: inv.color }} /> {inv.name}
+          </span>
+        ))}
         <button
           onClick={() => setNormalized((v) => !v)}
           aria-pressed={normalized}
@@ -106,7 +117,7 @@ export default function CompareChart({ data, nowMin, height = 340 }: CompareChar
       </div>
 
       <AnimatePresence>
-        {normalized && (
+        {normalized && twoInv && (
           <motion.p
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -123,14 +134,12 @@ export default function CompareChart({ data, nowMin, height = 340 }: CompareChar
         <ResponsiveContainer width="100%" height={height} className="max-lg:!h-[240px]">
           <AreaChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 4 }}>
             <defs>
-              <linearGradient id="grad-cmp-solis" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={palette.solis} stopOpacity={0.2} />
-                <stop offset="100%" stopColor={palette.solis} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="grad-cmp-fox" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={palette.fox} stopOpacity={0.2} />
-                <stop offset="100%" stopColor={palette.fox} stopOpacity={0} />
-              </linearGradient>
+              {inverters.map((inv) => (
+                <linearGradient key={`grad-cmp-${inv.key}`} id={`grad-cmp-${inv.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={inv.color} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={inv.color} stopOpacity={0} />
+                </linearGradient>
+              ))}
               <linearGradient id="grad-cmp-now" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={SOLAR_GRADIENT.from} />
                 <stop offset="100%" stopColor={SOLAR_GRADIENT.to} />
@@ -160,32 +169,22 @@ export default function CompareChart({ data, nowMin, height = 340 }: CompareChar
               cursor={{ stroke: 'var(--text-faint)', strokeDasharray: '3 3', strokeOpacity: 0.5 }}
             />
 
-            {/* fillOpacity 0.18: mezcla legible donde se solapan */}
-            <Area
-              name="Solis"
-              type="monotone"
-              dataKey="solis"
-              stroke={palette.solis}
-              strokeWidth={2}
-              fill="url(#grad-cmp-solis)"
-              fillOpacity={0.9}
-              animationDuration={1000}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-            <Area
-              name="Fox"
-              type="monotone"
-              dataKey="fox"
-              stroke={palette.fox}
-              strokeWidth={2}
-              fill="url(#grad-cmp-fox)"
-              fillOpacity={0.9}
-              animationDuration={1000}
-              animationBegin={300}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
+            {inverters.map((inv, i) => (
+              <Area
+                key={inv.key}
+                name={inv.name}
+                type="monotone"
+                dataKey={inv.key}
+                stroke={inv.color}
+                strokeWidth={2}
+                fill={`url(#grad-cmp-${inv.key})`}
+                fillOpacity={0.9}
+                animationDuration={1000}
+                animationBegin={i * 300}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            ))}
 
             <ReferenceLine
               x={nowT}

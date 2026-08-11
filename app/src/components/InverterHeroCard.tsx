@@ -6,7 +6,7 @@ import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
 import { cn } from '@/lib/utils';
 
 export interface InverterMeta {
-  key: 'solis' | 'fox';
+  key: string;
   name: string;
   model: string;
   kwp: number;

@@ -11,9 +11,12 @@ import {
   ArrowDownToLine,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { numLocale } from '@/i18n';
 import { useEnergyData } from '@/data/EnergyDataProvider';
-import { STEP_MIN } from '@/data/types';
-import { useEnergyColors } from '@/lib/colors';
+import { useInstall } from '@/hooks/useInstall';
+import { STEP_MIN, seriesInvValue } from '@/data/types';
+import { useEnergyColors, inverterColor } from '@/lib/colors';
+import { useTheme } from '@/theme/ThemeProvider';
 import { fmtEnergy } from '@/lib/format';
 import KpiCard from '@/components/KpiCard';
 import LivePowerStrip from '@/components/LivePowerStrip';
@@ -28,10 +31,16 @@ function batteryState(bp: number): 'charging' | 'discharging' | 'idle' {
   return 'idle';
 }
 
+function fmtKwKwp(kwp: number): string {
+  return new Intl.NumberFormat(numLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(kwp) + ' kWp';
+}
+
 export default function Dashboard() {
   const { nowMin, liveTick, today, sunriseMin, sunsetMin, getLivePower, getDaySeries, getKpis } =
     useEnergyData();
+  const install = useInstall();
   const palette = useEnergyColors();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [replayMin, setReplayMin] = useState<number | null>(null);
@@ -42,20 +51,54 @@ export default function Dashboard() {
   const dayKpis = useMemo(() => getKpis(today), [getKpis, today]);
   const series = useMemo(() => getDaySeries(today), [getDaySeries, today]);
 
-  const { solisKwh, foxKwh } = useMemo(() => {
-    let s = 0;
-    let f = 0;
-    for (const p of series) {
-      if (p.t >= effectiveMin) break;
-      s += p.solis * (STEP_MIN / 60);
-      f += p.fox * (STEP_MIN / 60);
-    }
-    return { solisKwh: s, foxKwh: f };
-  }, [series, effectiveMin]);
+  // Inversores: topología resuelta o fallback a los 2 clásicos.
+  const invs = useMemo(() => {
+    const fromInstall = (install?.inverters ?? []).map((inv) => ({
+      key: inv.key,
+      name: inv.name,
+      model: inv.model || '',
+      kwp: inv.kwp || 0,
+      panels: inv.panels || '',
+    }));
+    if (fromInstall.length > 0) return fromInstall;
+    return [
+      { key: 'solis', name: 'Solis', model: '4,4 kWp · 10 × 440 W', kwp: 4.4, panels: '10 × 440 W' },
+      { key: 'fox', name: 'Fox', model: '2,7 kWp · 6 × 450 W', kwp: 2.7, panels: '6 × 450 W' },
+    ];
+  }, [install]);
 
-  const totalInv = solisKwh + foxKwh;
-  const solisSeries = useMemo(() => series.map((p) => p.solis), [series]);
-  const foxSeries = useMemo(() => series.map((p) => p.fox), [series]);
+  const colorOf = (key: string, index: number) =>
+    key === 'solis' ? palette.solis : key === 'fox' ? palette.fox : inverterColor(key, isDark, index);
+
+  const dayCharts: { key: string; name: string; color: string }[] = invs.map((inv, i) => ({
+    key: inv.key,
+    name: inv.name,
+    color: colorOf(inv.key, i),
+  }));
+
+  const { kwhs, totalInv } = useMemo(() => {
+    const out = invs.map((inv) => {
+      let sum = 0;
+      for (const p of series) {
+        if (p.t >= effectiveMin) break;
+        const v = seriesInvValue(p, inv.key);
+        sum += v * (STEP_MIN / 60);
+      }
+      return sum;
+    });
+    return { kwhs: out, totalInv: out.reduce((a, b) => a + b, 0) };
+  }, [series, effectiveMin, invs]);
+
+  const liveKw = (inv: { key: string }, index: number) => {
+    if (live.inverters && live.inverters.length > 0) {
+      return live.inverters.find((i) => i.key === inv.key)?.kw ?? 0;
+    }
+    if (inv.key === 'solis') return live.solis;
+    if (inv.key === 'fox') return live.fox;
+    return live.inverters?.[index]?.kw ?? 0;
+  };
+
+  const seriesOf = (key: string) => series.map((p) => seriesInvValue(p, key));
 
   const socKwh = (live.soc / 100) * 5;
 
@@ -94,7 +137,7 @@ export default function Dashboard() {
           className="col-span-12 order-3 lg:order-2 lg:col-span-8"
           style={{ boxShadow: `0 8px 32px -8px ${palette.solar}2E`, borderRadius: 16 }}
         >
-          <DayChart data={series} nowMin={nowMin} replayMin={replayMin} onReplayChange={setReplayMin} fill />
+          <DayChart data={series} nowMin={nowMin} replayMin={replayMin} onReplayChange={setReplayMin} fill inverters={dayCharts} />
         </motion.div>
       </div>
 
@@ -202,29 +245,33 @@ export default function Dashboard() {
             />
           </motion.section>
           <InverterCard
-            name={`Solis · ${t('common.hybrid')}`}
-            model="4,4 kWp · 10 × 440 W"
-            kwp={4.4}
-            nowKw={live.solis}
-            todayKwh={solisKwh}
-            series={solisSeries}
-            sharePct={totalInv > 0 ? (solisKwh / totalInv) * 100 : 0}
-            color={palette.solis}
-            tab="solis"
+            key={invs[0].key}
+            name={`${invs[0].name}${invs[0].kwp > 0 ? ` · ${fmtKwKwp(invs[0].kwp)}` : ''}`}
+            model={invs[0].panels || invs[0].model}
+            kwp={invs[0].kwp}
+            nowKw={liveKw(invs[0], 0)}
+            todayKwh={kwhs[0]}
+            series={seriesOf(invs[0].key)}
+            sharePct={totalInv > 0 ? (kwhs[0] / totalInv) * 100 : 100}
+            color={colorOf(invs[0].key, 0)}
+            tab={invs[0].key}
             index={1}
           />
-          <InverterCard
-            name="Fox · FoxESS"
-            model="2,7 kWp · 6 × 450 W"
-            kwp={2.7}
-            nowKw={live.fox}
-            todayKwh={foxKwh}
-            series={foxSeries}
-            sharePct={totalInv > 0 ? (foxKwh / totalInv) * 100 : 0}
-            color={palette.fox}
-            tab="fox"
-            index={2}
-          />
+          {invs.length > 1 && (
+            <InverterCard
+              key={invs[1].key}
+              name={`${invs[1].name}${invs[1].kwp > 0 ? ` · ${fmtKwKwp(invs[1].kwp)}` : ''}`}
+              model={invs[1].panels || invs[1].model}
+              kwp={invs[1].kwp}
+              nowKw={liveKw(invs[1], 1)}
+              todayKwh={kwhs[1]}
+              series={seriesOf(invs[1].key)}
+              sharePct={totalInv > 0 ? (kwhs[1] / totalInv) * 100 : 0}
+              color={colorOf(invs[1].key, 1)}
+              tab={invs[1].key}
+              index={2}
+            />
+          )}
         </div>
       </section>
     </div>

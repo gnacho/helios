@@ -15,7 +15,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { PowerPoint } from '@/data/types';
-import { STEP_MIN } from '@/data/types';
+import { STEP_MIN, seriesInvValue } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtKw, fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -33,9 +33,14 @@ interface ChartRow {
   consumption: number;
   solis: number;
   fox: number;
+  inverters?: Record<string, number>;
 }
 
-type SeriesKey = 'total' | 'solis' | 'fox' | 'consumo';
+interface DayChartInverter {
+  key: string;
+  name: string;
+  color: string;
+}
 
 interface DayChartProps {
   data: PowerPoint[];
@@ -45,6 +50,8 @@ interface DayChartProps {
   replayMin: number | null;
   onReplayChange: (min: number | null) => void;
   height?: number;
+  /** Inversores a sobreimprimir (topología). Default: solis/fox. */
+  inverters?: DayChartInverter[];
 }
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: number }) {
@@ -69,37 +76,54 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 /** Gráfica gigante del día + scrubber "replay del día" (DayTimelineScrubber). */
-export default function DayChart({ data, nowMin, replayMin, onReplayChange, height = 380, fill = false }: DayChartProps & { fill?: boolean }) {
+export default function DayChart({ data, nowMin, replayMin, onReplayChange, height = 380, fill = false, inverters }: DayChartProps & { fill?: boolean }) {
   const palette = useEnergyColors();
   const { t } = useTranslation();
-  const [visible, setVisible] = useState<Record<SeriesKey, boolean>>({ total: true, solis: false, fox: false, consumo: true });
+  const invList: DayChartInverter[] = inverters ?? [
+    { key: 'solis', name: 'Solis', color: palette.solis },
+    { key: 'fox', name: 'Fox', color: palette.fox },
+  ];
+  const [visible, setVisible] = useState<Record<string, boolean>>(() => ({
+    total: true,
+    consumo: true,
+    ...Object.fromEntries(invList.map((i) => [i.key, false])),
+  }));
   const [replayArmed, setReplayArmed] = useState(false);
   const plotRef = useRef<HTMLDivElement>(null);
 
   const rows = useMemo<ChartRow[]>(() => {
     const nowIdx = Math.round(nowMin / STEP_MIN);
-    return data.map((p, i) => ({
-      t: p.t,
-      label: p.label,
-      production: p.production,
-      productionPast: i <= nowIdx ? p.production : null,
-      productionFuture: i >= nowIdx ? p.production : null,
-      consumption: p.consumption,
-      solis: p.solis,
-      fox: p.fox,
-    }));
-  }, [data, nowMin]);
+    return data.map((p, i) => {
+      const row: ChartRow = {
+        t: p.t,
+        label: p.label,
+        production: p.production,
+        productionPast: i <= nowIdx ? p.production : null,
+        productionFuture: i >= nowIdx ? p.production : null,
+        consumption: p.consumption,
+        solis: p.solis,
+        fox: p.fox,
+        inverters: p.inverters,
+      };
+      for (const inv of invList) {
+        (row as unknown as Record<string, number>)[inv.key] = seriesInvValue(p, inv.key);
+      }
+      return row;
+    });
+  }, [data, nowMin, invList]);
 
   const yMax = useMemo(() => {
     let max = 0.5;
     for (const r of rows) {
       if (visible.total && r.production > max) max = r.production;
-      if (visible.solis && r.solis > max) max = r.solis;
-      if (visible.fox && r.fox > max) max = r.fox;
+      for (const inv of invList) {
+        const v = r.inverters?.[inv.key] ?? ((r as unknown as Record<string, number>)[inv.key] ?? 0);
+        if (visible[inv.key] && v > max) max = v;
+      }
       if (visible.consumo && r.consumption > max) max = r.consumption;
     }
     return Math.max(1, Math.ceil(max + 0.3));
-  }, [rows, visible]);
+  }, [rows, visible, invList]);
 
   const minFromClientX = useCallback((clientX: number): number => {
     const el = plotRef.current;
@@ -123,10 +147,9 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
 
   const replaying = replayMin !== null;
 
-  const seriesChips: { key: SeriesKey; label: string; color: string }[] = [
+  const seriesChips: { key: string; label: string; color: string }[] = [
     { key: 'total', label: t('chart.total'), color: palette.solar },
-    { key: 'solis', label: 'Solis', color: palette.solis },
-    { key: 'fox', label: 'Fox', color: palette.fox },
+    ...invList.map((i) => ({ key: i.key, label: i.name, color: i.color })),
     { key: 'consumo', label: t('chart.consumption'), color: palette.consumo },
   ];
 
@@ -303,12 +326,11 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
                 activeDot={{ r: 4 }}
               />
             )}
-            {visible.solis && (
-              <Line name="Solis" type="monotone" dataKey="solis" stroke={palette.solis} strokeWidth={1.5} dot={false} animationDuration={900} />
-            )}
-            {visible.fox && (
-              <Line name="Fox" type="monotone" dataKey="fox" stroke={palette.fox} strokeWidth={1.5} dot={false} animationDuration={900} />
-            )}
+            {invList
+              .filter((i) => visible[i.key])
+              .map((i) => (
+                <Line key={i.key} name={i.name} type="monotone" dataKey={i.key} stroke={i.color} strokeWidth={1.5} dot={false} animationDuration={900} />
+              ))}
 
             {/* Marcador AHORA */}
             <ReferenceLine
