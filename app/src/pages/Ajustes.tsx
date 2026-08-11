@@ -40,6 +40,7 @@ import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useInstall } from '@/hooks/useInstall';
+import { TopologyEditor } from '@/components/TopologyEditor';
 import { THEME_BG, THEME_SURFACE, THEME_BAR, ACCENTS } from '@/lib/colors';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
 import { usePush } from '@/hooks/usePush';
@@ -764,10 +765,11 @@ function fmtKwp(v: number) {
   return new Intl.NumberFormat(numLocale(), { maximumFractionDigits: 1 }).format(v);
 }
 
-function InstallationSection() {
+function InstallationSection({ isAdmin = false }: { isAdmin?: boolean }) {
   const install = useInstall();
   const [settings, update] = useEnergySettings();
   const { t } = useTranslation();
+  const [editorOpen, setEditorOpen] = useState(false);
 
   // Inversores desde la topología resuelta (issue #37); fallback al clásico
   // Solis/Fox solo si la API no ha respondido aún.
@@ -794,6 +796,24 @@ function InstallationSection() {
 
   return (
     <div className="flex flex-col gap-4">
+      {isAdmin && install && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-faint">
+            {install.configured
+              ? t('ajustes.topology.configured')
+              : t('ajustes.topology.notConfigured')}
+          </p>
+          <button
+            type="button"
+            onClick={() => setEditorOpen(true)}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-app bg-surface px-3 text-xs font-medium text-app transition-colors hover:border-brand/50 hover:text-brand"
+          >
+            <Pencil size={13} />
+            {t('ajustes.topology.edit')}
+          </button>
+        </div>
+      )}
+      <TopologyEditor open={editorOpen} onOpenChange={setEditorOpen} install={install} />
       <div className="grid gap-3 md:grid-cols-3">
         {inverters.map((inv, i) => (
           <motion.div
@@ -1912,7 +1932,7 @@ export default function Ajustes() {
 
         {/* 1. Tu instalación */}
         <Section id="instalacion" title={t('ajustes.sections.instalacion')}>
-          <InstallationSection />
+          <InstallationSection isAdmin={userRole === 'admin'} />
         </Section>
 
         {/* 1b. Apariencia */}

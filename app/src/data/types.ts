@@ -73,8 +73,67 @@ export interface DayKpis {
   invertersKwh?: Record<string, number>;
 }
 
+/** Un inversor dentro de la topología (editable, issue #41). */
+export interface TopologyInverter {
+  key: string;
+  name: string;
+  model: string;
+  kwp: number;
+  panels: string;
+  tempC: number;
+  hasBattery: boolean;
+  batteryKwh: number;
+  powerId: string;
+  powerUnit: 'kW' | 'W';
+  energyId: string;
+  energyAcc: 'sum' | 'state';
+  energyCap: number;
+  deepIds: string[];
+  glitchOffsets: Record<string, number>;
+}
+
+/** Topología completa de la instalación: lo que se guarda como install_config.topology. */
+export interface Topology {
+  inverters: TopologyInverter[];
+  battery: {
+    enabled: boolean;
+    powerId: string;
+    stateId: string;
+    socId: string;
+    capacityKwh: number;
+    chargingStates: string[];
+    dischargingStates: string[];
+  };
+  grid: {
+    mode: 'attrs' | 'sensor';
+    attrsId: string | null;
+    sensorId: string | null;
+    importId: string | null;
+    exportId: string | null;
+  };
+  statusAttrsId: string | null;
+  consumption: {
+    powerIds: string[];
+    powerUnit: 'W' | 'kW';
+    energyIds: string[];
+    respaldoId: string | null;
+    noRespaldadaId: string | null;
+  };
+  energy: {
+    gridImportId: string;
+    gridExportId: string;
+    batChargeId: string;
+    batDischargeId: string;
+    consumptionId: string;
+  };
+  sun: string;
+  weather: string;
+  weatherTemp: string;
+}
+
 export interface InstallInfo {
   configured: boolean;
+  topology: Topology;
   inverters: {
     key: string;
     name: string;
