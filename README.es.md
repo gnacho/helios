@@ -30,9 +30,10 @@ SQLite corriendo en un LXC en casa. Sin nube.
 > (inversores, batería, fuente de red, mapeo de sensores) se resuelve desde
 > `install_config` — cualquier instalación HAOS puede ejecutarlo configurando
 > sus sensores, sin tocar código. El dashboard, la página de inversores y
-> Ajustes se adaptan a la topología resuelta (N inversores). Dicho esto, aún
-> no es un producto "plug-and-play" pulido (no hay editor de topología en la
-> app), así que una instalación nueva todavía requiere editar un JSON.
+> Ajustes se adaptan a la topología resuelta (N inversores). No es un producto
+> "plug-and-play" del todo pulido, pero desde 0.7.2 un admin puede editar la
+> topología (inversores, batería, fuente de red, mapeo de sensores de HAOS)
+> desde Ajustes, sin tocar código ni JSON.
 > Forkea el repo y adáptalo a tu instalación.
 
 ## ¿Por qué existe?
@@ -132,6 +133,24 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 - `shared/schemas.js`: contrato zod server↔front.
 - Detalle completo en `ARCHITECTURE.md` y `STACK.md`.
 
+## Instalación
+
+Helios es un servicio Node con SQLite embebida. **No** habla con los
+inversores directamente: se conecta a tu Home Assistant por su API WebSocket y
+lee los sensores que HAOS ya expone. Solo dos ajustes de HAOS importan:
+
+- `HAOS_URL` — la dirección de tu HAOS, p. ej. `http://192.168.10.244:8123`
+  (el `http://` se promociona internamente a `ws://`).
+- `HAOS_TOKEN` — un **token de acceso de larga duración**, generado en HAOS en
+  Perfil → Seguridad → Tokens de acceso de larga duración.
+
+Copia `server/.env.example` a `.env` y rellena esos dos valores (además de los
+de autenticación). Al arrancar, Helios autentica con el token y se suscribe a
+las entidades declaradas en la topología. Puedes ver la lista resuelta de
+entidades y probar la conexión en Ajustes → Conexión y datos; un admin edita
+la topología desde Ajustes. La BD vive en `server/data/` (o `DATA_DIR`) y el
+`.env` sobrevive siempre a las actualizaciones.
+
 ## Operación (lo justo para no romper nada)
 
 - Producción: un CT de Proxmox, servicio `helios.service`, puerto
@@ -186,8 +205,8 @@ inversor (online, estación).
 |---|---|---|
 | 1 | Panel live de solo lectura (producción vs consumo) | Hecho |
 | 2 | Backend real, multiusuario, histórico, batería, alertas, PWA, endurecimiento | Hecho (~0.6.x) |
-| 3 | Hardware configurable (siempre bajo HAOS) | Mayormente hecho (0.7.x) |
-| 4 | Multi-instalación: varios HAOS o varios Helios vía API | En exploración |
+| 3 | Hardware configurable (siempre bajo HAOS) | Hecho (0.7.x) |
+| 4 | Multi-instalación: varios HAOS o varios Helios vía API | Próximo |
 
 Ver [ROADMAP.md](ROADMAP.md) para más detalle.
 
