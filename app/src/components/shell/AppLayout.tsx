@@ -341,6 +341,22 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     }
   });
 
+  // Cada cambio de ruta resetea el scroll al principio (no hay ScrollRestoration).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  /* Re-tap del tab activo (o logo): scroll suave arriba. */
+  const reduceMotion = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const scrollTopIfActive = (to: string) => () => {
+    if (isActive(pathname, to) && window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' });
+    }
+  };
+
   const toggleCollapse = () => {
     setCollapsed((prev) => {
       try {
@@ -412,7 +428,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Header móvil */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden">
-        <Link to="/" aria-label={t('nav.dashboard')} className="flex items-center gap-2">
+        <Link to="/" aria-label={t('nav.dashboard')} className="flex items-center gap-2" onClick={scrollTopIfActive('/')}>
           <BrandLogo className="h-8 w-8" />
           <span className="font-display text-base font-semibold text-app">Helios</span>
         </Link>
@@ -440,7 +456,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           {ALL_ITEMS.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
             return (
-              <NavLink key={to} to={to} className="relative flex flex-col items-center justify-center gap-1" aria-label={t(labelKey)}>
+              <NavLink key={to} to={to} onClick={scrollTopIfActive(to)} className="relative flex flex-col items-center justify-center gap-1" aria-label={t(labelKey)}>
                 <motion.span
                   animate={active ? { scale: [1, 1.15, 1] } : { scale: 1 }}
                   transition={{ duration: 0.25, type: 'spring', stiffness: 500, damping: 20 }}
