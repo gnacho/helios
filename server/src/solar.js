@@ -1,5 +1,13 @@
-import { ENTITIES, ENERGY_ENTITIES, config } from './config.js'
+// solar.js — computación de datos solares a partir de la topología resuelta
+// (install.js). La topología (N inversores, batería opcional, grid source) vive
+// en install_config; aquí solo se consume con getInstall()/getEntities().
+//
+// Contrato hacia el frontend: computeLive y las series mantienen solis/fox como
+// claves de los 2 PRIMEROS inversores (compatibilidad con el frontend actual)
+// y añaden inverters[] para topologías con N inversores o nombres distintos.
+import { config } from './config.js'
 import { upsertDaily, dailyEmpty, kvGet, kvSet } from './db.js'
+import { getInstall, getEntities, getEnergyEntities, deepSources, deepSourceDailyKeys } from './install.js'
 
 const num = (v) => {
   const n = parseFloat(v)
@@ -35,39 +43,73 @@ const entityNum = (ha, id, divisor = 1) => {
   return num(e.state) / divisor
 }
 
-const CONSUMPTION_SOURCES = [ENTITIES.consRespaldo, ENTITIES.consNoRespaldada, ENTITIES.consAlmacen]
+// Potencia de cada inversor en kW, respetando la unidad del sensor (kW o W).
+function inverterPowerKw(ha, inv) {
+  const raw = entityNum(ha, inv.powerId)
+  return inv.powerUnit === 'W' ? raw / 1000 : raw
+}
 
-const consumptionKw = (ha) => {
+function consumptionKw(ha) {
+  const t = getInstall()
   let total = 0
-  for (const id of CONSUMPTION_SOURCES) total += entityNum(ha, id, 1000)
+  for (const id of t.consumption.powerIds) total += entityNum(ha, id, t.consumption.powerUnit === 'W' ? 1000 : 1)
   return total
 }
 
+// Potencia de la batería en kW con signo (positivo=cargan, negativo=descargan).
+// El estado se interpreta por SINÓNIMOS configurables (topología.battery.
+// chargingStates/dischargingStates): HAOS puede reportar 'Cargando'/'charging'
+// según el idioma de la instalación. Sin estado reconocible → 0.
+function batteryPowerKw(ha, batMag) {
+  const b = getInstall().battery
+  if (!b.enabled) return 0
+  const state = ha.getState(b.stateId)?.state || ''
+  if (b.chargingStates.includes(state)) return batMag
+  if (b.dischargingStates.includes(state)) return -batMag
+  return 0
+}
+
 export function computeLive(ha) {
-  const solis = entityNum(ha, ENTITIES.pvSolis)
-  let fox = entityNum(ha, ENTITIES.pvFox, 1000)
-  if (fox < 0.02) fox = 0
+  const t = getInstall()
+  const ENTITIES = getEntities()
+
+  let production = 0
+  const invLive = []
+  for (const inv of t.inverters) {
+    let kw = inverterPowerKw(ha, inv)
+    if (kw < 0.02) kw = 0
+    production += kw
+    invLive.push({ key: inv.key, name: inv.name, kw: round3(kw) })
+  }
   const consumption = consumptionKw(ha)
-  // Pinzas Tongou del cuadro de la vivienda por separado (kW). Se exponen para
-  // que el motor de alertas pueda aplicar la firma diferencial de corte de red:
-  // circuito respaldado (EPS del Solis+batería) vs no respaldado (cae con la red).
-  const respaldoKw = entityNum(ha, ENTITIES.consRespaldo, 1000)
-  const noRespaldadaKw = entityNum(ha, ENTITIES.consNoRespaldada, 1000)
 
-  const batMag = entityNum(ha, ENTITIES.batteryPower)
-  const batState = ha.getState(ENTITIES.batteryState)?.state || ''
-  const batteryPower = batState === 'Cargando' ? batMag : batState === 'Descargando' ? -batMag : 0
-  const soc = entityNum(ha, ENTITIES.batterySoc)
+  const b = t.battery
+  const batMag = b.enabled ? entityNum(ha, b.powerId) : 0
+  const batteryPower = batteryPowerKw(ha, batMag)
+  const soc = b.enabled ? entityNum(ha, b.socId) : 0
+  const batState = b.enabled ? (ha.getState(b.stateId)?.state || '') : ''
 
-  const scraper = ha.getState(ENTITIES.scraper)
-  const gridMag = Math.abs(num(scraper?.attributes?.currentGridPower))
-  const gridDir = scraper?.attributes?.gridDirection || 'none'
-  let grid = gridDir === 'import' ? gridMag : gridDir === 'export' ? -gridMag : 0
+  // Grid: fuente configurable. 'scraper' → atributos del scraper Solis (signo
+  // por gridDirection). 'sensor' → sensor plano con signo o pares import/export.
+  let grid = 0
+  if (t.grid.source === 'scraper' && t.grid.scraperId) {
+    const scraper = ha.getState(t.grid.scraperId)
+    const gridMag = Math.abs(num(scraper?.attributes?.currentGridPower))
+    const gridDir = scraper?.attributes?.gridDirection || 'none'
+    grid = gridDir === 'import' ? gridMag : gridDir === 'export' ? -gridMag : 0
+  } else {
+    if (t.grid.sensorId) {
+      grid = entityNum(ha, t.grid.sensorId) // signo: + import / - export
+    } else {
+      const imp = entityNum(ha, t.grid.importId)
+      const exp = entityNum(ha, t.grid.exportId)
+      grid = imp > 0 ? imp : -exp
+    }
+  }
 
-  const sun = ha.getState(ENTITIES.sun)
-  const weather = ha.getState(ENTITIES.weather)
+  const sun = ha.getState(t.sun)
+  const weather = ha.getState(t.weather)
   const elevation = num(sun?.attributes?.elevation)
-  const production = round3(solis + fox)
 
   // Sanity check: de noche sin sol, no puede haber export solar
   if (elevation < 0 && grid < -0.03 && production < 0.02) grid = -grid
@@ -77,31 +119,39 @@ export function computeLive(ha) {
 
   const alerts = []
   if (!ha.connected) alerts.push({ id: 'haos', severity: 'critical', text: 'Sin conexión con Home Assistant' })
-  if (scraper?.attributes?.inverterOnline === 0)
-    alerts.push({ id: 'inversor', severity: 'critical', text: 'Inversor Solis offline' })
-  const lastUpd = scraper?.attributes?.lastUpdate ? new Date(scraper.attributes.lastUpdate).getTime() : null
-  if (lastUpd && (Date.now() - lastUpd) / 60000 > 15)
-    alerts.push({
-      id: 'scraper',
-      severity: 'warning',
-      text: `Datos del Solis antiguos (hace ${Math.round((Date.now() - lastUpd) / 60000)} min)`,
-    })
+
+  if (t.grid.source === 'scraper' && t.grid.scraperId) {
+    const scraper = ha.getState(t.grid.scraperId)
+    if (scraper?.attributes?.inverterOnline === 0)
+      alerts.push({ id: 'inversor', severity: 'critical', text: 'Inversor Solis offline' })
+    const lastUpd = scraper?.attributes?.lastUpdate ? new Date(scraper.attributes.lastUpdate).getTime() : null
+    if (lastUpd && (Date.now() - lastUpd) / 60000 > 15)
+      alerts.push({
+        id: 'scraper',
+        severity: 'warning',
+        text: `Datos del Solis antiguos (hace ${Math.round((Date.now() - lastUpd) / 60000)} min)`,
+      })
+  }
+
   if (soc > 0 && soc <= 20) alerts.push({ id: 'bateria', severity: 'info', text: `Batería en reserva (${round1(soc)}%)` })
   if (elevation > 15 && production < 0.1)
     alerts.push({ id: 'sin_pv', severity: 'warning', text: 'Sin producción solar a plena luz' })
 
   const now = new Date()
+  const inv0 = invLive[0] || { kw: 0 }
+  const inv1 = invLive[1] || { kw: 0 }
   return {
-    production,
+    production: round3(production),
     consumption: round3(consumption),
-    respaldoKw: round3(respaldoKw),
-    noRespaldadaKw: round3(noRespaldadaKw),
+    respaldoKw: round3(entityNum(ha, t.consumption.respaldoId, t.consumption.powerUnit === 'W' ? 1000 : 1)),
+    noRespaldadaKw: round3(entityNum(ha, t.consumption.noRespaldadaId, t.consumption.powerUnit === 'W' ? 1000 : 1)),
     batteryPower: round3(batteryPower),
     batteryStatus: batState || 'Desconocido',
     soc: round1(soc),
     grid: round3(grid),
-    solis: round3(solis),
-    fox: round3(fox),
+    solis: round3(inv0.kw),
+    fox: round3(inv1.kw),
+    inverters: invLive,
     at: now.getHours() * 60 + now.getMinutes(),
     alerts,
     sun: {
@@ -111,18 +161,14 @@ export function computeLive(ha) {
       nextSetting: sun?.attributes?.next_setting || null,
     },
     weather: weather?.state || 'unknown',
-    weatherTemp: entityNum(ha, ENTITIES.weatherTemp),
-    station: scraper?.attributes?.stationName || '',
-    inverterOnline: scraper?.attributes?.inverterOnline === 1,
+    weatherTemp: entityNum(ha, t.weatherTemp),
+    station: t.grid.source === 'scraper' ? ha.getState(t.grid.scraperId)?.attributes?.stationName || '' : '',
+    inverterOnline: t.grid.source === 'scraper' ? ha.getState(t.grid.scraperId)?.attributes?.inverterOnline === 1 : true,
     ts: now.toISOString(),
   }
 }
 
-const CONSUMPTION_COUNTER_IDS = () => [
-  ENTITIES.consRespaldoEnergy,
-  ENTITIES.consNoRespaldadaEnergy,
-  ENTITIES.consAlmacenEnergy,
-]
+const CONSUMPTION_COUNTER_IDS = () => getInstall().consumption.energyIds
 
 export async function ensureConsumptionBaseline(ha, db) {
   const today = todayStr()
@@ -138,15 +184,16 @@ export async function ensureConsumptionBaseline(ha, db) {
   const start = new Date(y.getFullYear(), y.getMonth(), y.getDate())
   const end = new Date(start)
   end.setDate(end.getDate() + 1)
+  const ids = CONSUMPTION_COUNTER_IDS()
   const stats = await ha.statisticsDuringPeriod({
     startTime: start.toISOString(),
     endTime: end.toISOString(),
-    statisticIds: CONSUMPTION_COUNTER_IDS(),
+    statisticIds: ids,
     period: 'day',
     types: ['state'],
   })
   const values = {}
-  for (const id of CONSUMPTION_COUNTER_IDS()) {
+  for (const id of ids) {
     const rows = stats[id] || []
     values[id] = rows.length ? num(rows[rows.length - 1].state) : null
   }
@@ -156,9 +203,10 @@ export async function ensureConsumptionBaseline(ha, db) {
 }
 
 export function consumptionTodayFromCounters(ha, baseline) {
+  const ids = CONSUMPTION_COUNTER_IDS()
   let total = 0
   let usable = false
-  for (const id of CONSUMPTION_COUNTER_IDS()) {
+  for (const id of ids) {
     const base = baseline?.values?.[id]
     const cur = entityNum(ha, id)
     if (base !== null && base !== undefined && cur >= base) {
@@ -170,19 +218,28 @@ export function consumptionTodayFromCounters(ha, baseline) {
 }
 
 export function computeTodayKpis(ha, consumptionOverride) {
-  const g = (id) => entityNum(ha, id)
-  const production = g(ENTITIES.eSolis) + g(ENTITIES.eFox)
-  const gridImport = g(ENTITIES.eGridImport)
-  const gridExport = g(ENTITIES.eGridExport)
-  const batCharge = g(ENTITIES.eBatCharge)
-  const batDischarge = g(ENTITIES.eBatDischarge)
+  const E = getEnergyEntities()
+  const t = getInstall()
+  const g = (id) => (id ? entityNum(ha, id) : 0)
+  let production = 0
+  const perInv = {}
+  for (const inv of t.inverters) {
+    const k = g(inv.energyId)
+    perInv[inv.key] = k
+    production += k
+  }
+  const gridImport = g(E.gridImport)
+  const gridExport = g(E.gridExport)
+  const batCharge = g(E.batCharge)
+  const batDischarge = g(E.batDischarge)
   const medidores = consumptionOverride !== null && consumptionOverride !== undefined ? consumptionOverride : 0
   const derived = production + gridImport - gridExport - batCharge + batDischarge
-  const consumption = Math.max(medidores, derived, medidores > 0 ? 0 : g(ENTITIES.eConsumption))
+  const consumption = Math.max(medidores, derived, medidores > 0 ? 0 : g(E.consumption))
   return {
     productionKwh: round2(production),
-    solisKwh: round2(g(ENTITIES.eSolis)),
-    foxKwh: round2(g(ENTITIES.eFox)),
+    solisKwh: round2(perInv[t.inverters[0]?.key] || 0),
+    foxKwh: round2(perInv[t.inverters[1]?.key] || 0),
+    invertersKwh: Object.fromEntries(Object.entries(perInv).map(([k, v]) => [k, round2(v)])),
     consumptionKwh: round2(Math.min(100, consumption)),
     gridImportKwh: round2(gridImport),
     gridExportKwh: round2(gridExport),
@@ -192,6 +249,7 @@ export function computeTodayKpis(ha, consumptionOverride) {
 }
 
 async function getDaySeriesUncached(ha, dateStr, db) {
+  const t = getInstall()
   const day = dateStr ? new Date(dateStr + 'T00:00:00') : new Date()
   if (Number.isNaN(day.getTime())) throw new Error('fecha inválida')
   const start = new Date(day)
@@ -199,15 +257,12 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   const end = new Date(start)
   end.setDate(end.getDate() + 1)
 
-  const ids = [
-    ENTITIES.pvSolis,
-    ENTITIES.pvFox,
-    ENTITIES.consRespaldo,
-    ENTITIES.consNoRespaldada,
-    ENTITIES.consAlmacen,
-    ENTITIES.batteryPower,
-    ENTITIES.batterySoc,
-  ]
+  const invIds = t.inverters.map((inv) => inv.powerId).filter(Boolean)
+  const ids = [...invIds, ...t.consumption.powerIds]
+  if (t.battery.enabled) {
+    if (t.battery.powerId) ids.push(t.battery.powerId)
+    if (t.battery.socId) ids.push(t.battery.socId)
+  }
   const stats = await ha.statisticsDuringPeriod({
     startTime: start.toISOString(),
     endTime: end.toISOString(),
@@ -220,8 +275,8 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   for (const id of ids) {
     for (const row of stats[id] || []) {
       if (row.mean === null || row.mean === undefined) continue
-      const t = new Date(row.start)
-      const min = t.getHours() * 60 + t.getMinutes()
+      const tm = new Date(row.start)
+      const min = tm.getHours() * 60 + tm.getMinutes()
       if (!buckets.has(min)) buckets.set(min, {})
       buckets.get(min)[id] = row.mean
     }
@@ -230,35 +285,45 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   const points = []
   let prevSoc = null
   const minutes = [...buckets.keys()].sort((a, b) => a - b)
+  const consDiv = t.consumption.powerUnit === 'W' ? 1000 : 1
   for (const min of minutes) {
     const b = buckets.get(min)
-    const solis = num(b[ENTITIES.pvSolis])
-    let fox = num(b[ENTITIES.pvFox]) / 1000
-    if (fox < 0.02) fox = 0
-    const consumption =
-      (num(b[ENTITIES.consRespaldo]) + num(b[ENTITIES.consNoRespaldada]) + num(b[ENTITIES.consAlmacen])) / 1000
-    const batMag = num(b[ENTITIES.batteryPower])
-    const soc = num(b[ENTITIES.batterySoc])
+    let production = 0
+    const perInv = {}
+    for (const inv of t.inverters) {
+      let kw = num(b[inv.powerId]) / (inv.powerUnit === 'W' ? 1000 : 1)
+      if (kw < 0.02) kw = 0
+      perInv[inv.key] = kw
+      production += kw
+    }
+    const consumption = t.consumption.powerIds.reduce((acc, id) => acc + num(b[id]) / consDiv, 0)
 
     let batteryPower = 0
-    if (prevSoc !== null && batMag > 0.01) {
-      const socDelta = soc - prevSoc
-      if (socDelta > 0.02) batteryPower = batMag
-      else if (socDelta < -0.02) batteryPower = -batMag
+    if (t.battery.enabled) {
+      const batMag = num(b[t.battery.powerId])
+      const soc = num(b[t.battery.socId])
+      if (prevSoc !== null && batMag > 0.01) {
+        const socDelta = soc - prevSoc
+        if (socDelta > 0.02) batteryPower = batMag
+        else if (socDelta < -0.02) batteryPower = -batMag
+      }
+      if (soc > 0) prevSoc = soc
     }
-    if (soc > 0) prevSoc = soc
+    const soc = t.battery.enabled ? num(b[t.battery.socId]) : 0
 
-    const production = solis + fox
     let grid = consumption - production + batteryPower
     if (Math.abs(grid) < 0.03) grid = 0
 
     const hh = String(Math.floor(min / 60)).padStart(2, '0')
     const mm = String(min % 60).padStart(2, '0')
+    const inv0 = perInv[t.inverters[0]?.key] || 0
+    const inv1 = perInv[t.inverters[1]?.key] || 0
     points.push({
       t: min,
       label: `${hh}:${mm}`,
-      solis: round3(solis),
-      fox: round3(fox),
+      solis: round3(inv0),
+      fox: round3(inv1),
+      inverters: Object.fromEntries(Object.entries(perInv).map(([k, v]) => [k, round3(v)])),
       production: round3(production),
       consumption: round3(consumption),
       batteryPower: round3(batteryPower),
@@ -268,21 +333,30 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   }
 
   const dtH = 5 / 60
-  const sumSolis = points.reduce((acc, p) => acc + p.solis * dtH, 0)
-  const sumFox = points.reduce((acc, p) => acc + p.fox * dtH, 0)
+  const sumInv = (key) => points.reduce((acc, p) => acc + (p.inverters[key] || 0) * dtH, 0)
   let estimated = false
-  if (sumSolis < 0.5 && sumFox > 1 && db) {
-    const row = db.prepare('SELECT solis_kwh, fox_kwh FROM daily WHERE date = ?').get(dateStr || todayStr())
-    if (row && row.solis_kwh > 1 && sumFox > 1) {
-      const ratio = row.solis_kwh / sumFox
-      for (const p of points) {
-        p.solis = round3(p.fox * ratio)
-        p.production = round3(p.solis + p.fox)
-        let grid = p.consumption - p.production + p.batteryPower
-        if (Math.abs(grid) < 0.03) grid = 0
-        p.grid = round3(grid)
+  // Estimación de curva: si el inversor 0 no tiene statistics pero el total
+  // diario sí, se escala la curva del resto (fallback típico de sensores sin
+  // state_class). Se mantiene el heurístico original Solis→Fox.
+  if (db && points.length) {
+    const inv0Key = t.inverters[0]?.key
+    const inv1Key = t.inverters[1]?.key
+    const sum0 = sumInv(inv0Key)
+    const sum1 = inv1Key ? sumInv(inv1Key) : 0
+    if (sum0 < 0.5 && sum1 > 1 && inv0Key && inv1Key) {
+      const row = db.prepare('SELECT solis_kwh, fox_kwh FROM daily WHERE date = ?').get(dateStr || todayStr())
+      if (row && row.solis_kwh > 1 && sum1 > 1) {
+        const ratio = row.solis_kwh / sum1
+        for (const p of points) {
+          p.inverters[inv0Key] = round3(p.inverters[inv1Key] * ratio)
+          p.solis = p.inverters[inv0Key]
+          p.production = round3(p.inverters[inv0Key] + (p.inverters[inv1Key] || 0))
+          let grid = p.consumption - p.production + p.batteryPower
+          if (Math.abs(grid) < 0.03) grid = 0
+          p.grid = round3(grid)
+        }
+        estimated = true
       }
-      estimated = true
     }
   }
   return { points, estimated }
@@ -332,10 +406,12 @@ export async function getKpis(ha, dateStr, db) {
   }
 
   if (row) {
+    const invertersKwh = parseInvertersKwh(row)
     return decorateKpis({
       productionKwh: round2(row.production_kwh || 0),
       solisKwh: round2(row.solis_kwh || 0),
       foxKwh: round2(row.fox_kwh || 0),
+      invertersKwh,
       consumptionKwh: round2(row.consumption_kwh || 0),
       gridImportKwh: round2(row.grid_import_kwh || 0),
       gridExportKwh: round2(row.grid_export_kwh || 0),
@@ -351,7 +427,9 @@ export async function getKpis(ha, dateStr, db) {
   const end = new Date(day)
   end.setDate(end.getDate() + 1)
 
-  const ids = Object.values(ENERGY_ENTITIES)
+  const E = getEnergyEntities()
+  const t = getInstall()
+  const ids = Object.values(E).filter(Boolean)
   const stats = await ha.statisticsDuringPeriod({
     startTime: start.toISOString(),
     endTime: end.toISOString(),
@@ -360,28 +438,46 @@ export async function getKpis(ha, dateStr, db) {
     types: ['state'],
   })
 
-  const change = (id) => {    const rows = stats[id] || []
+  const change = (id) => {
+    const rows = stats[id] || []
     let total = 0
     for (const r of rows) total += num(r.state)
     return total
   }
 
-  const solisKwh = change(ENERGY_ENTITIES.solis)
-  const foxKwh = change(ENERGY_ENTITIES.fox)
+  const inv0Kwh = change(E.solis)
+  const inv1Kwh = change(E.fox)
+  const invertersKwh = {}
+  t.inverters.forEach((inv, i) => {
+    invertersKwh[inv.key] = i === 0 ? inv0Kwh : i === 1 ? inv1Kwh : change(inv.energyId)
+  })
 
   return decorateKpis({
-    productionKwh: round2(solisKwh + foxKwh),
-    solisKwh: round2(solisKwh),
-    foxKwh: round2(foxKwh),
-    consumptionKwh: round2(change(ENERGY_ENTITIES.consumption)),
-    gridImportKwh: round2(change(ENERGY_ENTITIES.gridImport)),
-    gridExportKwh: round2(change(ENERGY_ENTITIES.gridExport)),
-    batteryChargedKwh: round2(change(ENERGY_ENTITIES.batCharge)),
-    batteryDischargedKwh: round2(change(ENERGY_ENTITIES.batDischarge)),
+    productionKwh: round2(inv0Kwh + inv1Kwh),
+    solisKwh: round2(inv0Kwh),
+    foxKwh: round2(inv1Kwh),
+    invertersKwh,
+    consumptionKwh: round2(change(E.consumption)),
+    gridImportKwh: round2(change(E.gridImport)),
+    gridExportKwh: round2(change(E.gridExport)),
+    batteryChargedKwh: round2(change(E.batCharge)),
+    batteryDischargedKwh: round2(change(E.batDischarge)),
     soc,
     peakProductionKw: round3(peakProductionKw),
     peakAt,
   })
+}
+
+function parseInvertersKwh(row) {
+  if (row.inverters_kwh) {
+    try {
+      return JSON.parse(row.inverters_kwh)
+    } catch {}
+  }
+  const out = {}
+  if (row.solis_kwh !== null && row.solis_kwh !== undefined) out.solis = row.solis_kwh
+  if (row.fox_kwh !== null && row.fox_kwh !== undefined) out.fox = row.fox_kwh
+  return out
 }
 
 function decorateKpis(k) {
@@ -401,36 +497,15 @@ function decorateKpis(k) {
   }
 }
 
-const DEEP_SOURCES = {
-  solis: { ids: ['sensor.energia_solis_diaria_um'], acc: 'sum', cap: 35 },
-  fox: { ids: ['sensor.almacen_pinza_energy_produced_b'], acc: 'state', cap: 20 },
-  consumption: {
-    ids: ['sensor.medidor_respaldo_energy', 'sensor.vivienda_medidor_energy', 'sensor.almacen_pinza_energy_a'],
-    acc: 'state',
-    cap: 100,
-    requireAll: true,
-  },
-  gridImport: { ids: ['sensor.energia_red_importada_solis'], acc: 'sum', cap: 100 },
-  gridExport: { ids: ['sensor.energia_red_exportada_solis'], acc: 'sum', cap: 25 },
-  batCharge: { ids: ['sensor.energia_bateria_carga_diaria'], acc: 'sum', cap: 12 },
-  batDischarge: { ids: ['sensor.energia_bateria_descarga_diaria'], acc: 'sum', cap: 12 },
-}
-
-const FOX_GLITCH_OFFSETS = {
-  '2025-06-15': 5.46,
-  '2025-07-26': 13.88,
-  '2025-08-20': 4.25,
-  '2025-11-02': 206.58,
-  '2026-03-13': 4.71,
-}
-
 export async function backfillHistory(ha, db) {
+  const t = getInstall()
   const end = new Date()
   end.setDate(end.getDate() + 1)
   const start = new Date('2024-01-01T00:00:00')
   const queryStart = new Date(start)
   queryStart.setDate(queryStart.getDate() - 2)
-  const ids = Object.values(DEEP_SOURCES).flatMap((s) => s.ids)
+  const { srcs, map } = deepSourceDailyKeys()
+  const ids = Object.values(srcs).flatMap((s) => s.ids)
   const stats = await ha.statisticsDuringPeriod({
     startTime: queryStart.toISOString(),
     endTime: end.toISOString(),
@@ -446,7 +521,7 @@ export async function backfillHistory(ha, db) {
   }
   const minKey = dateKey(start)
 
-  for (const [field, src] of Object.entries(DEEP_SOURCES)) {
+  for (const [field, src] of Object.entries(srcs)) {
     const perIdDaily = new Map()
     for (const id of src.ids) {
       const rows = (stats[id] || []).filter((r) => (src.acc === 'sum' ? r.sum : r.state) !== null && (src.acc === 'sum' ? r.sum : r.state) !== undefined)
@@ -475,7 +550,8 @@ export async function backfillHistory(ha, db) {
         // delta se REPARTE uniformemente entre los días sin fila + el día de
         // la fila. Sin esto, un hueco de N días concentra N días de consumo
         // en el día posterior (bug de backfill, caza de bugs 6-Ago-2026).
-        const glitch = field === 'fox' ? FOX_GLITCH_OFFSETS[key] || 0 : 0
+        const invKey = map[field]
+        const glitch = invKey && t.inverters.find((i) => i.key === invKey)?.glitchOffsets?.[key] || 0
         let delta = Math.max(0, raw - prev - glitch)
         const gapDays = gapBetween(prevKey, key) // días intermedios sin fila
         if (prevKey && gapDays > 0) {
@@ -497,25 +573,41 @@ export async function backfillHistory(ha, db) {
     const allKeys = new Set()
     for (const daily of perIdDaily.values()) for (const key of daily.keys()) allKeys.add(key)
 
+    const outKey = map[field] || field
     for (const key of allKeys) {
       if (src.requireAll && ![...perIdDaily.values()].every((d) => d.has(key))) continue
       let value = 0
       for (const daily of perIdDaily.values()) value += daily.get(key) || 0
       if (src.cap && value > src.cap) {
-        console.warn(`[helios] ${field} diario anómalo ${key}: ${value} kWh, capado a ${src.cap}`)
+        console.warn(`[helios] ${outKey} diario anómalo ${key}: ${value} kWh, capado a ${src.cap}`)
         value = src.cap
       }
-      const cur = ensure(key)[field]
-      ensure(key)[field] = Math.max(cur === undefined ? -Infinity : cur, value)
+      const cur = ensure(key)[outKey]
+      ensure(key)[outKey] = Math.max(cur === undefined ? -Infinity : cur, value)
     }
   }
 
   let n = 0
+  // Columna por inversor (índice): los 2 primeros se escriben en solis/fox
+  // (compat); el resto en invN. deepSourceDailyKeys mapea igual.
+  const colForIndex = (i) => (i === 0 ? 'solis' : i === 1 ? 'fox' : `inv${i + 1}`)
   for (const [date, f] of [...byDate.entries()].sort()) {
-    const production = (f.solis || 0) + (f.fox || 0)
+    const perInv = {}
+    let production = 0
+    for (const [k, src] of Object.entries(srcs)) {
+      if (!k.startsWith('inv')) continue
+      const col = map[k]
+      perInv[col] = f[col] || 0
+      production += perInv[col]
+    }
     const medidores = f.consumption || 0
     const derived = production + (f.gridImport || 0) - (f.gridExport || 0) - (f.batCharge || 0) + (f.batDischarge || 0)
     const consumption = medidores > 0 ? Math.min(100, Math.max(medidores, derived)) : 0
+    // inverters_kwh guarda por clave real del inversor (issue #37).
+    const invertersKwh = {}
+    t.inverters.forEach((inv, i) => {
+      invertersKwh[inv.key] = round2(perInv[colForIndex(i)] || 0)
+    })
     upsertDaily(db, {
       date,
       production_kwh: round2(production),
@@ -524,8 +616,9 @@ export async function backfillHistory(ha, db) {
       grid_export_kwh: round2(f.gridExport || 0),
       battery_charged_kwh: round2(f.batCharge || 0),
       battery_discharged_kwh: round2(f.batDischarge || 0),
-      solis_kwh: round2(f.solis || 0),
-      fox_kwh: round2(f.fox || 0),
+      solis_kwh: round2(perInv.solis || 0),
+      fox_kwh: round2(perInv.fox || 0),
+      inverters_kwh: JSON.stringify(invertersKwh),
     })
     n++
   }
