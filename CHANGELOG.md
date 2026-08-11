@@ -7,6 +7,12 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-08-11
+
+### Added
+
+- **README: conexión con HAOS documentada (issue #48)**: nueva sección Installation/Instalación — `HAOS_URL` + token de larga duración (`HAOS_TOKEN`, Perfil → Seguridad → Tokens de larga duración) y copia de `.env.example` a `.env`. Corregido el callout que decía que no había editor de topología en la app (existe desde 0.7.2) y alineada la tabla de hoja de ruta con `ROADMAP.md` (Fase 3 hecha, Fase 4 próxima).
+
 ## [0.7.1] - 2026-08-11
 
 ### Changed
