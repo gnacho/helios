@@ -7,15 +7,30 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
-### Fixed
+## [0.7.0] - 2026-08-11
 
-- **Versión del server leída del package.json propio (issue #24)**: `index.js` leía `../../app/package.json`, que no existe en el layout plano de deploy (`/opt/helios/{server,public,shared}`) → en una instalación fresca el servidor no arrancaba, y en el CT daba una versión residual (0.5.0). Ahora la versión y el nombre salen del propio `server/package.json` (sincronizado con la app) y la versión de React se lee del frontend con fallback a `''`.
+### Added
+
+- **Topología configurable (Fase 3 del roadmap, issue #37)**: la instalación (inversores, batería, fuente de red, mapeo de sensores de HAOS) ya no está hardcodeada. Nuevo módulo `server/src/install.js` que resuelve la topología desde `install_config` (JSON en kv) con esta prioridad: config del admin > perfil legacy para instalaciones existentes (attrs del scraper + Solis/Fox + batería en español) > perfil genérico para instalaciones nuevas (sin scraper, red por sensores planos, batería opcional).
+- **N inversores**: cada uno con sus sensores de potencia/energía y unidad (kW/W). `daily` gana la columna `inverters_kwh` (migración v4, sin tocar las existentes); `solis_kwh`/`fox_kwh` siguen escribiéndose (los 2 primeros inversores) por compatibilidad.
+- **Batería con estados en varios idiomas**: `chargingStates`/`dischargingStates` aceptan cualquier cadena (`'Cargando'`, `'charging'`…), ya no depende del español.
+- **Grid source configurable**: `grid.mode: 'attrs'` lee la potencia/dirección de los atributos de un sensor HAOS (el scraper Solis es solo un sensor así), `grid.mode: 'sensor'` lee sensores planos (con signo o import/export). `statusAttrsId` (opcional) aporta online/station del inversor, desacoplado del grid. Todo viene de HAOS.
+- **`GET /api/install`**: devuelve la topología resuelta + entidades en uso; la UI (Ajustes → Conexión) ya no tiene la lista de entidades hardcodeada.
+- **Frontend genérico por topología**: página Inversores con tabs dinámicos (comparativa solo con ≥2), tabla de métricas de N columnas, reparto de N segmentos; Dashboard y DayChart se construyen desde la topología. `useInstall` (hook con caché de módulo).
+
+### Changed
+
+- `solar.js` (live/series/KPIs/backfill) y `alerts.js` guiados por la topología resuelta; `solis`/`fox` se mantienen como alias de los 2 primeros inversores.
 
 ## [0.6.2] - 2026-08-09
 
 ### Changed
 
 - **`corte_red` desactivado por defecto (issue #19)**: la alerta de corte de red daba falsos críticos porque la firma diferencial no es fiable con los sensores actuales (la pinza del circuito no respaldado está casi siempre a ~0 W por consumo bajo, y el scraper no expone tensión de red ni flag de EPS). Se mantiene `inversor_offline` (apagón total) y `fox_offline`. Para rehabilitarla en el futuro: `install_config.corteRedEnabled = true`; al disparar, el `audit_log` guarda ahora los datos del disparo (gridMag, respaldoKw, noRespaldadaKw, batteryPower, fresco).
+
+### Fixed
+
+- **Versión del server leída del package.json propio (issue #24)**: `index.js` leía `../../app/package.json`, que no existe en el layout plano de deploy (`/opt/helios/{server,public,shared}`) → en una instalación fresca el servidor no arrancaba, y en el CT daba una versión residual (0.5.0). Ahora la versión y el nombre salen del propio `server/package.json` (sincronizado con la app) y la versión de React se lee del frontend con fallback a `''`.
 - **Migración del toolchain de build**: Vite 7 → 8 (Rolldown), @vitejs/plugin-react 5 → 6, Tailwind CSS 3 → 4 (config en CSS vía `@theme` + `tw-animate-css`, plugin Vite `@tailwindcss/vite`).
 - **React Router 7 → 8.3.0**: imports migrados de `react-router-dom` a `react-router`.
 - **Backend**: @hono/node-server 1.x → 2.1.0.
