@@ -7,6 +7,17 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-08-12
+
+### Added
+
+- **Pull-to-refresh móvil (issue #28)**: al tirar hacia abajo desde el top de
+  la página se recarga la vista actual, para recoger un deploy nuevo sin
+  cerrar y reabrir la app. Solo actúa cuando `scrollY <= 0` y el gesto es un
+  pull vertical desde arriba (umbral 70 px); no interfiere con el overscroll
+  nativo ni con las listas con scroll propio, y el escritorio no se ve
+  afectado. Patrón portado de Keynest.
+
 ## [0.7.8] - 2026-08-12
 
 ### Changed
