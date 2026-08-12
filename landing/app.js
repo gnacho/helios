@@ -244,7 +244,10 @@
   function scrollPhase() {
     const doc = document.documentElement
     const max = doc.scrollHeight - window.innerHeight
-    return clamp(max > 0 ? window.scrollY / max : 0, 0, 1)
+    const x = clamp(max > 0 ? window.scrollY / max : 0, 0, 1)
+    // Acelera la transición luz→noche: la fase avanza más deprisa hacia el final
+    // (el atardecer llega antes, la noche se alcanza antes de llegar abajo del todo).
+    return 1 - Math.pow(1 - x, 1.3)
   }
 
   /* ── Gráfica del día ── */
