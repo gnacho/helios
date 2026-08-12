@@ -1,17 +1,18 @@
-// update.js — estado y aplicación de actualizaciones (patrón Keynest,
+// update.js — estado y aplicación de actualizaciones (patrón Keynest/Deltos,
 // skill app-auto-update): detecta la última release ESTABLE del repo
 // (releases/latest, tag v*) y, si hay versión nueva, la aplica ejecutando
 // helios-update.sh (deploy/, versionado en el repo: releases + checksums +
-// marker semver). El server NO se auto-aplica en runtime: el script hace el
-// deploy y, con SKIP_RESTART=1, el server sale y systemd (Restart=always)
-// relanza con el código nuevo.
-import { execFile } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+// marker semver). El server NO se auto-aplica en runtime: el endpoint escribe
+// un flag en el dir de datos (escribible) y un systemd .path
+// (helios-update.path) lo detecta y lanza helios-update.service (root, oneshot)
+// on-demand. El script hace el deploy + systemctl restart. El apply es
+// asíncrono: el front sondea /api/version hasta que el build cambia.
+import { writeFileSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { kvGet, kvSet } from './db.js'
 
 const REPO = process.env.GITHUB_REPO || 'gnacho/helios'
 const MARKER = process.env.RELEASE_MARKER || '/opt/helios/.release-id'
-const UPDATE_SCRIPT = process.env.UPDATE_SCRIPT || '/opt/helios/helios-update.sh'
 const CACHE_KEY = 'gh_latest_release'
 const CACHE_TTL = 5 * 60 * 1000
 
@@ -63,10 +64,18 @@ export async function updateStatus(db) {
   return { current, latest, available }
 }
 
-export function applyUpdate() {
-  return new Promise((resolve) => {
-    execFile(UPDATE_SCRIPT, { env: { ...process.env, SKIP_RESTART: '1' } }, (err) => {
-      resolve(!err)
-    })
-  })
+// El endpoint de apply NO ejecuta el script directamente (el servicio va
+// sandboxeado: User=helios + ProtectSystem=full + NoNewPrivileges, así que un
+// hijo hereda el sandbox y no puede escribir /opt/helios ni systemctl restart).
+// En su lugar escribe un flag en el dir de datos (escribible); un systemd
+// .path (helios-update.path) lo detecta y lanza helios-update.service (root,
+// oneshot) on-demand. Devuelve true si el flag se escribió.
+export function requestUpdate(dataDir) {
+  const flag = join(dataDir, '.update-requested')
+  try {
+    writeFileSync(flag, new Date().toISOString())
+    return true
+  } catch {
+    return false
+  }
 }

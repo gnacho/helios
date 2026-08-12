@@ -1,0 +1,13 @@
+[Unit]
+Description=Helios — aplicar actualización on-demand (flag en el dir de datos)
+
+[Path]
+# Helios se instala a mano en el CT (no hay install.sh por la dependencia de
+# HAOS); layout plano: datos en /opt/helios/data. El apply in-app escribe el
+# flag en el dir de datos; systemd lo vigila por inotify (fuera del sandbox
+# del servicio) y arranca helios-update.service (root) on-demand.
+PathExists=/opt/helios/data/.update-requested
+Unit=helios-update.service
+
+[Install]
+WantedBy=multi-user.target

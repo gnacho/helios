@@ -39,7 +39,7 @@ const auth = await import('./auth.js')
 const push = await import('./push.js')
 const { registerPushRoutes } = await import('./routes-push.js')
 const alerts = await import('./alerts.js')
-const { updateStatus, applyUpdate } = await import('./update.js')
+const { updateStatus, requestUpdate, currentId } = await import('./update.js')
 const install = await import('./install.js')
 const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
 const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema, topologySchema } = schemas
@@ -117,6 +117,16 @@ app.get('/health', (c) => {
   )
 })
 
+app.get('/api/version', (c) => {
+  // Público (se registra antes de guarded) y sin estado; build = release-id del
+  // marker, cambia en cada deploy → el front del apply lo sondea para saber
+  // cuándo el server reinició con el código nuevo.
+  return c.json({
+    version: pkg.version,
+    build: currentId() || pkg.version,
+  })
+})
+
 app.get('/api/system/info', (c) => {
   const mem = process.memoryUsage()
   return c.json({
@@ -159,11 +169,14 @@ app.post('/api/update/apply', async (c) => {
     return c.json({ error: 'solo administradores pueden actualizar' }, 403)
   }
   audit(db, user.username, user.id, 'update.apply', '')
-  const ok = await applyUpdate()
-  if (!ok) return c.json({ error: 'el script de actualización falló' }, 500)
-  // El script con SKIP_RESTART=1 deja el server vivo hasta aquí; se sale y
-  // systemd (Restart=always) relanza con el código nuevo.
-  setTimeout(() => process.exit(0), 1500)
+  // El servicio va sandboxeado (User=helios + ProtectSystem=full +
+  // NoNewPrivileges): no puede ejecutar helios-update.sh con privilegios.
+  // Escribe un flag en el dir de datos (escribible); un systemd .path
+  // (helios-update.path) lo detecta y lanza helios-update.service (root)
+  // on-demand. El apply es async: el front sondea /api/version hasta que el
+  // build cambia.
+  const ok = requestUpdate(config.dataDir)
+  if (!ok) return c.json({ error: 'no se pudo solicitar la actualización' }, 500)
   return c.json({ ok: true, restarting: true }, 202)
 })
 
