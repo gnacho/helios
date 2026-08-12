@@ -1,7 +1,7 @@
 import { memo, useId } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
-import { Sun, BatteryCharging, UtilityPole } from 'lucide-react';
+import { SolarPanel, BatteryCharging, UtilityPole } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -177,7 +177,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         glowColor={palette.solar}
         onClick={() => navigate('/inversores')}
       >
-        <Sun size={28} style={{ color: palette.solar }} />
+        <SolarPanel size={28} style={{ color: live.production > 0.1 ? palette.solar : 'var(--text-faint)' }} />
       </FlowNode>
 
       <FlowNode
