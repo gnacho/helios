@@ -21,8 +21,8 @@ function flowDuration(kw: number): number {
 }
 
 const NODES = {
-  fv: { x: 170, y: 82 },
-  home: { x: 170, y: 182 },
+  fv: { x: 170, y: 80 },
+  home: { x: 170, y: 196 },
   battery: { x: 62, y: 276 },
   grid: { x: 278, y: 276 },
 } as const;
@@ -167,7 +167,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
 
   return (
     <motion.svg
-      viewBox="0 0 340 348"
+      viewBox="0 0 340 346"
       className={cn('mx-auto w-full max-w-[360px]', className)}
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
