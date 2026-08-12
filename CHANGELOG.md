@@ -7,6 +7,21 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-08-12
+
+### Changed
+
+- **Landing: animación de scroll, sensores de batería, espaciado de gráficas
+  y footer (issue #57)**: la sección "Mírala respirar" anima sus estadísticas
+  al hacer scroll (respeta `prefers-reduced-motion`); el widget de batería
+  queda centrado y gana sensores (temperatura y autonomía estimada); las
+  gráficas aprovechan el espacio; corrección de copy ("Hecha para mirarla
+  todos los días."); el footer se reduce y su cielo nocturno estrellado pasa
+  a la sección CTA "El sol no espera". El final de la página se reordena
+  (screens → CTA → principios → FAQ → gracias con corazón rojo → footer, con
+  separador entre FAQ y gracias) y la transición luz→noche se acelera con una
+  curva de fase no lineal.
+
 ## [0.7.7] - 2026-08-12
 
 ### Changed
