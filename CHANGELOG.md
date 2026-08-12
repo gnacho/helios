@@ -7,6 +7,17 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-08-12
+
+### Changed
+
+- **Icono de marca redibujado (issue #59)**: el trazado del sol de Helios se
+  rehace a partir de una fuente SVG de Inkscape (casi cuadrada, el motivo
+  llena el lienzo). Actualizados los masters `logo.svg`/`logo-square.svg`, el
+  logo inline de la app (`BrandLogoIcon`) y regenerados todos los assets
+  derivados (favicon claro/oscuro 16+32, `favicon-32.png`, PWA 192/512,
+  `apple-touch-icon.png` e iconos de tema). El gradiente ámbar se mantiene.
+
 ## [0.7.4] - 2026-08-11
 
 ### Changed
