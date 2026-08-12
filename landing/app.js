@@ -409,6 +409,15 @@
 
   /* ── Batería ── */
   const ringFg = $('#ringFg'), batterySoc = $('#batterySoc'), batteryStatus = $('#batteryStatus')
+  const batTempVal = $('#batTempVal'), batAutonomyVal = $('#batAutonomyVal')
+  const BATTERY_CAPACITY_KWH = 10
+  const fmtAutonomy = (hours) => {
+    if (hours >= 100) return '∞'
+    if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`
+    const h = Math.floor(hours), m = Math.round((hours - h) * 60)
+    if (m >= 60) return `${h + 1} h`
+    return m ? `${h} h ${m} min` : `${h} h`
+  }
   let curSoc = 100
   function updateBattery(h) {
     const st = batteryState(h)
@@ -416,6 +425,14 @@
     ringFg.style.strokeDashoffset = String(314.16 * (1 - curSoc / 100))
     batterySoc.textContent = String(Math.round(curSoc))
     batteryStatus.textContent = MICRO[document.documentElement.lang || 'es'][st.mode]
+    const temp = 23 + (st.mode === 'charge' ? 2.5 : 0) + (st.mode === 'discharge' ? 0.9 : 0) + Math.sin(h * 1.7) * 0.4
+    batTempVal.textContent = `${temp.toFixed(1)} °C`
+    if (st.mode === 'charge') {
+      batAutonomyVal.textContent = '…'
+    } else {
+      const cons = Math.max(0.1, consumptionCurve(h))
+      batAutonomyVal.textContent = fmtAutonomy((curSoc / 100) * BATTERY_CAPACITY_KWH / cons)
+    }
   }
 
   /* ── Flujo de energía (réplica del widget de la app) ── */
@@ -590,6 +607,39 @@
     els.forEach((el) => io.observe(el))
   }
 
+  /* ── Teatro: animación al hacer scroll ── */
+  const theaterEl = document.querySelector('.theater')
+  const theaterStagger = [
+    ...document.querySelectorAll('.theater-eyebrow, .theater-title, .theater-sub'),
+    ...document.querySelectorAll('.theater-widgets .widget'),
+  ]
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  function theaterScroll() {
+    if (reduceMotion) return
+    const vh = window.innerHeight
+    const top = theaterEl.getBoundingClientRect().top + window.scrollY
+    const start = top - vh
+    const total = vh + vh * 1.4
+    const p = clamp((window.scrollY - start) / total, 0, 1)
+    let i = 0
+    for (const el of theaterStagger) {
+      const w0 = (i === 0 ? 0 : 0.06 + (i - 1) * 0.11)
+      const w1 = w0 + 0.12
+      const e = ss(w0, w1, p)
+      el.style.opacity = e.toFixed(3)
+      el.style.transform = e >= 1 ? '' : `translateY(${((1 - e) * 18).toFixed(1)}px)`
+      i++
+    }
+  }
+  function theaterScrollInit() {
+    if (reduceMotion) return
+    for (const el of theaterStagger) {
+      el.style.opacity = '0'
+      el.style.transform = 'translateY(18px)'
+    }
+    theaterScroll()
+  }
+
   /* ── Init ── */
   function init() {
     const i18n = window.heliosI18n
@@ -606,6 +656,7 @@
     setInterval(buildTicker, 10000)
     setupSlider()
     setupReveal()
+    theaterScrollInit()
     updateFlow(hourNow())
 
     let lastDom = 0
@@ -621,6 +672,7 @@
     function frame(ts) {
       const h = hourNow()
       drawSky(scrollPhase(), h)
+      theaterScroll()
       const heroChart = $('#heroChart'), theaterChart = $('#theaterChart'), theaterHist = $('#theaterHist')
       if (chartNeedsRedraw(heroChart)) drawDayChart(heroChart, true)
       if (chartNeedsRedraw(theaterChart)) drawDayChart(theaterChart, false)

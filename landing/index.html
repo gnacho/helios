@@ -210,6 +210,14 @@
                     <span class="battery-metric-value" id="batDischargedVal">0.0 kWh</span>
                   </div>
                   <div class="battery-metric">
+                    <span class="battery-metric-label mono" data-i18n="theater.bTemp">Temperatura</span>
+                    <span class="battery-metric-value" id="batTempVal">24.0 °C</span>
+                  </div>
+                  <div class="battery-metric">
+                    <span class="battery-metric-label mono" data-i18n="theater.bAutonomy">Autonomía</span>
+                    <span class="battery-metric-value" id="batAutonomyVal">…</span>
+                  </div>
+                  <div class="battery-metric">
                     <span class="battery-metric-label mono" data-i18n="theater.bCycles">Ciclos</span>
                     <span class="battery-metric-value">312</span>
                   </div>
@@ -325,7 +333,7 @@
     <section class="section screens" id="screens">
       <div class="section-head">
         <p class="eyebrow mono" data-i18n="screens.eyebrow">LA APP</p>
-        <h2 class="section-title" data-i18n="screens.title">Hecha para mirarse todos los días.</h2>
+        <h2 class="section-title" data-i18n="screens.title">Hecha para mirarla todos los días.</h2>
       </div>
       <div class="slider" id="slider">
         <div class="slider-viewport">
@@ -425,6 +433,15 @@
       </div>
     </section>
 
+    <!-- GRACIAS A HOME ASSISTANT -->
+    <section class="section thanks">
+      <div class="thanks-card glass">
+        <h3 data-i18n="how.thanks">Gracias, Home Assistant. 💛</h3>
+        <p data-i18n="how.thanksD">Helios no sería posible sin el proyecto Home Assistant y su comunidad. Se conecta a tu HAOS local por WebSocket, sin tocar su API pública, y lee solo los sensores que tú decides.</p>
+        <a class="mono thanks-link" href="https://www.home-assistant.io" target="_blank" rel="noopener">home-assistant.io →</a>
+      </div>
+    </section>
+
     <!-- CTA FINAL -->
     <section class="section cta-final">
       <h2 class="cta-title" data-i18n="cta.title">El sol no espera.<br /><em>Tu instalación tampoco.</em></h2>
@@ -442,25 +459,9 @@
     </section>
   </main>
 
-  <!-- GRACIAS A HOME ASSISTANT -->
-  <section class="section thanks">
-    <div class="thanks-card glass">
-      <h3 data-i18n="how.thanks">Gracias, Home Assistant. 💛</h3>
-      <p data-i18n="how.thanksD">Helios no sería posible sin el proyecto Home Assistant y su comunidad. Se conecta a tu HAOS local por WebSocket, sin tocar su API pública, y lee solo los sensores que tú decides.</p>
-      <a class="mono thanks-link" href="https://www.home-assistant.io" target="_blank" rel="noopener">home-assistant.io →</a>
-    </div>
-  </section>
-
   <!-- FOOTER: atardecer → noche -->
   <footer class="footer" id="footer">
-    <div class="footer-top">
-      <p class="footer-tagline" data-i18n="footer.tagline">Hecho en casa.<br />Para casas sin nube.</p>
-      <div class="footer-principles">
-        <span class="principle mono" data-i18n="footer.p1">Soberanía digital</span>
-        <span class="principle mono" data-i18n="footer.p2">Libre para siempre</span>
-        <span class="principle mono" data-i18n="footer.p3">De personas, no de empresas</span>
-      </div>
-    </div>
+    <p class="footer-tagline" data-i18n="footer.tagline">Hecho en casa.<br />Para casas sin nube.</p>
     <div class="footer-links mono">
       <a href="https://cloudless.club">
         <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
