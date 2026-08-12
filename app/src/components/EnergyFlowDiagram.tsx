@@ -1,13 +1,12 @@
 import { memo, useId } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
-import { SolarPanel, BatteryCharging, UtilityPole } from 'lucide-react';
+import { SolarPanel, House, BatteryCharging, UtilityPole } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtKw } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import FlowHomeIcon from '@/components/FlowHomeIcon';
 
 interface FlowEdge {
   id: string;
@@ -188,7 +187,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         active={live.consumption > 0.1}
         glowColor={palette.consumo}
       >
-        <FlowHomeIcon className="h-11 w-11 text-app" />
+        <House size={30} style={{ color: palette.consumo }} />
       </FlowNode>
 
       <FlowNode
