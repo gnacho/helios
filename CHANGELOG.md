@@ -7,6 +7,11 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+### Fixed
+
+- La PWA no giraba en tablets: el manifest forzaba orientación vertical
+  (`portrait-primary`). Ahora usa `any` para rotar con el dispositivo. (#74)
+
 ## [0.8.1] - 2026-08-12
 
 ### Fixed
