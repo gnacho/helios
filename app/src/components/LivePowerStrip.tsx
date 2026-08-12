@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Sun, House, BatteryCharging, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import { SolarPanel, House, BatteryCharging, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -8,22 +8,24 @@ import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
 import { cn } from '@/lib/utils';
 
 interface StripValueProps {
-  icon: typeof Sun;
+  icon: typeof SolarPanel;
   label: string;
   kw: number;
   status?: string;
   color: string;
+  /** Color del icono; si se omite, usa `color` (icono y celda iguales). */
+  iconColor?: string;
   className?: string;
   /** Sustituye la cifra grande por este valor y unidad (p.ej. batería: 20% en vez de kW). */
   altValue?: string;
   altUnit?: string;
 }
 
-function StripValue({ icon: Icon, label, kw, status, color, className, altValue, altUnit }: StripValueProps) {
+function StripValue({ icon: Icon, label, kw, status, color, iconColor, className, altValue, altUnit }: StripValueProps) {
   const animated = useAnimatedNumber(altValue === undefined ? kw : NaN);
   return (
     <div className={cn('flex items-center gap-3 px-4 py-3 sm:px-5', className)}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}1F`, color }}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}1F`, color: iconColor ?? color }}>
         <Icon size={18} strokeWidth={2.2} />
       </span>
       <div className="min-w-0">
@@ -87,7 +89,7 @@ export default function LivePowerStrip({ live, atMin }: LivePowerStripProps) {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4">
-        <StripValue icon={Sun} label={t('common.production')} kw={live.production} color={palette.solar} />
+        <StripValue icon={SolarPanel} label={t('common.production')} kw={live.production} color={palette.solar} iconColor={live.production > 0.1 ? palette.solar : 'var(--text-faint)'} />
         <StripValue icon={House} label={t('common.consumption')} kw={live.consumption} color={palette.consumo} className="border-l border-app" />
         <StripValue
           icon={BatteryCharging}

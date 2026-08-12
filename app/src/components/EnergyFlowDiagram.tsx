@@ -1,13 +1,12 @@
 import { memo, useId } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
-import { Sun, BatteryCharging, UtilityPole } from 'lucide-react';
+import { SolarPanel, House, BatteryCharging, UtilityPole } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtKw } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import FlowHomeIcon from '@/components/FlowHomeIcon';
 
 interface FlowEdge {
   id: string;
@@ -22,19 +21,19 @@ function flowDuration(kw: number): number {
 }
 
 const NODES = {
-  fv: { x: 170, y: 46 },
-  home: { x: 170, y: 152 },
-  battery: { x: 62, y: 246 },
-  grid: { x: 278, y: 246 },
+  fv: { x: 170, y: 78 },
+  home: { x: 170, y: 200 },
+  battery: { x: 62, y: 276 },
+  grid: { x: 278, y: 276 },
 } as const;
 
 const PATHS = {
   fvHome: `M ${NODES.fv.x} ${NODES.fv.y + 30} L ${NODES.home.x} ${NODES.home.y - 34}`,
-  fvBattery: `M ${NODES.fv.x - 18} ${NODES.fv.y + 16} C 96 74, ${NODES.battery.x + 6} 150, ${NODES.battery.x + 4} ${NODES.battery.y - 34}`,
-  fvGrid: `M ${NODES.fv.x + 18} ${NODES.fv.y + 16} C 244 74, ${NODES.grid.x - 6} 150, ${NODES.grid.x - 4} ${NODES.grid.y - 34}`,
-  batteryHome: `M ${NODES.battery.x + 28} ${NODES.battery.y - 22} C 118 206, 138 196, ${NODES.home.x - 20} ${NODES.home.y + 20}`,
-  gridHome: `M ${NODES.grid.x - 28} ${NODES.grid.y - 22} C 222 206, 202 196, ${NODES.home.x + 20} ${NODES.home.y + 20}`,
-  gridBattery: `M ${NODES.grid.x - 28} ${NODES.grid.y + 22} C 218 296, 122 296, ${NODES.battery.x + 28} ${NODES.battery.y + 22}`,
+  fvBattery: `M ${NODES.fv.x - 18} ${NODES.fv.y + 16} C 96 104, ${NODES.battery.x + 6} 180, ${NODES.battery.x + 4} ${NODES.battery.y - 34}`,
+  fvGrid: `M ${NODES.fv.x + 18} ${NODES.fv.y + 16} C 244 104, ${NODES.grid.x - 6} 180, ${NODES.grid.x - 4} ${NODES.grid.y - 34}`,
+  batteryHome: `M ${NODES.battery.x + 28} ${NODES.battery.y - 22} C 118 236, 138 226, ${NODES.home.x - 20} ${NODES.home.y + 20}`,
+  gridHome: `M ${NODES.grid.x - 28} ${NODES.grid.y - 22} C 222 236, 202 226, ${NODES.home.x + 20} ${NODES.home.y + 20}`,
+  gridBattery: `M ${NODES.grid.x - 28} ${NODES.grid.y + 22} C 218 326, 122 326, ${NODES.battery.x + 28} ${NODES.battery.y + 22}`,
 } as const;
 
 interface FlowNodeProps {
@@ -44,12 +43,16 @@ interface FlowNodeProps {
   valueText: string;
   active: boolean;
   glowColor: string;
+  /** Lado en el que se dibuja label + valor: 'bottom' (por defecto) o 'top'. */
+  textSide?: 'bottom' | 'top';
   onClick?: () => void;
   children: React.ReactNode;
 }
 
-const FlowNode = memo(function FlowNode({ x, y, label, valueText, active, glowColor, onClick, children }: FlowNodeProps) {
+const FlowNode = memo(function FlowNode({ x, y, label, valueText, active, glowColor, textSide = 'bottom', onClick, children }: FlowNodeProps) {
   const r = 33
+  const labelY = textSide === 'top' ? y - 50 : y + 50;
+  const valueY = textSide === 'top' ? y - 64 : y + 64;
   return (
     <g
       onClick={onClick}
@@ -73,7 +76,7 @@ const FlowNode = memo(function FlowNode({ x, y, label, valueText, active, glowCo
       </foreignObject>
       <text
         x={x}
-        y={y + 50}
+        y={labelY}
         textAnchor="middle"
         style={{ fill: 'var(--text-faint)', fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}
       >
@@ -81,7 +84,7 @@ const FlowNode = memo(function FlowNode({ x, y, label, valueText, active, glowCo
       </text>
       <text
         x={x}
-        y={y + 64}
+        y={valueY}
         textAnchor="middle"
         className="font-display"
         style={{ fill: 'var(--text)', fontSize: 12.5, fontWeight: 600 }}
@@ -136,6 +139,14 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
   const gridToBattery = Math.max(0, Math.min(charging - solarSurplus, importing));
   const fvToBattery = Math.max(0, charging - gridToBattery);
 
+  const homeSources = [
+    { kw: fvToHome, color: palette.solar },
+    { kw: discharging, color: palette.bateria },
+    { kw: importing, color: palette.redCompra },
+  ];
+  const dominantHome = homeSources.reduce((a, b) => (b.kw > a.kw ? b : a));
+  const homeColor = dominantHome.kw > 0.05 ? dominantHome.color : 'var(--text-faint)';
+
   const edges: FlowEdge[] = [
     { id: 'fv-home', d: PATHS.fvHome, value: fvToHome, color: palette.solar },
     { id: 'fv-battery', d: PATHS.fvBattery, value: fvToBattery, color: palette.bateria },
@@ -156,7 +167,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
 
   return (
     <motion.svg
-      viewBox="0 0 340 312"
+      viewBox="0 0 340 345"
       className={cn('mx-auto w-full max-w-[360px]', className)}
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -175,9 +186,10 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         valueText={`${fmtKw(live.production)} kW`}
         active={live.production > 0.1}
         glowColor={palette.solar}
+        textSide="top"
         onClick={() => navigate('/inversores')}
       >
-        <Sun size={28} style={{ color: palette.solar }} />
+        <SolarPanel size={28} style={{ color: live.production > 0.1 ? palette.solar : 'var(--text-faint)' }} />
       </FlowNode>
 
       <FlowNode
@@ -186,9 +198,9 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         label={t('flow.home')}
         valueText={`${fmtKw(live.consumption)} kW`}
         active={live.consumption > 0.1}
-        glowColor={palette.consumo}
+        glowColor={homeColor}
       >
-        <FlowHomeIcon className="h-11 w-11 text-app" />
+        <House size={30} style={{ color: homeColor }} />
       </FlowNode>
 
       <FlowNode
