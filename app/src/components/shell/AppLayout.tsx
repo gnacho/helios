@@ -29,6 +29,7 @@ import UpdateRibbon from '@/components/UpdateRibbon';
 import ThemeToggle from '@/components/ThemeToggle';
 import Footer from '@/components/Footer';
 import HeliosToaster from '@/components/HeliosToaster';
+import PullToRefresh from '@/components/PullToRefresh';
 import { apiFetch } from '@/data/api-client';
 
 /**
@@ -439,12 +440,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       <main className={cn('mx-auto max-w-[1440px] px-4 pb-24 pt-4 md:ml-16 md:px-6 md:pb-6 md:pt-6', lgMargin)}>
-        <UpdateRibbon />
-        {isDemo && <DemoBanner onExit={exitDemo} />}
-        {children}
-        <div className="hidden lg:block">
-          <Footer />
-        </div>
+        <PullToRefresh>
+          <UpdateRibbon />
+          {isDemo && <DemoBanner onExit={exitDemo} />}
+          {children}
+          <div className="hidden lg:block">
+            <Footer />
+          </div>
+        </PullToRefresh>
       </main>
 
       {/* Bottom nav < md */}
