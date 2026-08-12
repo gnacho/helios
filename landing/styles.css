@@ -261,6 +261,22 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
   padding: 26px 28px;
   color: rgb(var(--text-primary));
 }
+
+/* ── Separador de sección (sol entre dos líneas) ── */
+.section-divider {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  background: rgb(var(--canvas));
+  padding: 14px 0 2px;
+}
+.divider-line {
+  width: min(120px, 18vw); height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(var(--amber) / 0.55), transparent);
+}
+.divider-sun {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle, rgb(var(--amber-2)), rgb(var(--amber)));
+  box-shadow: 0 0 12px rgb(var(--amber) / 0.6);
+}
 .section.thanks .thanks-card {
   max-width: 860px; margin: 0 auto; text-align: center; border-radius: var(--radius-card);
 }
@@ -283,33 +299,35 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 .theater-eyebrow { margin-bottom: 6px; text-shadow: 0 2px 14px rgb(0 0 0 / 0.55); }
 .theater-title {
   font-family: var(--font-display); font-weight: 620;
-  font-size: clamp(2.2rem, 4vw, 3.2rem); letter-spacing: -0.015em;
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem); letter-spacing: -0.015em;
   text-shadow: 0 2px 18px rgb(0 0 0 / 0.5);
 }
-.theater-sub { color: rgb(255 255 255 / 0.8); margin-top: 4px; font-size: 1.05rem; text-shadow: 0 1px 10px rgb(0 0 0 / 0.4); }
+.theater-sub { color: rgb(255 255 255 / 0.8); margin-top: 4px; font-size: 1rem; text-shadow: 0 1px 10px rgb(0 0 0 / 0.4); }
 .theater-widgets {
   display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto;
   gap: 14px;
-  margin-top: 22px; text-align: left;
+  margin-top: 16px; text-align: left;
 }
 .widget { padding: 16px 18px; min-height: 0; }
 .theater-widgets .widget {
   background: rgb(var(--night) / 0.55);
   border-color: rgb(255 255 255 / 0.18);
+  padding: 10px 16px 12px;
 }
 .live-widget, .history-widget { display: flex; flex-direction: column; }
-.live-widget canvas { height: 220px; }
-.history-widget canvas { height: 200px; }
+.live-widget canvas { flex: 1; min-height: 140px; }
+.history-widget canvas { flex: 1; min-height: 130px; }
 .flow-widget .flow-diagram { margin: auto; }
 .widget-head {
   display: flex; justify-content: space-between; align-items: center;
-  color: rgb(255 255 255 / 0.65); font-size: 0.72rem; margin-bottom: 8px;
+  color: rgb(255 255 255 / 0.65); font-size: 0.72rem; margin-bottom: 4px;
 }
 .widget canvas { width: 100%; display: block; }
-.battery-widget { display: flex; flex-direction: column; padding: 16px 18px; }
-.battery-body { display: flex; gap: 18px; align-items: center; min-height: 0; }
+.battery-widget { display: flex; flex-direction: column; justify-content: center; padding: 16px 18px; }
+.battery-body { display: flex; gap: 14px; align-items: center; justify-content: center; min-height: 0; }
 .battery-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
 .battery-ring { position: relative; }
+.battery-ring svg { width: 100px; height: 100px; display: block; }
 .ring-bg { fill: none; stroke: rgb(255 255 255 / 0.12); stroke-width: 8; }
 .ring-fg {
   fill: none; stroke: rgb(var(--amber-2)); stroke-width: 8; stroke-linecap: round;
@@ -318,21 +336,21 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
 }
 .battery-center {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-size: 2rem; font-weight: 600; color: rgb(var(--amber-2));
+  font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; color: rgb(var(--amber-2));
 }
-.battery-center small { font-size: 0.9rem; color: rgb(255 255 255 / 0.6); margin-left: 2px; }
+.battery-center small { font-size: 0.85rem; color: rgb(255 255 255 / 0.6); margin-left: 2px; }
 .battery-status { color: rgb(255 255 255 / 0.7); font-size: 0.75rem; }
-.battery-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.battery-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; min-width: 0; }
 .battery-metric {
   display: flex; flex-direction: column; gap: 2px;
   background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.1);
-  border-radius: 10px; padding: 10px 12px; justify-content: center;
+  border-radius: 10px; padding: 8px 10px; justify-content: center;
 }
 .battery-metric-label { color: rgb(255 255 255 / 0.55); font-size: 0.62rem; letter-spacing: 0.05em; }
 .battery-metric-value { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: #fff; line-height: 1.15; }
 
 /* ── Flujo de energía (réplica del de la app) ── */
-.flow-diagram { width: 100%; max-width: 360px; margin: 0 auto; display: block; color: #fff; }
+.flow-diagram { width: 100%; max-width: 300px; margin: 0 auto; display: block; color: #fff; }
 .flow-edge path {
   fill: none; stroke: rgb(255 255 255 / 0.16); stroke-width: 1.5;
   transition: stroke 0.4s ease, opacity 0.4s ease, stroke-width 0.4s ease;
@@ -439,8 +457,11 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
 .faq-item[open] summary::after { content: '–'; }
 .faq-item p { padding: 0 20px 18px; color: rgb(var(--text-secondary)); font-size: 0.95rem; }
 
-/* ── CTA final ── */
-.cta-final { text-align: center; background: rgb(var(--canvas)); }
+/* ── CTA final (efecto nocturno propio, no depende del scroll) ── */
+.cta-final {
+  text-align: center; color: #fff;
+  background: linear-gradient(180deg, rgb(var(--dawn) / 0.45), rgb(var(--night) / 0.92) 55%, rgb(var(--night)));
+}
 .cta-kofi {
   margin-top: 34px;
   max-width: 560px;
@@ -448,24 +469,25 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
   display: flex; flex-direction: column; align-items: center; gap: 14px;
 }
 .cta-kofi-note {
-  color: rgb(var(--text-secondary));
+  color: rgb(255 255 255 / 0.8);
   font-size: 0.92rem;
   line-height: 1.55;
 }
 .kofi {
   display: inline-flex; align-items: center; gap: 0.5rem;
   font-weight: 600; font-size: 0.92rem;
-  color: rgb(var(--text-primary));
-  border: 1px solid rgb(var(--border));
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 0.3);
   border-radius: 999px;
   padding: 0.6rem 1.2rem;
   transition: background 0.2s;
 }
-.kofi svg { width: 17px; height: 17px; color: rgb(var(--amber)); }
-.kofi:hover { background: rgb(var(--amber) / 0.08); text-decoration: none; }
+.kofi svg { width: 17px; height: 17px; color: rgb(var(--amber-2)); }
+.kofi:hover { background: rgb(255 255 255 / 0.1); text-decoration: none; }
 .cta-title {
   font-family: var(--font-display); font-weight: 620;
   font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin-bottom: 30px;
+  color: #fff; text-shadow: 0 2px 24px rgb(0 0 0 / 0.4);
 }
 .cta-title em {
   font-style: italic;
@@ -473,31 +495,23 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .cta-final .hero-cta { justify-content: center; }
-.cta-final .btn-ghost { border-color: rgb(0 0 0 / 0.2); color: rgb(var(--text-primary)); background: transparent; }
-.cta-final .btn-ghost:hover { background: rgb(var(--amber) / 0.08); }
+.cta-final .btn-ghost { border-color: rgb(255 255 255 / 0.35); color: #fff; background: rgb(255 255 255 / 0.06); }
+.cta-final .btn-ghost:hover { background: rgb(255 255 255 / 0.14); }
 
-/* ── Footer ── */
+/* ── Footer reducido ── */
 .footer {
   position: relative;
-  padding-top: clamp(70px, 12vh, 130px); padding-bottom: 60px;
+  padding-top: 48px; padding-bottom: 40px;
   color: #fff;
-}
-.footer-top {
-  display: flex; flex-wrap: wrap; gap: 40px; justify-content: space-between; align-items: flex-end;
-  margin-bottom: 50px;
+  text-align: center;
 }
 .footer-tagline {
   font-family: var(--font-display); font-weight: 600;
-  font-size: clamp(1.9rem, 5vw, 3.2rem); line-height: 1.08;
-}
-.footer-principles { display: flex; gap: 10px; flex-wrap: wrap; }
-.principle {
-  padding: 8px 14px; border-radius: 999px;
-  border: 1px solid rgb(255 255 255 / 0.25); background: rgb(255 255 255 / 0.07);
-  font-size: 0.74rem; color: rgb(255 255 255 / 0.9);
+  font-size: clamp(1.4rem, 3.5vw, 2.1rem); line-height: 1.15;
+  margin-bottom: 24px;
 }
 .footer-links {
-  display: flex; gap: 26px; flex-wrap: wrap; margin-bottom: 30px;
+  display: flex; gap: 26px; flex-wrap: wrap; justify-content: center; margin-bottom: 22px;
 }
 .footer-links a {
   display: inline-flex; align-items: center; gap: 8px;

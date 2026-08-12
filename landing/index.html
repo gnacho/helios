@@ -25,9 +25,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=4" />
-  <script defer src="/i18n.js?v=4"></script>
-  <script defer src="/app.js?v=4"></script>
+  <link rel="stylesheet" href="/styles.css?v=8" />
+  <script defer src="/i18n.js?v=8"></script>
+  <script defer src="/app.js?v=8"></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="misc.skip">Saltar al contenido</a>
@@ -210,6 +210,14 @@
                     <span class="battery-metric-value" id="batDischargedVal">0.0 kWh</span>
                   </div>
                   <div class="battery-metric">
+                    <span class="battery-metric-label mono" data-i18n="theater.bTemp">Temperatura</span>
+                    <span class="battery-metric-value" id="batTempVal">24.0 °C</span>
+                  </div>
+                  <div class="battery-metric">
+                    <span class="battery-metric-label mono" data-i18n="theater.bAutonomy">Autonomía</span>
+                    <span class="battery-metric-value" id="batAutonomyVal">…</span>
+                  </div>
+                  <div class="battery-metric">
                     <span class="battery-metric-label mono" data-i18n="theater.bCycles">Ciclos</span>
                     <span class="battery-metric-value">312</span>
                   </div>
@@ -325,7 +333,7 @@
     <section class="section screens" id="screens">
       <div class="section-head">
         <p class="eyebrow mono" data-i18n="screens.eyebrow">LA APP</p>
-        <h2 class="section-title" data-i18n="screens.title">Hecha para mirarse todos los días.</h2>
+        <h2 class="section-title" data-i18n="screens.title">Hecha para mirarla todos los días.</h2>
       </div>
       <div class="slider" id="slider">
         <div class="slider-viewport">
@@ -356,37 +364,19 @@
       </div>
     </section>
 
-    <!-- FAQ -->
-    <section class="section faq" id="faq">
-      <div class="section-head">
-        <p class="eyebrow mono" data-i18n="faq.eyebrow">PREGUNTAS FRECUENTES</p>
-        <h2 class="section-title" data-i18n="faq.title">Lo que todo el mundo pregunta.</h2>
+    <!-- CTA FINAL -->
+    <section class="section cta-final">
+      <h2 class="cta-title" data-i18n="cta.title">El sol no espera.<br /><em>Tu instalación tampoco.</em></h2>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="https://demo.helios.cloudless.club" data-i18n="cta.demo">Abrir la demo</a>
+        <a class="btn btn-ghost btn-lg" href="https://github.com/gnacho/helios" data-i18n="cta.code">Fork en GitHub</a>
       </div>
-      <div class="faq-list">
-        <details class="faq-item">
-          <summary data-i18n="q1">¿Escribe datos en mi HAOS?</summary>
-          <p data-i18n="a1">No. Solo lectura: ni una configuración, ni un dato, ni una escena. Helios se suscribe a tus sensores y lee estadísticas del grabador.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="q2">¿Necesita cuenta, nube o registrarme?</summary>
-          <p data-i18n="a2">No. Ni cuenta, ni nube, ni datos fuera de casa. Se instala en tu propia máquina y es 100&nbsp;% AGPL-3.0: puedes leerlo, auditarlo y forkearlo.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="q3">¿Sirve para cualquier instalación?</summary>
-          <p data-i18n="a3">Desde 0.7.x la topología es configurable: N inversores, batería opcional y grid por sensores o por atributos de un scraper. Una instalación nueva requiere editar un JSON con tus sensores; no hay aún editor visual de topología.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="q4">¿Cuánto consume?</summary>
-          <p data-i18n="a4">Un proceso Node.js pequeño con SQLite. Cabe en un LXC sin estrenar: la demo completa, con 953 días de histórico, va sobrada en 2&nbsp;GB de RAM.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="q5">¿Y si se cae internet?</summary>
-          <p data-i18n="a5">Tu casa sigue funcionando: el sol no espera. Helios es local y sigue pintando tu instalación aunque la nube de nadie esté caída.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="q6">¿Funciona en el móvil?</summary>
-          <p data-i18n="a6">Sí: es una PWA instalable, responsive, con temas claro y oscuro, y acceso multiusuario con perfiles e idiomas.</p>
-        </details>
+      <div class="cta-kofi">
+        <p class="cta-kofi-note" data-i18n="cta.kofi">Si algo de lo que ves te ha sido útil, me harías muy feliz con un café en Ko-fi. No vivo de esto: es mi hobby, hecho en casa y para compartir. Pero si el proyecto recibe apoyo, podré dedicarle más tiempo. Y de paso me dices si te gusta la curva.</p>
+        <a class="kofi" href="https://ko-fi.com/gnacho" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.24 2.437 2.057 3.134 3.957 3.134 2.806.001 5.825-.054 8.658-.065.147-.031 4.467-.842 5.393-4.63.266-1.088.05-1.574-.149-2.466zm-4.572 3.482c-.567 2.306-2.876 2.523-2.876 2.523H4.645c-1.846 0-1.833-1.873-1.833-1.873V6.94c0-1.293 1.164-1.48 1.164-1.48h11.639c1.895 0 2.088 1.509 2.088 1.509s.18 2.121.18 3.153c0 1.155-.193 2.308-.574 2.308zm-4.224-1.051c-.657-.526-1.219-1.298-1.743-2.236-.523.938-1.086 1.71-1.742 2.236-.952.762-2.352.506-2.764-.567-.177-.462-.141-1.068.069-1.711.479-1.475 1.862-3.511 3.406-4.83a1.53 1.53 0 0 1 2.06 0c1.545 1.319 2.928 3.355 3.407 4.83.21.643.246 1.249.069 1.711-.413 1.073-1.813 1.329-2.762.567z"/></svg>
+          <span data-i18n="cta.kofiCta">Apóyame en Ko-fi</span>
+        </a>
       </div>
     </section>
 
@@ -425,42 +415,59 @@
       </div>
     </section>
 
-    <!-- CTA FINAL -->
-    <section class="section cta-final">
-      <h2 class="cta-title" data-i18n="cta.title">El sol no espera.<br /><em>Tu instalación tampoco.</em></h2>
-      <div class="hero-cta">
-        <a class="btn btn-primary btn-lg" href="https://demo.helios.cloudless.club" data-i18n="cta.demo">Abrir la demo</a>
-        <a class="btn btn-ghost btn-lg" href="https://github.com/gnacho/helios" data-i18n="cta.code">Fork en GitHub</a>
+    <!-- FAQ -->
+    <section class="section faq" id="faq">
+      <div class="section-head">
+        <p class="eyebrow mono" data-i18n="faq.eyebrow">PREGUNTAS FRECUENTES</p>
+        <h2 class="section-title" data-i18n="faq.title">Lo que todo el mundo pregunta.</h2>
       </div>
-      <div class="cta-kofi">
-        <p class="cta-kofi-note" data-i18n="cta.kofi">Si algo de lo que ves te ha sido útil, me harías muy feliz con un café en Ko-fi. No vivo de esto: es mi hobby, hecho en casa y para compartir. Pero si el proyecto recibe apoyo, podré dedicarle más tiempo. Y de paso me dices si te gusta la curva.</p>
-        <a class="kofi" href="https://ko-fi.com/gnacho" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.24 2.437 2.057 3.134 3.957 3.134 2.806.001 5.825-.054 8.658-.065.147-.031 4.467-.842 5.393-4.63.266-1.088.05-1.574-.149-2.466zm-4.572 3.482c-.567 2.306-2.876 2.523-2.876 2.523H4.645c-1.846 0-1.833-1.873-1.833-1.873V6.94c0-1.293 1.164-1.48 1.164-1.48h11.639c1.895 0 2.088 1.509 2.088 1.509s.18 2.121.18 3.153c0 1.155-.193 2.308-.574 2.308zm-4.224-1.051c-.657-.526-1.219-1.298-1.743-2.236-.523.938-1.086 1.71-1.742 2.236-.952.762-2.352.506-2.764-.567-.177-.462-.141-1.068.069-1.711.479-1.475 1.862-3.511 3.406-4.83a1.53 1.53 0 0 1 2.06 0c1.545 1.319 2.928 3.355 3.407 4.83.21.643.246 1.249.069 1.711-.413 1.073-1.813 1.329-2.762.567z"/></svg>
-          <span data-i18n="cta.kofiCta">Apóyame en Ko-fi</span>
-        </a>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary data-i18n="q1">¿Escribe datos en mi HAOS?</summary>
+          <p data-i18n="a1">No. Solo lectura: ni una configuración, ni un dato, ni una escena. Helios se suscribe a tus sensores y lee estadísticas del grabador.</p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="q2">¿Necesita cuenta, nube o registrarme?</summary>
+          <p data-i18n="a2">No. Ni cuenta, ni nube, ni datos fuera de casa. Se instala en tu propia máquina y es 100&nbsp;% AGPL-3.0: puedes leerlo, auditarlo y forkearlo.</p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="q3">¿Sirve para cualquier instalación?</summary>
+          <p data-i18n="a3">Desde 0.7.x la topología es configurable: N inversores, batería opcional y grid por sensores o por atributos de un scraper. Una instalación nueva requiere editar un JSON con tus sensores; no hay aún editor visual de topología.</p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="q4">¿Cuánto consume?</summary>
+          <p data-i18n="a4">Un proceso Node.js pequeño con SQLite. Cabe en un LXC sin estrenar: la demo completa, con 953 días de histórico, va sobrada en 2&nbsp;GB de RAM.</p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="q5">¿Y si se cae internet?</summary>
+          <p data-i18n="a5">Tu casa sigue funcionando: el sol no espera. Helios es local y sigue pintando tu instalación aunque la nube de nadie esté caída.</p>
+        </details>
+        <details class="faq-item">
+          <summary data-i18n="q6">¿Funciona en el móvil?</summary>
+          <p data-i18n="a6">Sí: es una PWA instalable, responsive, con temas claro y oscuro, y acceso multiusuario con perfiles e idiomas.</p>
+        </details>
+      </div>
+    </section>
+
+    <div class="section-divider" aria-hidden="true">
+      <span class="divider-line"></span>
+      <span class="divider-sun"></span>
+      <span class="divider-line"></span>
+    </div>
+
+    <!-- GRACIAS A HOME ASSISTANT -->
+    <section class="section thanks">
+      <div class="thanks-card glass">
+        <h3 data-i18n="how.thanks">Gracias, Home Assistant. ❤️</h3>
+        <p data-i18n="how.thanksD">Helios no sería posible sin el proyecto Home Assistant y su comunidad. Se conecta a tu HAOS local por WebSocket, sin tocar su API pública, y lee solo los sensores que tú decides.</p>
+        <a class="mono thanks-link" href="https://www.home-assistant.io" target="_blank" rel="noopener">home-assistant.io →</a>
       </div>
     </section>
   </main>
 
-  <!-- GRACIAS A HOME ASSISTANT -->
-  <section class="section thanks">
-    <div class="thanks-card glass">
-      <h3 data-i18n="how.thanks">Gracias, Home Assistant. 💛</h3>
-      <p data-i18n="how.thanksD">Helios no sería posible sin el proyecto Home Assistant y su comunidad. Se conecta a tu HAOS local por WebSocket, sin tocar su API pública, y lee solo los sensores que tú decides.</p>
-      <a class="mono thanks-link" href="https://www.home-assistant.io" target="_blank" rel="noopener">home-assistant.io →</a>
-    </div>
-  </section>
-
   <!-- FOOTER: atardecer → noche -->
   <footer class="footer" id="footer">
-    <div class="footer-top">
-      <p class="footer-tagline" data-i18n="footer.tagline">Hecho en casa.<br />Para casas sin nube.</p>
-      <div class="footer-principles">
-        <span class="principle mono" data-i18n="footer.p1">Soberanía digital</span>
-        <span class="principle mono" data-i18n="footer.p2">Libre para siempre</span>
-        <span class="principle mono" data-i18n="footer.p3">De personas, no de empresas</span>
-      </div>
-    </div>
+    <p class="footer-tagline" data-i18n="footer.tagline">Hecho en casa.<br />Para casas sin nube.</p>
     <div class="footer-links mono">
       <a href="https://cloudless.club">
         <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
