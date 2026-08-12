@@ -586,6 +586,19 @@ function ConnectionSection({ isAdmin = false }: { isAdmin?: boolean }) {
           </span>
           {connected ? t('ajustes.connection.connected', { station: live.station || 'Home Assistant' }) : t('ajustes.connection.reconnecting')}
         </span>
+        {isAdmin && install && (
+          <button
+            type="button"
+            onClick={() => setEditorOpen(true)}
+            title={install.configured
+              ? t('ajustes.topology.configured')
+              : t('ajustes.topology.notConfigured')}
+            className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-full border border-app bg-surface px-4 text-[13px] font-medium text-app transition-colors hover:border-brand/50 hover:text-brand"
+          >
+            <Pencil size={13} />
+            {t('ajustes.topology.edit')}
+          </button>
+        )}
       </div>
 
       {/* Entidades leídas (colapsable) */}
@@ -614,24 +627,6 @@ function ConnectionSection({ isAdmin = false }: { isAdmin?: boolean }) {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-
-      {isAdmin && install && (
-        <div className="flex items-center justify-between border-t border-app pt-3">
-          <p className="text-xs text-faint">
-            {install.configured
-              ? t('ajustes.topology.configured')
-              : t('ajustes.topology.notConfigured')}
-          </p>
-          <button
-            type="button"
-            onClick={() => setEditorOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-app bg-surface px-3 text-xs font-medium text-app transition-colors hover:border-brand/50 hover:text-brand"
-          >
-            <Pencil size={13} />
-            {t('ajustes.topology.edit')}
-          </button>
-        </div>
-      )}
       <TopologyEditor open={editorOpen} onOpenChange={setEditorOpen} install={install} />
     </div>
   );
