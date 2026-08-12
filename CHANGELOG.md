@@ -7,6 +7,23 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-12
+
+### Fixed
+
+- **Auto-update apply desde la app (issue #69)**: el botón "Actualizar ahora"
+  devolvía 500 porque el servicio va sandboxeado (`ProtectSystem=full` +
+  `NoNewPrivileges`) y el `execFile` del script heredaba el sandbox. Ahora el
+  endpoint escribe un flag en el dir de datos y un unit systemd
+  (`helios-update.path`) lanza `helios-update.service` (root) on-demand; el
+  front sondea `/api/version` hasta que el build cambia. Nuevo endpoint público
+  `GET /api/version` con el `build` del marker.
+- **Cache-buster en `checksums.txt`** del script de actualización: la CDN
+  servía una copia vieja justo tras publicar → fallaba la verificación sha256.
+- **Workflow de release**: `checksums.txt` ahora se genera en un job separado
+  que combina ambos arch (antes cada job de la matriz pisaba el del otro y la
+  release quedaba con un solo arch).
+
 ## [0.8.0] - 2026-08-12
 
 ### Changed
