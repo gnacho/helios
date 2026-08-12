@@ -7,6 +7,21 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-12
+
+### Changed
+
+- **Iconos lucide para producción, casa y diagrama de flujo (issue #68)**:
+  las placas se muestran con el icono `SolarPanel` (antes `Sun`), ámbar
+  mientras la instalación produce y gris cuando no (noche/offline). La casa
+  del diagrama de flujo pasa a usar el icono `House` de lucide (se elimina el
+  SVG dibujado a mano) y su color refleja la fuente dominante que recibe:
+  verde si llega más de la batería, roja si más de la red, ámbar si más de la
+  fotovoltaica y neutro cuando no hay consumo. El rótulo del nodo de
+  fotovoltaica sube por encima del nodo para no tapar los flujos, el diagrama
+  se desplaza para aprovechar el lienzo y el cable de fotovoltaica se alarga
+  apurando los márgenes superior e inferior.
+
 ## [0.7.9] - 2026-08-12
 
 ### Added
