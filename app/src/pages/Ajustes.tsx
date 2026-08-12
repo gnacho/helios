@@ -508,11 +508,12 @@ function ThemeSection() {
 
 // ── §3 Conexión con Home Assistant ───────────────────────────────────────────
 
-function ConnectionSection() {
+function ConnectionSection({ isAdmin = false }: { isAdmin?: boolean }) {
   const { connectionStatus, getLivePower } = useEnergyData();
   const { t } = useTranslation();
   const install = useInstall();
   const [testing, setTesting] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const live = getLivePower();
   const connected = connectionStatus === 'connected';
 
@@ -585,6 +586,19 @@ function ConnectionSection() {
           </span>
           {connected ? t('ajustes.connection.connected', { station: live.station || 'Home Assistant' }) : t('ajustes.connection.reconnecting')}
         </span>
+        {isAdmin && install && (
+          <button
+            type="button"
+            onClick={() => setEditorOpen(true)}
+            title={install.configured
+              ? t('ajustes.topology.configured')
+              : t('ajustes.topology.notConfigured')}
+            className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-full border border-app bg-surface px-4 text-[13px] font-medium text-app transition-colors hover:border-brand/50 hover:text-brand"
+          >
+            <Pencil size={13} />
+            {t('ajustes.topology.edit')}
+          </button>
+        )}
       </div>
 
       {/* Entidades leídas (colapsable) */}
@@ -613,6 +627,7 @@ function ConnectionSection() {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+      <TopologyEditor open={editorOpen} onOpenChange={setEditorOpen} install={install} />
     </div>
   );
 }
@@ -765,11 +780,10 @@ function fmtKwp(v: number) {
   return new Intl.NumberFormat(numLocale(), { maximumFractionDigits: 1 }).format(v);
 }
 
-function InstallationSection({ isAdmin = false }: { isAdmin?: boolean }) {
+function InstallationSection() {
   const install = useInstall();
   const [settings, update] = useEnergySettings();
   const { t } = useTranslation();
-  const [editorOpen, setEditorOpen] = useState(false);
 
   // Inversores desde la topología resuelta (issue #37); fallback al clásico
   // Solis/Fox solo si la API no ha respondido aún.
@@ -796,24 +810,6 @@ function InstallationSection({ isAdmin = false }: { isAdmin?: boolean }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {isAdmin && install && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-faint">
-            {install.configured
-              ? t('ajustes.topology.configured')
-              : t('ajustes.topology.notConfigured')}
-          </p>
-          <button
-            type="button"
-            onClick={() => setEditorOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-app bg-surface px-3 text-xs font-medium text-app transition-colors hover:border-brand/50 hover:text-brand"
-          >
-            <Pencil size={13} />
-            {t('ajustes.topology.edit')}
-          </button>
-        </div>
-      )}
-      <TopologyEditor open={editorOpen} onOpenChange={setEditorOpen} install={install} />
       <div className="grid gap-3 md:grid-cols-3">
         {inverters.map((inv, i) => (
           <motion.div
@@ -1932,7 +1928,7 @@ export default function Ajustes() {
 
         {/* 1. Tu instalación */}
         <Section id="instalacion" title={t('ajustes.sections.instalacion')}>
-          <InstallationSection isAdmin={userRole === 'admin'} />
+          <InstallationSection />
         </Section>
 
         {/* 1b. Apariencia */}
@@ -1946,7 +1942,7 @@ export default function Ajustes() {
           title={t('ajustes.sections.conexionDatos')}
           badge={<HealthBadge ok={connectionStatus === 'connected' && dataOk} />}
         >
-          <ConnectionSection />
+          <ConnectionSection isAdmin={userRole === 'admin'} />
         </Section>
 
         {/* 3. Mi perfil (span-12) */}
