@@ -261,6 +261,22 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
   padding: 26px 28px;
   color: rgb(var(--text-primary));
 }
+
+/* ── Separador de sección (sol entre dos líneas) ── */
+.section-divider {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  background: rgb(var(--canvas));
+  padding: 14px 0 2px;
+}
+.divider-line {
+  width: min(120px, 18vw); height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(var(--amber) / 0.55), transparent);
+}
+.divider-sun {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle, rgb(var(--amber-2)), rgb(var(--amber)));
+  box-shadow: 0 0 12px rgb(var(--amber) / 0.6);
+}
 .section.thanks .thanks-card {
   max-width: 860px; margin: 0 auto; text-align: center; border-radius: var(--radius-card);
 }
