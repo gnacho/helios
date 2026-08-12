@@ -23,6 +23,10 @@ trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
 log() { logger -t "$APP-update" "$@"; }
 
+# El apply in-app escribe un flag en el dir de datos (ver update.js / el .path
+# de systemd). Borrarlo AL PRINCIPIO permite re-disparar el apply a voluntad.
+rm -f /opt/helios/data/.update-requested 2>/dev/null || true
+
 echo "STEP:detect"
 VER="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
   | sed -n 's/.*"tag_name": *"\(v\?[0-9][^"]*\)".*/\1/p' | head -n1)"
@@ -38,7 +42,11 @@ echo "STEP:download"
 TARBALL="helios_${VER_NO_V}_linux_${ARCH}.tar.gz"
 BASE="https://github.com/$REPO/releases/download/$VER"
 curl -fL "$BASE/$TARBALL" -o "$TMP_DIR/app.tar.gz"
-curl -fL "$BASE/checksums.txt" -o "$TMP_DIR/checksums.txt"
+# Cache-buster: la URL de checksums.txt es estable entre versiones y la CDN
+# sirve la copia vieja justo tras publicar → el tarball nuevo "no está en
+# checksums". Añadir ?nc=<ts> fuerza la revalidación.
+TS="$(date +%s)"
+curl -fL "$BASE/checksums.txt?nc=$TS" -o "$TMP_DIR/checksums.txt"
 
 echo "STEP:verify"
 expected="$(awk -v f="$TARBALL" '$0 ~ f {print $1; exit}' "$TMP_DIR/checksums.txt")"

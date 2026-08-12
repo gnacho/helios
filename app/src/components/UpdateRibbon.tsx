@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, X } from 'lucide-react';
-import { apiFetch, apiPost } from '@/data/api-client';
+import { apiFetch } from '@/data/api-client';
+import { applyRelease } from '@/data/apply-update';
 import pkg from '../../package.json';
 
 const CHECK_KEY = 'helios-last-update-check';
@@ -85,8 +86,9 @@ export default function UpdateRibbon() {
     if (applying) return;
     setApplying(true);
     try {
-      await apiPost<{ ok: boolean }>('/api/update/apply');
-      setTimeout(() => window.location.reload(), 2500);
+      const done = await applyRelease();
+      if (done) window.location.reload();
+      else setApplying(false);
     } catch {
       setApplying(false);
     }

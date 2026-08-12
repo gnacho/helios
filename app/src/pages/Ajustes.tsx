@@ -50,6 +50,7 @@ import { LANG_MODE_KEY, resolveNavigatorLanguage, numLocale } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-client';
+import { applyRelease } from '@/data/apply-update';
 import pkg from '../../package.json';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
@@ -174,9 +175,12 @@ function AdminZone() {
     if (applying) return;
     setApplying(true);
     try {
-      await apiPost<{ ok: boolean }>('/api/update/apply');
-      // El servidor se reinicia; la app se recarga con el build nuevo.
-      setTimeout(() => window.location.reload(), 2500);
+      const done = await applyRelease();
+      if (done) window.location.reload();
+      else {
+        setApplying(false);
+        setUpdateStatus('error');
+      }
     } catch {
       setApplying(false);
       setUpdateStatus('error');
