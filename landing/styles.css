@@ -441,8 +441,11 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
 .faq-item[open] summary::after { content: '–'; }
 .faq-item p { padding: 0 20px 18px; color: rgb(var(--text-secondary)); font-size: 0.95rem; }
 
-/* ── CTA final (sobre el cielo nocturno) ── */
-.cta-final { text-align: center; background: transparent; color: #fff; }
+/* ── CTA final (efecto nocturno propio, no depende del scroll) ── */
+.cta-final {
+  text-align: center; color: #fff;
+  background: linear-gradient(180deg, rgb(var(--dawn) / 0.45), rgb(var(--night) / 0.92) 55%, rgb(var(--night)));
+}
 .cta-kofi {
   margin-top: 34px;
   max-width: 560px;
