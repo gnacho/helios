@@ -7,6 +7,17 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-08-12
+
+### Changed
+
+- **Ajustes: editor de topología movido a Conexión y datos (issue #45)**: el
+  botón admin "Editar topología" (con su estado configurado/no configurado)
+  deja la tarjeta Instalación y pasa a la sección Conexión y datos, en la
+  misma fila que "Probar conexión" y junto al listado de entidades HAOS que
+  la topología resuelve. La tarjeta Instalación queda centrada en el resumen
+  de inversores.
+
 ## [0.7.6] - 2026-08-12
 
 ### Changed
