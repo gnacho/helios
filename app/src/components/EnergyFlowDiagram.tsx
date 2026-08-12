@@ -135,6 +135,14 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
   const gridToBattery = Math.max(0, Math.min(charging - solarSurplus, importing));
   const fvToBattery = Math.max(0, charging - gridToBattery);
 
+  const homeSources = [
+    { kw: fvToHome, color: palette.solar },
+    { kw: discharging, color: palette.bateria },
+    { kw: importing, color: palette.redCompra },
+  ];
+  const dominantHome = homeSources.reduce((a, b) => (b.kw > a.kw ? b : a));
+  const homeColor = dominantHome.kw > 0.05 ? dominantHome.color : 'var(--text-faint)';
+
   const edges: FlowEdge[] = [
     { id: 'fv-home', d: PATHS.fvHome, value: fvToHome, color: palette.solar },
     { id: 'fv-battery', d: PATHS.fvBattery, value: fvToBattery, color: palette.bateria },
@@ -185,9 +193,9 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         label={t('flow.home')}
         valueText={`${fmtKw(live.consumption)} kW`}
         active={live.consumption > 0.1}
-        glowColor={palette.consumo}
+        glowColor={homeColor}
       >
-        <House size={30} style={{ color: palette.consumo }} />
+        <House size={30} style={{ color: homeColor }} />
       </FlowNode>
 
       <FlowNode
