@@ -376,7 +376,7 @@ export default function DayChart({ data, nowMin, replayMin, onReplayChange, heig
 
       {/* Tabla accesible de la curva principal */}
       <table className="sr-only">
-        <caption>{t('chart.caption')}</caption>
+        <caption className="sr-only">{t('chart.caption')}</caption>
         <thead>
           <tr>
             <th>{t('chart.hour')}</th>

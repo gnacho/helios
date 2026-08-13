@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import {
   Sun,
   House,
-  BatteryCharging,
   Leaf,
   UtilityPole,
   ArrowUpFromLine,
@@ -16,6 +15,7 @@ import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useInstall } from '@/hooks/useInstall';
 import { STEP_MIN, seriesInvValue } from '@/data/types';
 import { useEnergyColors, inverterColor } from '@/lib/colors';
+import { batteryIcon } from '@/lib/battery';
 import { useTheme } from '@/theme/ThemeProvider';
 import { fmtEnergy } from '@/lib/format';
 import KpiCard from '@/components/KpiCard';
@@ -169,7 +169,7 @@ export default function Dashboard() {
         </div>
         <div className="w-[42%] shrink-0 snap-center lg:w-auto">
           <KpiCard
-            icon={BatteryCharging}
+            icon={batteryIcon(live.soc, live.batteryPower > 0.05)}
             color="bateria"
             label={t('common.battery')}
             value={socKwh}

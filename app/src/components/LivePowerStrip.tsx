@@ -1,14 +1,16 @@
 import { motion } from 'framer-motion';
-import { SolarPanel, House, BatteryCharging, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import { SolarPanel, House, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { LucideIcon } from 'lucide-react';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
+import { batteryIcon } from '@/lib/battery';
 import { fmtKw, fmtTime } from '@/lib/format';
 import { useAnimatedNumber } from '@/lib/useAnimatedNumber';
 import { cn } from '@/lib/utils';
 
 interface StripValueProps {
-  icon: typeof SolarPanel;
+  icon: LucideIcon;
   label: string;
   kw: number;
   status?: string;
@@ -92,7 +94,7 @@ export default function LivePowerStrip({ live, atMin }: LivePowerStripProps) {
         <StripValue icon={SolarPanel} label={t('common.production')} kw={live.production} color={palette.solar} iconColor={live.production > 0.1 ? palette.solar : 'var(--text-faint)'} />
         <StripValue icon={House} label={t('common.consumption')} kw={live.consumption} color={palette.consumo} className="border-l border-app" />
         <StripValue
-          icon={BatteryCharging}
+          icon={batteryIcon(live.soc, live.batteryPower > 0.05)}
           label={t('common.battery')}
           kw={Math.abs(live.batteryPower)}
           status={batteryLabel(live.batteryPower)}

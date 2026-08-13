@@ -57,15 +57,6 @@ function applyTheme(effective: EffectiveTheme) {
   root.classList.toggle('dark', effective === 'dark');
   const meta = document.getElementById('meta-theme-color');
   if (meta) meta.setAttribute('content', effective === 'dark' ? THEME_BG.dark : THEME_BG.light);
-  // Favicon según el tema EFECTIVO de la app (pisa los estáticos con media del SO)
-  let icon = document.querySelector<HTMLLinkElement>('link[rel="icon"][data-app-theme]');
-  if (!icon) {
-    icon = document.createElement('link');
-    icon.rel = 'icon';
-    icon.setAttribute('data-app-theme', '');
-    document.head.appendChild(icon);
-  }
-  icon.href = effective === 'dark' ? '/favicon-dark.ico' : '/favicon-light.ico';
 }
 
 function applyDensity(density: Density) {
