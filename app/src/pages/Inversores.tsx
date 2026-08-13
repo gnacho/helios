@@ -530,9 +530,11 @@ export default function Inversores() {
     kwp: m.kwp,
   }));
 
+  // Solo se ofrece la comparativa cuando hay varios inversores; las vistas
+  // individuales por inversor se eliminaron (issue #70).
   const tabKeys = useMemo(() => {
     const keys = invMetas.map((m) => m.key);
-    return invMetas.length >= 2 ? ['compare', ...keys] : keys;
+    return invMetas.length >= 2 ? ['compare'] : keys;
   }, [invMetas]);
 
   const tabParam = searchParams.get('tab');
@@ -573,7 +575,8 @@ export default function Inversores() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-4 lg:gap-5">
-        {/* ── §1 Segmented control (sticky en móvil) ────────────── */}
+        {/* ── §1 Segmented control (sticky en móvil) — solo con varias vistas ── */}
+        {tabKeys.length > 1 && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -618,6 +621,7 @@ export default function Inversores() {
             })}
           </div>
         </motion.div>
+        )}
 
         {/* ── Contenido por pestaña (crossfade + y 8px) ─────────── */}
         <AnimatePresence mode="wait">
