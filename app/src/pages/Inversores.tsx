@@ -207,7 +207,7 @@ function CompareView({ inverters, metas, liveKws, dayKwhs, peakKws }: CompareVie
   const { nowMin, today, getDaySeries } = useEnergyData();
   const { t } = useTranslation();
   const series = useMemo(() => getDaySeries(today), [getDaySeries, today]);
-  const [repartoMode, setRepartoMode] = useState<'barra' | 'donut'>('barra');
+  const [repartoMode, setRepartoMode] = useState<'barra' | 'donut'>('donut');
 
   const total = dayKwhs.reduce((a, b) => a + b, 0);
   const shares = dayKwhs.map((k) => (total > 0 ? (k / total) * 100 : 100 / Math.max(1, dayKwhs.length)));
