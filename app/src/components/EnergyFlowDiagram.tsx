@@ -1,10 +1,11 @@
-import { memo, useId } from 'react';
+import { createElement, memo, useId } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
-import { SolarPanel, House, BatteryCharging, UtilityPole } from 'lucide-react';
+import { SolarPanel, House, UtilityPole } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { LivePower } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
+import { batteryIcon } from '@/lib/battery';
 import { fmtKw } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -156,6 +157,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
     { id: 'grid-battery', d: PATHS.gridBattery, value: gridToBattery, color: palette.redCompra },
   ];
 
+  const batteryCharging = live.batteryPower > 0.05;
   const batteryText =
     live.batteryPower > 0.05
       ? `${fmtKw(live.batteryPower)} kW`
@@ -213,7 +215,7 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         onClick={() => navigate('/bateria')}
       >
         <span className="flex flex-col items-center leading-none">
-          <BatteryCharging size={22} style={{ color: palette.bateria }} />
+          {createElement(batteryIcon(live.soc, batteryCharging), { size: 22, style: { color: palette.bateria } })}
           <span className="mt-1 text-[11px] font-bold tabular-nums" style={{ color: palette.bateria }}>
             {Math.round(live.soc)}%
           </span>
