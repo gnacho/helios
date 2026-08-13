@@ -7,10 +7,27 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-08-13
+
+### Changed
+
+- **Favicon transparente**: ahora es un SVG + PNG con canal alpha real, sin
+  fondo de color. Sustituye a los dos `.ico` condicionados por el tema que el
+  navegador seleccionaba mal (cuadradito negro en tema claro y viceversa).
+  El motivo se escaló (1.49→1.65) para llenar el lienzo tocando los bordes. (#76)
+- **Logo de la app**: el icono de marca del shell usa el gradiente ámbar de
+  marca (igual que el favicon) en vez de `currentColor` (gris/blanco). (#76)
+- **Icono de batería por estado**: nuevo helper `batteryIcon(soc, charging)` —
+  cargando → `BatteryCharging`, ≥80% → `BatteryFull`, >30% → `BatteryMedium`,
+  >20% → `BatteryLow`, ≤20% → `BatteryWarning`. Aplicado al nodo del diagrama
+  de flujo, al strip en vivo y a la KPI del dashboard. (#76)
+
 ### Fixed
 
-- La PWA no giraba en tablets: el manifest forzaba orientación vertical
-  (`portrait-primary`). Ahora usa `any` para rotar con el dispositivo. (#74)
+- La tabla accesible de la gráfica del día mostraba su `<caption>`
+  ("Producción y consumo por horas") visible en desktop: los caption se
+  posicionan fuera de la caja de la tabla, así que el recorte `sr-only` de la
+  tabla no los ocultaba. Ahora `sr-only` se aplica al propio caption. (#76)
 
 ## [0.8.1] - 2026-08-12
 
