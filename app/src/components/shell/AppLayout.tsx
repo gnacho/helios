@@ -10,16 +10,9 @@ import {
   Settings,
   ChevronsLeft,
   ChevronsRight,
-  RefreshCw,
-  Sunrise,
-  Sun,
-  Moon,
   User,
-  Wifi,
-  WifiOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { fmtWeekdayDate } from '@/i18n';
 import BrandLogo from '@/components/BrandLogo';
@@ -37,7 +30,7 @@ import { apiFetch } from '@/data/api-client';
  *  - ≥lg: sidebar 232px colapsable a raíl 64px (persiste en helios-sidebar-collapsed)
  *  - md: raíl 64px con tooltips
  *  - <md: header móvil + bottom nav (5 items)
- *  - Topbar desktop/tablet: título+fecha | refresh, campana, tema, conexión
+ *  - Topbar desktop/tablet: título+fecha | campana, tema, conexión
  *  - DemoBanner cuando sessionStorage['helios-demo'] === '1'
  *  - HeliosToaster global (antes solo en Ajustes e Histórico)
  */
@@ -90,25 +83,6 @@ function Logo({ collapsed }: { collapsed?: boolean }) {
   );
 }
 
-/** Botón de tema compacto (cicla auto → claro → oscuro) para raíl/colapsado. */
-function ThemeCycleButton() {
-  const { mode, setMode } = useTheme();
-  const { t } = useTranslation();
-  const next = mode === 'auto' ? 'light' : mode === 'light' ? 'dark' : 'auto';
-  const Icon = mode === 'auto' ? Sunrise : mode === 'light' ? Sun : Moon;
-  return (
-    <button
-      type="button"
-      onClick={() => setMode(next)}
-      aria-label={t('theme.label')}
-      title={t('theme.label')}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:text-app"
-    >
-      <Icon size={16} strokeWidth={1.75} />
-    </button>
-  );
-}
-
 /** Item de navegación solo-icono con tooltip (raíl md y sidebar colapsado). */
 function IconNavLink({ to, labelKey, icon: Icon }: { to: string; labelKey: string; icon: typeof Activity }) {
   const { t } = useTranslation();
@@ -131,11 +105,9 @@ function IconNavLink({ to, labelKey, icon: Icon }: { to: string; labelKey: strin
   );
 }
 
-function UserBlock({ collapsed }: { collapsed: boolean }) {
-  const { t } = useTranslation();
-  const { connectionStatus } = useEnergyData();
+/** Usuario en la topbar desktop/tablet (solo md+). */
+function TopbarUser() {
   const [username, setUsername] = useState<string | null>(null);
-  const connected = connectionStatus === 'connected';
 
   useEffect(() => {
     apiFetch<{ authenticated?: boolean; user?: { username?: string } }>('/api/auth/me')
@@ -143,32 +115,15 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
       .catch(() => setUsername(null));
   }, []);
 
-  if (collapsed) {
-    return (
-      <div className="flex flex-col items-center gap-1.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/12 text-brand">
-          <User size={16} />
-        </span>
-        <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-amber-500')} title={connected ? t('common.online') : t('ajustes.connection.reconnecting')} />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-app bg-surface-2/50 px-3 py-2">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
-        <User size={16} />
+    <span className="hidden h-9 items-center gap-2 rounded-lg border border-app bg-surface px-2.5 sm:flex">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/12 text-brand">
+        <User size={14} strokeWidth={2} />
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold text-app">{username ?? '...'}</p>
-        <span className="inline-flex items-center gap-1 text-[11px] text-faint">
-          {connected
-            ? <><Wifi size={10} /> {t('common.online')}</>
-            : <><WifiOff size={10} /> {t('ajustes.connection.reconnecting')}</>
-          }
-        </span>
-      </div>
-    </div>
+      <span className="hidden max-w-[120px] truncate text-[13px] font-semibold text-app sm:inline">
+        {username ?? '...'}
+      </span>
+    </span>
   );
 }
 
@@ -187,20 +142,16 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
           ))}
         </nav>
         <div className="flex flex-col items-center gap-2">
-          <UserBlock collapsed />
-          <div className="flex items-center gap-1.5">
-            <ThemeCycleButton />
-            <NavLink
-              to={SETTINGS_ITEM.to}
-              aria-label={t('nav.ajustes')}
-              className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
-                settingsActive ? 'bg-brand/15 text-brand' : 'border border-app bg-surface text-muted hover:text-app',
-              )}
-            >
-              <Settings size={16} strokeWidth={1.75} />
-            </NavLink>
-          </div>
+          <NavLink
+            to={SETTINGS_ITEM.to}
+            aria-label={t('nav.ajustes')}
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+              settingsActive ? 'bg-brand/15 text-brand' : 'border border-app bg-surface text-muted hover:text-app',
+            )}
+          >
+            <Settings size={16} strokeWidth={1.75} />
+          </NavLink>
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -242,9 +193,7 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
         })}
       </nav>
       <div className="border-t border-app p-3">
-        <UserBlock collapsed={false} />
-        <div className="mt-2 flex items-center gap-2">
-          <ThemeCycleButton />
+        <div className="flex items-center gap-2">
           <NavLink
             to={SETTINGS_ITEM.to}
             className={cn(
@@ -284,8 +233,6 @@ function Rail() {
         ))}
       </nav>
       <div className="flex flex-col items-center gap-2">
-        <UserBlock collapsed />
-        <ThemeCycleButton />
         <NavLink
           to={SETTINGS_ITEM.to}
           aria-label={t('nav.ajustes')}
@@ -325,8 +272,7 @@ function DemoBanner({ onExit }: { onExit: () => void }) {
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const { refresh, today } = useEnergyData();
-  const [spinning, setSpinning] = useState(false);
+  const { today } = useEnergyData();
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem('helios-sidebar-collapsed') === '1';
@@ -381,12 +327,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     window.location.assign('/');
   };
 
-  const onRefresh = () => {
-    refresh();
-    setSpinning(true);
-    window.setTimeout(() => setSpinning(false), 600);
-  };
-
   const titleKey = TITLE_KEYS.find(([re]) => re.test(pathname))?.[1] ?? 'nav.dashboard';
   const lgMargin = collapsed ? 'lg:ml-16' : 'lg:ml-[232px]';
 
@@ -407,23 +347,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <p className="text-[11px] capitalize leading-tight text-faint">{fmtWeekdayDate(today)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={t('common.refresh')}
-            onClick={onRefresh}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:text-app"
-          >
-            <motion.span
-              animate={spinning ? { rotate: 360 } : { rotate: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex"
-            >
-              <RefreshCw size={16} strokeWidth={1.75} />
-            </motion.span>
-          </button>
           <AlertsBell />
           <ThemeToggle />
           <ConnectionStatus />
+          <TopbarUser />
         </div>
       </header>
 
@@ -434,8 +361,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <span className="font-display text-base font-semibold text-app">Helios</span>
         </Link>
         <div className="flex items-center gap-2">
-          <ConnectionStatus compact />
+          <ConnectionStatus />
+          <ThemeToggle />
           <AlertsBell />
+          <TopbarUser />
         </div>
       </header>
 
