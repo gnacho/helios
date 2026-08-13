@@ -26,6 +26,9 @@ export const ESTADO_COLORS = {
 /** Degradado ámbar de las áreas solares en gráficas. */
 export const SOLAR_GRADIENT = { from: '#F59E0B', to: '#F97316' } as const;
 
+/** Gradiente de marca Helios (el mismo del favicon): amarillo ámbar → naranja. */
+export const BRAND_GRADIENT = { from: '#FBBF24', to: '#F97316' } as const;
+
 /** Batería por debajo de la reserva (gauge). */
 export const BATTERY_LOW_COLOR = '#FB7185';
 
