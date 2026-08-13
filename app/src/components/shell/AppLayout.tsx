@@ -11,15 +11,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   RefreshCw,
-  Sunrise,
-  Sun,
-  Moon,
   User,
   Wifi,
   WifiOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { fmtWeekdayDate } from '@/i18n';
 import BrandLogo from '@/components/BrandLogo';
@@ -87,25 +83,6 @@ function Logo({ collapsed }: { collapsed?: boolean }) {
         </div>
       )}
     </Link>
-  );
-}
-
-/** Botón de tema compacto (cicla auto → claro → oscuro) para raíl/colapsado. */
-function ThemeCycleButton() {
-  const { mode, setMode } = useTheme();
-  const { t } = useTranslation();
-  const next = mode === 'auto' ? 'light' : mode === 'light' ? 'dark' : 'auto';
-  const Icon = mode === 'auto' ? Sunrise : mode === 'light' ? Sun : Moon;
-  return (
-    <button
-      type="button"
-      onClick={() => setMode(next)}
-      aria-label={t('theme.label')}
-      title={t('theme.label')}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:text-app"
-    >
-      <Icon size={16} strokeWidth={1.75} />
-    </button>
   );
 }
 
@@ -188,19 +165,16 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
         </nav>
         <div className="flex flex-col items-center gap-2">
           <UserBlock collapsed />
-          <div className="flex items-center gap-1.5">
-            <ThemeCycleButton />
-            <NavLink
-              to={SETTINGS_ITEM.to}
-              aria-label={t('nav.ajustes')}
-              className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
-                settingsActive ? 'bg-brand/15 text-brand' : 'border border-app bg-surface text-muted hover:text-app',
-              )}
-            >
-              <Settings size={16} strokeWidth={1.75} />
-            </NavLink>
-          </div>
+          <NavLink
+            to={SETTINGS_ITEM.to}
+            aria-label={t('nav.ajustes')}
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+              settingsActive ? 'bg-brand/15 text-brand' : 'border border-app bg-surface text-muted hover:text-app',
+            )}
+          >
+            <Settings size={16} strokeWidth={1.75} />
+          </NavLink>
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -244,7 +218,6 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
       <div className="border-t border-app p-3">
         <UserBlock collapsed={false} />
         <div className="mt-2 flex items-center gap-2">
-          <ThemeCycleButton />
           <NavLink
             to={SETTINGS_ITEM.to}
             className={cn(
@@ -285,7 +258,6 @@ function Rail() {
       </nav>
       <div className="flex flex-col items-center gap-2">
         <UserBlock collapsed />
-        <ThemeCycleButton />
         <NavLink
           to={SETTINGS_ITEM.to}
           aria-label={t('nav.ajustes')}
