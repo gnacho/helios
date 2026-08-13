@@ -138,7 +138,7 @@
     "temperature": "Temperatura",
     "autonomy": "Autonomía est.",
     "socTitle": "Estado de carga · hoy",
-    "socSubtitle": "0–100 % · proyección nocturna discontinua",
+    "socSubtitle": "0-100 % · proyección nocturna discontinua",
     "socAria": "Estado de carga de la batería a lo largo del día",
     "socFull": "Batería llena {{time}}",
     "chargeStart": "Inicio de carga {{time}}",
@@ -336,7 +336,7 @@
       "privacy": "100% privado · 0% nube",
       "checkUpdates": "Comprobar actualizaciones",
       "checking": "Comprobando…",
-      "upToDate": "Estás al día — v{{version}} es la última versión",
+      "upToDate": "Estás al día - v{{version}} es la última versión",
       "updateAvailable": "Nueva versión disponible: v{{version}}",
       "viewRelease": "Ver novedades",
       "updateNow": "Actualizar ahora",
@@ -535,7 +535,7 @@
     }
   },
   "footer": {
-    "line1": "Helios · Monitor Solar — datos locales vía Home Assistant",
+    "line1": "Helios · Monitor Solar {{version}} - datos locales vía Home Assistant",
     "line2": "Instalación local · datos vía Home Assistant"
   },
   "stub": {
@@ -580,7 +580,7 @@
     }
   },
   "demo": {
-    "banner": "Modo demo — los cambios no se aplican al sistema",
+    "banner": "Modo demo - los cambios no se aplican al sistema",
     "exit": "Salir del demo"
   },
   "audit": {
