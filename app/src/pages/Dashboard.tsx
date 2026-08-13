@@ -115,7 +115,7 @@ export default function Dashboard() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
-          className="helios-card col-span-12 order-2 p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4"
+          className="helios-card col-span-12 order-2 p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3"
         >
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold text-app">{t('dashboard.flowTitle')}</h2>
@@ -134,7 +134,7 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.25, ease: [0.25, 1, 0.5, 1] }}
-          className="col-span-12 order-3 lg:order-2 lg:col-span-8"
+          className="col-span-12 order-3 lg:order-2 lg:col-span-8 xl:col-span-9"
           style={{ boxShadow: `0 8px 32px -8px ${palette.solar}2E`, borderRadius: 16 }}
         >
           <DayChart data={series} nowMin={nowMin} replayMin={replayMin} onReplayChange={setReplayMin} fill inverters={dayCharts} />
