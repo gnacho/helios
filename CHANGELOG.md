@@ -7,6 +7,23 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-08-13
+
+### Changed
+
+- **Toggle de tema fuera del menú lateral**: se elimina el botón de ciclo
+  claro/oscuro de la sidebar y el rail; queda el segmented Auto/Claro/Oscuro
+  de la topbar y la tarjeta Apariencia en Ajustes. (#77)
+- **Estado de conexión minimalista**: el indicador de conexión HAOS pasa de
+  pill con texto ("conectado"/"reconectando") a un único punto verde/ámbar;
+  se elimina el icono Wifi + "online" del menú. (#77)
+- **Topbar simplificada**: se quita el botón de sincronización manual (los
+  datos llegan por SSE en tiempo real y en móvil hay pull-to-refresh). (#77)
+- **Tema en móvil**: el header móvil muestra el toggle Auto/Claro/Oscuro
+  (iconos en vertical, texto desde móvil horizontal). (#77)
+- **Usuario en la topbar**: chip con avatar y nombre arriba a la derecha,
+  visible desde móvil horizontal/tablet/desktop; oculto en móvil vertical. (#77)
+
 ## [0.8.3] - 2026-08-13
 
 ### Changed
