@@ -7,6 +7,26 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-08-13
+
+### Changed
+
+- **Inversores: donut por defecto**: el "Reparto de hoy" de la comparativa abre
+  en vista donut en vez de barras (el toggle sigue funcionando en la sesión).
+  (#84)
+- **Versión en el pie**: el footer muestra la versión real de la app en runtime
+  ("Helios · Monitor Solar vX - datos locales vía Home Assistant"). (#86)
+- **Flujo de energía más estrecho en pantallas anchas** (≥1280px): el diagrama
+  de flujo pasa de 4/12 a 3/12 de ancho y la tarjeta "Producción vs consumo"
+  de 8/12 a 9/12, ganando espacio para la gráfica. (#87)
+
+### Fixed
+
+- **Guiones dobles (em/en dash)**: eliminados los `—`/`–` que quedaban en
+  varios textos visibles (pie, subtítulo de SOC, "estás al día", banner de
+  demo). Nuevo sanitizer `check-dashes` en el lint: el build falla si aparece
+  un em/en dash en index.html, el manifest PWA o las traducciones i18n. (#86)
+
 ## [0.8.5] - 2026-08-13
 
 ### Changed
