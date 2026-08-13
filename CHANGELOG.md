@@ -7,7 +7,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
-## [0.8.3] - 2026-08-13
+## [0.8.5] - 2026-08-13
+
+### Changed
+
+- **Inversores: solo comparativa**: con 2+ inversores se eliminan las vistas
+  individuales por inversor y se muestra directamente la comparativa (sin
+  botones de pestaña). (#70)
+
+## [0.8.4] - 2026-08-13
 
 ### Changed
 
