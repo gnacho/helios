@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint . && node scripts/theme-audit.mjs",
+    "lint": "eslint . && node scripts/theme-audit.mjs && node scripts/check-dashes.mjs",
     "format": "prettier --write .",
+    "check:dashes": "node scripts/check-dashes.mjs",
     "check:bundlesize": "node scripts/check-bundle-size.mjs",
     "test:e2e": "playwright test",
     "preview": "vite preview"

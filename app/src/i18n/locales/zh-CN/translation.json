@@ -138,7 +138,7 @@
     "temperature": "温度",
     "autonomy": "预计续航",
     "socTitle": "充电状态 · 今天",
-    "socSubtitle": "0–100 % · 夜间预测为虚线",
+    "socSubtitle": "0-100 % · 夜间预测为虚线",
     "socAria": "全天电池充电状态",
     "socFull": "电池已充满 {{time}}",
     "chargeStart": "开始充电 {{time}}",
@@ -334,7 +334,7 @@
       "privacy": "100% 私密 · 0% 云",
       "checkUpdates": "检查更新",
       "checking": "检查中…",
-      "upToDate": "已是最新版本 — v{{version}} 是最新版",
+      "upToDate": "已是最新版本 - v{{version}} 是最新版",
       "updateAvailable": "有新版本可用：v{{version}}",
       "viewRelease": "查看更新",
       "updateNow": "立即更新",
@@ -532,7 +532,7 @@
     }
   },
   "footer": {
-    "line1": "Helios · 太阳能监控 — 通过 Home Assistant 本地获取数据",
+    "line1": "Helios · 太阳能监控 {{version}} - 通过 Home Assistant 本地获取数据",
     "line2": "本地安装 · 通过 Home Assistant 获取数据"
   },
   "stub": {
@@ -577,7 +577,7 @@
     }
   },
   "demo": {
-    "banner": "演示模式 — 更改不会应用到系统",
+    "banner": "演示模式 - 更改不会应用到系统",
     "exit": "退出演示"
   },
   "audit": {
