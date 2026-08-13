@@ -4,13 +4,13 @@ import { LIVE_STALE_MS } from '@/data/types';
 import { cn } from '@/lib/utils';
 
 /**
- * Pill de estado de conexión HAOS.
- * conectado (verde) · reconectando (amber) · demo (violeta, "Modo demo").
+ * Punto de estado de conexión HAOS (sin texto ni pill).
+ * conectado (verde) · reconectando (amber) · demo (violeta).
  * Si el SSE lleva más de LIVE_STALE_MS en silencio (conexión muerta sin onerror,
  * típico en móvil suspendido), gana el aviso "sin datos" aunque el navegador
  * siga creyendo que está conectado.
  */
-export default function ConnectionStatus({ compact = false }: { compact?: boolean }) {
+export default function ConnectionStatus() {
   const { connectionStatus, liveUpdatedAt, now } = useEnergyData();
   const { t } = useTranslation();
 
@@ -33,21 +33,12 @@ export default function ConnectionStatus({ compact = false }: { compact?: boolea
       }[connectionStatus];
 
   return (
-    <span
-      className={cn(
-        'inline-flex h-8 items-center gap-2 rounded-full border border-app bg-surface px-3',
-        'text-xs font-medium text-muted',
+    <span className="relative flex h-2 w-2 shrink-0" title={t('connection.title')}>
+      {config.ping && (
+        <span className={cn('absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping-soft', config.dot)} />
       )}
-      title={t('connection.title')}
-    >
-      <span className="relative flex h-2 w-2">
-        {config.ping && (
-          <span className={cn('absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping-soft', config.dot)} />
-        )}
-        <span className={cn('relative inline-flex h-2 w-2 rounded-full', config.dot)} />
-      </span>
-      {!compact && <span>{config.text}</span>}
-      {compact && <span className="sr-only">{config.text}</span>}
+      <span className={cn('relative inline-flex h-2 w-2 rounded-full', config.dot)} />
+      <span className="sr-only">{config.text}</span>
     </span>
   );
 }
