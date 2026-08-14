@@ -41,7 +41,9 @@
     "light": "Claro",
     "dark": "Oscuro",
     "darkActive": "Oscuro activo",
-    "lightActive": "Claro activo"
+    "lightActive": "Claro activo",
+    "toLight": "Cambiar a tema claro",
+    "toDark": "Cambiar a tema oscuro"
   },
   "connection": {
     "connected": "HAOS · Local",

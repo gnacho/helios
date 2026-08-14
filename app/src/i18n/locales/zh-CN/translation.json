@@ -41,7 +41,9 @@
     "light": "浅色",
     "dark": "深色",
     "darkActive": "深色已启用",
-    "lightActive": "浅色已启用"
+    "lightActive": "浅色已启用",
+    "toLight": "切换到浅色主题",
+    "toDark": "切换到深色主题"
   },
   "connection": {
     "connected": "HAOS · 本地",
