@@ -21,6 +21,7 @@ import ConnectionStatus from '@/components/ConnectionStatus';
 import AlertsBell from '@/components/AlertsBell';
 import UpdateRibbon from '@/components/UpdateRibbon';
 import ThemeToggle from '@/components/ThemeToggle';
+import ThemeToggleButton from '@/components/ThemeToggleButton';
 import Footer from '@/components/Footer';
 import HeliosToaster from '@/components/HeliosToaster';
 import PullToRefresh from '@/components/PullToRefresh';
@@ -396,7 +397,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </Link>
         <div className="flex items-center gap-2">
           <ConnectionStatus />
-          <ThemeToggle />
+          <ThemeToggleButton />
           <AlertsBell />
           <TopbarUser />
         </div>
