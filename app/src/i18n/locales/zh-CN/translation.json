@@ -178,6 +178,7 @@
     "todayAria": "当日充电曲线",
     "noDataToday": "今天还没有充电数据。",
     "historyTitle": "充电历史",
+    "historyHint": "每天：发电量柱（右侧坐标轴）旁边是汽车充电柱，分为太阳能和电网。",
     "historyAria": "充电电量历史",
     "noHistory": "还没有历史记录。会逐日积累。",
     "charged": "已充",
@@ -186,7 +187,8 @@
     "fromGrid": "电网和电池",
     "periodTotal": "期间充电量",
     "ofProduction": "{{pct}} % 的发电量给了车",
-    "pctSolarAria": "太阳能充电占比"
+    "pctSolarAria": "太阳能充电占比",
+    "prodRight": "发电量（右轴）"
   },
   "inversores": {
     "title": "逆变器",

@@ -234,7 +234,10 @@ export default function Cargador() {
   }, [rows]);
 
   const hasData = rows.some((r) => r.kwh > 0 || r.prod > 0);
-  const yMax = Math.max(1, Math.ceil(Math.max(...rows.map((r) => Math.max(r.kwh, r.prod)), 0)));
+  const yMax = Math.max(1, Math.ceil(Math.max(...rows.map((r) => r.kwh), 0)));
+  const yMaxProd = Math.max(1, Math.ceil(Math.max(...rows.map((r) => r.prod), 0)));
+  // Ancho de barra adaptado al nº de categorías (mes = ~30 días).
+  const barW = period === 'mes' ? 9 : 20;
 
   // Deep-link / extensión desactivada a mitad de sesión → vuelta al inicio.
   if (!chargerEnabled(ext)) return <Navigate to="/" replace />;
@@ -374,6 +377,7 @@ export default function Cargador() {
             <div className="mr-auto">
               <h2 className="text-[15px] font-semibold text-app">{t('cargador.historyTitle')}</h2>
               <p className="text-xs capitalize text-faint">{periodSubtitle(period, anchor)}</p>
+              <p className="mt-0.5 text-xs text-faint">{t('cargador.historyHint')}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-5">
@@ -391,7 +395,7 @@ export default function Cargador() {
           </div>
           <div className="flex flex-wrap items-center gap-3 px-4 pb-1 sm:px-5">
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <span className="h-2 w-2 rounded-full opacity-40" style={{ backgroundColor: palette.solar }} /> {t('common.production')}
+              <span className="h-2 w-2 rounded-full opacity-40" style={{ backgroundColor: palette.solar }} /> {t('cargador.prodRight')}
             </span>
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.bateria }} /> {t('cargador.fromSolar')}
@@ -407,7 +411,7 @@ export default function Cargador() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 4 }} barGap={1}>
+                <BarChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 4 }} barGap={2}>
                   <CartesianGrid vertical={false} stroke="var(--line)" strokeOpacity={0.6} strokeDasharray="3 6" />
                   <XAxis
                     dataKey="label"
@@ -417,35 +421,49 @@ export default function Cargador() {
                     minTickGap={period === 'semana' ? 0 : 12}
                     interval="preserveStartEnd"
                   />
+                  {/* Eje izquierdo: carga del coche (kWh) */}
                   <YAxis
+                    yAxisId="chg"
                     domain={[0, yMax]}
                     width={34}
                     tick={{ fontSize: 12, fill: 'var(--text-faint)', fontFamily: 'Inter' }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip content={<HistTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }} />
-                  {/* Producción del periodo al lado (contexto: cuánto sol hubo) */}
-                  <Bar
-                    dataKey="prod"
-                    name={t('common.production')}
-                    fill={palette.solar}
-                    fillOpacity={0.35}
-                    barSize={6}
-                    radius={[2, 2, 0, 0]}
-                    animationDuration={500}
+                  {/* Eje derecho: producción (kWh), escala propia para no aplastar la carga */}
+                  <YAxis
+                    yAxisId="prod"
+                    orientation="right"
+                    domain={[0, yMaxProd]}
+                    width={34}
+                    tick={{ fontSize: 12, fill: 'var(--text-faint)', fontFamily: 'Inter' }}
+                    axisLine={false}
+                    tickLine={false}
                   />
-                  {/* Carga del coche, partida en solar vs resto */}
-                  <Bar dataKey="pv" name={t('cargador.fromSolar')} stackId="chg" fill={palette.bateria} barSize={22} animationDuration={500} />
+                  <Tooltip content={<HistTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }} />
+                  {/* Carga del coche, partida en solar vs resto (eje izquierdo) */}
+                  <Bar dataKey="pv" name={t('cargador.fromSolar')} yAxisId="chg" stackId="chg" fill={palette.bateria} barSize={barW} animationDuration={500} />
                   <Bar
                     dataKey="rest"
                     name={t('cargador.fromGrid')}
+                    yAxisId="chg"
                     stackId="chg"
                     fill={palette.consumo}
-                    barSize={22}
+                    barSize={barW}
                     radius={[3, 3, 0, 0]}
                     animationDuration={500}
                     animationBegin={60}
+                  />
+                  {/* Producción al lado (eje derecho): cuánto sol hubo */}
+                  <Bar
+                    dataKey="prod"
+                    name={t('common.production')}
+                    yAxisId="prod"
+                    fill={palette.solar}
+                    fillOpacity={0.3}
+                    barSize={barW}
+                    radius={[3, 3, 0, 0]}
+                    animationDuration={500}
                   />
                 </BarChart>
               </ResponsiveContainer>
