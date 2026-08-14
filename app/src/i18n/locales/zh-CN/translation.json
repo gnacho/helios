@@ -29,6 +29,7 @@
     "inversores": "逆变器",
     "bateria": "电池",
     "historico": "历史",
+    "cargador": "充电",
     "ajustes": "设置",
     "main": "主导航",
     "collapse": "折叠菜单",
@@ -165,6 +166,26 @@
     "gaugeAria": "电池电量 {{pct}} %",
     "reservePct": "保留 {{pct}} %",
     "ofTotalKwh": "{{kwh}} / {{total}} kWh"
+  },
+  "cargador": {
+    "connected": "已插枪",
+    "currentPower": "当前功率",
+    "session": "本次充电",
+    "lifetime": "累计电量",
+    "temperature": "温度",
+    "todayTitle": "今日充电",
+    "todaySubtitle": "全天充电功率",
+    "todayAria": "当日充电曲线",
+    "noDataToday": "今天还没有充电数据。",
+    "historyTitle": "充电历史",
+    "historySubtitle": "每日充电电量",
+    "historyAria": "充电电量历史",
+    "noHistory": "还没有历史记录。会逐日积累。",
+    "charged": "已充",
+    "last30": "最近 30 天",
+    "daysWithData": "{{n}} 天有充电",
+    "avgDay": "日均",
+    "bestDay": "最多一天"
   },
   "inversores": {
     "title": "逆变器",
@@ -306,7 +327,8 @@
       "sesion": "我的会话",
       "apariencia": "外观",
       "perfil": "我的资料",
-      "administracion": "管理"
+      "administracion": "管理",
+      "extensiones": "扩展"
     },
     "theme": {
       "autoNote": "自动模式下，界面在日出（06:50）和日落（21:40）之间使用浅色主题。",
@@ -530,6 +552,28 @@
       "sun": "太阳",
       "weather": "天气",
       "weatherTemp": "室外温度"
+    },
+    "extensions": {
+      "enable": "启用扩展",
+      "carCharger": "汽车充电器",
+      "offHint": "扩展为 Helios 添加可选模块。打开后可查看可用扩展。",
+      "carChargerOffHint": "启用汽车充电器以添加其菜单并跟踪车辆充电。",
+      "carChargerDesc": "充电器的 Home Assistant 实体。请根据你的安装调整 ID。",
+      "save": "保存",
+      "savedRestart": "扩展已保存。重启服务以完全应用更改。",
+      "entitiesHint": "实体更改需要重启（订阅在启动时固定）。",
+      "f": {
+        "name": "名称",
+        "powerUnit": "功率单位",
+        "powerId": "功率 (entity_id)",
+        "energyTotalId": "总电量 (entity_id)",
+        "energySessionId": "单次电量 (entity_id)",
+        "stateId": "状态 (entity_id)",
+        "tempId": "温度 (entity_id)",
+        "switchId": "开关 (entity_id)",
+        "chargingStates": "充电状态 (CSV)",
+        "connectedStates": "连接状态 (CSV)"
+      }
     }
   },
   "footer": {

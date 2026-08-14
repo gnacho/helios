@@ -29,6 +29,7 @@
     "inversores": "Inversores",
     "bateria": "Batería",
     "historico": "Histórico",
+    "cargador": "Cargador",
     "ajustes": "Ajustes",
     "main": "Navegación principal",
     "collapse": "Plegar menú",
@@ -165,6 +166,26 @@
     "gaugeAria": "Batería al {{pct}} %",
     "reservePct": "Reserva {{pct}} %",
     "ofTotalKwh": "{{kwh}} de {{total}} kWh"
+  },
+  "cargador": {
+    "connected": "Enchufado",
+    "currentPower": "Potencia actual",
+    "session": "Sesión",
+    "lifetime": "Total acumulado",
+    "temperature": "Temperatura",
+    "todayTitle": "Carga de hoy",
+    "todaySubtitle": "Potencia de carga a lo largo del día",
+    "todayAria": "Curva de carga del día",
+    "noDataToday": "Todavía no hay datos de carga hoy.",
+    "historyTitle": "Histórico de carga",
+    "historySubtitle": "Energía cargada por día",
+    "historyAria": "Histórico de energía cargada",
+    "noHistory": "Sin histórico todavía. Se va acumulando día a día.",
+    "charged": "Cargado",
+    "last30": "Últimos 30 días",
+    "daysWithData": "{{n}} días con carga",
+    "avgDay": "Media diaria",
+    "bestDay": "Día con más carga"
   },
   "inversores": {
     "title": "Inversores",
@@ -308,7 +329,8 @@
       "sesion": "Mi sesión",
       "apariencia": "Apariencia",
       "perfil": "Mi perfil",
-      "administracion": "Administración"
+      "administracion": "Administración",
+      "extensiones": "Extensiones"
     },
     "theme": {
       "autoNote": "En modo Auto, la interfaz usa el tema claro entre el amanecer (06:50) y el atardecer (21:40).",
@@ -533,6 +555,28 @@
       "sun": "Sol",
       "weather": "Tiempo",
       "weatherTemp": "Temperatura exterior"
+    },
+    "extensions": {
+      "enable": "Activar extensiones",
+      "carCharger": "Cargador de coche",
+      "offHint": "Las extensiones añaden módulos opcionales a Helios. Actívalas para ver las disponibles.",
+      "carChargerOffHint": "Activa el cargador de coche para añadir su menú y seguir la carga del vehículo.",
+      "carChargerDesc": "Entidades de Home Assistant del cargador. Ajusta los IDs a tu instalación.",
+      "save": "Guardar",
+      "savedRestart": "Extensiones guardadas. Reinicia el servicio para aplicar los cambios por completo.",
+      "entitiesHint": "Los cambios de entidades requieren reinicio (las suscripciones se fijan al arrancar).",
+      "f": {
+        "name": "Nombre",
+        "powerUnit": "Unidad de potencia",
+        "powerId": "Potencia (entity_id)",
+        "energyTotalId": "Energía total (entity_id)",
+        "energySessionId": "Energía de sesión (entity_id)",
+        "stateId": "Estado (entity_id)",
+        "tempId": "Temperatura (entity_id)",
+        "switchId": "Interruptor (entity_id)",
+        "chargingStates": "Estados de carga (CSV)",
+        "connectedStates": "Estados de conectado (CSV)"
+      }
     }
   },
   "footer": {

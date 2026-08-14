@@ -7,6 +7,7 @@ import {
   Zap,
   BatteryCharging,
   BarChart3,
+  CarFront,
   Settings,
   ChevronsLeft,
   ChevronsRight,
@@ -25,6 +26,8 @@ import HeliosToaster from '@/components/HeliosToaster';
 import PullToRefresh from '@/components/PullToRefresh';
 import { apiFetch } from '@/data/api-client';
 import { useInstall } from '@/hooks/useInstall';
+import { useExtensions } from '@/hooks/useExtensions';
+import { chargerEnabled } from '@/data/types';
 
 /**
  * AppLayout unificado (skill webapp-shell):
@@ -44,13 +47,16 @@ const NAV_ITEMS = [
 ] as const;
 
 const SETTINGS_ITEM = { to: '/ajustes', labelKey: 'nav.ajustes', icon: Settings } as const;
-const ALL_ITEMS = [...NAV_ITEMS, SETTINGS_ITEM];
+
+/** Item del cargador (extensión #94): solo con el módulo activo. */
+const CHARGER_ITEM = { to: '/cargador', labelKey: 'nav.cargador', icon: CarFront } as const;
 
 const TITLE_KEYS: [RegExp, string][] = [
   [/^\/$/, 'nav.dashboard'],
   [/^\/inversores/, 'nav.inversores'],
   [/^\/bateria/, 'nav.bateria'],
   [/^\/historico/, 'nav.historico'],
+  [/^\/cargador/, 'nav.cargador'],
   [/^\/ajustes/, 'nav.ajustes'],
 ];
 
@@ -61,6 +67,15 @@ const IDLE = 'text-muted hover:bg-surface-2/50 hover:text-app';
 function useInverterCount(): number | undefined {
   const install = useInstall();
   return install?.inverters?.length;
+}
+
+/** Items de navegación según extensiones activas (el cargador añade un menú). */
+function useNavItems() {
+  const ext = useExtensions();
+  const chargerOn = chargerEnabled(ext);
+  const navItems = chargerOn ? [...NAV_ITEMS, CHARGER_ITEM] : [...NAV_ITEMS];
+  const allItems = [...navItems, SETTINGS_ITEM];
+  return { navItems, allItems, chargerOn };
 }
 
 /** Label del menú: singular con 1 inversor, plural con varios. */
@@ -144,13 +159,14 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
   const { pathname } = useLocation();
   const settingsActive = isActive(pathname, SETTINGS_ITEM.to);
   const count = useInverterCount();
+  const { navItems } = useNavItems();
 
   if (collapsed) {
     return (
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 lg:flex">
         <Logo collapsed />
         <nav className="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={t('nav.dashboard')}>
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <IconNavLink key={item.to} {...item} />
           ))}
         </nav>
@@ -182,7 +198,7 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-app bg-surface lg:flex">
       <Logo />
       <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label={t('nav.dashboard')}>
-        {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => {
+        {navItems.map(({ to, labelKey, icon: Icon }) => {
           const active = isActive(pathname, to);
           const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
           return (
@@ -238,11 +254,12 @@ function Rail() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const settingsActive = isActive(pathname, SETTINGS_ITEM.to);
+  const { allItems } = useNavItems();
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
       <Logo collapsed />
       <nav className="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={t('nav.dashboard')}>
-        {ALL_ITEMS.map((item) => (
+        {allItems.map((item) => (
           <IconNavLink key={item.to} {...item} />
         ))}
       </nav>
@@ -343,6 +360,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const titleKey = TITLE_KEYS.find(([re]) => re.test(pathname))?.[1] ?? 'nav.dashboard';
   const count = useInverterCount();
+  const { allItems, chargerOn } = useNavItems();
   const resolvedTitleKey = titleKey === 'nav.inversores' ? invLabelKey(count) : titleKey;
   const lgMargin = collapsed ? 'lg:ml-16' : 'lg:ml-[232px]';
 
@@ -400,8 +418,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden"
         aria-label={t('nav.dashboard')}
       >
-        <div className="grid h-16 grid-cols-5">
-          {ALL_ITEMS.map(({ to, labelKey, icon: Icon }) => {
+        <div className={cn('grid h-16', chargerOn ? 'grid-cols-6' : 'grid-cols-5')}>
+          {allItems.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
             const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
             return (
