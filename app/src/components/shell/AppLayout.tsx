@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router';
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router';
+import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -85,6 +86,11 @@ const invLabelKey = (count?: number) => (count === 1 ? 'nav.inversor' : 'nav.inv
 function isActive(pathname: string, to: string): boolean {
   if (to === '/') return pathname === '/';
   return pathname.startsWith(to);
+}
+
+/** Índice del item de navegación (para la dirección del deslizamiento móvil). */
+function navIndex(path: string): number {
+  return ALL_ITEMS.findIndex(({ to }) => isActive(path, to));
 }
 
 function Logo({ collapsed }: { collapsed?: boolean }) {
@@ -304,6 +310,7 @@ function DemoBanner({ onExit }: { onExit: () => void }) {
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { today } = useEnergyData();
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -333,6 +340,34 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const scrollTopIfActive = (to: string) => () => {
     if (isActive(pathname, to) && window.scrollY > 0) {
       window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' });
+    }
+  };
+
+  /* Navegación móvil: el modo declarativo (BrowserRouter) no soporta la prop
+   * viewTransition de react-router (solo RouterProvider), así que interceptamos
+   * el click y envolvemos la navegación en document.startViewTransition (con
+   * flushSync, igual que hace react-router internamente). La dirección del
+   * deslizamiento se marca en <html data-nav-dir> antes del snapshot. */
+  const handleMobileNav = (to: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const from = navIndex(pathname);
+    const target = navIndex(to);
+    if (target !== -1 && from !== target) {
+      try {
+        document.documentElement.dataset.navDir = from === -1 || target > from ? 'forward' : 'back';
+      } catch {
+        /* sin dataset */
+      }
+      scrollTopIfActive(to)();
+      const doNavigate = () => navigate(to);
+      if (typeof document.startViewTransition === 'function') {
+        document.startViewTransition(() => flushSync(doNavigate));
+      } else {
+        doNavigate();
+      }
+    } else {
+      scrollTopIfActive(to)();
+      navigate(to, { replace: true });
     }
   };
 
@@ -391,7 +426,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Header móvil */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden">
-        <Link to="/" aria-label={t('nav.dashboard')} className="flex items-center gap-2" onClick={scrollTopIfActive('/')}>
+        <Link
+          to="/"
+          aria-label={t('nav.dashboard')}
+          className="flex items-center gap-2"
+          onClick={handleMobileNav('/')}
+        >
           <BrandLogo className="h-8 w-8" />
           <span className="font-display text-base font-semibold text-app">Helios</span>
         </Link>
@@ -424,7 +464,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             const active = isActive(pathname, to);
             const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
             return (
-              <NavLink key={to} to={to} onClick={scrollTopIfActive(to)} className="relative flex flex-col items-center justify-center gap-1" aria-label={label}>
+              <NavLink key={to} to={to} onClick={handleMobileNav(to)} className="relative flex flex-col items-center justify-center gap-1" aria-label={label}>
                 <motion.span
                   animate={active ? { scale: [1, 1.15, 1] } : { scale: 1 }}
                   transition={{ duration: 0.25, type: 'spring', stiffness: 500, damping: 20 }}
