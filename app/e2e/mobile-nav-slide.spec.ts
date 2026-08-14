@@ -42,28 +42,39 @@ test('bottom nav móvil marca dirección forward/back del deslizamiento', async 
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
-  // Durante la transición, el grupo root (header + bottom nav) NO debe animar
-  // (la hoja UA hace fade-in de group/image-pair desde opacity 0 → nav invisible),
-  // y el contenido (helios-content) SÍ debe deslizarse con nuestros keyframes.
-  const vtPoll = page.evaluate(() => new Promise<{ root: string[]; content: string[] }>((resolve) => {
-    const seen: { root: string[]; content: string[] } = { root: [], content: [] };
+  // Durante la transición, los grupos del shell (root + header + nav) NO deben
+  // animar (la hoja UA hace fade-in desde opacity 0 → shell invisible), y el
+  // contenido (helios-content) SÍ debe deslizarse con nuestros keyframes.
+  const vtPoll = page.evaluate(() => new Promise<Record<string, string[]>>((resolve) => {
+    const seen: Record<string, string[]> = {};
+    const names = ['root', 'helios-header', 'helios-nav', 'helios-content'];
     const iv = setInterval(() => {
-      const root = getComputedStyle(document.documentElement, '::view-transition-image-pair(root)');
-      const oldContent = getComputedStyle(document.documentElement, '::view-transition-old(helios-content)');
-      const newContent = getComputedStyle(document.documentElement, '::view-transition-new(helios-content)');
-      if (root.animationName) seen.root.push(root.animationName);
-      if (oldContent.animationName) seen.content.push(oldContent.animationName);
-      if (newContent.animationName) seen.content.push(newContent.animationName);
+      for (const n of names) {
+        for (const pseudo of ['old', 'new']) {
+          const cs = getComputedStyle(document.documentElement, `::view-transition-${pseudo}(${n})`);
+          if (cs.animationName && !seen[`${n}:${pseudo}`]) {
+            seen[`${n}:${pseudo}`] = [cs.animationName];
+          }
+        }
+      }
     }, 25);
     setTimeout(() => {
       clearInterval(iv);
-      resolve({ root: [...new Set(seen.root)], content: [...new Set(seen.content)] });
+      resolve(seen);
     }, 900);
   }));
   await page.getByRole('link', { name: 'Histórico' }).click();
   const vtAnims = await vtPoll;
-  expect(vtAnims.root).toEqual(['none']);
-  expect(vtAnims.content.some((n) => n.startsWith('helios-vt-'))).toBe(true);
+  console.log('vtAnims:', JSON.stringify(vtAnims, null, 1));
+  for (const key of ['root', 'helios-header', 'helios-nav']) {
+    for (const pseudo of ['old', 'new']) {
+      const a = vtAnims[`${key}:${pseudo}`];
+      expect(a).toBeDefined();
+      expect(a![0]).toBe('none');
+    }
+  }
+  expect(vtAnims['helios-content:old']?.some((n) => n.startsWith('helios-vt-'))).toBe(true);
+  expect(vtAnims['helios-content:new']?.some((n) => n.startsWith('helios-vt-'))).toBe(true);
 
   await page.waitForURL(/\/historico/);
   const calls = await page.evaluate(() => (window as unknown as { __vtCalls: string[] }).__vtCalls);

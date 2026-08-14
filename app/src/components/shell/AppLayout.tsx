@@ -425,7 +425,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Header móvil */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden">
+      <header className="[view-transition-name:helios-header] sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden">
         <Link
           to="/"
           aria-label={t('nav.dashboard')}
@@ -456,7 +456,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Bottom nav < md */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden"
+        className="[view-transition-name:helios-nav] fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden"
         aria-label={t('nav.dashboard')}
       >
         <div className={cn('grid h-16', chargerOn ? 'grid-cols-6' : 'grid-cols-5')}>

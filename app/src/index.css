@@ -315,17 +315,28 @@
   }
 }
 
-/* Transición móvil entre vistas: el contenido (<main>) se desliza, el shell queda fijo */
+/* Transición móvil entre vistas: el contenido (<main>) se desliza y el shell
+ * (header móvil + bottom nav) permanece estático. Se capturan como grupos de
+ * view-transition PROPIO (helios-header/helios-nav) para no depender de cómo el
+ * navegador capture el grupo root con position:fixed (falla en dispositivos). */
 @media (max-width: 767px) {
   main {
     view-transition-name: helios-content;
   }
-  /* El shell (header + bottom nav) queda estático: anulamos las 4 animaciones
-   * UA del grupo root (group/image-pair arrancan en opacity 0 en la hoja UA). */
+  /* El shell queda estático: anulamos las 4 animaciones UA de cada grupo
+   * (group/image-pair arrancan en opacity 0 en la hoja UA del navegador). */
   ::view-transition-group(root),
   ::view-transition-image-pair(root),
   ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-new(root),
+  ::view-transition-group(helios-header),
+  ::view-transition-image-pair(helios-header),
+  ::view-transition-old(helios-header),
+  ::view-transition-new(helios-header),
+  ::view-transition-group(helios-nav),
+  ::view-transition-image-pair(helios-nav),
+  ::view-transition-old(helios-nav),
+  ::view-transition-new(helios-nav) {
     animation: none;
   }
   html[data-nav-dir='forward']::view-transition-old(helios-content) {
