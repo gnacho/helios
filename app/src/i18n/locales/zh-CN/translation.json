@@ -556,6 +556,7 @@
     "extensions": {
       "enable": "启用扩展",
       "carCharger": "汽车充电器",
+      "configure": "配置汽车充电器",
       "offHint": "扩展为 Helios 添加可选模块。打开后可查看可用扩展。",
       "carChargerOffHint": "启用汽车充电器以添加其菜单并跟踪车辆充电。",
       "carChargerDesc": "充电器的 Home Assistant 实体。请根据你的安装调整 ID。",

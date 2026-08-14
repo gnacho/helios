@@ -559,6 +559,7 @@
     "extensions": {
       "enable": "Enable extensions",
       "carCharger": "Car charger",
+      "configure": "Configure car charger",
       "offHint": "Extensions add optional modules to Helios. Turn them on to see what is available.",
       "carChargerOffHint": "Enable the car charger to add its menu and follow the vehicle charge.",
       "carChargerDesc": "Home Assistant entities of the charger. Adjust the IDs to your installation.",
