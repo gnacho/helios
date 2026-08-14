@@ -135,6 +135,17 @@ function migrate(db) {
     if (!cols.includes('inverters_kwh')) db.exec('ALTER TABLE daily ADD COLUMN inverters_kwh TEXT')
     db.pragma('user_version = 4')
   }
+
+  if (version < 5) {
+    // v5: daily gana ext_charger_kwh (kWh cargados por día, extensión cargador,
+    // issue #94). La acumula el propio Helios por deltas del contador total:
+    // los cargadores locales suelen exponer energía sin state_class (sin
+    // statistics en HAOS). upsertDaily NO la toca → sobrevive a la
+    // consolidación nocturna.
+    const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
+    if (!cols.includes('ext_charger_kwh')) db.exec('ALTER TABLE daily ADD COLUMN ext_charger_kwh REAL')
+    db.pragma('user_version = 5')
+  }
 }
 
 export function openDb(dataDir) {

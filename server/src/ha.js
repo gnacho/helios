@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events'
 export class HAClient extends EventEmitter {
   constructor(httpUrl, token) {
     super()
+    this.httpUrl = httpUrl
     this.wsUrl = httpUrl.replace(/^http/, 'ws') + '/api/websocket'
     this.token = token
     this.entities = new Map()
@@ -158,5 +159,20 @@ export class HAClient extends EventEmitter {
       period,
       types,
     })
+  }
+
+  // Historial de estados vía REST (no existe equivalente websocket para
+  // /api/history/period). Lo usan las extensiones para sensores SIN
+  // state_class (sin statistics): p.ej. el contador de energía del cargador.
+  // Devuelve la lista de estados de UNA entidad: [{ state, last_changed }].
+  async historyDuringPeriod({ startTime, endTime, entityId }) {
+    const url =
+      `${this.httpUrl}/api/history/period/${encodeURIComponent(startTime)}` +
+      `?filter_entity_id=${encodeURIComponent(entityId)}` +
+      `&end_time=${encodeURIComponent(endTime)}&minimal_response`
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${this.token}` } })
+    if (!res.ok) throw new Error(`history HTTP ${res.status}`)
+    const data = await res.json()
+    return Array.isArray(data) && Array.isArray(data[0]) ? data[0] : []
   }
 }

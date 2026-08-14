@@ -100,5 +100,24 @@ export function createSchemas(z) {
       weather: z.string().optional().default(''),
       weatherTemp: z.string().optional().default(''),
     }),
+
+    // Extensiones (issue #94): marco opcional de módulos. Interrupor maestro
+    // + primer módulo (cargador de coche) con sus entidades HAOS editables.
+    extensionsSchema: z.object({
+      enabled: z.boolean().optional().default(false),
+      carCharger: z.object({
+        enabled: z.boolean().optional().default(false),
+        name: z.string().min(1).max(60).optional().default(''),
+        powerId: z.string().optional().default(''),
+        powerUnit: z.enum(['kW', 'W']).optional().default('kW'),
+        energyTotalId: z.string().optional().default(''),
+        energySessionId: z.string().optional().default(''),
+        stateId: z.string().optional().default(''),
+        tempId: z.string().optional().default(''),
+        switchId: z.string().optional().default(''),
+        chargingStates: z.array(z.string()).optional().default([]),
+        connectedStates: z.array(z.string()).optional().default([]),
+      }).optional().default({}),
+    }),
   }
 }

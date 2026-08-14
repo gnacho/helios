@@ -41,8 +41,9 @@ const { registerPushRoutes } = await import('./routes-push.js')
 const alerts = await import('./alerts.js')
 const { updateStatus, requestUpdate, currentId } = await import('./update.js')
 const install = await import('./install.js')
+const extensions = await import('./extensions.js')
 const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
-const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema, topologySchema } = schemas
+const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema, topologySchema, extensionsSchema } = schemas
 
 const db = dbModule.openDb(config.dataDir)
 const { dailyRange, dailyCount, cleanSessions, kvGet, kvSet, audit, auditRange, auditCount, purgeAudit } = dbModule
@@ -55,6 +56,12 @@ console.log(
     (topology.battery.enabled ? ', batería' : ', sin batería') +
     `, grid=${topology.grid.mode}`
 )
+// Extensiones resueltas: extensions_config (kv) > legacy (instalación con
+// datos) > genérico. Se instalan ANTES de conectar con HAOS (suscripciones).
+const extConfig = extensions.resolveAndSet(db)
+if (extensions.chargerActive(extConfig)) {
+  console.log(`[helios] extensión cargador activa (${extConfig.carCharger.name})`)
+}
 await auth.ensureBootstrapAdmin(db)
 push.configurePush({
   publicKey: process.env.VAPID_PUBLIC_KEY,
@@ -68,7 +75,7 @@ let backfillState = 'pending'
 
 ha.on('connected', async () => {
   console.log('[helios] HAOS conectado')
-  await ha.subscribeEntities(install.liveEntities())
+  await ha.subscribeEntities([...install.liveEntities(), ...extensions.chargerEntities()])
   haReady = true
   if (backfillState === 'pending') {
     backfillState = 'running'
@@ -76,6 +83,11 @@ ha.on('connected', async () => {
       const r = await solar.maybeBackfill(ha, db)
       if (r.ran) console.log(`[helios] backfill inicial: ${r.rows} días`)
       await solar.ensureConsumptionBaseline(ha, db)
+      const charged = await extensions.backfillChargerHistory(ha, db).catch((err) => {
+        console.error('[helios] backfill cargador error:', err.message)
+        return 0
+      })
+      if (charged) console.log(`[helios] backfill cargador: ${charged} días`)
       backfillState = 'done'
     } catch (err) {
       backfillState = 'error'
@@ -195,11 +207,15 @@ const sseClients = new Set()
 const MAX_SSE_CLIENTS = 10
 
 let lastPush = 0
+// Payload live: datos solares + snapshot del cargador (si la extensión está
+// activa; computeChargerLive devuelve undefined y JSON.stringify lo omite).
+const livePayload = () =>
+  JSON.stringify({ type: 'live', data: { ...solar.computeLive(ha), charger: extensions.computeChargerLive(ha) } })
 ha.on('entity', () => {
   const now = Date.now()
   if (now - lastPush < 1000 || sseClients.size === 0) return
   lastPush = now
-  const payload = `data: ${JSON.stringify({ type: 'live', data: solar.computeLive(ha) })}\n\n`
+  const payload = `data: ${livePayload()}\n\n`
   for (const c of sseClients) {
     try {
       c.write(payload)
@@ -540,7 +556,7 @@ guarded.get('/solar/stream', (c) => {
       write: (payload) => stream.write(payload),
     }
     sseClients.add(client)
-    await stream.write(`data: ${JSON.stringify({ type: 'live', data: solar.computeLive(ha) })}\n\n`)
+    await stream.write(`data: ${livePayload()}\n\n`)
     const heartbeat = setInterval(() => {
       // ping como mensaje data (no comentario): el cliente lo usa como prueba de vida del SSE.
       // Si el write falla (cliente caído sin disparar onAbort aún), se limpia el cliente y
@@ -659,6 +675,62 @@ guarded.put('/config', async (c) => {
   return c.json({ ok: true, restartNeeded: body.topology !== undefined })
 })
 
+// ── Extensiones (issue #94) ──────────────────────────────────────────────────
+
+// Config resuelta (GET) para la barra de Ajustes y la navegación del frontend.
+guarded.get('/extensions', (c) => {
+  return c.json({ ...extensions.getExtensions(), chargerActive: extensions.chargerActive() })
+})
+
+// Guardar la config de extensiones (admin): valida con el schema, persiste en
+// kv y re-resuelve. Las suscripciones nuevas requieren reinicio.
+guarded.put('/extensions', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  if (!body || typeof body !== 'object') return c.json({ error: 'body inválido' }, 400)
+  const parsed = extensionsSchema.safeParse(body)
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]
+    const path = first?.path?.join('.') || 'extensions'
+    const reason = first?.message || 'config inválida'
+    return c.json({ error: `extensiones inválidas en ${path}: ${reason}` }, 400)
+  }
+  kvSet(db, 'extensions_config', JSON.stringify(parsed.data))
+  extensions.resolveAndSet(db)
+  const me = dbModule.getUserById(db, c.get('userId'))
+  audit(db, me?.username || 'unknown', c.get('userId'), 'extensions.change', { enabled: parsed.data.enabled })
+  return c.json({ ok: true, restartNeeded: true })
+})
+
+// Curva del día del cargador (kW por tramos de 5 min, desde el recorder).
+guarded.get('/charger/day', async (c) => {
+  try {
+    const date = c.req.query('date')
+    const parsed = dateSchema.safeParse(date)
+    if (!parsed.success) {
+      return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
+    }
+    const result = await extensions.chargerDayCurve(ha, parsed.data)
+    return c.json({ date: parsed.data || solar.todayStr(), points: result.points })
+  } catch (err) {
+    return c.json({ error: err.message }, 400)
+  }
+})
+
+// Histórico diario del cargador (kWh/día acumulados por Helios).
+guarded.get('/charger/history', (c) => {
+  const to = c.req.query('to')
+  const from = c.req.query('from')
+  const toParsed = dateSchema.safeParse(to)
+  const fromParsed = dateSchema.safeParse(from)
+  if (!toParsed.success || !fromParsed.success) {
+    return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
+  }
+  const toFinal = toParsed.data || solar.todayStr()
+  const fromFinal = fromParsed.data || shiftDays(toFinal, -364)
+  const days = extensions.chargerHistory(db, fromFinal, toFinal)
+  return c.json({ from: fromFinal, to: toFinal, days })
+})
+
 app.route('/api', guarded)
 
 app.onError((err, c) => {
@@ -694,6 +766,15 @@ setInterval(() => {
     console.error('[helios] alerts tick error:', err.message)
   }
 }, 60 * 1000).unref()
+// Acumulación diaria del cargador (deltas del contador total → daily v5).
+setInterval(() => {
+  if (!haReady) return
+  try {
+    extensions.accumulateChargerDaily(ha, db)
+  } catch (err) {
+    console.error('[helios] charger accumulate error:', err.message)
+  }
+}, 60 * 1000).unref()
 alerts.scheduleResumenDiario(db, ha, solar)
 setInterval(() => {
   try {
@@ -713,6 +794,7 @@ function scheduleNightly() {
     try {
       const n = await solar.backfillHistory(ha, db)
       await solar.ensureConsumptionBaseline(ha, db)
+      await extensions.backfillChargerHistory(ha, db).catch(() => 0)
       purgeAudit(db)
       console.log(`[helios] consolidación nocturna: ${n} días`)
     } catch (err) {
