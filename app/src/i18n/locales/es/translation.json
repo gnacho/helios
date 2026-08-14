@@ -178,7 +178,7 @@
     "todayAria": "Curva de carga del día",
     "noDataToday": "Todavía no hay datos de carga hoy.",
     "historyTitle": "Histórico de carga",
-    "historyHint": "Cada día: la barra de producción (eje derecho) y la barra de carga del coche, partida en solar y red.",
+    "historyHint": "Cada barra es la energía cargada ese día, partida en solar (verde) y red y batería (azul).",
     "historyAria": "Histórico de energía cargada",
     "noHistory": "Sin histórico todavía. Se va acumulando día a día.",
     "charged": "Cargado",
@@ -187,8 +187,7 @@
     "fromGrid": "Red y batería",
     "periodTotal": "Cargado en el periodo",
     "ofProduction": "{{pct}} % de la producción se fue al coche",
-    "pctSolarAria": "Porcentaje de la carga de origen solar",
-    "prodRight": "Producción (eje derecho)"
+    "pctSolarAria": "Porcentaje de la carga de origen solar"
   },
   "inversores": {
     "title": "Inversores",

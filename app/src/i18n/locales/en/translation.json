@@ -178,7 +178,7 @@
     "todayAria": "Charge curve of the day",
     "noDataToday": "No charging data yet today.",
     "historyTitle": "Charging history",
-    "historyHint": "Each day: the production bar (right axis) next to the car charging bar, split into solar and grid.",
+    "historyHint": "Each bar is the energy charged that day, split into solar (green) and grid & battery (blue).",
     "historyAria": "Charged energy history",
     "noHistory": "No history yet. It builds up day by day.",
     "charged": "Charged",
@@ -187,8 +187,7 @@
     "fromGrid": "Grid & battery",
     "periodTotal": "Charged in the period",
     "ofProduction": "{{pct}} % of production went to the car",
-    "pctSolarAria": "Share of charging from solar",
-    "prodRight": "Production (right axis)"
+    "pctSolarAria": "Share of charging from solar"
   },
   "inversores": {
     "title": "Inverters",

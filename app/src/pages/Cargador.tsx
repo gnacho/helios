@@ -247,9 +247,8 @@ export default function Cargador() {
 
   const hasData = rows.some((r) => r.kwh > 0 || r.prod > 0);
   const yMax = Math.max(1, Math.ceil(Math.max(...rows.map((r) => r.kwh), 0)));
-  const yMaxProd = Math.max(1, Math.ceil(Math.max(...rows.map((r) => r.prod), 0)));
   // Ancho de barra adaptado al nº de categorías (mes = ~30 días).
-  const barW = period === 'mes' ? 9 : 20;
+  const barW = period === 'mes' ? 10 : 22;
 
   // Mientras la config de extensiones carga (null) NO redirigimos (race de
   // deep-link: un F5 en /cargador debe caer aquí, no en el dashboard).
@@ -414,9 +413,6 @@ export default function Cargador() {
           </div>
           <div className="flex flex-wrap items-center gap-3 px-4 pb-1 sm:px-5">
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <span className="h-2 w-2 rounded-full opacity-40" style={{ backgroundColor: palette.solar }} /> {t('cargador.prodRight')}
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.bateria }} /> {t('cargador.fromSolar')}
             </span>
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
@@ -440,49 +436,28 @@ export default function Cargador() {
                     minTickGap={period === 'semana' ? 0 : 12}
                     interval="preserveStartEnd"
                   />
-                  {/* Eje izquierdo: carga del coche (kWh) */}
+                  {/* Un único eje: kWh cargados. La producción va en el tooltip y
+                   *  en la tarjeta lateral (un segundo eje con escala distinta
+                   *  resultaba confuso). */}
                   <YAxis
-                    yAxisId="chg"
                     domain={[0, yMax]}
                     width={34}
                     tick={{ fontSize: 12, fill: 'var(--text-faint)', fontFamily: 'Inter' }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  {/* Eje derecho: producción (kWh), escala propia para no aplastar la carga */}
-                  <YAxis
-                    yAxisId="prod"
-                    orientation="right"
-                    domain={[0, yMaxProd]}
-                    width={34}
-                    tick={{ fontSize: 12, fill: 'var(--text-faint)', fontFamily: 'Inter' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
                   <Tooltip content={<HistTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }} />
-                  {/* Carga del coche, partida en solar vs resto (eje izquierdo) */}
-                  <Bar dataKey="pv" name={t('cargador.fromSolar')} yAxisId="chg" stackId="chg" fill={palette.bateria} barSize={barW} animationDuration={500} />
+                  {/* Carga del coche, partida en solar vs resto */}
+                  <Bar dataKey="pv" name={t('cargador.fromSolar')} stackId="chg" fill={palette.bateria} barSize={barW} animationDuration={500} />
                   <Bar
                     dataKey="rest"
                     name={t('cargador.fromGrid')}
-                    yAxisId="chg"
                     stackId="chg"
                     fill={palette.consumo}
                     barSize={barW}
                     radius={[3, 3, 0, 0]}
                     animationDuration={500}
                     animationBegin={60}
-                  />
-                  {/* Producción al lado (eje derecho): cuánto sol hubo */}
-                  <Bar
-                    dataKey="prod"
-                    name={t('common.production')}
-                    yAxisId="prod"
-                    fill={palette.solar}
-                    fillOpacity={0.3}
-                    barSize={barW}
-                    radius={[3, 3, 0, 0]}
-                    animationDuration={500}
                   />
                 </BarChart>
               </ResponsiveContainer>
