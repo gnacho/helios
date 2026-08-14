@@ -320,6 +320,10 @@
   main {
     view-transition-name: helios-content;
   }
+  /* El shell (header + bottom nav) queda estático: anulamos las 4 animaciones
+   * UA del grupo root (group/image-pair arrancan en opacity 0 en la hoja UA). */
+  ::view-transition-group(root),
+  ::view-transition-image-pair(root),
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;

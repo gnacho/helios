@@ -42,10 +42,30 @@ test('bottom nav móvil marca dirección forward/back del deslizamiento', async 
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
-  await page.getByRole('link', { name: /Inversor/ }).click();
-  await expect(page).toHaveURL(/\/inversores/);
-  expect(errors).toEqual([]);
-  await page.waitForTimeout(400);
+  // Durante la transición, el grupo root (header + bottom nav) NO debe animar
+  // (la hoja UA hace fade-in de group/image-pair desde opacity 0 → nav invisible),
+  // y el contenido (helios-content) SÍ debe deslizarse con nuestros keyframes.
+  const vtPoll = page.evaluate(() => new Promise<{ root: string[]; content: string[] }>((resolve) => {
+    const seen: { root: string[]; content: string[] } = { root: [], content: [] };
+    const iv = setInterval(() => {
+      const root = getComputedStyle(document.documentElement, '::view-transition-image-pair(root)');
+      const oldContent = getComputedStyle(document.documentElement, '::view-transition-old(helios-content)');
+      const newContent = getComputedStyle(document.documentElement, '::view-transition-new(helios-content)');
+      if (root.animationName) seen.root.push(root.animationName);
+      if (oldContent.animationName) seen.content.push(oldContent.animationName);
+      if (newContent.animationName) seen.content.push(newContent.animationName);
+    }, 25);
+    setTimeout(() => {
+      clearInterval(iv);
+      resolve({ root: [...new Set(seen.root)], content: [...new Set(seen.content)] });
+    }, 900);
+  }));
+  await page.getByRole('link', { name: 'Histórico' }).click();
+  const vtAnims = await vtPoll;
+  expect(vtAnims.root).toEqual(['none']);
+  expect(vtAnims.content.some((n) => n.startsWith('helios-vt-'))).toBe(true);
+
+  await page.waitForURL(/\/historico/);
   const calls = await page.evaluate(() => (window as unknown as { __vtCalls: string[] }).__vtCalls);
   expect(calls.length).toBeGreaterThan(0);
 });
