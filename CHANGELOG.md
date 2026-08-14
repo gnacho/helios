@@ -7,6 +7,23 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-08-14
+
+### Added
+
+- **Pestañas por inversor desde la topología**: vuelven las vistas individuales
+  por inversor (eliminadas en #70) pero sin nombres fijos: se generan desde la
+  topología (`install.inverters[].name`). (#91)
+- **Etiqueta singular/plural en la navegación**: el menú muestra "Inversor" con
+  un inversor e "Inversores" con dos o más (sidebar, raíl, título y navegación
+  inferior). (#91)
+
+### Fixed
+
+- **Detección por botón de la pestaña comparativa**: el render de las pestañas
+  usaba la pestaña activa para decidir si una tecla era "compare", un bug latente
+  que afloraba al reintroducir las pestañas individuales. (#91)
+
 ## [0.8.6] - 2026-08-13
 
 ### Changed
