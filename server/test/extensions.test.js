@@ -6,6 +6,7 @@ import Database from 'better-sqlite3'
 import { z } from 'zod'
 import { initSchema, kvSet } from '../src/db.js'
 import { createSchemas } from '../../shared/schemas.js'
+import { _setForTests as _setInstallForTests, LEGACY_TOPOLOGY } from '../src/install.js'
 import {
   resolveExtensions,
   normalizeExtensions,
@@ -13,6 +14,7 @@ import {
   chargerEntities,
   computeChargerLive,
   accumulateChargerDaily,
+  pvShareNow,
   dailyDeltasFromHistory,
   backfillChargerHistory,
   addChargerKwh,
@@ -27,6 +29,7 @@ const { extensionsSchema } = createSchemas(z)
 
 afterEach(() => {
   _setForTests(GENERIC_EXTENSIONS)
+  _setInstallForTests(LEGACY_TOPOLOGY)
 })
 
 function emptyDb() {
@@ -302,5 +305,82 @@ describe('dailyDeltasFromHistory / backfillChargerHistory', () => {
     expect(chargerHistory(db, '2026-08-12', '2026-08-12')[0].kwh).toBe(3.5)
     setChargerKwhIfNull(db, '2026-08-14', 4) // sin fila → no crea (solo backfill de filas)
     expect(chargerHistory(db, '2026-08-14', '2026-08-14')).toEqual([])
+  })
+})
+
+describe('atribución solar (iteración 4)', () => {
+  // Topología simple: 1 inversor kW + consumo W (incluye el circuito del cargador).
+  const TOPO = {
+    ...LEGACY_TOPOLOGY,
+    inverters: [
+      { ...LEGACY_TOPOLOGY.inverters[0], key: 'inv1', name: 'Inv', powerId: 'sensor.prod', powerUnit: 'kW' },
+    ],
+    consumption: {
+      ...LEGACY_TOPOLOGY.consumption,
+      powerIds: ['sensor.cons'],
+      powerUnit: 'W',
+    },
+  }
+
+  function haWith(prod, consW, chg) {
+    const map = {
+      'sensor.prod': { state: String(prod) },
+      'sensor.cons': { state: String(consW) },
+      'sensor.chg_total': { state: '100' },
+    }
+    if (chg !== undefined) map['sensor.chg_power'] = { state: String(chg) }
+    return { connected: true, getState: (id) => map[id] }
+  }
+
+  it('pvShareNow: excedente FV parcial tras servir el resto de la casa', () => {
+    _setInstallForTests(TOPO)
+    // producción 5 kW, consumo 6 kW con cargador a 3 → resto casa 3 → solar al cargador 2 → 2/3
+    expect(pvShareNow(haWith(5, 6000, 3), 3)).toBeCloseTo(2 / 3, 5)
+  })
+
+  it('pvShareNow: sin cargador, reparto producción/consumo', () => {
+    _setInstallForTests(TOPO)
+    expect(pvShareNow(haWith(4, 8000, undefined), undefined)).toBeCloseTo(0.5, 5)
+  })
+
+  it('pvShareNow: excedente total → 1; noche → 0', () => {
+    _setInstallForTests(TOPO)
+    expect(pvShareNow(haWith(8, 6000, 3), 3)).toBe(1)
+    expect(pvShareNow(haWith(0, 6000, 3), 3)).toBe(0)
+  })
+
+  it('accumulateChargerDaily escribe la fracción solar del delta', () => {
+    const db = emptyDb()
+    _setForTests(chargerExt())
+    _setInstallForTests(TOPO)
+    const ha = haWith(5, 6000, 3)
+    accumulateChargerDaily(ha, db) // siembra base 100
+    ha.getState = (id) => ({ 'sensor.prod': { state: '5' }, 'sensor.cons': { state: '6000' }, 'sensor.chg_total': { state: '100.9' }, 'sensor.chg_power': { state: '3' } })[id]
+    accumulateChargerDaily(ha, db)
+    const row = chargerHistory(db, '2000-01-01', '2999-12-31')[0]
+    expect(row.kwh).toBe(0.9)
+    expect(row.pvKwh).toBeCloseTo(0.9 * (2 / 3), 2)
+  })
+
+  it('addChargerKwh clampa el PV al total del día', () => {
+    const db = emptyDb()
+    addChargerKwh(db, '2026-08-12', 5, 9) // pv > kwh → 5
+    expect(chargerHistory(db, '2026-08-12', '2026-08-12')[0].pvKwh).toBe(5)
+    addChargerKwh(db, '2026-08-12', 2, 1)
+    const row = chargerHistory(db, '2026-08-12', '2026-08-12')[0]
+    expect(row.kwh).toBe(7)
+    expect(row.pvKwh).toBe(6) // 5 + 1, sin superar 7
+  })
+
+  it('chargerHistory estima el PV por balance diario cuando falta (pv NULL)', () => {
+    const db = emptyDb()
+    // producción 20, consumo 15 (incluye cargador 6) → resto 9 → solar al cargador 11 → clamp 6
+    db.prepare(
+      `INSERT INTO daily (date, production_kwh, consumption_kwh, ext_charger_kwh)
+       VALUES ('2026-08-12', 20, 15, 6), ('2026-08-13', 10, 30, 4)`
+    ).run()
+    const days = chargerHistory(db, '2026-08-12', '2026-08-13')
+    expect(days[0].pvKwh).toBe(6) // excedente 11 > carga 6 → todo solar
+    expect(days[1].pvKwh).toBe(0) // producción < consumo del resto → 0
   })
 })

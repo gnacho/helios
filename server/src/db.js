@@ -146,6 +146,15 @@ function migrate(db) {
     if (!cols.includes('ext_charger_kwh')) db.exec('ALTER TABLE daily ADD COLUMN ext_charger_kwh REAL')
     db.pragma('user_version = 5')
   }
+
+  if (version < 6) {
+    // v6: daily gana ext_charger_pv_kwh (fracción solar de la carga, issue #94
+    // iteración 4). La atribuye accumulateChargerDaily con el balance
+    // instantáneo (excedente FV vs resto); el resto = red y batería.
+    const cols = db.prepare('PRAGMA table_info(daily)').all().map((c) => c.name)
+    if (!cols.includes('ext_charger_pv_kwh')) db.exec('ALTER TABLE daily ADD COLUMN ext_charger_pv_kwh REAL')
+    db.pragma('user_version = 6')
+  }
 }
 
 export function openDb(dataDir) {

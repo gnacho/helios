@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import type { Period } from '@/lib/historyStats';
 import { cn } from '@/lib/utils';
 
-const PERIODS: Period[] = ['dia', 'semana', 'mes', 'ano'];
+const DEFAULT_PERIODS: Period[] = ['dia', 'semana', 'mes', 'ano'];
 
 interface PeriodSelectorProps {
   period: Period;
   onPeriodChange: (p: Period) => void;
+  /** Subconjunto de periodos a ofrecer (por defecto, los cuatro). */
+  periods?: Period[];
   /** Etiqueta corta del periodo visible: `15 jul` · `8 – 14 jul` · `julio 2025` · `2025`. */
   label: string;
   canNext: boolean;
@@ -25,6 +27,7 @@ interface PeriodSelectorProps {
 export default function PeriodSelector({
   period,
   onPeriodChange,
+  periods = DEFAULT_PERIODS,
   label,
   canNext,
   isCurrent,
@@ -41,7 +44,7 @@ export default function PeriodSelector({
         aria-label={t('historico.periodAria')}
         className="flex h-9 items-center rounded-full border border-app bg-surface p-0.5"
       >
-        {PERIODS.map((p) => {
+        {periods.map((p) => {
           const active = p === period;
           return (
             <button

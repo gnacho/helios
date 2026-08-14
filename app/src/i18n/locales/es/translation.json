@@ -178,16 +178,15 @@
     "todayAria": "Curva de carga del día",
     "noDataToday": "Todavía no hay datos de carga hoy.",
     "historyTitle": "Histórico de carga",
-    "historySubtitle": "Energía cargada por día",
     "historyAria": "Histórico de energía cargada",
     "noHistory": "Sin histórico todavía. Se va acumulando día a día.",
     "charged": "Cargado",
-    "last30": "Últimos 30 días",
-    "daysWithData": "{{n}} días con carga",
     "avgDay": "Media diaria",
-    "bestDay": "Día con más carga",
-    "viewDays": "Días",
-    "viewMonths": "Meses"
+    "fromSolar": "De solar",
+    "fromGrid": "Red y batería",
+    "periodTotal": "Cargado en el periodo",
+    "ofProduction": "{{pct}} % de la producción se fue al coche",
+    "pctSolarAria": "Porcentaje de la carga de origen solar"
   },
   "inversores": {
     "title": "Inversores",

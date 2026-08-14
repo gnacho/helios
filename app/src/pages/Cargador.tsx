@@ -25,7 +25,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useEnergyData } from '@/data/EnergyDataProvider';
-import { useExtensions, } from '@/hooks/useExtensions';
+import { useExtensions } from '@/hooks/useExtensions';
 import { chargerEnabled } from '@/data/types';
 import type { ChargerCurvePoint } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -33,12 +33,27 @@ import { fmtEnergy, fmtKw } from '@/lib/format';
 import { apiFetch } from '@/data/api-client';
 import { dateLocale } from '@/i18n';
 import { cn } from '@/lib/utils';
+import PeriodSelector from '@/components/PeriodSelector';
+import type { Period } from '@/lib/historyStats';
+import {
+  periodWindow,
+  initialAnchor,
+  shiftAnchor,
+  isCurrentPeriod,
+  canGoNext,
+  navLabel,
+  periodSubtitle,
+} from '@/lib/historyStats';
+
+const dateKeyOf = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const EASE_OUT: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
 interface HistoryDay {
   date: string;
   kwh: number | null;
+  pvKwh: number | null;
 }
 
 function CurveTooltip({ active, payload, label }: { active?: boolean; payload?: { value?: number }[]; label?: string }) {
@@ -55,34 +70,34 @@ function CurveTooltip({ active, payload, label }: { active?: boolean; payload?: 
   );
 }
 
-function DayTooltip({ active, payload }: { active?: boolean; payload?: { payload?: HistoryDay }[] }) {
-  const { t } = useTranslation();
-  if (!active || !payload || payload.length === 0) return null;
-  const d = payload[0]?.payload;
-  if (!d || d.kwh === null) return null;
-  return (
-    <div className="rounded-xl border border-app bg-surface/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md">
-      <p className="font-semibold text-app">
-        {format(new Date(d.date + 'T00:00:00'), 'EEE d MMM', { locale: dateLocale() })}
-      </p>
-      <p className="text-muted">
-        {t('cargador.charged')}: <span className="font-semibold text-app">{fmtEnergy(d.kwh)} kWh</span>
-      </p>
-    </div>
-  );
+interface HistRow {
+  label: string;
+  full: string;
+  kwh: number;
+  pv: number;
+  rest: number;
+  prod: number;
 }
 
-function MonthTooltip({ active, payload }: { active?: boolean; payload?: { payload?: { full: string; kwh: number } }[] }) {
+function HistTooltip({ active, payload }: { active?: boolean; payload?: { payload?: HistRow }[] }) {
   const { t } = useTranslation();
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
   return (
     <div className="rounded-xl border border-app bg-surface/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md">
-      <p className="font-semibold capitalize text-app">{d.full}</p>
+      <p className="mb-1 font-semibold capitalize text-app">{d.full}</p>
+      <p className="text-muted">
+        {t('common.production')}: <span className="font-semibold text-app">{fmtEnergy(d.prod)} kWh</span>
+      </p>
       <p className="text-muted">
         {t('cargador.charged')}: <span className="font-semibold text-app">{fmtEnergy(d.kwh)} kWh</span>
       </p>
+      {d.kwh > 0 && (
+        <p className="text-muted">
+          {t('cargador.fromSolar')}: <span className="font-semibold text-app">{fmtEnergy(d.pv)} kWh</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -93,7 +108,7 @@ export default function Cargador() {
   const { t, i18n } = useTranslation();
   const ext = useExtensions();
   const palette = useEnergyColors();
-  const { getLivePower, nowMin, liveTick } = useEnergyData();
+  const { getLivePower, getHistory, nowMin, liveTick } = useEnergyData();
 
   const [curve, setCurve] = useState<ChargerCurvePoint[] | null>(null);
   const [history, setHistory] = useState<HistoryDay[] | null>(null);
@@ -117,7 +132,7 @@ export default function Cargador() {
       });
     const to = new Date();
     const from = new Date();
-    from.setDate(from.getDate() - 364); // 12 meses rodantes para la vista por meses
+    from.setDate(from.getDate() - 400); // cubre la vista por año del año anterior
     const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     apiFetch<{ days: HistoryDay[] }>(`/api/charger/history?from=${fmt(from)}&to=${fmt(to)}`)
       .then((res) => {
@@ -131,50 +146,95 @@ export default function Cargador() {
     };
   }, [ext, todayKey]);
 
-  const [histView, setHistView] = useState<'days' | 'months'>('days');
+  // ── Histórico tipo Histórico: Semana / Mes / Año con navegador ────────────
+  const [period, setPeriod] = useState<Period>('semana');
+  const [anchor, setAnchor] = useState<Date>(() => initialAnchor('semana', new Date()));
+  const today = useMemo(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  }, []);
+  const solarHistory = getHistory(); // producción diaria para la barra de contexto
 
-  const histData = useMemo(() => {
-    if (!history) return [];
-    return history.slice(-14).map((d) => ({
-      ...d,
-      day: format(new Date(d.date + 'T00:00:00'), 'EEEEE', { locale: dateLocale() }).toUpperCase(),
-    }));
-  }, [history]);
+  const changePeriod = (p: Period) => {
+    setPeriod(p);
+    setAnchor(initialAnchor(p, today));
+  };
 
-  /** Agregado mensual (YYYY-MM → kWh) de los últimos 12 meses con datos. */
-  const monthlyData = useMemo(() => {
-    if (!history) return [];
-    const byMonth = new Map<string, { kwh: number; label: string; full: string }>();
-    for (const d of history) {
-      if (d.kwh === null || d.kwh <= 0) continue;
-      const date = new Date(d.date + 'T00:00:00');
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const cur = byMonth.get(key);
-      if (cur) cur.kwh += d.kwh;
-      else {
-        const first = new Date(date.getFullYear(), date.getMonth(), 1);
-        byMonth.set(key, {
-          kwh: d.kwh,
-          label: format(first, 'MMM', { locale: dateLocale() }),
-          full: format(first, 'MMMM yyyy', { locale: dateLocale() }),
+  /** Filas del periodo: rango completo (con ceros) para semana/mes/año. */
+  const rows = useMemo(() => {
+    const chargerByDay = new Map((history ?? []).map((d) => [d.date, d]));
+    const prodByDay = new Map<string, number>();
+    for (const d of solarHistory) prodByDay.set(dateKeyOf(d.date), d.productionKwh);
+
+    const out: { label: string; full: string; kwh: number; pv: number; rest: number; prod: number }[] = [];
+
+    const dayRow = (date: Date) => {
+      const k = dateKeyOf(date);
+      const c = chargerByDay.get(k);
+      const kwh = c?.kwh ?? 0;
+      const pv = c?.pvKwh ?? 0;
+      out.push({
+        label: format(date, period === 'mes' ? 'd' : 'EEEEE', { locale: dateLocale() }).toUpperCase(),
+        full: format(date, 'EEE d MMM', { locale: dateLocale() }),
+        kwh,
+        pv,
+        rest: Math.max(0, kwh - pv),
+        prod: prodByDay.get(k) ?? 0,
+      });
+    };
+
+    if (period === 'ano') {
+      for (let m = 0; m < 12; m++) {
+        const monthDate = new Date(anchor.getFullYear(), m, 1);
+        let kwh = 0;
+        let pv = 0;
+        let prod = 0;
+        const daysInMonth = new Date(anchor.getFullYear(), m + 1, 0).getDate();
+        for (let dd = 1; dd <= daysInMonth; dd++) {
+          const dayDate = new Date(anchor.getFullYear(), m, dd);
+          if (dayDate > today) break;
+          const k = dateKeyOf(dayDate);
+          const c = chargerByDay.get(k);
+          kwh += c?.kwh ?? 0;
+          pv += c?.pvKwh ?? 0;
+          prod += prodByDay.get(k) ?? 0;
+        }
+        out.push({
+          label: format(monthDate, 'MMM', { locale: dateLocale() }),
+          full: format(monthDate, 'MMMM yyyy', { locale: dateLocale() }),
+          kwh,
+          pv,
+          rest: Math.max(0, kwh - pv),
+          prod,
         });
       }
+    } else {
+      const { start, end } = periodWindow(period, anchor);
+      const last = end > today ? today : end;
+      for (const d = new Date(start); d <= last; d.setDate(d.getDate() + 1)) {
+        dayRow(new Date(d));
+      }
     }
-    return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-12).map(([month, v]) => ({ month, ...v }));
-  }, [history, i18n.language]);
+    return out;
+  }, [history, solarHistory, period, anchor, today, i18n.language]);
 
-  const histStats = useMemo(() => {
-    // Stats de los últimos 30 días (el fetch trae 12 meses para la vista por meses).
-    const withData = (history ?? []).slice(-30).filter((d) => d.kwh !== null && d.kwh > 0);
-    const total = withData.reduce((acc, d) => acc + (d.kwh ?? 0), 0);
-    const max = withData.reduce((acc, d) => Math.max(acc, d.kwh ?? 0), 0);
+  const stats = useMemo(() => {
+    const kwh = rows.reduce((acc, r) => acc + r.kwh, 0);
+    const pv = rows.reduce((acc, r) => acc + r.pv, 0);
+    const prod = rows.reduce((acc, r) => acc + r.prod, 0);
+    const activeDays = rows.filter((r) => r.kwh > 0).length;
     return {
-      days: withData.length,
-      total,
-      avg: withData.length ? total / withData.length : 0,
-      max,
+      kwh,
+      pv,
+      prod,
+      pctSolar: kwh > 0 ? (pv / kwh) * 100 : 0,
+      pctOfProduction: prod > 0 ? (kwh / prod) * 100 : 0,
+      avgDay: activeDays > 0 ? kwh / activeDays : 0,
     };
-  }, [history]);
+  }, [rows]);
+
+  const hasData = rows.some((r) => r.kwh > 0 || r.prod > 0);
+  const yMax = Math.max(1, Math.ceil(Math.max(...rows.map((r) => Math.max(r.kwh, r.prod)), 0)));
 
   // Deep-link / extensión desactivada a mitad de sesión → vuelta al inicio.
   if (!chargerEnabled(ext)) return <Navigate to="/" replace />;
@@ -185,15 +245,12 @@ export default function Cargador() {
       ? { text: t('cargador.connected'), cls: 'bg-amber-500/12 text-amber-600 dark:text-amber-400', Icon: Cable }
       : { text: t('common.idle'), cls: 'bg-surface-2 text-muted', Icon: PlugZap };
 
-  const stats = [
+  const liveStats = [
     { Icon: Zap, label: t('cargador.currentPower'), value: live ? `${fmtKw(live.powerKw)} kW` : '…' },
     { Icon: Clock, label: t('cargador.session'), value: live?.sessionKwh !== undefined ? `${fmtEnergy(live.sessionKwh)} kWh` : '—' },
     { Icon: Gauge, label: t('cargador.lifetime'), value: live?.totalKwh !== undefined ? `${fmtEnergy(live.totalKwh)} kWh` : '—' },
     { Icon: Thermometer, label: t('cargador.temperature'), value: live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—' },
   ];
-
-  const chartData = histView === 'months' ? monthlyData : histData;
-  const yMax = Math.max(1, Math.ceil(Math.max(...chartData.map((d) => d.kwh ?? 0), 0)));
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
@@ -228,7 +285,7 @@ export default function Cargador() {
 
           <div className="flex min-w-0 flex-1 items-center lg:border-l lg:border-app lg:pl-6">
             <div className="grid w-full grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-              {stats.map((d, i) => (
+              {liveStats.map((d, i) => (
                 <motion.div
                   key={d.label}
                   initial={{ opacity: 0, y: 12 }}
@@ -316,72 +373,80 @@ export default function Cargador() {
           <div className="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
             <div className="mr-auto">
               <h2 className="text-[15px] font-semibold text-app">{t('cargador.historyTitle')}</h2>
-              <p className="text-xs text-faint">{t('cargador.historySubtitle')}</p>
+              <p className="text-xs capitalize text-faint">{periodSubtitle(period, anchor)}</p>
             </div>
-            {/* Segmented Días / Meses */}
-            <div
-              role="tablist"
-              aria-label={t('cargador.historyAria')}
-              className="flex h-8 items-center rounded-full border border-app bg-surface p-0.5"
-            >
-              {(['days', 'months'] as const).map((v) => {
-                const active = v === histView;
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setHistView(v)}
-                    className={cn(
-                      'relative flex h-7 items-center rounded-full px-3 text-xs font-medium transition-colors',
-                      active ? 'text-app' : 'text-faint hover:text-muted',
-                    )}
-                  >
-                    {active && (
-                      <motion.span
-                        layoutId="chg-hist-pill"
-                        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                        className="absolute inset-0 rounded-full bg-surface-2 shadow-inner"
-                      />
-                    )}
-                    <span className="relative">{t(v === 'days' ? 'cargador.viewDays' : 'cargador.viewMonths')}</span>
-                  </button>
-                );
-              })}
-            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-5">
+            <PeriodSelector
+              period={period}
+              periods={['semana', 'mes', 'ano']}
+              onPeriodChange={changePeriod}
+              label={navLabel(period, anchor)}
+              canNext={canGoNext(period, anchor, today)}
+              isCurrent={isCurrentPeriod(period, anchor, today)}
+              onPrev={() => setAnchor((a) => shiftAnchor(period, a, -1))}
+              onNext={() => setAnchor((a) => shiftAnchor(period, a, 1))}
+              onToday={() => setAnchor(initialAnchor(period, today))}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3 px-4 pb-1 sm:px-5">
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.consumo }} /> {t('cargador.charged')}
+              <span className="h-2 w-2 rounded-full opacity-40" style={{ backgroundColor: palette.solar }} /> {t('common.production')}
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.bateria }} /> {t('cargador.fromSolar')}
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.consumo }} /> {t('cargador.fromGrid')}
             </span>
           </div>
           <div className="px-1">
-            {chartData.length === 0 ? (
+            {!hasData ? (
               <div className="flex h-[220px] items-center justify-center px-6 text-center text-sm text-faint">
                 {t('cargador.noHistory')}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={chartData} margin={{ top: 10, right: 12, bottom: 0, left: 4 }}>
+                <BarChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 4 }} barGap={1}>
                   <CartesianGrid vertical={false} stroke="var(--line)" strokeOpacity={0.6} strokeDasharray="3 6" />
                   <XAxis
-                    dataKey={histView === 'months' ? 'label' : 'day'}
+                    dataKey="label"
                     tick={{ fontSize: 12, fill: 'var(--text-faint)', fontFamily: 'Inter' }}
                     axisLine={false}
                     tickLine={false}
-                    minTickGap={histView === 'months' ? 16 : 0}
+                    minTickGap={period === 'semana' ? 0 : 12}
+                    interval="preserveStartEnd"
                   />
                   <YAxis
                     domain={[0, yMax]}
-                    width={30}
+                    width={34}
                     tick={{ fontSize: 12, fill: 'var(--text-faint)', fontFamily: 'Inter' }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip
-                    content={histView === 'months' ? <MonthTooltip /> : <DayTooltip />}
-                    cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }}
+                  <Tooltip content={<HistTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }} />
+                  {/* Producción del periodo al lado (contexto: cuánto sol hubo) */}
+                  <Bar
+                    dataKey="prod"
+                    name={t('common.production')}
+                    fill={palette.solar}
+                    fillOpacity={0.35}
+                    barSize={6}
+                    radius={[2, 2, 0, 0]}
+                    animationDuration={500}
                   />
-                  <Bar dataKey="kwh" name={t('cargador.charged')} fill={palette.consumo} radius={[3, 3, 0, 0]} animationDuration={500} />
+                  {/* Carga del coche, partida en solar vs resto */}
+                  <Bar dataKey="pv" name={t('cargador.fromSolar')} stackId="chg" fill={palette.bateria} barSize={22} animationDuration={500} />
+                  <Bar
+                    dataKey="rest"
+                    name={t('cargador.fromGrid')}
+                    stackId="chg"
+                    fill={palette.consumo}
+                    barSize={22}
+                    radius={[3, 3, 0, 0]}
+                    animationDuration={500}
+                    animationBegin={60}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -396,22 +461,41 @@ export default function Cargador() {
           className="helios-card col-span-12 flex flex-col gap-5 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:col-span-4"
         >
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('cargador.last30')}</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('cargador.periodTotal')}</p>
             <p className="mt-1 font-display text-[28px] font-semibold leading-none tracking-[-0.01em] text-app">
-              {fmtEnergy(histStats.total)} <span className="text-[0.6em] font-medium text-faint">kWh</span>
+              {fmtEnergy(stats.kwh)} <span className="text-[0.6em] font-medium text-faint">kWh</span>
             </p>
-            <p className="mt-1.5 text-sm text-muted">{t('cargador.daysWithData', { n: histStats.days })}</p>
+          </div>
+          <div className="border-t border-app pt-5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('cargador.fromSolar')}</p>
+            <p className="mt-1 font-display text-[22px] font-semibold leading-none text-app">
+              {Math.round(stats.pctSolar)} <span className="text-[0.6em] font-medium text-faint">%</span>
+            </p>
+            <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.round(stats.pctSolar)} aria-valuemin={0} aria-valuemax={100} aria-label={t('cargador.pctSolarAria')}>
+              <motion.div
+                className="h-full rounded-full"
+                style={{ backgroundColor: palette.bateria }}
+                initial={{ width: 0 }}
+                whileInView={{ width: `${Math.min(100, stats.pctSolar)}%` }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
+              />
+            </div>
+            <p className="mt-1.5 text-sm text-muted">
+              {fmtEnergy(stats.pv)} kWh · {t('cargador.fromGrid')}: {fmtEnergy(stats.kwh - stats.pv)} kWh
+            </p>
+          </div>
+          <div className="border-t border-app pt-5">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('common.production')}</p>
+            <p className="mt-1 font-display text-[22px] font-semibold leading-none text-app">
+              {fmtEnergy(stats.prod)} <span className="text-[0.6em] font-medium text-faint">kWh</span>
+            </p>
+            <p className="mt-1.5 text-sm text-muted">{t('cargador.ofProduction', { pct: Math.round(stats.pctOfProduction) })}</p>
           </div>
           <div className="border-t border-app pt-5">
             <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('cargador.avgDay')}</p>
             <p className="mt-1 font-display text-[22px] font-semibold leading-none text-app">
-              {fmtEnergy(histStats.avg)} <span className="text-[0.6em] font-medium text-faint">kWh</span>
-            </p>
-          </div>
-          <div className="border-t border-app pt-5">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{t('cargador.bestDay')}</p>
-            <p className="mt-1 font-display text-[22px] font-semibold leading-none text-app">
-              {fmtEnergy(histStats.max)} <span className="text-[0.6em] font-medium text-faint">kWh</span>
+              {fmtEnergy(stats.avgDay)} <span className="text-[0.6em] font-medium text-faint">kWh</span>
             </p>
           </div>
         </motion.section>

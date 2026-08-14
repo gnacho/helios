@@ -20,6 +20,7 @@
 // reinicio (mismo contrato que la topología).
 
 import { kvGet, kvSet } from './db.js'
+import { getInstall } from './install.js'
 import { cachedCollector } from './solar.js'
 
 const num = (v) => {
@@ -185,6 +186,12 @@ export function computeChargerLive(ha, ext = getExtensions()) {
 //   - Bajada del contador (reset del equipo) → nueva base, sin sumar.
 //   - Salto imposible (> CHARGER_GLITCH_KWH entre ticks) → se ignora y se
 //     re-basa (los huecos los cubre el backfill desde el recorder de HAOS).
+//
+// Además atribuye el ORIGEN de cada delta (v6, ext_charger_pv_kwh): la fracción
+// que en ese instante pudo venir de excedente FV. Balance por slot: solar al
+// cargador = min(potencia cargador, max(0, producción − consumoSinCargador)).
+// Lo que no es FV directo se etiqueta "red y batería" (una carga nocturna desde
+// batería cuenta como no solar: honesto y simple).
 
 function todayStr() {
   const d = new Date()
@@ -201,19 +208,49 @@ function dateKey(d) {
   return `${y}-${m}-${day}`
 }
 
-/** Suma `kwh` al día (crea la fila con ceros si no existe). */
-export function addChargerKwh(db, date, kwh) {
+/** Suma `kwh` al día (crea la fila con ceros si no existe). `pvKwh` (0..kwh)
+ *  es la fracción de origen solar; se acumula clampeada al total del día. */
+export function addChargerKwh(db, date, kwh, pvKwh = 0) {
+  const pv = round3(Math.max(0, Math.min(pvKwh, kwh)))
   db.prepare(
-    `INSERT INTO daily (date, production_kwh, consumption_kwh, grid_import_kwh, grid_export_kwh, battery_charged_kwh, battery_discharged_kwh, ext_charger_kwh)
-     VALUES (?, 0, 0, 0, 0, 0, 0, ?)
+    `INSERT INTO daily (date, production_kwh, consumption_kwh, grid_import_kwh, grid_export_kwh, battery_charged_kwh, battery_discharged_kwh, ext_charger_kwh, ext_charger_pv_kwh)
+     VALUES (?, 0, 0, 0, 0, 0, 0, ?, ?)
      ON CONFLICT(date) DO UPDATE SET
-       ext_charger_kwh = COALESCE(ext_charger_kwh, 0) + excluded.ext_charger_kwh`
-  ).run(date, round3(kwh))
+       ext_charger_kwh = COALESCE(ext_charger_kwh, 0) + excluded.ext_charger_kwh,
+       ext_charger_pv_kwh = MIN(COALESCE(ext_charger_pv_kwh, 0) + excluded.ext_charger_pv_kwh, COALESCE(ext_charger_kwh, 0) + excluded.ext_charger_kwh)`
+  ).run(date, round3(kwh), pv)
 }
 
 /** Fija (sin sumar) el kWh de un día SOLO si estaba a NULL (backfill). */
 export function setChargerKwhIfNull(db, date, kwh) {
   db.prepare('UPDATE daily SET ext_charger_kwh = ? WHERE date = ? AND ext_charger_kwh IS NULL').run(round3(kwh), date)
+}
+
+/** Fracción [0..1] del delta que pudo venir de excedente FV en este instante.
+ *  Balance por slot (la topología de consumo incluye el circuito del cargador):
+ *  solar → cargador = min(potCargador, max(0, producción − (consumo − potCargador))).
+ *  Sin lectura de potencia del cargador → reparto proporcional producción/consumo. */
+export function pvShareNow(ha, chargerPowerKw) {
+  const t = getInstall()
+  let production = 0
+  for (const inv of t.inverters) {
+    const raw = entityNumOrUndef(ha, inv.powerId)
+    if (raw === undefined) continue
+    production += inv.powerUnit === 'W' ? raw / 1000 : raw
+  }
+  const consDiv = t.consumption.powerUnit === 'W' ? 1000 : 1
+  let consumption = 0
+  for (const id of t.consumption.powerIds) {
+    const raw = entityNumOrUndef(ha, id)
+    if (raw !== undefined) consumption += raw / consDiv
+  }
+  if (chargerPowerKw !== undefined && chargerPowerKw > 0.05) {
+    const other = Math.max(0, consumption - chargerPowerKw)
+    const solarToCharger = Math.min(chargerPowerKw, Math.max(0, production - other))
+    return Math.max(0, Math.min(1, solarToCharger / chargerPowerKw))
+  }
+  if (consumption > 0.01) return Math.max(0, Math.min(1, production / consumption))
+  return production > 0 ? 1 : 0
 }
 
 /** Tick de acumulación (llamar cada ~60 s con HAOS conectado). */
@@ -242,19 +279,34 @@ export function accumulateChargerDaily(ha, db, ext = getExtensions()) {
 
   const delta = total - saved.total
   if (delta > 0 && delta <= CHARGER_GLITCH_KWH) {
-    addChargerKwh(db, todayStr(), delta)
+    const rawPower = entityNumOrUndef(ha, c.powerId)
+    const powerKw = rawPower === undefined ? undefined : c.powerUnit === 'W' ? rawPower / 1000 : rawPower
+    addChargerKwh(db, todayStr(), delta, delta * pvShareNow(ha, powerKw))
   } else if (delta > CHARGER_GLITCH_KWH) {
     console.warn(`[helios] cargador: salto anómalo ${delta} kWh, ignorado (¿glitch o sustitución del contador?)`)
   }
   if (delta !== 0) kvSet(db, 'charger_counter', JSON.stringify({ date: todayStr(), total }))
 }
 
-/** Histórico diario del cargador (kWh por día) desde la tabla daily. */
+/** Histórico diario del cargador (kWh por día + fracción solar) desde daily.
+ *  Los días acumulados antes de la atribución (o con pv NULL) se estiman por
+ *  balance diario: solar = min(kwh, max(0, producción − (consumo − kwh))). */
 export function chargerHistory(db, from, to) {
   return db
-    .prepare('SELECT date, ext_charger_kwh FROM daily WHERE date >= ? AND date <= ? ORDER BY date ASC')
+    .prepare(
+      `SELECT date, ext_charger_kwh, ext_charger_pv_kwh, production_kwh, consumption_kwh
+       FROM daily WHERE date >= ? AND date <= ? ORDER BY date ASC`
+    )
     .all(from, to)
-    .map((r) => ({ date: r.date, kwh: r.ext_charger_kwh ?? null }))
+    .map((r) => {
+      const kwh = r.ext_charger_kwh ?? null
+      let pvKwh = r.ext_charger_pv_kwh ?? null
+      if (kwh !== null && kwh > 0 && pvKwh === null) {
+        const other = Math.max(0, (r.consumption_kwh ?? 0) - kwh)
+        pvKwh = Math.max(0, Math.min(kwh, (r.production_kwh ?? 0) - other))
+      }
+      return { date: r.date, kwh, pvKwh }
+    })
 }
 
 // ── Cargador: backfill y curva desde el recorder de HAOS ─────────────────────

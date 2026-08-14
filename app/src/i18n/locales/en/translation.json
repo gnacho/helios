@@ -178,16 +178,15 @@
     "todayAria": "Charge curve of the day",
     "noDataToday": "No charging data yet today.",
     "historyTitle": "Charging history",
-    "historySubtitle": "Energy charged per day",
     "historyAria": "Charged energy history",
     "noHistory": "No history yet. It builds up day by day.",
     "charged": "Charged",
-    "last30": "Last 30 days",
-    "daysWithData": "{{n}} days with charge",
     "avgDay": "Daily average",
-    "bestDay": "Best day",
-    "viewDays": "Days",
-    "viewMonths": "Months"
+    "fromSolar": "From solar",
+    "fromGrid": "Grid & battery",
+    "periodTotal": "Charged in the period",
+    "ofProduction": "{{pct}} % of production went to the car",
+    "pctSolarAria": "Share of charging from solar"
   },
   "inversores": {
     "title": "Inverters",

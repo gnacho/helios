@@ -178,16 +178,15 @@
     "todayAria": "当日充电曲线",
     "noDataToday": "今天还没有充电数据。",
     "historyTitle": "充电历史",
-    "historySubtitle": "每日充电电量",
     "historyAria": "充电电量历史",
     "noHistory": "还没有历史记录。会逐日积累。",
     "charged": "已充",
-    "last30": "最近 30 天",
-    "daysWithData": "{{n}} 天有充电",
     "avgDay": "日均",
-    "bestDay": "最多一天",
-    "viewDays": "按天",
-    "viewMonths": "按月"
+    "fromSolar": "太阳能",
+    "fromGrid": "电网和电池",
+    "periodTotal": "期间充电量",
+    "ofProduction": "{{pct}} % 的发电量给了车",
+    "pctSolarAria": "太阳能充电占比"
   },
   "inversores": {
     "title": "逆变器",
