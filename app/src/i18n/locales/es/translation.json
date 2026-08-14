@@ -25,6 +25,7 @@
   },
   "nav": {
     "dashboard": "Hoy",
+    "inversor": "Inversor",
     "inversores": "Inversores",
     "bateria": "Batería",
     "historico": "Histórico",
