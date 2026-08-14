@@ -72,10 +72,25 @@ function DayTooltip({ active, payload }: { active?: boolean; payload?: { payload
   );
 }
 
+function MonthTooltip({ active, payload }: { active?: boolean; payload?: { payload?: { full: string; kwh: number } }[] }) {
+  const { t } = useTranslation();
+  if (!active || !payload || payload.length === 0) return null;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+  return (
+    <div className="rounded-xl border border-app bg-surface/95 px-3 py-2 text-xs shadow-lg backdrop-blur-md">
+      <p className="font-semibold capitalize text-app">{d.full}</p>
+      <p className="text-muted">
+        {t('cargador.charged')}: <span className="font-semibold text-app">{fmtEnergy(d.kwh)} kWh</span>
+      </p>
+    </div>
+  );
+}
+
 /** Página del cargador de coche (extensión #94): estado en vivo, curva del día
  *  e histórico de energía cargada. Sólo se llega con la extensión activa. */
 export default function Cargador() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const ext = useExtensions();
   const palette = useEnergyColors();
   const { getLivePower, nowMin, liveTick } = useEnergyData();
@@ -102,7 +117,7 @@ export default function Cargador() {
       });
     const to = new Date();
     const from = new Date();
-    from.setDate(from.getDate() - 29);
+    from.setDate(from.getDate() - 364); // 12 meses rodantes para la vista por meses
     const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     apiFetch<{ days: HistoryDay[] }>(`/api/charger/history?from=${fmt(from)}&to=${fmt(to)}`)
       .then((res) => {
@@ -116,6 +131,8 @@ export default function Cargador() {
     };
   }, [ext, todayKey]);
 
+  const [histView, setHistView] = useState<'days' | 'months'>('days');
+
   const histData = useMemo(() => {
     if (!history) return [];
     return history.slice(-14).map((d) => ({
@@ -124,8 +141,31 @@ export default function Cargador() {
     }));
   }, [history]);
 
+  /** Agregado mensual (YYYY-MM → kWh) de los últimos 12 meses con datos. */
+  const monthlyData = useMemo(() => {
+    if (!history) return [];
+    const byMonth = new Map<string, { kwh: number; label: string; full: string }>();
+    for (const d of history) {
+      if (d.kwh === null || d.kwh <= 0) continue;
+      const date = new Date(d.date + 'T00:00:00');
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const cur = byMonth.get(key);
+      if (cur) cur.kwh += d.kwh;
+      else {
+        const first = new Date(date.getFullYear(), date.getMonth(), 1);
+        byMonth.set(key, {
+          kwh: d.kwh,
+          label: format(first, 'MMM', { locale: dateLocale() }),
+          full: format(first, 'MMMM yyyy', { locale: dateLocale() }),
+        });
+      }
+    }
+    return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-12).map(([month, v]) => ({ month, ...v }));
+  }, [history, i18n.language]);
+
   const histStats = useMemo(() => {
-    const withData = (history ?? []).filter((d) => d.kwh !== null && d.kwh > 0);
+    // Stats de los últimos 30 días (el fetch trae 12 meses para la vista por meses).
+    const withData = (history ?? []).slice(-30).filter((d) => d.kwh !== null && d.kwh > 0);
     const total = withData.reduce((acc, d) => acc + (d.kwh ?? 0), 0);
     const max = withData.reduce((acc, d) => Math.max(acc, d.kwh ?? 0), 0);
     return {
@@ -152,7 +192,8 @@ export default function Cargador() {
     { Icon: Thermometer, label: t('cargador.temperature'), value: live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—' },
   ];
 
-  const yMax = Math.max(1, Math.ceil(Math.max(...histData.map((d) => d.kwh ?? 0), 0)));
+  const chartData = histView === 'months' ? monthlyData : histData;
+  const yMax = Math.max(1, Math.ceil(Math.max(...chartData.map((d) => d.kwh ?? 0), 0)));
 
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
@@ -277,24 +318,57 @@ export default function Cargador() {
               <h2 className="text-[15px] font-semibold text-app">{t('cargador.historyTitle')}</h2>
               <p className="text-xs text-faint">{t('cargador.historySubtitle')}</p>
             </div>
+            {/* Segmented Días / Meses */}
+            <div
+              role="tablist"
+              aria-label={t('cargador.historyAria')}
+              className="flex h-8 items-center rounded-full border border-app bg-surface p-0.5"
+            >
+              {(['days', 'months'] as const).map((v) => {
+                const active = v === histView;
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setHistView(v)}
+                    className={cn(
+                      'relative flex h-7 items-center rounded-full px-3 text-xs font-medium transition-colors',
+                      active ? 'text-app' : 'text-faint hover:text-muted',
+                    )}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="chg-hist-pill"
+                        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                        className="absolute inset-0 rounded-full bg-surface-2 shadow-inner"
+                      />
+                    )}
+                    <span className="relative">{t(v === 'days' ? 'cargador.viewDays' : 'cargador.viewMonths')}</span>
+                  </button>
+                );
+              })}
+            </div>
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.consumo }} /> {t('cargador.charged')}
             </span>
           </div>
           <div className="px-1">
-            {histData.length === 0 ? (
+            {chartData.length === 0 ? (
               <div className="flex h-[220px] items-center justify-center px-6 text-center text-sm text-faint">
                 {t('cargador.noHistory')}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={histData} margin={{ top: 10, right: 12, bottom: 0, left: 4 }}>
+                <BarChart data={chartData} margin={{ top: 10, right: 12, bottom: 0, left: 4 }}>
                   <CartesianGrid vertical={false} stroke="var(--line)" strokeOpacity={0.6} strokeDasharray="3 6" />
                   <XAxis
-                    dataKey="day"
+                    dataKey={histView === 'months' ? 'label' : 'day'}
                     tick={{ fontSize: 12, fill: 'var(--text-faint)', fontFamily: 'Inter' }}
                     axisLine={false}
                     tickLine={false}
+                    minTickGap={histView === 'months' ? 16 : 0}
                   />
                   <YAxis
                     domain={[0, yMax]}
@@ -303,7 +377,10 @@ export default function Cargador() {
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip content={<DayTooltip />} cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }} />
+                  <Tooltip
+                    content={histView === 'months' ? <MonthTooltip /> : <DayTooltip />}
+                    cursor={{ fill: 'var(--surface-2)', opacity: 0.5 }}
+                  />
                   <Bar dataKey="kwh" name={t('cargador.charged')} fill={palette.consumo} radius={[3, 3, 0, 0]} animationDuration={500} />
                 </BarChart>
               </ResponsiveContainer>

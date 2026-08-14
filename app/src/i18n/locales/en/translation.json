@@ -185,7 +185,9 @@
     "last30": "Last 30 days",
     "daysWithData": "{{n}} days with charge",
     "avgDay": "Daily average",
-    "bestDay": "Best day"
+    "bestDay": "Best day",
+    "viewDays": "Days",
+    "viewMonths": "Months"
   },
   "inversores": {
     "title": "Inverters",

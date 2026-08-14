@@ -185,7 +185,9 @@
     "last30": "最近 30 天",
     "daysWithData": "{{n}} 天有充电",
     "avgDay": "日均",
-    "bestDay": "最多一天"
+    "bestDay": "最多一天",
+    "viewDays": "按天",
+    "viewMonths": "按月"
   },
   "inversores": {
     "title": "逆变器",

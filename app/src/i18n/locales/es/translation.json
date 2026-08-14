@@ -185,7 +185,9 @@
     "last30": "Últimos 30 días",
     "daysWithData": "{{n}} días con carga",
     "avgDay": "Media diaria",
-    "bestDay": "Día con más carga"
+    "bestDay": "Día con más carga",
+    "viewDays": "Días",
+    "viewMonths": "Meses"
   },
   "inversores": {
     "title": "Inversores",
