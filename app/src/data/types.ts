@@ -51,7 +51,56 @@ export interface LivePower {
   weatherTemp?: number;
   station?: string;
   inverterOnline?: boolean;
+  charger?: ChargerLive;
   ts?: string;
+}
+
+/** Snapshot en vivo del cargador (extensión, issue #94). Viaja en el SSE. */
+export interface ChargerLive {
+  name: string;
+  charging: boolean;
+  connected: boolean;
+  state?: string;
+  powerKw: number;
+  sessionKwh?: number;
+  totalKwh?: number;
+  tempC?: number;
+  switchOn?: boolean;
+}
+
+/** Punto de la curva diaria del cargador (kW por tramos de 5 min). */
+export interface ChargerCurvePoint {
+  t: number;
+  label: string;
+  kw: number;
+}
+
+/** Config de extensiones (GET/PUT /api/extensions). */
+export interface ExtensionsConfig {
+  enabled: boolean;
+  chargerActive?: boolean;
+  carCharger: {
+    enabled: boolean;
+    name: string;
+    powerId: string;
+    powerUnit: 'kW' | 'W';
+    energyTotalId: string;
+    /** Divisor del contador (unidades → kWh); 1 = ya está en kWh. */
+    energyDivisor: number;
+    /** ¿Los medidores de consumo de la topología incluyen el circuito del cargador? */
+    chargerInHouseMeters: boolean;
+    energySessionId: string;
+    stateId: string;
+    tempId: string;
+    switchId: string;
+    chargingStates: string[];
+    connectedStates: string[];
+  };
+}
+
+/** ¿El marco está activo y el cargador encendido? */
+export function chargerEnabled(ext: ExtensionsConfig | null): boolean {
+  return !!(ext?.enabled && ext.carCharger?.enabled);
 }
 
 export interface DayKpis {

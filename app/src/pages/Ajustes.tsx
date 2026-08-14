@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   BatteryCharging,
   Bell,
+  CarFront,
   Check,
   ChevronDown,
   FileText,
@@ -20,7 +21,9 @@ import {
   MapPin,
   Moon,
   Pencil,
+  Puzzle,
   RefreshCw,
+  Settings2,
   ShieldCheck,
   Smartphone,
   Sun,
@@ -40,6 +43,8 @@ import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useInstall } from '@/hooks/useInstall';
+import { useExtensions, invalidateExtensions } from '@/hooks/useExtensions';
+import type { ExtensionsConfig } from '@/data/types';
 import { TopologyEditor } from '@/components/TopologyEditor';
 import { THEME_BG, THEME_SURFACE, THEME_BAR, ACCENTS } from '@/lib/colors';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
@@ -632,6 +637,202 @@ function ConnectionSection({ isAdmin = false }: { isAdmin?: boolean }) {
         </AccordionItem>
       </Accordion>
       <TopologyEditor open={editorOpen} onOpenChange={setEditorOpen} install={install} />
+    </div>
+  );
+}
+
+// ── §3b Extensiones (issue #94): barra con interruptor maestro + módulos ─────
+
+/** Campo de entidad HAOS del cargador (label + input mono). */
+function EntityField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const id = `ext-${label.replace(/\s+/g, '-').toLowerCase()}`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id} className="text-xs text-muted">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-9 font-mono text-[13px]"
+        spellCheck={false}
+      />
+    </div>
+  );
+}
+
+function ExtensionsSection() {
+  const { t } = useTranslation();
+  const ext = useExtensions();
+  const [draft, setDraft] = useState<ExtensionsConfig | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  // Opciones del cargador PLEGADAS por defecto: se despliegan con el icono de
+  // config (solo visible con el componente aplicado).
+  const [configOpen, setConfigOpen] = useState(false);
+
+  // La draft se inicializa desde la config resuelta (y se refresca si aún no
+  // había cargado). Guardar escribe { enabled, carCharger } completos.
+  useEffect(() => {
+    if (ext && !draft) setDraft({ ...ext, chargerActive: undefined });
+  }, [ext, draft]);
+
+  // Al desactivar el cargador se vuelve a plegar (estado por defecto).
+  useEffect(() => {
+    if (!draft?.carCharger?.enabled) setConfigOpen(false);
+  }, [draft?.carCharger?.enabled]);
+
+  if (!ext || !draft) {
+    return <p className="text-sm text-faint">…</p>;
+  }
+
+  const save = async (next: ExtensionsConfig) => {
+    if (saving) return;
+    setDraft(next);
+    setSaving(true);
+    setSaved(false);
+    try {
+      await apiPut<{ ok: boolean; restartNeeded?: boolean }>('/api/extensions', {
+        enabled: next.enabled,
+        carCharger: next.carCharger,
+      });
+      invalidateExtensions();
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2500);
+      heliosToast(t('ajustes.extensions.savedRestart'), { tone: 'warning' });
+    } catch (err) {
+      heliosToast(err instanceof ApiError ? err.message : t('common.error'), { tone: 'warning' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleMaster = (checked: boolean) => void save({ ...draft, enabled: checked });
+  const toggleCharger = (checked: boolean) =>
+    void save({ ...draft, carCharger: { ...draft.carCharger, enabled: checked } });
+
+  const ch = draft.carCharger;
+  const setCh = (patch: Partial<ExtensionsConfig['carCharger']>) =>
+    setDraft({ ...draft, carCharger: { ...ch, ...patch } });
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Barra horizontal: interruptor maestro + módulo cargador en la misma fila */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex items-center gap-2.5">
+          <Puzzle size={18} strokeWidth={1.75} className="shrink-0 text-brand" />
+          <span className="text-sm font-semibold text-app">{t('ajustes.extensions.enable')}</span>
+          <Switch checked={draft.enabled} onCheckedChange={toggleMaster} disabled={saving} aria-label={t('ajustes.extensions.enable')} />
+        </div>
+        {draft.enabled && (
+          <>
+            <div className="hidden h-6 w-px bg-app sm:block" />
+            <div className="flex items-center gap-2.5">
+              <CarFront size={18} strokeWidth={1.75} className="shrink-0 text-brand" />
+              <span className="text-sm font-semibold text-app">{t('ajustes.extensions.carCharger')}</span>
+              <Switch checked={ch.enabled} onCheckedChange={toggleCharger} disabled={saving} aria-label={t('ajustes.extensions.carCharger')} />
+              {ch.enabled && (
+                <button
+                  type="button"
+                  onClick={() => setConfigOpen((v) => !v)}
+                  aria-expanded={configOpen}
+                  aria-controls="ext-charger-config"
+                  aria-label={t('ajustes.extensions.configure')}
+                  title={t('ajustes.extensions.configure')}
+                  className={cn(
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
+                    configOpen
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
+                  )}
+                >
+                  <Settings2 size={15} strokeWidth={1.75} />
+                </button>
+              )}
+            </div>
+          </>
+        )}
+        {saving && <RefreshCw size={14} className="animate-spin text-faint" />}
+        {saved && !saving && <Check size={14} className="text-emerald-500" />}
+      </div>
+
+      {!draft.enabled ? (
+        <p className="text-sm text-muted">{t('ajustes.extensions.offHint')}</p>
+      ) : !ch.enabled ? (
+        <p className="text-sm text-muted">{t('ajustes.extensions.carChargerOffHint')}</p>
+      ) : (
+        <AnimatePresence initial={false}>
+          {configOpen && (
+            <motion.div
+              key="ext-charger-config"
+              id="ext-charger-config"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted">{t('ajustes.extensions.carChargerDesc')}</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <EntityField label={t('ajustes.extensions.f.name')} value={ch.name} onChange={(v) => setCh({ name: v })} />
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs text-muted">{t('ajustes.extensions.f.powerUnit')}</Label>
+                    <Select value={ch.powerUnit} onValueChange={(v: 'kW' | 'W') => setCh({ powerUnit: v })}>
+                      <SelectTrigger className="h-9 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kW">kW</SelectItem>
+                        <SelectItem value="W">W</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <EntityField label={t('ajustes.extensions.f.chargingStates')} value={ch.chargingStates.join(', ')} onChange={(v) => setCh({ chargingStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="charging" />
+                  <EntityField label={t('ajustes.extensions.f.powerId')} value={ch.powerId} onChange={(v) => setCh({ powerId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.energyTotalId')} value={ch.energyTotalId} onChange={(v) => setCh({ energyTotalId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.energyDivisor')} value={String(ch.energyDivisor)} onChange={(v) => setCh({ energyDivisor: Math.max(1, Math.min(100000, Math.round(Number(v) || 1))) })} placeholder="1" />
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted">{t('ajustes.extensions.f.chargerInHouseMeters')}</Label>
+              <div className="flex h-9 items-center gap-2">
+                <Switch checked={ch.chargerInHouseMeters} onCheckedChange={(v) => setCh({ chargerInHouseMeters: v })} aria-label={t('ajustes.extensions.f.chargerInHouseMeters')} />
+                <span className="text-xs text-faint">{t('ajustes.extensions.f.chargerInHouseMetersHint')}</span>
+              </div>
+            </div>
+                  <EntityField label={t('ajustes.extensions.f.energySessionId')} value={ch.energySessionId} onChange={(v) => setCh({ energySessionId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.stateId')} value={ch.stateId} onChange={(v) => setCh({ stateId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.tempId')} value={ch.tempId} onChange={(v) => setCh({ tempId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.switchId')} value={ch.switchId} onChange={(v) => setCh({ switchId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.connectedStates')} value={ch.connectedStates.join(', ')} onChange={(v) => setCh({ connectedStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="connected" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void save(draft)}
+                    disabled={saving}
+                    className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                  >
+                    {t('ajustes.extensions.save')}
+                  </button>
+                  <p className="text-xs text-faint">{t('ajustes.extensions.entitiesHint')}</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
@@ -1948,6 +2149,13 @@ export default function Ajustes() {
         >
           <ConnectionSection isAdmin={userRole === 'admin'} />
         </Section>
+
+        {/* 2b. Extensiones (solo admin): barra maestra + módulo cargador */}
+        {userRole === 'admin' && (
+          <Section id="extensiones" title={t('ajustes.sections.extensiones')}>
+            <ExtensionsSection />
+          </Section>
+        )}
 
         {/* 3. Mi perfil (span-12) */}
         <motion.section

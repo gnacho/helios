@@ -29,6 +29,7 @@
     "inversores": "Inverters",
     "bateria": "Battery",
     "historico": "History",
+    "cargador": "Charger",
     "ajustes": "Settings",
     "main": "Main navigation",
     "collapse": "Collapse menu",
@@ -165,6 +166,28 @@
     "gaugeAria": "Battery at {{pct}} %",
     "reservePct": "Reserve {{pct}} %",
     "ofTotalKwh": "{{kwh}} of {{total}} kWh"
+  },
+  "cargador": {
+    "connected": "Plugged in",
+    "currentPower": "Current power",
+    "session": "Session",
+    "lifetime": "Lifetime total",
+    "temperature": "Temperature",
+    "todayTitle": "Today's charge",
+    "todaySubtitle": "Charging power along the day",
+    "todayAria": "Charge curve of the day",
+    "noDataToday": "No charging data yet today.",
+    "historyTitle": "Charging history",
+    "historyHint": "Each bar is the energy charged that day, split into solar (green) and grid & battery (blue).",
+    "historyAria": "Charged energy history",
+    "noHistory": "No history yet. It builds up day by day.",
+    "charged": "Charged",
+    "avgDay": "Daily average",
+    "fromSolar": "From solar",
+    "fromGrid": "Grid & battery",
+    "periodTotal": "Charged in the period",
+    "ofProduction": "{{pct}} % of production went to the car",
+    "pctSolarAria": "Share of charging from solar"
   },
   "inversores": {
     "title": "Inverters",
@@ -308,7 +331,8 @@
       "sesion": "My session",
       "apariencia": "Appearance",
       "perfil": "My profile",
-      "administracion": "Administration"
+      "administracion": "Administration",
+      "extensiones": "Extensions"
     },
     "theme": {
       "autoNote": "In Auto mode, the interface uses the light theme between sunrise (06:50) and sunset (21:40).",
@@ -533,6 +557,32 @@
       "sun": "Sun",
       "weather": "Weather",
       "weatherTemp": "Outdoor temperature"
+    },
+    "extensions": {
+      "enable": "Enable extensions",
+      "carCharger": "Car charger",
+      "configure": "Configure car charger",
+      "offHint": "Extensions add optional modules to Helios. Turn them on to see what is available.",
+      "carChargerOffHint": "Enable the car charger to add its menu and follow the vehicle charge.",
+      "carChargerDesc": "Home Assistant entities of the charger. Adjust the IDs to your installation.",
+      "save": "Save",
+      "savedRestart": "Extensions saved. Restart the service to fully apply the changes.",
+      "entitiesHint": "Entity changes need a restart (subscriptions are fixed at boot).",
+      "f": {
+        "name": "Name",
+        "powerUnit": "Power unit",
+        "powerId": "Power (entity_id)",
+        "energyTotalId": "Total energy (entity_id)",
+        "energyDivisor": "Energy divisor (units to kWh)",
+        "energySessionId": "Session energy (entity_id)",
+        "stateId": "State (entity_id)",
+        "tempId": "Temperature (entity_id)",
+        "switchId": "Switch (entity_id)",
+        "chargingStates": "Charging states (CSV)",
+        "connectedStates": "Connected states (CSV)",
+        "chargerInHouseMeters": "Charger in house meters",
+        "chargerInHouseMetersHint": "Enable only if your consumption meters already measure the charger circuit."
+      }
     }
   },
   "footer": {

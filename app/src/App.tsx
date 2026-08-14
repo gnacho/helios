@@ -8,6 +8,7 @@ import Inversores from '@/pages/Inversores';
 import Bateria from '@/pages/Bateria';
 import Historico from '@/pages/Historico';
 import Ajustes from '@/pages/Ajustes';
+import Cargador from '@/pages/Cargador';
 import StubPage from '@/pages/StubPage';
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
               <Route path="/inversores" element={<Inversores />} />
               <Route path="/bateria" element={<Bateria />} />
               <Route path="/historico" element={<Historico />} />
+              <Route path="/cargador" element={<Cargador />} />
               <Route path="/ajustes" element={<Ajustes />} />
               <Route path="*" element={<StubPage />} />
             </Routes>
