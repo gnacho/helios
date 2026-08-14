@@ -85,6 +85,8 @@ export interface ExtensionsConfig {
     powerId: string;
     powerUnit: 'kW' | 'W';
     energyTotalId: string;
+    /** Divisor del contador (unidades → kWh); 1 = ya está en kWh. */
+    energyDivisor: number;
     energySessionId: string;
     stateId: string;
     tempId: string;

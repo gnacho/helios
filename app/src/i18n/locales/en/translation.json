@@ -574,6 +574,7 @@
         "powerUnit": "Power unit",
         "powerId": "Power (entity_id)",
         "energyTotalId": "Total energy (entity_id)",
+        "energyDivisor": "Energy divisor (units to kWh)",
         "energySessionId": "Session energy (entity_id)",
         "stateId": "State (entity_id)",
         "tempId": "Temperature (entity_id)",

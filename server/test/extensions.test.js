@@ -276,25 +276,112 @@ describe('dailyDeltasFromHistory / backfillChargerHistory', () => {
     expect(perDay.get('2026-08-14')).toBe(2)
   })
 
-  it('backfill solo escribe días a NULL y anteriores a hoy', async () => {
-    const db = emptyDb()
-    db.prepare(
-      `INSERT INTO daily (date, production_kwh, ext_charger_kwh) VALUES ('2026-08-12', 10, 7.0), ('2026-08-13', 10, NULL)`
-    ).run()
-    _setForTests(chargerExt())
+  it('suma incrementos positivos: multi-paso, unavailable y reset intra-día', () => {
+    const L = (y, m, d, h, min = 0) => new Date(y, m - 1, d, h, min).toISOString()
+    const rows = [
+      { state: '100', last_changed: L(2026, 8, 12, 8) },
+      { state: '145', last_changed: L(2026, 8, 12, 10) },
+      { state: 'unavailable', last_changed: L(2026, 8, 12, 11) },
+      { state: '190', last_changed: L(2026, 8, 12, 12) },
+      { state: '5', last_changed: L(2026, 8, 12, 20) }, // reset del equipo
+      { state: '25', last_changed: L(2026, 8, 12, 21) },
+      { state: '25', last_changed: L(2026, 8, 13, 9) },
+      { state: '60', last_changed: L(2026, 8, 13, 15) },
+    ]
+    const perDay = dailyDeltasFromHistory(rows)
+    expect(perDay.get('2026-08-12')).toBe(110) // 45 + 45 + (reset no resta) 20
+    expect(perDay.get('2026-08-13')).toBe(35)
+  })
+
+  it('divisor del contador: centésimas de kWh → kWh', () => {
     const L = (y, m, d, h) => new Date(y, m - 1, d, h).toISOString()
     const rows = [
-      { state: '100', last_changed: L(2026, 8, 12, 12) },
-      { state: '103', last_changed: L(2026, 8, 12, 20) },
-      { state: '103', last_changed: L(2026, 8, 13, 10) },
-      { state: '107', last_changed: L(2026, 8, 13, 20) },
+      { state: '0', last_changed: L(2026, 8, 11, 14) },
+      { state: '118', last_changed: L(2026, 8, 11, 15) },
+      { state: '369', last_changed: L(2026, 8, 11, 16) },
+    ]
+    const perDay = dailyDeltasFromHistory(rows, 100)
+    expect(perDay.get('2026-08-11')).toBe(3.69)
+  })
+
+  it('backfill escribe días a NULL (hoy incluida) y marca 0 los sin carga', async () => {
+    const db = emptyDb()
+    const t = new Date()
+    const iso = (offsetDays) => {
+      const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() - offsetDays)
+      return {
+        key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+        at: (h) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h).toISOString(),
+      }
+    }
+    const d2 = iso(2) // preset
+    const d1 = iso(1) // NULL con carga en el recorder
+    const d0 = iso(0) // HOY NULL sin estados → 0
+    db.prepare(
+      'INSERT INTO daily (date, production_kwh, ext_charger_kwh) VALUES (?, 10, 7.0), (?, 10, NULL), (?, 10, NULL)'
+    ).run(d2.key, d1.key, d0.key)
+    _setForTests(chargerExt())
+    const rows = [
+      { state: '100', last_changed: d2.at(12) },
+      { state: '103', last_changed: d2.at(20) },
+      { state: '103', last_changed: d1.at(10) },
+      { state: '107', last_changed: d1.at(20) },
     ]
     const ha = { historyDuringPeriod: async () => rows }
     const n = await backfillChargerHistory(ha, db)
-    expect(n).toBe(1)
-    const days = chargerHistory(db, '2026-08-12', '2026-08-13')
-    expect(days[0].kwh).toBe(7.0) // ya tenía dato: intacto
-    expect(days[1].kwh).toBe(4)
+    expect(n).toBe(2)
+    const days = chargerHistory(db, d1.key, d0.key)
+    expect(days[0].kwh).toBe(4) // NULL → delta del recorder
+    expect(days[1].kwh).toBe(0) // hoy sin estados → 0 (no NULL)
+  })
+
+  it('hoy sin fila daily: siembra la base del acumulador, no escribe la fila', async () => {
+    const db = emptyDb()
+    const t = new Date()
+    const iso = (offsetDays) => {
+      const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() - offsetDays)
+      return {
+        key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+        at: (h) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h).toISOString(),
+      }
+    }
+    const d1 = iso(1)
+    const d0 = iso(0)
+    db.prepare('INSERT INTO daily (date, production_kwh, ext_charger_kwh) VALUES (?, 10, NULL)').run(d1.key)
+    _setForTests(chargerExt({ energyDivisor: 100 }))
+    const rows = [
+      { state: '100', last_changed: d1.at(12) },
+      { state: '300', last_changed: d1.at(20) },
+      { state: '14', last_changed: d0.at(14) }, // primer estado de HOY
+      { state: '469', last_changed: d0.at(16) },
+    ]
+    const ha = { historyDuringPeriod: async () => rows }
+    const n = await backfillChargerHistory(ha, db)
+    expect(n).toBe(1) // solo ayer (2 kWh)
+    expect(chargerHistory(db, d0.key, d0.key)).toEqual([]) // hoy sin fila
+    // base sembrada con el primer estado de hoy (14/100 kWh)
+    const { kvGet } = await import('../src/db.js')
+    expect(JSON.parse(kvGet(db, 'charger_counter'))).toEqual({ date: d0.key, total: 0.14 })
+    // el acumulador aplica el delta de hoy y crea la fila
+    const haLive = { getState: (id) => ({ 'sensor.chg_total': { state: '469' } })[id] }
+    accumulateChargerDaily(haLive, db)
+    expect(chargerHistory(db, d0.key, d0.key)[0].kwh).toBe(4.55)
+  })
+
+  it('acumulador y live aplican el divisor del contador', () => {
+    const db = emptyDb()
+    _setForTests(chargerExt({ energyDivisor: 100, powerUnit: 'W', powerId: 'sensor.chg_power' }))
+    let total = 36900 // unidades crudas = 369 kWh
+    const ha = mockHa({})
+    ha.getState = (id) => ({ 'sensor.chg_total': { state: String(total) }, 'sensor.chg_power': { state: '2605' } })[id]
+    accumulateChargerDaily(ha, db)
+    total = 36955 // +55 unidades = 0,55 kWh
+    accumulateChargerDaily(ha, db)
+    const day = chargerHistory(db, '2000-01-01', '2999-12-31')[0]
+    expect(day.kwh).toBe(0.55)
+    const live = computeChargerLive(ha)
+    expect(live.totalKwh).toBe(369.55)
+    expect(live.powerKw).toBe(2.605)
   })
 
   it('addChargerKwh suma sobre lo existente; setChargerKwhIfNull no pisa ni crea filas', () => {

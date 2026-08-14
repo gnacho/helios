@@ -803,6 +803,7 @@ function ExtensionsSection() {
                   <EntityField label={t('ajustes.extensions.f.chargingStates')} value={ch.chargingStates.join(', ')} onChange={(v) => setCh({ chargingStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="charging" />
                   <EntityField label={t('ajustes.extensions.f.powerId')} value={ch.powerId} onChange={(v) => setCh({ powerId: v })} />
                   <EntityField label={t('ajustes.extensions.f.energyTotalId')} value={ch.energyTotalId} onChange={(v) => setCh({ energyTotalId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.energyDivisor')} value={String(ch.energyDivisor)} onChange={(v) => setCh({ energyDivisor: Math.max(1, Math.min(100000, Math.round(Number(v) || 1))) })} placeholder="1" />
                   <EntityField label={t('ajustes.extensions.f.energySessionId')} value={ch.energySessionId} onChange={(v) => setCh({ energySessionId: v })} />
                   <EntityField label={t('ajustes.extensions.f.stateId')} value={ch.stateId} onChange={(v) => setCh({ stateId: v })} />
                   <EntityField label={t('ajustes.extensions.f.tempId')} value={ch.tempId} onChange={(v) => setCh({ tempId: v })} />

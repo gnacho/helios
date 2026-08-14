@@ -40,8 +40,12 @@ export const LEGACY_EXTENSIONS = {
     enabled: false,
     name: 'Cargador coche',
     powerId: 'sensor.cargador_coche_potencia',
-    powerUnit: 'kW',
+    // ⚠ Verificado contra el recorder (14-Ago-2026): el DPS reporta W aunque
+    // la entidad localtuya diga kW (2605 "kW" durante carga = 2,6 kW reales).
+    powerUnit: 'W',
     energyTotalId: 'sensor.cargador_coche_energia_total',
+    // El contador va en centésimas de kWh (DPS 1 qccdz): 469 = 4,69 kWh.
+    energyDivisor: 100,
     energySessionId: 'sensor.cargador_coche_energia_sesion',
     stateId: 'sensor.cargador_coche_estado',
     tempId: 'sensor.cargador_coche_temperatura',
@@ -60,6 +64,7 @@ export const GENERIC_EXTENSIONS = {
     powerId: 'sensor.charger_power',
     powerUnit: 'kW',
     energyTotalId: 'sensor.charger_energy_total',
+    energyDivisor: 1,
     energySessionId: '',
     stateId: 'sensor.charger_state',
     tempId: '',
@@ -112,6 +117,7 @@ export function normalizeExtensions(cfg, base = GENERIC_EXTENSIONS) {
   c.enabled = typeof c.enabled === 'boolean' ? c.enabled : false
   c.name = typeof c.name === 'string' && c.name.trim() ? c.name.trim() : base.carCharger.name
   c.powerUnit = c.powerUnit === 'W' ? 'W' : 'kW'
+  c.energyDivisor = Number.isInteger(c.energyDivisor) && c.energyDivisor >= 1 ? c.energyDivisor : 1
   c.chargingStates = Array.isArray(c.chargingStates) ? c.chargingStates.filter((s) => typeof s === 'string') : []
   c.connectedStates = Array.isArray(c.connectedStates) ? c.connectedStates.filter((s) => typeof s === 'string') : []
   for (const k of ['powerId', 'energyTotalId', 'energySessionId', 'stateId', 'tempId', 'switchId']) {
@@ -144,6 +150,11 @@ function entityNumOrUndef(ha, id) {
   return Number.isFinite(n) ? n : undefined
 }
 
+/** Divide un valor leído por el divisor del contador (undefined lo respeta). */
+function divOpt(v, divisor) {
+  return v === undefined ? undefined : round3(v / (divisor || 1))
+}
+
 function entityStateOrUndef(ha, id) {
   if (!id) return undefined
   const e = ha.getState(id)
@@ -170,8 +181,8 @@ export function computeChargerLive(ha, ext = getExtensions()) {
     connected,
     state,
     powerKw: powerKw ?? 0,
-    sessionKwh: entityNumOrUndef(ha, c.energySessionId),
-    totalKwh: entityNumOrUndef(ha, c.energyTotalId),
+    sessionKwh: divOpt(entityNumOrUndef(ha, c.energySessionId), c.energyDivisor),
+    totalKwh: divOpt(entityNumOrUndef(ha, c.energyTotalId), c.energyDivisor),
     tempC: entityNumOrUndef(ha, c.tempId),
     switchOn: sw === undefined ? undefined : sw === 'on',
   }
@@ -258,7 +269,7 @@ export function accumulateChargerDaily(ha, db, ext = getExtensions()) {
   if (!chargerActive(ext)) return
   const c = ext.carCharger
   if (!c.energyTotalId) return
-  const total = entityNumOrUndef(ha, c.energyTotalId)
+  const total = divOpt(entityNumOrUndef(ha, c.energyTotalId), c.energyDivisor)
   if (total === undefined) return
 
   let saved = null
@@ -313,23 +324,39 @@ export function chargerHistory(db, from, to) {
 
 // Deltas diarios de una serie de estados de un contador creciente.
 // `rows`: [{ state, last_changed }] (historial REST de HAOS, en orden).
-// Devuelve Map<dateKey, kWh> con las guardas de reset y glitch.
-export function dailyDeltasFromHistory(rows) {
+// `divisor`: unidades del contador → kWh (DPS Tuya suele ir en centésimas).
+// Suma los INCREMENTOS POSITIVOS dentro de cada día: un reset del contador
+// (bajada) no resta ni suma, y los saltos imposibles (> CHARGER_GLITCH_KWH
+// en kWh) se ignoran como glitch. Devuelve Map<dateKey, kWh>.
+export function dailyDeltasFromHistory(rows, divisor = 1) {
   const perDay = new Map()
-  const first = new Map()
+  let prevKey = null
+  let prevV = 0
   for (const r of rows) {
     const v = parseFloat(r.state)
     if (!Number.isFinite(v)) continue // unavailable/unknown
     const key = dateKey(new Date(r.last_changed))
-    if (!first.has(key)) first.set(key, v)
-    const delta = v - first.get(key)
-    if (delta > 0 && delta <= CHARGER_GLITCH_KWH) perDay.set(key, round3(delta))
+    if (key !== prevKey) {
+      prevKey = key
+      prevV = v
+      if (!perDay.has(key)) perDay.set(key, 0)
+      continue // el valor inicial del día es la base, no un delta
+    }
+    const diffKwh = (v - prevV) / (divisor || 1)
+    if (diffKwh > 0) {
+      if (diffKwh <= CHARGER_GLITCH_KWH) perDay.set(key, round3((perDay.get(key) || 0) + diffKwh))
+      else console.warn(`[helios] cargador: salto anómalo ${diffKwh} kWh ignorado en backfill`)
+    }
+    prevV = v
   }
   return perDay
 }
 
-/** Rellena (solo días a NULL, anteriores a hoy) desde el recorder de HAOS.
- *  Ventana ~9 días (retención típica del recorder). Devuelve días escritos. */
+/** Rellena (solo días a NULL, HOY incluida) desde el recorder de HAOS.
+ *  Ventana ~9 días (retención típica del recorder). Incluir hoy es seguro:
+ *  el acumulador en vivo siembra su base con el contador ACTUAL tras el
+ *  backfill, así no hay doble conteo del tramo ya cubierto.
+ *  Devuelve días escritos. */
 export async function backfillChargerHistory(ha, db, ext = getExtensions()) {
   if (!chargerActive(ext)) return 0
   const c = ext.carCharger
@@ -341,23 +368,46 @@ export async function backfillChargerHistory(ha, db, ext = getExtensions()) {
   const fromKey = dateKey(from)
 
   const missing = db
-    .prepare('SELECT date FROM daily WHERE date >= ? AND date < ? AND ext_charger_kwh IS NULL ORDER BY date ASC')
+    .prepare('SELECT date FROM daily WHERE date >= ? AND date <= ? AND ext_charger_kwh IS NULL ORDER BY date ASC')
     .all(fromKey, today)
     .map((r) => r.date)
   if (!missing.length) return 0
 
   const startTime = new Date(fromKey + 'T00:00:00').toISOString()
-  const endTime = new Date(today + 'T00:00:00').toISOString()
+  const endTime = new Date().toISOString()
   const rows = await ha.historyDuringPeriod({ startTime, endTime, entityId: c.energyTotalId })
   if (!Array.isArray(rows) || rows.length === 0) return 0
 
-  const perDay = dailyDeltasFromHistory(rows)
+  const perDay = dailyDeltasFromHistory(rows, c.energyDivisor)
+  // Primer día cubierto por el recorder: los días sin estados a partir de ahí
+  // son días SIN carga (contador estático) → 0, no NULL (evita re-consultar).
+  const firstRowKey = dateKey(new Date(rows.find((r) => Number.isFinite(parseFloat(r.state)))?.last_changed || 0))
   let n = 0
   for (const date of missing) {
-    const kwh = perDay.get(date)
-    if (kwh === undefined) continue
-    setChargerKwhIfNull(db, date, kwh)
-    n++
+    if (perDay.has(date)) {
+      setChargerKwhIfNull(db, date, perDay.get(date))
+      n++
+    } else if (date >= firstRowKey) {
+      // Día dentro de la ventana del recorder sin estados: contador estático
+      // → 0 kWh (hoy incluida: aún sin carga; el acumulador suma encima).
+      setChargerKwhIfNull(db, date, 0)
+      n++
+    }
+  }
+
+  // HOY sin fila en daily (la consolidación solar la crea de madrugada): no se
+  // escribe directo (una fila con producción 0 ensuciaría el histórico solar).
+  // En su lugar se siembra la base del acumulador con el PRIMER estado de hoy
+  // y el tick de 60 s aplica el delta del día (addChargerKwh ya crea filas).
+  const hasTodayRow = db.prepare('SELECT 1 AS x FROM daily WHERE date = ?').get(today)
+  if (!hasTodayRow && !kvGet(db, 'charger_counter')) {
+    const firstToday = rows.find(
+      (r) => Number.isFinite(parseFloat(r.state)) && dateKey(new Date(r.last_changed)) === today
+    )
+    if (firstToday) {
+      kvSet(db, 'charger_counter', JSON.stringify({ date: today, total: round3(parseFloat(firstToday.state) / (c.energyDivisor || 1)) }))
+      console.log('[helios] cargador: hoy se aplicará vía acumulador (base sembrada del recorder)')
+    }
   }
   return n
 }

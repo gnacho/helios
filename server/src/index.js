@@ -513,7 +513,7 @@ guarded.get('/solar/kpis', async (c) => {
   }
 })
 
-guarded.get('/solar/history', (c) => {
+guarded.get('/solar/history', async (c) => {
   const to = c.req.query('to')
   const from = c.req.query('from')
   const toParsed = dateSchema.safeParse(to)
@@ -529,6 +529,28 @@ guarded.get('/solar/history', (c) => {
   const fromFinal = fromParsed.data || shiftDays(toFinal, -364)
   const total = dailyCount(db, fromFinal, toFinal)
   const rows = dailyRange(db, fromFinal, toFinal, pageParsed.data.limit, pageParsed.data.offset)
+  // HOY: la consolidación nocturna escribe la fila a las 00:10; si ya existe
+  // una fila de hoy con producción 0 (la crea la extensión del cargador al
+  // acumular), se refresca con los KPIs en vivo para no mostrar un falso 0.
+  const todayKey = solar.todayStr()
+  const todayRaw = rows.find((r) => r.date === todayKey)
+  if (todayRaw && !(todayRaw.production_kwh > 0)) {
+    try {
+      const baseline = await solar.ensureConsumptionBaseline(ha, db).catch(() => null)
+      const k = solar.computeTodayKpis(ha, solar.consumptionTodayFromCounters(ha, baseline))
+      todayRaw.production_kwh = k.productionKwh
+      todayRaw.consumption_kwh = k.consumptionKwh
+      todayRaw.grid_import_kwh = k.gridImportKwh
+      todayRaw.grid_export_kwh = k.gridExportKwh
+      todayRaw.battery_charged_kwh = k.batteryChargedKwh
+      todayRaw.battery_discharged_kwh = k.batteryDischargedKwh
+      todayRaw.solis_kwh = k.solisKwh
+      todayRaw.fox_kwh = k.foxKwh
+      todayRaw.inverters_kwh = JSON.stringify(k.invertersKwh || {})
+    } catch {
+      /* sin HAOS: queda la fila tal cual */
+    }
+  }
   const days = rows.map((r) => ({
     date: r.date,
     productionKwh: r.production_kwh,

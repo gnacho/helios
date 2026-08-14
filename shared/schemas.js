@@ -112,6 +112,10 @@ export function createSchemas(z) {
         powerUnit: z.enum(['kW', 'W']).optional().default('kW'),
         energyTotalId: z.string().optional().default(''),
         energySessionId: z.string().optional().default(''),
+        // Divisor del contador de energía (unidades → kWh): muchos cargadores
+        // Tuya reportan en centésimas de kWh (DPS 1) aunque la integración los
+        // etiquete como kWh. 1 = ya está en kWh.
+        energyDivisor: z.number().int().min(1).max(100000).optional().default(1),
         stateId: z.string().optional().default(''),
         tempId: z.string().optional().default(''),
         switchId: z.string().optional().default(''),

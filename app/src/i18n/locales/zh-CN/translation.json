@@ -571,6 +571,7 @@
         "powerUnit": "功率单位",
         "powerId": "功率 (entity_id)",
         "energyTotalId": "总电量 (entity_id)",
+        "energyDivisor": "能量除数（单位转千瓦时）",
         "energySessionId": "单次电量 (entity_id)",
         "stateId": "状态 (entity_id)",
         "tempId": "温度 (entity_id)",
