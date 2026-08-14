@@ -116,6 +116,10 @@ export function createSchemas(z) {
         // Tuya reportan en centésimas de kWh (DPS 1) aunque la integración los
         // etiquete como kWh. 1 = ya está en kWh.
         energyDivisor: z.number().int().min(1).max(100000).optional().default(1),
+        // ¿Los medidores de consumo de la topología ya incluyen el circuito
+        // del cargador? Si true, la atribución solar descuenta la potencia del
+        // cargador del consumo medido; si false (circuito dedicado aparte), no.
+        chargerInHouseMeters: z.boolean().optional().default(true),
         stateId: z.string().optional().default(''),
         tempId: z.string().optional().default(''),
         switchId: z.string().optional().default(''),

@@ -16,6 +16,7 @@ import {
   accumulateChargerDaily,
   pvShareNow,
   dailyDeltasFromHistory,
+  chargerPvFromCurves,
   backfillChargerHistory,
   addChargerKwh,
   setChargerKwhIfNull,
@@ -425,6 +426,14 @@ describe('atribución solar (iteración 4)', () => {
     expect(pvShareNow(haWith(5, 6000, 3), 3)).toBeCloseTo(2 / 3, 5)
   })
 
+  it('pvShareNow: cargador en circuito APARTE (legacy) → no se descuenta del consumo', () => {
+    _setInstallForTests(TOPO)
+    const ext = chargerExt({ chargerInHouseMeters: false })
+    // producción 5, casa 3, cargador 3: sin descontar → surplus 2 → 2/3
+    // (con descontar sería 5-0=5 → 1, demasiado optimista)
+    expect(pvShareNow(haWith(5, 3000, 3), 3, ext)).toBeCloseTo(2 / 3, 5)
+  })
+
   it('pvShareNow: sin cargador, reparto producción/consumo', () => {
     _setInstallForTests(TOPO)
     expect(pvShareNow(haWith(4, 8000, undefined), undefined)).toBeCloseTo(0.5, 5)
@@ -457,6 +466,50 @@ describe('atribución solar (iteración 4)', () => {
     const row = chargerHistory(db, '2026-08-12', '2026-08-12')[0]
     expect(row.kwh).toBe(7)
     expect(row.pvKwh).toBe(6) // 5 + 1, sin superar 7
+  })
+
+  it('chargerPvFromCurves: unavailable del sensor de potencia NO fabrica carga fantasma', async () => {
+    _setInstallForTests(TOPO)
+    _setForTests(chargerExt({ powerId: 'sensor.chg_power', chargerInHouseMeters: false }))
+    const start = new Date(2026, 7, 11, 15, 0, 0)
+    const stats = {
+      'sensor.prod': [0, 1, 2].map((i) => ({ start: new Date(start.getTime() + i * 300000).toISOString(), mean: 5 })),
+      'sensor.cons': [0, 1, 2].map((i) => ({ start: new Date(start.getTime() + i * 300000).toISOString(), mean: 500 })),
+    }
+    // Carga real en el bucket 0; después el sensor cae a unavailable (dropout):
+    // el hold-last del viejo algoritmo seguía "cargando" 2 kW con el sol alto.
+    const powerRows = [
+      { state: '2', last_changed: new Date(start.getTime() - 60000).toISOString() },
+      { state: 'unavailable', last_changed: new Date(start.getTime() + 240000).toISOString() },
+    ]
+    const ha = {
+      statisticsDuringPeriod: async () => stats,
+      historyDuringPeriod: async () => powerRows,
+    }
+    const pv = await chargerPvFromCurves(ha, start.toISOString(), new Date(start.getTime() + 900000).toISOString())
+    // solo el bucket 0 con carga real: min(2, 5-0.5)=2 kW × 5 min ≈ 0.167 kWh
+    expect(pv.get('2026-08-11')).toBeCloseTo(2 * (5 / 60), 2)
+  })
+
+  it('chargerPvFromCurves: integra min(cargador, excedente) por buckets de 5 min', async () => {
+    _setInstallForTests(TOPO)
+    _setForTests(chargerExt({ powerId: 'sensor.chg_power', chargerInHouseMeters: false }))
+    // 3 buckets de 5 min: cargador 2 kW constante; producción 4 kW, casa 1 kW
+    // → surplus 3 → solar = min(2, 3) = 2 kW → 2 kW × 0.25 h = 0.5 kWh
+    const start = new Date(2026, 7, 12, 12, 0, 0)
+    const stats = {
+      'sensor.prod': [0, 1, 2].map((i) => ({ start: new Date(start.getTime() + i * 300000).toISOString(), mean: 4 })),
+      'sensor.cons': [0, 1, 2].map((i) => ({ start: new Date(start.getTime() + i * 300000).toISOString(), mean: 1000 })),
+    }
+    const powerRows = [
+      { state: '2', last_changed: new Date(start.getTime() - 3600000).toISOString() }, // 2 kW
+    ]
+    const ha = {
+      statisticsDuringPeriod: async () => stats,
+      historyDuringPeriod: async () => powerRows,
+    }
+    const pv = await chargerPvFromCurves(ha, start.toISOString(), new Date(start.getTime() + 900000).toISOString())
+    expect(pv.get('2026-08-12')).toBeCloseTo(0.5, 2)
   })
 
   it('chargerHistory estima el PV por balance diario cuando falta (pv NULL)', () => {

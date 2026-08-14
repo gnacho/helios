@@ -580,7 +580,9 @@
         "tempId": "Temperatura (entity_id)",
         "switchId": "Interruptor (entity_id)",
         "chargingStates": "Estados de carga (CSV)",
-        "connectedStates": "Estados de conectado (CSV)"
+        "connectedStates": "Estados de conectado (CSV)",
+        "chargerInHouseMeters": "Cargador en medidores de casa",
+        "chargerInHouseMetersHint": "Actívalo solo si tus medidores de consumo ya miden el circuito del cargador."
       }
     }
   },

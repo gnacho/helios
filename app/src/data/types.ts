@@ -87,6 +87,8 @@ export interface ExtensionsConfig {
     energyTotalId: string;
     /** Divisor del contador (unidades → kWh); 1 = ya está en kWh. */
     energyDivisor: number;
+    /** ¿Los medidores de consumo de la topología incluyen el circuito del cargador? */
+    chargerInHouseMeters: boolean;
     energySessionId: string;
     stateId: string;
     tempId: string;

@@ -804,6 +804,13 @@ function ExtensionsSection() {
                   <EntityField label={t('ajustes.extensions.f.powerId')} value={ch.powerId} onChange={(v) => setCh({ powerId: v })} />
                   <EntityField label={t('ajustes.extensions.f.energyTotalId')} value={ch.energyTotalId} onChange={(v) => setCh({ energyTotalId: v })} />
                   <EntityField label={t('ajustes.extensions.f.energyDivisor')} value={String(ch.energyDivisor)} onChange={(v) => setCh({ energyDivisor: Math.max(1, Math.min(100000, Math.round(Number(v) || 1))) })} placeholder="1" />
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted">{t('ajustes.extensions.f.chargerInHouseMeters')}</Label>
+              <div className="flex h-9 items-center gap-2">
+                <Switch checked={ch.chargerInHouseMeters} onCheckedChange={(v) => setCh({ chargerInHouseMeters: v })} aria-label={t('ajustes.extensions.f.chargerInHouseMeters')} />
+                <span className="text-xs text-faint">{t('ajustes.extensions.f.chargerInHouseMetersHint')}</span>
+              </div>
+            </div>
                   <EntityField label={t('ajustes.extensions.f.energySessionId')} value={ch.energySessionId} onChange={(v) => setCh({ energySessionId: v })} />
                   <EntityField label={t('ajustes.extensions.f.stateId')} value={ch.stateId} onChange={(v) => setCh({ stateId: v })} />
                   <EntityField label={t('ajustes.extensions.f.tempId')} value={ch.tempId} onChange={(v) => setCh({ tempId: v })} />

@@ -50,6 +50,10 @@ export const LEGACY_EXTENSIONS = {
     stateId: 'sensor.cargador_coche_estado',
     tempId: 'sensor.cargador_coche_temperatura',
     switchId: 'switch.cargador_coche',
+    // Verificado 14-Ago-2026 contra el recorder: durante la carga, los
+    // medidores de consumo de la casa (Tongou vivienda/respaldo) leen 3-4 W
+    // → el cargador va en circuito APARTE, no está incluido en ellos.
+    chargerInHouseMeters: false,
     chargingStates: ['charger_charging', 'charging'],
     connectedStates: ['charger_insert', 'charger_charging', 'charging'],
   },
@@ -69,6 +73,7 @@ export const GENERIC_EXTENSIONS = {
     stateId: 'sensor.charger_state',
     tempId: '',
     switchId: '',
+    chargerInHouseMeters: true,
     chargingStates: ['charging', 'charger_charging'],
     connectedStates: ['charger_insert', 'connected', 'charging', 'charger_charging'],
   },
@@ -118,6 +123,7 @@ export function normalizeExtensions(cfg, base = GENERIC_EXTENSIONS) {
   c.name = typeof c.name === 'string' && c.name.trim() ? c.name.trim() : base.carCharger.name
   c.powerUnit = c.powerUnit === 'W' ? 'W' : 'kW'
   c.energyDivisor = Number.isInteger(c.energyDivisor) && c.energyDivisor >= 1 ? c.energyDivisor : 1
+  c.chargerInHouseMeters = c.chargerInHouseMeters !== false
   c.chargingStates = Array.isArray(c.chargingStates) ? c.chargingStates.filter((s) => typeof s === 'string') : []
   c.connectedStates = Array.isArray(c.connectedStates) ? c.connectedStates.filter((s) => typeof s === 'string') : []
   for (const k of ['powerId', 'energyTotalId', 'energySessionId', 'stateId', 'tempId', 'switchId']) {
@@ -232,16 +238,24 @@ export function addChargerKwh(db, date, kwh, pvKwh = 0) {
   ).run(date, round3(kwh), pv)
 }
 
-/** Fija (sin sumar) el kWh de un día SOLO si estaba a NULL (backfill). */
-export function setChargerKwhIfNull(db, date, kwh) {
-  db.prepare('UPDATE daily SET ext_charger_kwh = ? WHERE date = ? AND ext_charger_kwh IS NULL').run(round3(kwh), date)
+/** Fija (sin sumar) el kWh (y su fracción solar) de un día SOLO si estaba a
+ *  NULL (backfill). pv se clampea a kwh. */
+export function setChargerKwhIfNull(db, date, kwh, pvKwh) {
+  const pv = pvKwh === undefined || pvKwh === null ? null : round3(Math.max(0, Math.min(pvKwh, kwh)))
+  db.prepare('UPDATE daily SET ext_charger_kwh = ?, ext_charger_pv_kwh = ? WHERE date = ? AND ext_charger_kwh IS NULL').run(
+    round3(kwh),
+    pv,
+    date
+  )
 }
 
 /** Fracción [0..1] del delta que pudo venir de excedente FV en este instante.
- *  Balance por slot (la topología de consumo incluye el circuito del cargador):
- *  solar → cargador = min(potCargador, max(0, producción − (consumo − potCargador))).
+ *  Balance por slot. Si los medidores de la casa incluyen el cargador
+ *  (chargerInHouseMeters), el "resto de la casa" es consumo − potCargador; si
+ *  va en circuito aparte (verificado en la instalación legacy), es el consumo
+ *  tal cual: solar → cargador = min(potCargador, max(0, producción − resto)).
  *  Sin lectura de potencia del cargador → reparto proporcional producción/consumo. */
-export function pvShareNow(ha, chargerPowerKw) {
+export function pvShareNow(ha, chargerPowerKw, ext = getExtensions()) {
   const t = getInstall()
   let production = 0
   for (const inv of t.inverters) {
@@ -256,7 +270,8 @@ export function pvShareNow(ha, chargerPowerKw) {
     if (raw !== undefined) consumption += raw / consDiv
   }
   if (chargerPowerKw !== undefined && chargerPowerKw > 0.05) {
-    const other = Math.max(0, consumption - chargerPowerKw)
+    const c = ext.carCharger
+    const other = Math.max(0, consumption - (c.chargerInHouseMeters ? chargerPowerKw : 0))
     const solarToCharger = Math.min(chargerPowerKw, Math.max(0, production - other))
     return Math.max(0, Math.min(1, solarToCharger / chargerPowerKw))
   }
@@ -313,11 +328,100 @@ export function chargerHistory(db, from, to) {
       const kwh = r.ext_charger_kwh ?? null
       let pvKwh = r.ext_charger_pv_kwh ?? null
       if (kwh !== null && kwh > 0 && pvKwh === null) {
-        const other = Math.max(0, (r.consumption_kwh ?? 0) - kwh)
+        const inHouse = getExtensions().carCharger.chargerInHouseMeters
+        const other = Math.max(0, (r.consumption_kwh ?? 0) - (inHouse ? kwh : 0))
         pvKwh = Math.max(0, Math.min(kwh, (r.production_kwh ?? 0) - other))
       }
       return { date: r.date, kwh, pvKwh }
     })
+}
+
+/** Atribución solar por CURVAS para los días del recorder: integra
+ *  min(cargador, max(0, producción − resto_casa)) sobre buckets de 5 min
+ *  (statistics de los sensores de potencia de la topología; el cargador, sin
+ *  state_class, entra como escalón desde su historial REST). Mucho más justo
+ *  que el balance diario neto: una carga a mediodía de un día neto
+ *  importador sigue siendo mayormente solar.
+ *  Devuelve Map<dateKey, kWh>; vacío si no hay statistics disponibles. */
+export async function chargerPvFromCurves(ha, startTime, endTime, ext = getExtensions()) {
+  const t = getInstall()
+  const c = ext.carCharger
+  const statIds = [...new Set([...t.inverters.map((i) => i.powerId).filter(Boolean), ...t.consumption.powerIds.filter(Boolean)])]
+  if (!statIds.length) return new Map()
+  let stats = {}
+  try {
+    stats = await ha.statisticsDuringPeriod({ startTime, endTime, statisticIds: statIds, period: '5minute', types: ['mean'] })
+  } catch {
+    return new Map()
+  }
+  // bucketStartMs → mean, por sensor
+  const bySensor = new Map()
+  for (const [id, rows] of Object.entries(stats)) {
+    const m = new Map()
+    for (const r of rows || []) if (r.mean !== null && r.mean !== undefined) m.set(new Date(r.start).getTime(), r.mean)
+    bySensor.set(id, m)
+  }
+  if (!bySensor.size) return new Map()
+
+  // Escalón de potencia del cargador (sin statistics → historial REST).
+  // ⚠ unavailable/unknown se trata como 0 kW, NUNCA como "mantener el último
+  // valor": el sensor cae entre sesiones (dropout localtuya) y un hold-last
+  // fabricaría cargas fantasma de días (bug cazado 14-Ago: 93% vs 74% real).
+  const steps = []
+  if (c.powerId) {
+    try {
+      const rows = await ha.historyDuringPeriod({ startTime, endTime, entityId: c.powerId })
+      for (const r of rows) {
+        const v = parseFloat(r.state)
+        const kw = Number.isFinite(v) ? (c.powerUnit === 'W' ? v / 1000 : v) : 0
+        steps.push({ t: new Date(r.last_changed).getTime(), kw })
+      }
+      steps.sort((a, b) => a.t - b.t)
+    } catch {
+      /* sin curva del cargador → sin atribución */
+    }
+  }
+  if (!steps.length) return new Map()
+  const chgAt = (ms) => {
+    let v = 0
+    for (const st of steps) {
+      if (st.t > ms) break
+      v = st.kw
+    }
+    return v
+  }
+
+  const consDiv = t.consumption.powerUnit === 'W' ? 1000 : 1
+  const pvByDay = new Map()
+  const BUCKET = 5 * 60 * 1000
+  const startMs = Math.ceil(new Date(startTime).getTime() / BUCKET) * BUCKET
+  const endMs = Math.min(new Date(endTime).getTime(), Date.now())
+  for (let ms = startMs; ms < endMs; ms += BUCKET) {
+    const k = chgAt(ms)
+    if (!(k > 0.05)) continue
+    let prod = 0
+    for (const inv of t.inverters) {
+      const v = bySensor.get(inv.powerId)?.get(ms)
+      if (v !== undefined) prod += inv.powerUnit === 'W' ? v / 1000 : v
+    }
+    let cons = 0
+    let haveCons = true
+    for (const id of t.consumption.powerIds) {
+      const v = bySensor.get(id)?.get(ms)
+      if (v === undefined) {
+        haveCons = false
+        break
+      }
+      cons += v / consDiv
+    }
+    if (!haveCons) continue
+    const other = Math.max(0, cons - (c.chargerInHouseMeters ? k : 0))
+    const solar = Math.min(k, Math.max(0, prod - other)) * (BUCKET / 3600000)
+    if (solar <= 0) continue
+    const key = dateKey(new Date(ms))
+    pvByDay.set(key, round3((pvByDay.get(key) || 0) + solar))
+  }
+  return pvByDay
 }
 
 // ── Cargador: backfill y curva desde el recorder de HAOS ─────────────────────
@@ -379,13 +483,17 @@ export async function backfillChargerHistory(ha, db, ext = getExtensions()) {
   if (!Array.isArray(rows) || rows.length === 0) return 0
 
   const perDay = dailyDeltasFromHistory(rows, c.energyDivisor)
+  // Atribución solar por curvas (statistics 5 min de prod/cons + potencia del
+  // cargador): solo para los días que el recorder cubre.
+  const needCurves = missing.some((date) => perDay.has(date) && perDay.get(date) > 0)
+  const pvByDay = needCurves ? await chargerPvFromCurves(ha, startTime, endTime, ext).catch(() => new Map()) : new Map()
   // Primer día cubierto por el recorder: los días sin estados a partir de ahí
   // son días SIN carga (contador estático) → 0, no NULL (evita re-consultar).
   const firstRowKey = dateKey(new Date(rows.find((r) => Number.isFinite(parseFloat(r.state)))?.last_changed || 0))
   let n = 0
   for (const date of missing) {
     if (perDay.has(date)) {
-      setChargerKwhIfNull(db, date, perDay.get(date))
+      setChargerKwhIfNull(db, date, perDay.get(date), pvByDay.get(date))
       n++
     } else if (date >= firstRowKey) {
       // Día dentro de la ventana del recorder sin estados: contador estático
@@ -433,15 +541,16 @@ export const chargerDayCurve = cachedCollector(
     })
     if (!Array.isArray(rows) || rows.length === 0) return { points: [] }
 
-    // Estados numéricos con su timestamp (ms desde medianoche local).
+    // Estados con su timestamp (ms desde medianoche local). unavailable/unknown
+    // cuenta como 0 kW (ver nota de chargerPvFromCurves: el hold-last fabrica
+    // cargas fantasma en los dropouts del sensor).
     const steps = []
     for (const r of rows) {
       const v = parseFloat(r.state)
-      if (!Number.isFinite(v)) continue
       const ts = new Date(r.last_changed).getTime()
       if (Number.isNaN(ts)) continue
       const min = Math.max(0, Math.round((ts - start.getTime()) / 60000))
-      steps.push({ min, kw: c.powerUnit === 'W' ? v / 1000 : v })
+      steps.push({ min, kw: Number.isFinite(v) ? (c.powerUnit === 'W' ? v / 1000 : v) : 0 })
     }
     if (!steps.length) return { points: [] }
 

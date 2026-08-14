@@ -580,7 +580,9 @@
         "tempId": "Temperature (entity_id)",
         "switchId": "Switch (entity_id)",
         "chargingStates": "Charging states (CSV)",
-        "connectedStates": "Connected states (CSV)"
+        "connectedStates": "Connected states (CSV)",
+        "chargerInHouseMeters": "Charger in house meters",
+        "chargerInHouseMetersHint": "Enable only if your consumption meters already measure the charger circuit."
       }
     }
   },

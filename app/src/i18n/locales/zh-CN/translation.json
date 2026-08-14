@@ -577,7 +577,9 @@
         "tempId": "温度 (entity_id)",
         "switchId": "开关 (entity_id)",
         "chargingStates": "充电状态 (CSV)",
-        "connectedStates": "连接状态 (CSV)"
+        "connectedStates": "连接状态 (CSV)",
+        "chargerInHouseMeters": "充电器计入家中电表",
+        "chargerInHouseMetersHint": "仅当家中电表已测量充电器回路时启用。"
       }
     }
   },
