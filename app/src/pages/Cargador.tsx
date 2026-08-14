@@ -39,7 +39,6 @@ import {
   periodWindow,
   initialAnchor,
   shiftAnchor,
-  isCurrentPeriod,
   canGoNext,
   navLabel,
   periodSubtitle,
@@ -148,17 +147,30 @@ export default function Cargador() {
 
   // ── Histórico tipo Histórico: Semana / Mes / Año con navegador ────────────
   const [period, setPeriod] = useState<Period>('semana');
-  const [anchor, setAnchor] = useState<Date>(() => initialAnchor('semana', new Date()));
+  // Semana anclada a HOY (no a ayer como el Histórico): la carga de hoy es lo
+  // primero que uno quiere ver. Ventana = últimos 7 días incluyendo hoy.
+  const [anchor, setAnchor] = useState<Date>(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  });
   const today = useMemo(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), n.getDate());
   }, []);
   const solarHistory = getHistory(); // producción diaria para la barra de contexto
 
+  /** Ancla "actual" para el cargador: semana = HOY (incluye el día en curso);
+   *  mes/año igual que el Histórico. */
+  const homeAnchor = (p: Period, t: Date): Date =>
+    p === 'semana' ? new Date(t.getFullYear(), t.getMonth(), t.getDate()) : initialAnchor(p, t);
+
   const changePeriod = (p: Period) => {
     setPeriod(p);
-    setAnchor(initialAnchor(p, today));
+    setAnchor(homeAnchor(p, today));
   };
+
+  const isCurrent = (p: Period, a: Date): boolean =>
+    periodWindow(p, a).start.getTime() === periodWindow(p, homeAnchor(p, today)).start.getTime();
 
   /** Filas del periodo: rango completo (con ceros) para semana/mes/año. */
   const rows = useMemo(() => {
@@ -239,8 +251,15 @@ export default function Cargador() {
   // Ancho de barra adaptado al nº de categorías (mes = ~30 días).
   const barW = period === 'mes' ? 9 : 20;
 
-  // Deep-link / extensión desactivada a mitad de sesión → vuelta al inicio.
-  if (!chargerEnabled(ext)) return <Navigate to="/" replace />;
+  // Mientras la config de extensiones carga (null) NO redirigimos (race de
+  // deep-link: un F5 en /cargador debe caer aquí, no en el dashboard).
+  // Extensión desactivada a mitad de sesión → vuelta al inicio.
+  if (ext !== null && !chargerEnabled(ext)) return <Navigate to="/" replace />;
+  if (ext === null) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center text-sm text-faint">…</div>
+    );
+  }
 
   const stateChip = live?.charging
     ? { text: `${t('common.charging')} · ${fmtKw(live.powerKw)} kW`, cls: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400', Icon: BatteryCharging }
@@ -387,10 +406,10 @@ export default function Cargador() {
               onPeriodChange={changePeriod}
               label={navLabel(period, anchor)}
               canNext={canGoNext(period, anchor, today)}
-              isCurrent={isCurrentPeriod(period, anchor, today)}
+              isCurrent={isCurrent(period, anchor)}
               onPrev={() => setAnchor((a) => shiftAnchor(period, a, -1))}
               onNext={() => setAnchor((a) => shiftAnchor(period, a, 1))}
-              onToday={() => setAnchor(initialAnchor(period, today))}
+              onToday={() => setAnchor(homeAnchor(period, today))}
             />
           </div>
           <div className="flex flex-wrap items-center gap-3 px-4 pb-1 sm:px-5">
