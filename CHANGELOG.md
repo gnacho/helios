@@ -7,6 +7,31 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.8] - 2026-08-14
+
+### Added
+
+- **Marco de extensiones**: módulos opcionales por instalación con interruptor
+  maestro y por módulo en la misma barra de Ajustes; cada extensión es editable
+  (entidades, unidades, sinónimos de estado) tras su icono de config. (#94)
+- **Cargador de coche**: nueva vista con estado en vivo (cargando/enchufado/en
+  reposo, potencia, sesión, total, temperatura), curva del día e histórico por
+  semanas/meses/años con atribución solar (de solar vs red y batería). (#94)
+- Helios almacena su propio histórico del cargador en SQLite: el recorder de HA
+  solo conserva ~10 días y muchos cargadores locales no exponen estadísticas.
+- Cabeceras de caché HTTP: assets inmutables y shell siempre revalidado.
+
+### Fixed
+
+- Corrección de unidades del cargador: divisor de energía configurable
+  (contadores en centésimas de kWh) y potencia en W mal etiquetada como kW.
+- Atribución solar por curvas reales durante las ventanas de carga (el balance
+  diario neto daba 0% solar en cargas de mediodía de días importadores), con
+  flag para cargadores en circuito aparte no medido por los medidores de casa.
+- La semana del histórico del cargador incluye hoy; el deep-link a /cargador ya
+  no redirige al inicio; gráfica con un único eje.
+
+## [0.8.7] - 2026-08-14
 ## [0.8.7] - 2026-08-14
 
 ### Added
