@@ -530,11 +530,11 @@ export default function Inversores() {
     kwp: m.kwp,
   }));
 
-  // Solo se ofrece la comparativa cuando hay varios inversores; las vistas
-  // individuales por inversor se eliminaron (issue #70).
+  // Con varios inversores: comparativa + una vista por inversor (nombres de la
+  // topología). Con uno solo: vista individual directa, sin barra de tabs.
   const tabKeys = useMemo(() => {
     const keys = invMetas.map((m) => m.key);
-    return invMetas.length >= 2 ? ['compare'] : keys;
+    return invMetas.length >= 2 ? ['compare', ...keys] : keys;
   }, [invMetas]);
 
   const tabParam = searchParams.get('tab');
@@ -586,9 +586,10 @@ export default function Inversores() {
           <div className="flex h-10 w-full items-center gap-1 overflow-x-auto rounded-full border border-app bg-surface p-1 no-scrollbar lg:w-fit" role="tablist" aria-label={t('inversores.tabAria')}>
             {tabKeys.map((key) => {
               const active = tab === key;
-              const idx = invMetas.findIndex((m) => m.key === key);
-              const color = isCompare ? undefined : colorOf(key, idx);
-              const label = isCompare ? t('inversores.compare') : invMetas[idx]?.name || key;
+              const isCompareKey = key === 'compare';
+              const idx = isCompareKey ? -1 : invMetas.findIndex((m) => m.key === key);
+              const color = isCompareKey ? undefined : colorOf(key, idx);
+              const label = isCompareKey ? t('inversores.compare') : invMetas[idx]?.name || key;
               return (
                 <button
                   key={key}
@@ -609,7 +610,7 @@ export default function Inversores() {
                     />
                   )}
                   <span className="relative z-10 flex items-center gap-1.5">
-                    {isCompare ? (
+                    {isCompareKey ? (
                       <ArrowLeftRight size={14} />
                     ) : (
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color, opacity: active ? 1 : 0.4 }} />

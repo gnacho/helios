@@ -24,6 +24,7 @@ import Footer from '@/components/Footer';
 import HeliosToaster from '@/components/HeliosToaster';
 import PullToRefresh from '@/components/PullToRefresh';
 import { apiFetch } from '@/data/api-client';
+import { useInstall } from '@/hooks/useInstall';
 
 /**
  * AppLayout unificado (skill webapp-shell):
@@ -55,6 +56,15 @@ const TITLE_KEYS: [RegExp, string][] = [
 
 const ACTIVE = 'bg-surface-2 text-brand';
 const IDLE = 'text-muted hover:bg-surface-2/50 hover:text-app';
+
+/** Conteo de inversores de la topología (undefined mientras la API no responde). */
+function useInverterCount(): number | undefined {
+  const install = useInstall();
+  return install?.inverters?.length;
+}
+
+/** Label del menú: singular con 1 inversor, plural con varios. */
+const invLabelKey = (count?: number) => (count === 1 ? 'nav.inversor' : 'nav.inversores');
 
 function isActive(pathname: string, to: string): boolean {
   if (to === '/') return pathname === '/';
@@ -88,10 +98,12 @@ function IconNavLink({ to, labelKey, icon: Icon }: { to: string; labelKey: strin
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const active = isActive(pathname, to);
+  const count = useInverterCount();
+  const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
   return (
     <NavLink
       to={to}
-      aria-label={t(labelKey)}
+      aria-label={label}
       className={cn(
         'group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
         active ? ACTIVE : IDLE,
@@ -99,7 +111,7 @@ function IconNavLink({ to, labelKey, icon: Icon }: { to: string; labelKey: strin
     >
       <Icon size={18} strokeWidth={1.75} />
       <span className="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-md border border-app bg-surface px-2 py-1 text-xs text-app group-hover:block">
-        {t(labelKey)}
+        {label}
       </span>
     </NavLink>
   );
@@ -131,6 +143,7 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const settingsActive = isActive(pathname, SETTINGS_ITEM.to);
+  const count = useInverterCount();
 
   if (collapsed) {
     return (
@@ -171,6 +184,7 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
       <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label={t('nav.dashboard')}>
         {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => {
           const active = isActive(pathname, to);
+          const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
           return (
             <NavLink
               key={to}
@@ -181,7 +195,7 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
               )}
             >
               <Icon size={18} strokeWidth={1.75} className="shrink-0" />
-              <span className="flex-1">{t(labelKey)}</span>
+              <span className="flex-1">{label}</span>
               {active && (
                 <motion.span
                   layoutId="nav-indicator"
@@ -328,6 +342,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   };
 
   const titleKey = TITLE_KEYS.find(([re]) => re.test(pathname))?.[1] ?? 'nav.dashboard';
+  const count = useInverterCount();
+  const resolvedTitleKey = titleKey === 'nav.inversores' ? invLabelKey(count) : titleKey;
   const lgMargin = collapsed ? 'lg:ml-16' : 'lg:ml-[232px]';
 
   return (
@@ -343,7 +359,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         )}
       >
         <div className="min-w-0">
-          <h1 className="font-display text-lg font-semibold leading-tight tracking-[-0.01em] text-app">{t(titleKey)}</h1>
+          <h1 className="font-display text-lg font-semibold leading-tight tracking-[-0.01em] text-app">{t(resolvedTitleKey)}</h1>
           <p className="text-[11px] capitalize leading-tight text-faint">{fmtWeekdayDate(today)}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -387,8 +403,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="grid h-16 grid-cols-5">
           {ALL_ITEMS.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
+            const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
             return (
-              <NavLink key={to} to={to} onClick={scrollTopIfActive(to)} className="relative flex flex-col items-center justify-center gap-1" aria-label={t(labelKey)}>
+              <NavLink key={to} to={to} onClick={scrollTopIfActive(to)} className="relative flex flex-col items-center justify-center gap-1" aria-label={label}>
                 <motion.span
                   animate={active ? { scale: [1, 1.15, 1] } : { scale: 1 }}
                   transition={{ duration: 0.25, type: 'spring', stiffness: 500, damping: 20 }}
@@ -396,7 +413,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 >
                   <Icon size={22} strokeWidth={active ? 2.4 : 2} />
                 </motion.span>
-                <span className={cn('text-[10px] font-medium', active ? 'text-brand' : 'text-faint')}>{t(labelKey)}</span>
+                <span className={cn('text-[10px] font-medium', active ? 'text-brand' : 'text-faint')}>{label}</span>
                 {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-brand" />}
               </NavLink>
             );

@@ -25,6 +25,7 @@
   },
   "nav": {
     "dashboard": "今日",
+    "inversor": "逆变器",
     "inversores": "逆变器",
     "bateria": "电池",
     "historico": "历史",
