@@ -688,24 +688,39 @@
       chartState.set(canvas, st)
       return dirty
     }
-    function frame(ts) {
-      const h = hourNow()
-      drawSky(scrollPhase(), h)
-      theaterScroll()
+    function renderCharts() {
       const heroChart = $('#heroChart'), theaterChart = $('#theaterChart'), theaterHist = $('#theaterHist')
       if (chartNeedsRedraw(heroChart)) drawDayChart(heroChart, true)
       if (chartNeedsRedraw(theaterChart)) drawDayChart(theaterChart, false)
       if (chartNeedsRedraw(theaterHist)) drawHist(theaterHist)
+    }
+    function tick() {
+      const h = hourNow()
+      updateStats()
+      updateBattery(h)
+      updateFlow(h)
+      renderCharts()
+    }
+    function frame(ts) {
+      const h = hourNow()
+      drawSky(scrollPhase(), h)
+      theaterScroll()
+      renderCharts()
       updateFlowParticles(ts)
       if (ts - lastDom > 1000) {
         lastDom = ts
-        updateStats()
-        updateBattery(h)
-        updateFlow(h)
+        tick()
       }
       requestAnimationFrame(frame)
     }
-    requestAnimationFrame(frame)
+    if (reduceMotion) {
+      drawSky(scrollPhase(), hourNow())
+      renderCharts()
+      tick()
+      setInterval(tick, 1000)
+    } else {
+      requestAnimationFrame(frame)
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init)

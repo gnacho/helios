@@ -576,7 +576,9 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .ticker-track, .live-dot { animation: none; }
   .flow-particle { animation: none; }
-  html { scroll-behavior: auto; }
+  .reveal, .reveal.visible { opacity: 1; transform: none; transition: none; }
+  .lightbox { transition: none; }
 }
