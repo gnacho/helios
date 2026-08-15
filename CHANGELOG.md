@@ -7,6 +7,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.9] - 2026-08-15
+
+### Changed
+
+- **Tema en móvil**: el header móvil usa ahora un único botón sol/luna que
+  alterna claro/oscuro, en lugar del selector de tres iconos (auto/claro/oscuro)
+  cuyas etiquetas no caben en pantallas pequeñas. La topbar de escritorio
+  mantiene el selector completo con etiquetas. (#95)
+
 ## [0.8.8] - 2026-08-14
 
 ### Added
