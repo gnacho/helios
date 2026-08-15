@@ -101,6 +101,7 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
   background: rgb(255 255 255 / 0.06);
 }
 .btn-ghost:hover { background: rgb(255 255 255 / 0.14); }
+.btn:active, .btn-primary:active, .btn-ghost:active { transform: translateY(0) scale(0.97); }
 .btn-lg { padding: 14px 28px; font-size: 1.02rem; }
 .btn-small { padding: 8px 16px; font-size: 0.86rem; }
 
