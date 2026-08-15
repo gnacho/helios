@@ -89,8 +89,8 @@ function isActive(pathname: string, to: string): boolean {
 }
 
 /** Índice del item de navegación (para la dirección del deslizamiento móvil). */
-function navIndex(path: string): number {
-  return ALL_ITEMS.findIndex(({ to }) => isActive(path, to));
+function navIndex(items: { to: string }[], path: string): number {
+  return items.findIndex(({ to }) => isActive(path, to));
 }
 
 function Logo({ collapsed }: { collapsed?: boolean }) {
@@ -350,8 +350,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
    * deslizamiento se marca en <html data-nav-dir> antes del snapshot. */
   const handleMobileNav = (to: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    const from = navIndex(pathname);
-    const target = navIndex(to);
+    const from = navIndex(allItems, pathname);
+    const target = navIndex(allItems, to);
     if (target !== -1 && from !== target) {
       try {
         document.documentElement.dataset.navDir = from === -1 || target > from ? 'forward' : 'back';
