@@ -76,8 +76,7 @@ function useNavItems() {
   const ext = useExtensions();
   const chargerOn = chargerEnabled(ext);
   const navItems = chargerOn ? [...NAV_ITEMS, CHARGER_ITEM] : [...NAV_ITEMS];
-  const allItems = [...navItems, SETTINGS_ITEM];
-  return { navItems, allItems, chargerOn };
+  return { navItems, chargerOn };
 }
 
 /** Label del menú: singular con 1 inversor, plural con varios. */
@@ -141,6 +140,7 @@ function IconNavLink({ to, labelKey, icon: Icon }: { to: string; labelKey: strin
 
 /** Usuario en la topbar desktop/tablet (solo md+). */
 function TopbarUser() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
@@ -149,15 +149,22 @@ function TopbarUser() {
       .catch(() => setUsername(null));
   }, []);
 
+  /* Avatar siempre visible (en móvil es el acceso a Ajustes, canon webapp-shell);
+   * el nombre solo a partir de sm. Clicable → /ajustes. */
   return (
-    <span className="hidden h-9 items-center gap-2 rounded-lg border border-app bg-surface px-2.5 sm:flex">
+    <Link
+      to={SETTINGS_ITEM.to}
+      aria-label={t('nav.ajustes')}
+      title={t('nav.ajustes')}
+      className="flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-2.5 transition-colors hover:text-app"
+    >
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/12 text-brand">
         <User size={14} strokeWidth={2} />
       </span>
       <span className="hidden max-w-[120px] truncate text-[13px] font-semibold text-app sm:inline">
         {username ?? '...'}
       </span>
-    </span>
+    </Link>
   );
 }
 
@@ -261,12 +268,12 @@ function Rail() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const settingsActive = isActive(pathname, SETTINGS_ITEM.to);
-  const { allItems } = useNavItems();
+  const { navItems } = useNavItems();
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
       <Logo collapsed />
       <nav className="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={t('nav.dashboard')}>
-        {allItems.map((item) => (
+        {navItems.map((item) => (
           <IconNavLink key={item.to} {...item} />
         ))}
       </nav>
@@ -350,8 +357,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
    * deslizamiento se marca en <html data-nav-dir> antes del snapshot. */
   const handleMobileNav = (to: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    const from = navIndex(allItems, pathname);
-    const target = navIndex(allItems, to);
+    const from = navIndex(navItems, pathname);
+    const target = navIndex(navItems, to);
     if (target !== -1 && from !== target) {
       try {
         document.documentElement.dataset.navDir = from === -1 || target > from ? 'forward' : 'back';
@@ -396,7 +403,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const titleKey = TITLE_KEYS.find(([re]) => re.test(pathname))?.[1] ?? 'nav.dashboard';
   const count = useInverterCount();
-  const { allItems, chargerOn } = useNavItems();
+  const { navItems, chargerOn } = useNavItems();
   const resolvedTitleKey = titleKey === 'nav.inversores' ? invLabelKey(count) : titleKey;
   const lgMargin = collapsed ? 'lg:ml-16' : 'lg:ml-[232px]';
 
@@ -459,8 +466,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         className="[view-transition-name:helios-nav] fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden"
         aria-label={t('nav.dashboard')}
       >
-        <div className={cn('grid h-16', chargerOn ? 'grid-cols-6' : 'grid-cols-5')}>
-          {allItems.map(({ to, labelKey, icon: Icon }) => {
+        {/* Sin Ajustes: en móvil el acceso es el avatar del header (→ /ajustes) */}
+        <div className={cn('grid h-16', chargerOn ? 'grid-cols-5' : 'grid-cols-4')}>
+          {navItems.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
             const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
             return (

@@ -23,8 +23,8 @@ test('bottom nav móvil marca dirección forward/back del deslizamiento', async 
   await page.click('button[type=submit]');
   await expect(page.locator('#login-user')).toHaveCount(0);
 
-  // En / el bottom nav está visible
-  const bottomNav = page.locator('nav[aria-label]').filter({ hasText: 'Ajustes' }).last();
+  // En / el bottom nav está visible (clase md:hidden; ya no contiene Ajustes)
+  const bottomNav = page.locator('nav.md\\:hidden');
   await expect(bottomNav).toBeVisible();
 
   // Click en "Histórico" (índice 3 > dashboard 0) → forward
@@ -79,4 +79,25 @@ test('bottom nav móvil marca dirección forward/back del deslizamiento', async 
   await page.waitForURL(/\/historico/);
   const calls = await page.evaluate(() => (window as unknown as { __vtCalls: string[] }).__vtCalls);
   expect(calls.length).toBeGreaterThan(0);
+});
+
+test('avatar del header móvil enlaza a Ajustes y el bottom nav ya no lo incluye', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.fill('#login-user', 'admin');
+  await page.fill('#login-pass', 'testpass123');
+  await page.click('button[type=submit]');
+  await expect(page.locator('#login-user')).toHaveCount(0);
+
+  // El bottom nav no tiene Ajustes
+  const bottomNav = page.locator('nav.md\\:hidden');
+  await expect(bottomNav).toBeVisible();
+  await expect(bottomNav.getByRole('link', { name: 'Ajustes' })).toHaveCount(0);
+
+  // El avatar del header móvil enlaza a Ajustes (solo avatar, sin nombre <sm)
+  const avatar = page.locator('header.md\\:hidden').getByRole('link', { name: 'Ajustes' });
+  await expect(avatar).toBeVisible();
+  await expect(avatar.getByText('admin')).toBeHidden();
+  await avatar.click();
+  await expect(page).toHaveURL(/\/ajustes/);
 });
