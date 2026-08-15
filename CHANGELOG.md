@@ -7,6 +7,21 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.10] - 2026-08-15
+
+### Added
+
+- **Deslizamiento entre vistas en móvil**: al cambiar de pestaña con la barra
+  inferior, el contenido se desliza en la dirección de la navegación (adelante
+  o atrás según el orden del menú). El header y la barra inferior permanecen
+  fijos durante la transición. (#93)
+
+### Changed
+
+- **Ajustes en móvil**: el avatar del header (arriba a la derecha) enlaza a
+  Ajustes y la barra inferior queda solo con las vistas del dominio; en la
+  tablet, el raíl ya no duplica el icono de Ajustes. (#99)
+
 ## [0.8.9] - 2026-08-15
 
 ### Changed
