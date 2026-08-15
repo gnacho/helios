@@ -1,17 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BatteryCharging,
   Car,
   CarFront,
+  Fan,
+  Flashlight,
   Gauge,
   Lock,
   LockOpen,
   MapPin,
   PlugZap,
   RefreshCw,
+  Snowflake,
   Thermometer,
   DoorOpen,
   Eye,
+  Volume2,
+  AppWindow,
   Zap,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +28,9 @@ import type { BydLive } from '@/data/types';
 import { apiFetch } from '@/data/api-client';
 import { heliosToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
+
+// Mapa Leaflet en chunk aparte (solo se carga al abrir la página del coche).
+const CarMap = lazy(() => import('@/components/CarMap'));
 
 /**
  * Página del vehículo BYD (extensión, issue 100, personal): estado en vivo del
@@ -193,6 +201,9 @@ export default function Coche() {
                 {live.charging && live.powerKw !== undefined && live.powerKw > 0
                   ? ` · ${(live.powerKw).toFixed(1)} kW`
                   : ''}
+                {live.charging && live.remainingMin !== undefined && live.remainingMin > 0
+                  ? ` · ${Math.floor(live.remainingMin / 60)}h ${String(live.remainingMin % 60).padStart(2, '0')}min`
+                  : ''}
               </span>
               {live.odometerKm !== undefined && (
                 <span className="rounded-full bg-surface-2 px-3 py-1 text-[12px] text-muted tnum">
@@ -271,6 +282,122 @@ export default function Coche() {
         </section>
       )}
 
+      {/* ── Control del vehículo (admin) ───────────────────────────────── */}
+      {isAdmin && (
+        <section className="rounded-2xl border border-app bg-surface p-5">
+          <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-app">
+            <Fan size={17} aria-hidden="true" />
+            {t('coche.controlTitle')}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => act('ac', live.acOn !== true)}
+              disabled={busyKey('ac', live.acOn !== true) === busy}
+              className={cn(
+                'flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-40',
+                live.acOn
+                  ? 'bg-sky-600 text-white hover:opacity-90'
+                  : 'border border-app bg-surface-2 text-app hover:bg-surface-2/60',
+              )}
+            >
+              {live.acOn ? <Snowflake size={16} aria-hidden="true" /> : <Fan size={16} aria-hidden="true" />}
+              {live.acOn ? t('coche.acOn') : t('coche.acOff')}
+            </button>
+            <button
+              type="button"
+              onClick={() => act(live.lockUnlocked ? 'lock' : 'unlock')}
+              disabled={busyKey(live.lockUnlocked ? 'lock' : 'unlock') === busy}
+              className="flex items-center gap-2 rounded-xl border border-app bg-surface-2 px-4 py-2 text-sm font-semibold text-app transition-colors hover:bg-surface-2/60 disabled:opacity-40"
+            >
+              {live.lockUnlocked ? <LockOpen size={16} aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
+              {live.lockUnlocked ? t('coche.lockAction') : t('coche.unlockAction')}
+            </button>
+            <button
+              type="button"
+              onClick={() => act('flash_lights')}
+              disabled={busyKey('flash_lights') === busy}
+              className="flex items-center gap-2 rounded-xl border border-app bg-surface-2 px-4 py-2 text-sm font-semibold text-app transition-colors hover:bg-surface-2/60 disabled:opacity-40"
+              title={t('coche.flashHint')}
+            >
+              <Flashlight size={16} aria-hidden="true" />
+              {t('coche.flashLights')}
+            </button>
+            <button
+              type="button"
+              onClick={() => act('find_car')}
+              disabled={busyKey('find_car') === busy}
+              className="flex items-center gap-2 rounded-xl border border-app bg-surface-2 px-4 py-2 text-sm font-semibold text-app transition-colors hover:bg-surface-2/60 disabled:opacity-40"
+              title={t('coche.findCarHint')}
+            >
+              <Volume2 size={16} aria-hidden="true" />
+              {t('coche.findCar')}
+            </button>
+            <button
+              type="button"
+              onClick={() => act('close_windows')}
+              disabled={busyKey('close_windows') === busy}
+              className="flex items-center gap-2 rounded-xl border border-app bg-surface-2 px-4 py-2 text-sm font-semibold text-app transition-colors hover:bg-surface-2/60 disabled:opacity-40"
+            >
+              <AppWindow size={16} aria-hidden="true" />
+              {t('coche.closeWindows')}
+            </button>
+          </div>
+          <p className="mt-2.5 text-[11px] text-faint">{t('coche.controlHint')}</p>
+        </section>
+      )}
+
+      {/* ── Ubicación ──────────────────────────────────────────────────── */}
+      <section className="rounded-2xl border border-app bg-surface p-5">
+        <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-app">
+          <MapPin size={17} aria-hidden="true" />
+          {t('coche.locationTitle')}
+          {live.gpsAgeMin !== undefined && (
+            <span className="ml-auto text-[11px] font-normal text-faint">
+              {t('coche.updated')} {t('coche.minAgo', { n: live.gpsAgeMin })}
+            </span>
+          )}
+        </h2>
+        {live.lat !== undefined && live.lon !== undefined ? (
+          <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-xl bg-surface-2" />}>
+            <CarMap lat={live.lat} lon={live.lon} label={live.name} />
+          </Suspense>
+        ) : (
+          <p className="text-sm text-muted">{t('coche.locationUnknown')}</p>
+        )}
+      </section>
+
+      {/* ── Consumo ────────────────────────────────────────────────────── */}
+      {(live.consumptionRecent !== undefined ||
+        live.consumption50 !== undefined ||
+        live.consumptionLifetime !== undefined ||
+        live.consumptionToday !== undefined) && (
+        <section className="rounded-2xl border border-app bg-surface p-5">
+          <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-app">
+            <Zap size={17} aria-hidden="true" />
+            {t('coche.consumptionTitle')}
+          </h2>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {[
+              { label: t('coche.consumptionRecent'), v: live.consumptionRecent },
+              { label: t('coche.consumption50'), v: live.consumption50 },
+              { label: t('coche.consumptionToday'), v: live.consumptionToday },
+              { label: t('coche.consumptionLifetime'), v: live.consumptionLifetime },
+            ]
+              .filter((s) => s.v !== undefined)
+              .map((s) => (
+                <div key={s.label} className="flex flex-col items-center rounded-xl border border-app bg-surface px-3 py-2.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-faint">{s.label}</span>
+                  <span className="font-display text-lg font-semibold text-app tnum">
+                    {(s.v as number).toFixed(1)}
+                    <span className="ml-0.5 text-[11px] font-normal text-muted">kWh/100km</span>
+                  </span>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
       {/* ── Estado del vehículo ────────────────────────────────────────── */}
       <section className="rounded-2xl border border-app bg-surface p-5">
         <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-app">
@@ -296,9 +423,6 @@ export default function Coche() {
               : live.location === 'not_home'
                 ? t('coche.away')
                 : (live.location ?? '—')}
-            {live.gpsAgeMin !== undefined && (
-              <span className="text-[11px] text-faint">· {t('coche.minAgo', { n: live.gpsAgeMin })}</span>
-            )}
           </div>
           {live.cabinTempC !== undefined && live.exteriorTempC !== undefined && (
             <div className="flex items-center gap-2 rounded-xl border border-app bg-surface px-3 py-2 text-[13px] font-medium text-app tnum">

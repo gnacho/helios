@@ -161,6 +161,18 @@ export function createSchemas(z) {
         scheduleStartId: z.string().optional().default(''),
         scheduleEndId: z.string().optional().default(''),
         repeatDailyId: z.string().optional().default(''),
+        // v2 (#100): control del vehículo + consumo + tiempo restante
+        lockId: z.string().optional().default(''),
+        acSwitchId: z.string().optional().default(''),
+        flashLightsId: z.string().optional().default(''),
+        findCarId: z.string().optional().default(''),
+        closeWindowsId: z.string().optional().default(''),
+        remainingHoursId: z.string().optional().default(''),
+        remainingMinutesId: z.string().optional().default(''),
+        consumptionRecentId: z.string().optional().default(''),
+        consumption50Id: z.string().optional().default(''),
+        consumptionLifetimeId: z.string().optional().default(''),
+        consumptionTodayId: z.string().optional().default(''),
       }).optional().default({}),
     }),
   }

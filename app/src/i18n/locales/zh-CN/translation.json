@@ -621,7 +621,19 @@
         "scheduleEnabled": "计划开关",
         "scheduleStart": "开始时间",
         "scheduleEnd": "结束时间",
-        "repeatDaily": "每日重复开关"
+        "repeatDaily": "每日重复开关",
+        "lock": "门锁 (lock)",
+        "acSwitch": "空调开关",
+        "flashLights": "灯光按钮",
+        "findCar": "鸣笛/找车按钮",
+        "closeWindows": "关窗按钮",
+        "remainingHours": "剩余小时",
+        "remainingMinutes": "剩余分钟",
+        "consumptionRecent": "最近能耗",
+        "consumption50": "50 公里能耗",
+        "consumptionLifetime": "历史能耗",
+        "consumptionToday": "今日能耗",
+        "group_control": "车辆控制"
       }
     }
   },
@@ -726,6 +738,25 @@
     "scheduleEnabled": "已计划",
     "scheduleFrom": "从",
     "scheduleTo": "到",
-    "repeatDaily": "每天重复"
+    "repeatDaily": "每天重复",
+    "controlTitle": "车辆控制",
+    "acOn": "空调开启",
+    "acOff": "打开空调",
+    "lockAction": "上锁",
+    "unlockAction": "解锁",
+    "flashLights": "灯光",
+    "flashHint": "闪烁车辆灯光",
+    "findCar": "鸣笛",
+    "findCarHint": "车辆鸣笛方便你找到它",
+    "closeWindows": "关闭车窗",
+    "controlHint": "控制命令可能需要在 Home Assistant 的 BYD 集成中设置控制 PIN 码。",
+    "locationTitle": "位置",
+    "mapLabel": "车辆位置地图",
+    "locationUnknown": "没有车辆的 GPS 位置。",
+    "consumptionTitle": "能耗",
+    "consumptionRecent": "最近",
+    "consumption50": "最近 50 公里",
+    "consumptionToday": "今天",
+    "consumptionLifetime": "历史平均"
   }
 }

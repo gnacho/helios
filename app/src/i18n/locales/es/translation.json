@@ -624,7 +624,19 @@
         "scheduleEnabled": "Switch programación",
         "scheduleStart": "Hora inicio",
         "scheduleEnd": "Hora fin",
-        "repeatDaily": "Switch repetir diario"
+        "repeatDaily": "Switch repetir diario",
+        "lock": "Cerradura (lock)",
+        "acSwitch": "Switch A/C",
+        "flashLights": "Botón luces",
+        "findCar": "Botón pitido/encontrar",
+        "closeWindows": "Botón cerrar ventanas",
+        "remainingHours": "Horas restantes",
+        "remainingMinutes": "Minutos restantes",
+        "consumptionRecent": "Consumo reciente",
+        "consumption50": "Consumo 50 km",
+        "consumptionLifetime": "Consumo histórico",
+        "consumptionToday": "Consumo hoy",
+        "group_control": "Control del vehículo"
       }
     }
   },
@@ -729,6 +741,25 @@
     "scheduleEnabled": "Programada",
     "scheduleFrom": "Desde",
     "scheduleTo": "hasta",
-    "repeatDaily": "Repetir cada día"
+    "repeatDaily": "Repetir cada día",
+    "controlTitle": "Control del vehículo",
+    "acOn": "A/C encendido",
+    "acOff": "Encender A/C",
+    "lockAction": "Bloquear",
+    "unlockAction": "Desbloquear",
+    "flashLights": "Luces",
+    "flashHint": "Destella las luces del coche",
+    "findCar": "Pitido",
+    "findCarHint": "El coche pita para que lo encuentres",
+    "closeWindows": "Cerrar ventanas",
+    "controlHint": "Los comandos de control pueden requerir el PIN de control configurado en la integración BYD de Home Assistant.",
+    "locationTitle": "Ubicación",
+    "mapLabel": "Mapa con la posición del coche",
+    "locationUnknown": "Sin posición GPS del coche.",
+    "consumptionTitle": "Consumo",
+    "consumptionRecent": "Reciente",
+    "consumption50": "Últimos 50 km",
+    "consumptionToday": "Hoy",
+    "consumptionLifetime": "Histórico"
   }
 }

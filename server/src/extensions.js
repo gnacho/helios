@@ -293,6 +293,9 @@ export function bydEntities(ext = getExtensions()) {
         b.locationId, b.gpsAgeId, b.lastUpdateId,
         b.startChargeId, b.stopChargeId, b.forcePollId, b.chargeToFullId,
         b.scheduleEnabledId, b.scheduleStartId, b.scheduleEndId, b.repeatDailyId,
+        b.lockId, b.acSwitchId, b.flashLightsId, b.findCarId, b.closeWindowsId,
+        b.remainingHoursId, b.remainingMinutesId,
+        b.consumptionRecentId, b.consumption50Id, b.consumptionLifetimeId, b.consumptionTodayId,
       ].filter(Boolean),
     ),
   ]
@@ -323,6 +326,18 @@ export function computeBydLive(ha, ext = getExtensions()) {
     rl: entityNumOrUndef(ha, b.tireRlId),
     rr: entityNumOrUndef(ha, b.tireRrId),
   }
+  // Coordenadas del device_tracker (attributes latitude/longitude)
+  let lat
+  let lon
+  if (b.locationId) {
+    const attrs = ha.getState(b.locationId)?.attributes
+    const la = attrs ? parseFloat(attrs.latitude) : NaN
+    const lo = attrs ? parseFloat(attrs.longitude) : NaN
+    if (Number.isFinite(la) && Number.isFinite(lo)) {
+      lat = Math.round(la * 1000) / 1000
+      lon = Math.round(lo * 1000) / 1000
+    }
+  }
   return {
     name: b.name,
     online: entityBoolOrUndef(ha, b.onlineId) ?? false,
@@ -340,6 +355,8 @@ export function computeBydLive(ha, ext = getExtensions()) {
     exteriorTempC: entityNumOrUndef(ha, b.exteriorTempId),
     tires,
     location: entityStateOrUndef(ha, b.locationId),
+    lat,
+    lon,
     gpsAgeMin: entityAgeMinOrUndef(ha, b.gpsAgeId),
     lastUpdateMin: entityAgeMinOrUndef(ha, b.lastUpdateId),
     // Estado de acciones (para pintar switches coherentes)
@@ -348,6 +365,24 @@ export function computeBydLive(ha, ext = getExtensions()) {
     scheduleStart: entityStateOrUndef(ha, b.scheduleStartId),
     scheduleEnd: entityStateOrUndef(ha, b.scheduleEndId),
     repeatDailyOn: entityBoolOrUndef(ha, b.repeatDailyId),
+    // v2: control + consumo + tiempo restante
+    lockUnlocked: (() => {
+      const s = entityStateOrUndef(ha, b.lockId)
+      return s === undefined ? undefined : s === 'unlocked'
+    })(),
+    acOn: (() => {
+      const s = entityStateOrUndef(ha, b.acSwitchId)
+      return s === undefined ? undefined : s === 'on'
+    })(),
+    remainingMin: (() => {
+      const rh = entityNumOrUndef(ha, b.remainingHoursId)
+      const rm = entityNumOrUndef(ha, b.remainingMinutesId)
+      return rh === undefined && rm === undefined ? undefined : Math.round((rh ?? 0) * 60 + (rm ?? 0))
+    })(),
+    consumptionRecent: entityNumOrUndef(ha, b.consumptionRecentId),
+    consumption50: entityNumOrUndef(ha, b.consumption50Id),
+    consumptionLifetime: entityNumOrUndef(ha, b.consumptionLifetimeId),
+    consumptionToday: entityNumOrUndef(ha, b.consumptionTodayId),
   }
 }
 
@@ -383,6 +418,29 @@ export async function bydAction(ha, ext, action, value) {
     case 'schedule_enabled':
       if (!b.scheduleEnabledId || typeof value !== 'boolean') throw new Error('unknown_action')
       return setSwitch(b.scheduleEnabledId, value)
+    case 'lock':
+    case 'unlock': {
+      if (!b.lockId) throw new Error('unknown_action')
+      return ha.call({
+        type: 'call_service',
+        domain: 'lock',
+        service: action === 'lock' ? 'lock' : 'unlock',
+        target: { entity_id: b.lockId },
+      })
+    }
+    case 'ac': {
+      if (!b.acSwitchId || typeof value !== 'boolean') throw new Error('unknown_action')
+      return setSwitch(b.acSwitchId, value)
+    }
+    case 'flash_lights':
+      if (!b.flashLightsId) throw new Error('unknown_action')
+      return press(b.flashLightsId)
+    case 'find_car':
+      if (!b.findCarId) throw new Error('unknown_action')
+      return press(b.findCarId)
+    case 'close_windows':
+      if (!b.closeWindowsId) throw new Error('unknown_action')
+      return press(b.closeWindowsId)
     case 'schedule_start':
     case 'schedule_end': {
       const id = action === 'schedule_start' ? b.scheduleStartId : b.scheduleEndId

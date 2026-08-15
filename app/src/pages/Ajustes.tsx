@@ -903,6 +903,17 @@ function ExtensionsSection() {
                   {bydField('scheduleStartId', 'ajustes.extensions.f_byd.scheduleStart')}
                   {bydField('scheduleEndId', 'ajustes.extensions.f_byd.scheduleEnd')}
                   {bydField('repeatDailyId', 'ajustes.extensions.f_byd.repeatDaily')}
+                  {bydField('lockId', 'ajustes.extensions.f_byd.lock')}
+                  {bydField('acSwitchId', 'ajustes.extensions.f_byd.acSwitch')}
+                  {bydField('flashLightsId', 'ajustes.extensions.f_byd.flashLights')}
+                  {bydField('findCarId', 'ajustes.extensions.f_byd.findCar')}
+                  {bydField('closeWindowsId', 'ajustes.extensions.f_byd.closeWindows')}
+                  {bydField('remainingHoursId', 'ajustes.extensions.f_byd.remainingHours')}
+                  {bydField('remainingMinutesId', 'ajustes.extensions.f_byd.remainingMinutes')}
+                  {bydField('consumptionRecentId', 'ajustes.extensions.f_byd.consumptionRecent')}
+                  {bydField('consumption50Id', 'ajustes.extensions.f_byd.consumption50')}
+                  {bydField('consumptionLifetimeId', 'ajustes.extensions.f_byd.consumptionLifetime')}
+                  {bydField('consumptionTodayId', 'ajustes.extensions.f_byd.consumptionToday')}
                 </div>
                 <div className="flex items-center gap-3">
                   <button

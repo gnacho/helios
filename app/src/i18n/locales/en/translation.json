@@ -624,7 +624,19 @@
         "scheduleEnabled": "Schedule switch",
         "scheduleStart": "Start time",
         "scheduleEnd": "End time",
-        "repeatDaily": "Repeat daily switch"
+        "repeatDaily": "Repeat daily switch",
+        "lock": "Lock (lock)",
+        "acSwitch": "A/C switch",
+        "flashLights": "Flash lights button",
+        "findCar": "Honk/find car button",
+        "closeWindows": "Close windows button",
+        "remainingHours": "Remaining hours",
+        "remainingMinutes": "Remaining minutes",
+        "consumptionRecent": "Recent consumption",
+        "consumption50": "50 km consumption",
+        "consumptionLifetime": "Lifetime consumption",
+        "consumptionToday": "Today consumption",
+        "group_control": "Vehicle control"
       }
     }
   },
@@ -729,6 +741,25 @@
     "scheduleEnabled": "Scheduled",
     "scheduleFrom": "From",
     "scheduleTo": "to",
-    "repeatDaily": "Repeat daily"
+    "repeatDaily": "Repeat daily",
+    "controlTitle": "Vehicle control",
+    "acOn": "A/C on",
+    "acOff": "Turn on A/C",
+    "lockAction": "Lock",
+    "unlockAction": "Unlock",
+    "flashLights": "Lights",
+    "flashHint": "Flash the car lights",
+    "findCar": "Honk",
+    "findCarHint": "The car honks so you can find it",
+    "closeWindows": "Close windows",
+    "controlHint": "Control commands may require the control PIN set in the BYD integration in Home Assistant.",
+    "locationTitle": "Location",
+    "mapLabel": "Map with the car position",
+    "locationUnknown": "No GPS position from the car.",
+    "consumptionTitle": "Consumption",
+    "consumptionRecent": "Recent",
+    "consumption50": "Last 50 km",
+    "consumptionToday": "Today",
+    "consumptionLifetime": "Lifetime"
   }
 }

@@ -563,6 +563,17 @@ function bydExt(overrides = {}) {
       scheduleStartId: 'time.byd_start',
       scheduleEndId: 'time.byd_end',
       repeatDailyId: 'switch.byd_repeat',
+      lockId: 'lock.byd_lock',
+      acSwitchId: 'switch.byd_ac',
+      flashLightsId: 'button.byd_flash',
+      findCarId: 'button.byd_find',
+      closeWindowsId: 'button.byd_windows',
+      remainingHoursId: 'sensor.byd_rem_h',
+      remainingMinutesId: 'sensor.byd_rem_m',
+      consumptionRecentId: 'sensor.byd_cons_recent',
+      consumption50Id: 'sensor.byd_cons_50',
+      consumptionLifetimeId: 'sensor.byd_cons_life',
+      consumptionTodayId: 'sensor.byd_cons_today',
       ...overrides,
     },
   })
@@ -587,7 +598,18 @@ function bydHa(states = {}) {
     'sensor.byd_fr': { state: '232' },
     'sensor.byd_rl': { state: '230' },
     'sensor.byd_rr': { state: '232' },
-    'device_tracker.byd_loc': { state: 'home' },
+    'device_tracker.byd_loc': {
+      state: 'home',
+      attributes: { latitude: 39.559, longitude: -0.512 },
+    },
+    'lock.byd_lock': { state: 'unlocked' },
+    'switch.byd_ac': { state: 'off' },
+    'sensor.byd_rem_h': { state: '1' },
+    'sensor.byd_rem_m': { state: '25' },
+    'sensor.byd_cons_recent': { state: '14.4' },
+    'sensor.byd_cons_50': { state: '14.4' },
+    'sensor.byd_cons_life': { state: '17.3' },
+    'sensor.byd_cons_today': { state: '14.4' },
     ...states,
   })
 }
@@ -642,18 +664,18 @@ describe('computeBydLive', () => {
   })
 })
 
-describe('bydAction (whitelist)', () => {
-  function recordingHa() {
-    const calls = []
-    return {
-      calls,
-      call: async (msg) => {
-        calls.push(msg)
-        return {}
-      },
-    }
+function recordingHa() {
+  const calls = []
+  return {
+    calls,
+    call: async (msg) => {
+      calls.push(msg)
+      return {}
+    },
   }
+}
 
+describe('bydAction (whitelist)', () => {
   it('start_charging → button.press sobre la entidad configurada', async () => {
     const ha = recordingHa()
     await bydAction(ha, bydExt(), 'start_charging')
@@ -717,5 +739,76 @@ describe('normalizeExtensions: módulo byd', () => {
     expect(parsed.success).toBe(true)
     expect(parsed.data.byd.socId).toBe('sensor.x')
     expect(parsed.data.byd.enabled).toBe(true)
+  })
+})
+
+
+describe('computeBydLive v2 (geo, control, consumo, restante)', () => {
+  it('lat/lon desde attributes del device_tracker', () => {
+    const ext = bydExt()
+    _setForTests(ext)
+    const live = computeBydLive(bydHa(), ext)
+    expect(live.lat).toBeCloseTo(39.559, 2)
+    expect(live.lon).toBeCloseTo(-0.512, 2)
+  })
+
+  it('device_tracker sin coordenadas → lat/lon undefined (no rompe)', () => {
+    const ext = bydExt()
+    _setForTests(ext)
+    const live = computeBydLive(bydHa({ 'device_tracker.byd_loc': { state: 'home', attributes: {} } }), ext)
+    expect(live.lat).toBeUndefined()
+    expect(live.lon).toBeUndefined()
+  })
+
+  it('lock/ac normalizados y tiempo restante h+min combinado', () => {
+    const ext = bydExt()
+    _setForTests(ext)
+    const live = computeBydLive(bydHa(), ext)
+    expect(live.lockUnlocked).toBe(true)
+    expect(live.acOn).toBe(false)
+    expect(live.remainingMin).toBe(85)
+    expect(live.consumptionRecent).toBe(14.4)
+    expect(live.consumptionLifetime).toBe(17.3)
+  })
+})
+
+describe('bydAction v2 (lock/ac/luces/pitido/ventanas)', () => {
+  it('lock/unlock → lock.lock | lock.unlock', async () => {
+    const ha = recordingHa()
+    await bydAction(ha, bydExt(), 'lock')
+    expect(ha.calls[0]).toEqual({
+      type: 'call_service',
+      domain: 'lock',
+      service: 'lock',
+      target: { entity_id: 'lock.byd_lock' },
+    })
+    await bydAction(ha, bydExt(), 'unlock')
+    expect(ha.calls[1].service).toBe('unlock')
+  })
+
+  it('ac → switch turn_on/off', async () => {
+    const ha = recordingHa()
+    await bydAction(ha, bydExt(), 'ac', true)
+    expect(ha.calls[0].service).toBe('turn_on')
+    await bydAction(ha, bydExt(), 'ac', false)
+    expect(ha.calls[1].service).toBe('turn_off')
+    await expect(bydAction(ha, bydExt(), 'ac', 'si')).rejects.toThrow('unknown_action')
+  })
+
+  it('flash_lights / find_car / close_windows → button.press', async () => {
+    const ha = recordingHa()
+    await bydAction(ha, bydExt(), 'flash_lights')
+    await bydAction(ha, bydExt(), 'find_car')
+    await bydAction(ha, bydExt(), 'close_windows')
+    for (const c of ha.calls) {
+      expect(c.domain).toBe('button')
+      expect(c.service).toBe('press')
+    }
+    expect(ha.calls.map((c) => c.target.entity_id)).toEqual(['button.byd_flash', 'button.byd_find', 'button.byd_windows'])
+  })
+
+  it('sin la entidad configurada → unknown_action (botón oculto)', async () => {
+    const ha = recordingHa()
+    await expect(bydAction(ha, bydExt({ findCarId: '' }), 'find_car')).rejects.toThrow('unknown_action')
   })
 })

@@ -129,6 +129,17 @@ export interface ExtensionsConfig {
     scheduleStartId: string;
     scheduleEndId: string;
     repeatDailyId: string;
+    lockId: string;
+    acSwitchId: string;
+    flashLightsId: string;
+    findCarId: string;
+    closeWindowsId: string;
+    remainingHoursId: string;
+    remainingMinutesId: string;
+    consumptionRecentId: string;
+    consumption50Id: string;
+    consumptionLifetimeId: string;
+    consumptionTodayId: string;
   };
 }
 
@@ -160,8 +171,17 @@ export interface BydLive {
   exteriorTempC?: number;
   tires: { fl?: number; fr?: number; rl?: number; rr?: number };
   location?: string;
+  lat?: number;
+  lon?: number;
   gpsAgeMin?: number;
   lastUpdateMin?: number;
+  lockUnlocked?: boolean;
+  acOn?: boolean;
+  remainingMin?: number;
+  consumptionRecent?: number;
+  consumption50?: number;
+  consumptionLifetime?: number;
+  consumptionToday?: number;
   chargeToFullOn?: boolean;
   scheduleEnabledOn?: boolean;
   scheduleStart?: string;
