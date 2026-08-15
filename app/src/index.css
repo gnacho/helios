@@ -315,6 +315,69 @@
   }
 }
 
+/* Transición móvil entre vistas: el contenido (<main>) se desliza y el shell
+ * (header móvil + bottom nav) permanece estático. Se capturan como grupos de
+ * view-transition PROPIO (helios-header/helios-nav) para no depender de cómo el
+ * navegador capture el grupo root con position:fixed (falla en dispositivos). */
+@media (max-width: 767px) {
+  main {
+    view-transition-name: helios-content;
+  }
+  /* El shell queda estático: anulamos las 4 animaciones UA de cada grupo
+   * (group/image-pair arrancan en opacity 0 en la hoja UA del navegador). */
+  ::view-transition-group(root),
+  ::view-transition-image-pair(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(helios-header),
+  ::view-transition-image-pair(helios-header),
+  ::view-transition-old(helios-header),
+  ::view-transition-new(helios-header),
+  ::view-transition-group(helios-nav),
+  ::view-transition-image-pair(helios-nav),
+  ::view-transition-old(helios-nav),
+  ::view-transition-new(helios-nav) {
+    animation: none;
+  }
+  html[data-nav-dir='forward']::view-transition-old(helios-content) {
+    animation: helios-vt-out-left 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='forward']::view-transition-new(helios-content) {
+    animation: helios-vt-in-right 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='back']::view-transition-old(helios-content) {
+    animation: helios-vt-out-right 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='back']::view-transition-new(helios-content) {
+    animation: helios-vt-in-left 0.3s ease-in-out both;
+  }
+}
+
+@keyframes helios-vt-out-left {
+  to {
+    transform: translateX(-24%);
+    opacity: 0.7;
+  }
+}
+@keyframes helios-vt-in-right {
+  from {
+    transform: translateX(24%);
+    opacity: 0.7;
+  }
+}
+@keyframes helios-vt-out-right {
+  to {
+    transform: translateX(24%);
+    opacity: 0.7;
+  }
+}
+@keyframes helios-vt-in-left {
+  from {
+    transform: translateX(-24%);
+    opacity: 0.7;
+  }
+}
+
 /* Reducir animaciones: switch de Ajustes (clase en <html>) + SO */
 html.reduce-motion *,
 html.reduce-motion *::before,
@@ -322,11 +385,19 @@ html.reduce-motion *::after {
   animation-duration: 0.01ms !important;
   transition-duration: 0.01ms !important;
 }
+html.reduce-motion::view-transition-old(*),
+html.reduce-motion::view-transition-new(*) {
+  animation: none !important;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
