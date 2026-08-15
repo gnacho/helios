@@ -618,7 +618,7 @@
 
   /* ── Reveal ── */
   function setupReveal() {
-    const els = document.querySelectorAll('.section-head, .feature-card, .how-step, .slide, .faq-item, .thanks-card, .cta-final, .statute')
+    const els = document.querySelectorAll('.feature-card, .how-step, .faq-item, .thanks-card, .cta-final, .statute')
     els.forEach((el) => el.classList.add('reveal'))
     const io = new IntersectionObserver((entries) => {
       entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('visible'); io.unobserve(en.target) } })
