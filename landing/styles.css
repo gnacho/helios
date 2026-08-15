@@ -556,7 +556,7 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
 .lightbox-close:hover { background: rgb(255 255 255 / 0.22); }
 
 /* ── Animaciones de entrada ── */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity 340ms var(--ease-out), transform 340ms var(--ease-out); }
 .reveal.visible { opacity: 1; transform: none; }
 
 /* ── Responsive ── */
@@ -578,7 +578,6 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .ticker-track, .live-dot { animation: none; }
-  .flow-particle { animation: none; }
   .reveal, .reveal.visible { opacity: 1; transform: none; transition: none; }
   .lightbox { transition: none; }
 }
