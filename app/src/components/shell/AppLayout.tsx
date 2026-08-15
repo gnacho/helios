@@ -8,6 +8,7 @@ import {
   Zap,
   BatteryCharging,
   BarChart3,
+  Car,
   CarFront,
   Settings,
   ChevronsLeft,
@@ -29,7 +30,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import { apiFetch } from '@/data/api-client';
 import { useInstall } from '@/hooks/useInstall';
 import { useExtensions } from '@/hooks/useExtensions';
-import { chargerEnabled } from '@/data/types';
+import { chargerEnabled, bydEnabled } from '@/data/types';
 
 /**
  * AppLayout unificado (skill webapp-shell):
@@ -52,6 +53,7 @@ const SETTINGS_ITEM = { to: '/ajustes', labelKey: 'nav.ajustes', icon: Settings 
 
 /** Item del cargador (extensión #94): solo con el módulo activo. */
 const CHARGER_ITEM = { to: '/cargador', labelKey: 'nav.cargador', icon: CarFront } as const;
+const BYD_ITEM = { to: '/coche', labelKey: 'nav.coche', icon: Car } as const;
 
 const TITLE_KEYS: [RegExp, string][] = [
   [/^\/$/, 'nav.dashboard'],
@@ -59,6 +61,7 @@ const TITLE_KEYS: [RegExp, string][] = [
   [/^\/bateria/, 'nav.bateria'],
   [/^\/historico/, 'nav.historico'],
   [/^\/cargador/, 'nav.cargador'],
+  [/^\/coche/, 'nav.coche'],
   [/^\/ajustes/, 'nav.ajustes'],
 ];
 
@@ -75,8 +78,11 @@ function useInverterCount(): number | undefined {
 function useNavItems() {
   const ext = useExtensions();
   const chargerOn = chargerEnabled(ext);
-  const navItems = chargerOn ? [...NAV_ITEMS, CHARGER_ITEM] : [...NAV_ITEMS];
-  return { navItems, chargerOn };
+  const bydOn = bydEnabled(ext);
+  const navItems: { to: string; labelKey: string; icon: typeof Activity }[] = [...NAV_ITEMS];
+  if (chargerOn) navItems.push(CHARGER_ITEM);
+  if (bydOn) navItems.push(BYD_ITEM);
+  return { navItems, chargerOn, bydOn };
 }
 
 /** Label del menú: singular con 1 inversor, plural con varios. */
@@ -403,7 +409,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const titleKey = TITLE_KEYS.find(([re]) => re.test(pathname))?.[1] ?? 'nav.dashboard';
   const count = useInverterCount();
-  const { navItems, chargerOn } = useNavItems();
+  const { navItems, chargerOn, bydOn } = useNavItems();
+  const navCols = chargerOn && bydOn ? 'grid-cols-6' : chargerOn || bydOn ? 'grid-cols-5' : 'grid-cols-4';
   const resolvedTitleKey = titleKey === 'nav.inversores' ? invLabelKey(count) : titleKey;
   const lgMargin = collapsed ? 'lg:ml-16' : 'lg:ml-[232px]';
 
@@ -467,7 +474,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         aria-label={t('nav.dashboard')}
       >
         {/* Sin Ajustes: en móvil el acceso es el avatar del header (→ /ajustes) */}
-        <div className={cn('grid h-16', chargerOn ? 'grid-cols-5' : 'grid-cols-4')}>
+        <div className={cn('grid h-16', navCols)}>
           {navItems.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
             const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);

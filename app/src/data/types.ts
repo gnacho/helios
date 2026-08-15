@@ -52,6 +52,7 @@ export interface LivePower {
   station?: string;
   inverterOnline?: boolean;
   charger?: ChargerLive;
+  byd?: BydLive;
   ts?: string;
 }
 
@@ -79,6 +80,7 @@ export interface ChargerCurvePoint {
 export interface ExtensionsConfig {
   enabled: boolean;
   chargerActive?: boolean;
+  bydActive?: boolean;
   carCharger: {
     enabled: boolean;
     name: string;
@@ -96,11 +98,75 @@ export interface ExtensionsConfig {
     chargingStates: string[];
     connectedStates: string[];
   };
+  byd: {
+    enabled: boolean;
+    name: string;
+    socId: string;
+    rangeId: string;
+    odometerId: string;
+    batteryPowerId: string;
+    chargingId: string;
+    pluggedId: string;
+    onlineId: string;
+    lockedId: string;
+    doorsId: string;
+    windowsId: string;
+    sentryId: string;
+    cabinTempId: string;
+    exteriorTempId: string;
+    tireFlId: string;
+    tireFrId: string;
+    tireRlId: string;
+    tireRrId: string;
+    locationId: string;
+    gpsAgeId: string;
+    lastUpdateId: string;
+    startChargeId: string;
+    stopChargeId: string;
+    forcePollId: string;
+    chargeToFullId: string;
+    scheduleEnabledId: string;
+    scheduleStartId: string;
+    scheduleEndId: string;
+    repeatDailyId: string;
+  };
 }
 
 /** ¿El marco está activo y el cargador encendido? */
 export function chargerEnabled(ext: ExtensionsConfig | null): boolean {
   return !!(ext?.enabled && ext.carCharger?.enabled);
+}
+
+/** ¿El marco está activo y el módulo BYD encendido? */
+export function bydEnabled(ext: ExtensionsConfig | null): boolean {
+  return !!(ext?.enabled && ext.byd?.enabled);
+}
+
+/** Snapshot en vivo del BYD (viaja en el SSE live.byd). */
+export interface BydLive {
+  name: string;
+  online: boolean;
+  soc?: number;
+  rangeKm?: number;
+  odometerKm?: number;
+  charging: boolean;
+  plugged: boolean;
+  powerKw?: number;
+  locked?: boolean;
+  doorsOpen: boolean;
+  windowsOpen: boolean;
+  sentry?: boolean;
+  cabinTempC?: number;
+  exteriorTempC?: number;
+  tires: { fl?: number; fr?: number; rl?: number; rr?: number };
+  location?: string;
+  gpsAgeMin?: number;
+  lastUpdateMin?: number;
+  chargeToFullOn?: boolean;
+  scheduleEnabledOn?: boolean;
+  scheduleStart?: string;
+  scheduleEnd?: string;
+  repeatDailyOn?: boolean;
 }
 
 export interface DayKpis {

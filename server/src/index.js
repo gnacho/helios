@@ -75,7 +75,7 @@ let backfillState = 'pending'
 
 ha.on('connected', async () => {
   console.log('[helios] HAOS conectado')
-  await ha.subscribeEntities([...install.liveEntities(), ...extensions.chargerEntities()])
+  await ha.subscribeEntities([...install.liveEntities(), ...extensions.chargerEntities(), ...extensions.bydEntities()])
   haReady = true
   if (backfillState === 'pending') {
     backfillState = 'running'
@@ -207,10 +207,11 @@ const sseClients = new Set()
 const MAX_SSE_CLIENTS = 10
 
 let lastPush = 0
-// Payload live: datos solares + snapshot del cargador (si la extensión está
-// activa; computeChargerLive devuelve undefined y JSON.stringify lo omite).
+// Payload live: datos solares + snapshot del cargador y del BYD (si las
+// extensiones están activas; compute*Live devuelve undefined y
+// JSON.stringify lo omite).
 const livePayload = () =>
-  JSON.stringify({ type: 'live', data: { ...solar.computeLive(ha), charger: extensions.computeChargerLive(ha) } })
+  JSON.stringify({ type: 'live', data: { ...solar.computeLive(ha), charger: extensions.computeChargerLive(ha), byd: extensions.computeBydLive(ha) } })
 ha.on('entity', () => {
   const now = Date.now()
   if (now - lastPush < 1000 || sseClients.size === 0) return
@@ -701,7 +702,11 @@ guarded.put('/config', async (c) => {
 
 // Config resuelta (GET) para la barra de Ajustes y la navegación del frontend.
 guarded.get('/extensions', (c) => {
-  return c.json({ ...extensions.getExtensions(), chargerActive: extensions.chargerActive() })
+  return c.json({
+    ...extensions.getExtensions(),
+    chargerActive: extensions.chargerActive(),
+    bydActive: extensions.bydActive(),
+  })
 })
 
 // Guardar la config de extensiones (admin): valida con el schema, persiste en
@@ -721,6 +726,32 @@ guarded.put('/extensions', async (c) => {
   const me = dbModule.getUserById(db, c.get('userId'))
   audit(db, me?.username || 'unknown', c.get('userId'), 'extensions.change', { enabled: parsed.data.enabled })
   return c.json({ ok: true, restartNeeded: true })
+})
+
+// Acciones del módulo BYD (#100, solo admin): whitelist estricta en
+// extensions.bydAction (solo button.press / switch.turn_* / time.set_value
+// sobre las entidades configuradas). Los servicios no requieren
+// re-suscripción: el efecto llega por el SSE live.
+guarded.post('/byd/action', async (c) => {
+  const user = dbModule.getUserById(db, c.get('userId'))
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores pueden controlar el vehículo' }, 403)
+  }
+  const body = await c.req.json().catch(() => null)
+  const action = body?.action
+  const value = body?.value
+  if (typeof action !== 'string') return c.json({ error: 'acción inválida' }, 400)
+  try {
+    await extensions.bydAction(ha, extensions.getExtensions(), action, value)
+    audit(db, user.username, user.id, 'byd.action', action)
+    return c.json({ ok: true })
+  } catch (err) {
+    if (err.message === 'unknown_action' || err.message === 'byd_disabled') {
+      return c.json({ error: err.message }, 400)
+    }
+    console.error('[helios] byd action:', err.message)
+    return c.json({ error: 'no se pudo ejecutar la acción' }, 502)
+  }
 })
 
 // Curva del día del cargador (kW por tramos de 5 min, desde el recorder).

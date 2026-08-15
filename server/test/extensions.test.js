@@ -524,3 +524,198 @@ describe('atribución solar (iteración 4)', () => {
     expect(days[1].pvKwh).toBe(0) // producción < consumo del resto → 0
   })
 })
+
+// ── Módulo BYD (#100) ────────────────────────────────────────────────────────
+import { bydActive, bydEntities, computeBydLive, bydAction, LEGACY_BYD } from '../src/extensions.js'
+
+function bydExt(overrides = {}) {
+  return normalizeExtensions({
+    enabled: true,
+    carCharger: { enabled: false },
+    byd: {
+      enabled: true,
+      name: 'Test BYD',
+      socId: 'sensor.byd_soc',
+      rangeId: 'sensor.byd_range',
+      odometerId: 'sensor.byd_odo',
+      batteryPowerId: 'sensor.byd_power',
+      chargingId: 'binary_sensor.byd_charging',
+      pluggedId: 'binary_sensor.byd_plug',
+      onlineId: 'binary_sensor.byd_online',
+      lockedId: 'binary_sensor.byd_locked',
+      doorsId: 'binary_sensor.byd_doors',
+      windowsId: 'binary_sensor.byd_windows',
+      sentryId: 'binary_sensor.byd_sentry',
+      cabinTempId: 'sensor.byd_cabin',
+      exteriorTempId: 'sensor.byd_out',
+      tireFlId: 'sensor.byd_fl',
+      tireFrId: 'sensor.byd_fr',
+      tireRlId: 'sensor.byd_rl',
+      tireRrId: 'sensor.byd_rr',
+      locationId: 'device_tracker.byd_loc',
+      gpsAgeId: 'sensor.byd_gps_ts',
+      lastUpdateId: 'sensor.byd_last_ts',
+      startChargeId: 'button.byd_start',
+      stopChargeId: 'button.byd_stop',
+      forcePollId: 'button.byd_poll',
+      chargeToFullId: 'switch.byd_ctf',
+      scheduleEnabledId: 'switch.byd_sched',
+      scheduleStartId: 'time.byd_start',
+      scheduleEndId: 'time.byd_end',
+      repeatDailyId: 'switch.byd_repeat',
+      ...overrides,
+    },
+  })
+}
+
+function bydHa(states = {}) {
+  return mockHa({
+    'sensor.byd_soc': { state: '97' },
+    'sensor.byd_range': { state: '410' },
+    'sensor.byd_odo': { state: '13508' },
+    'sensor.byd_power': { state: '6800' },
+    'binary_sensor.byd_charging': { state: 'on' },
+    'binary_sensor.byd_plug': { state: 'on' },
+    'binary_sensor.byd_online': { state: 'on' },
+    'binary_sensor.byd_locked': { state: 'on' },
+    'binary_sensor.byd_doors': { state: 'off' },
+    'binary_sensor.byd_windows': { state: 'off' },
+    'binary_sensor.byd_sentry': { state: 'on' },
+    'sensor.byd_cabin': { state: '28' },
+    'sensor.byd_out': { state: '31' },
+    'sensor.byd_fl': { state: '232' },
+    'sensor.byd_fr': { state: '232' },
+    'sensor.byd_rl': { state: '230' },
+    'sensor.byd_rr': { state: '232' },
+    'device_tracker.byd_loc': { state: 'home' },
+    ...states,
+  })
+}
+
+describe('bydActive / bydEntities', () => {
+  it('inactivo por defecto; entidades solo con el módulo encendido', () => {
+    expect(bydActive(GENERIC_EXTENSIONS)).toBe(false)
+    const ext = bydExt()
+    expect(bydActive(ext)).toBe(true)
+    expect(bydEntities(ext)).toContain('sensor.byd_soc')
+    expect(bydEntities(bydExt({ enabled: false }))).toEqual([])
+  })
+})
+
+describe('computeBydLive', () => {
+  it('snapshot completo: soc, kW, binarios, neumáticos, ubicación', () => {
+    const ext = bydExt()
+    _setForTests(ext)
+    const live = computeBydLive(bydHa(), ext)
+    expect(live.soc).toBe(97)
+    expect(live.rangeKm).toBe(410)
+    expect(live.powerKw).toBe(6.8)
+    expect(live.charging).toBe(true)
+    expect(live.plugged).toBe(true)
+    expect(live.locked).toBe(true)
+    expect(live.doorsOpen).toBe(false)
+    expect(live.tires).toEqual({ fl: 232, fr: 232, rl: 230, rr: 232 })
+    expect(live.location).toBe('home')
+  })
+
+  it('unavailable/unknown → undefined (no 0), y W → kW', () => {
+    const ext = bydExt()
+    _setForTests(ext)
+    const live = computeBydLive(bydHa({ 'sensor.byd_soc': { state: 'unavailable' }, 'sensor.byd_power': { state: 'unknown' } }), ext)
+    expect(live.soc).toBeUndefined()
+    expect(live.powerKw).toBeUndefined()
+    expect(live.online).toBe(true) // binary sigue presente
+  })
+
+  it('timestamps ISO → antigüedad en minutos; offline sin datos', () => {
+    const ext = bydExt()
+    _setForTests(ext)
+    const ts = new Date(Date.now() - 5 * 60000).toISOString()
+    const live = computeBydLive(bydHa({ 'sensor.byd_gps_ts': { state: ts }, 'binary_sensor.byd_online': { state: 'off' } }), ext)
+    expect(live.gpsAgeMin).toBe(5)
+    expect(live.online).toBe(false)
+  })
+
+  it('sin el módulo activo devuelve undefined', () => {
+    _setForTests(GENERIC_EXTENSIONS)
+    expect(computeBydLive(bydHa(), GENERIC_EXTENSIONS)).toBeUndefined()
+  })
+})
+
+describe('bydAction (whitelist)', () => {
+  function recordingHa() {
+    const calls = []
+    return {
+      calls,
+      call: async (msg) => {
+        calls.push(msg)
+        return {}
+      },
+    }
+  }
+
+  it('start_charging → button.press sobre la entidad configurada', async () => {
+    const ha = recordingHa()
+    await bydAction(ha, bydExt(), 'start_charging')
+    expect(ha.calls[0]).toEqual({
+      type: 'call_service',
+      domain: 'button',
+      service: 'press',
+      target: { entity_id: 'button.byd_start' },
+    })
+  })
+
+  it('charge_to_full → switch turn_on/off según value', async () => {
+    const ha = recordingHa()
+    await bydAction(ha, bydExt(), 'charge_to_full', true)
+    expect(ha.calls[0].service).toBe('turn_on')
+    await bydAction(ha, bydExt(), 'charge_to_full', false)
+    expect(ha.calls[1].service).toBe('turn_off')
+  })
+
+  it('schedule_start valida HH:MM y usa time.set_value', async () => {
+    const ha = recordingHa()
+    await bydAction(ha, bydExt(), 'schedule_start', '08:30')
+    expect(ha.calls[0]).toEqual({
+      type: 'call_service',
+      domain: 'time',
+      service: 'set_value',
+      target: { entity_id: 'time.byd_start' },
+      time: '08:30',
+    })
+    await expect(bydAction(ha, bydExt(), 'schedule_start', '99:99')).rejects.toThrow('unknown_action')
+    await expect(bydAction(ha, bydExt(), 'schedule_start', 'nope')).rejects.toThrow('unknown_action')
+  })
+
+  it('acción desconocida o módulo apagado → error', async () => {
+    const ha = recordingHa()
+    await expect(bydAction(ha, bydExt(), 'open_frunk')).rejects.toThrow('unknown_action')
+    await expect(bydAction(ha, bydExt({ enabled: false }), 'start_charging')).rejects.toThrow('byd_disabled')
+  })
+})
+
+describe('normalizeExtensions: módulo byd', () => {
+  it('campos no-string revierten a string vacío; legacy trae los IDs reales', () => {
+    const ext = normalizeExtensions({
+      enabled: true,
+      byd: { enabled: true, name: 'Mi BYD', socId: 42, rangeId: null },
+    })
+    expect(ext.byd.enabled).toBe(true)
+    expect(ext.byd.name).toBe('Mi BYD')
+    expect(ext.byd.socId).toBe('')
+    expect(ext.byd.rangeId).toBe('')
+    expect(LEGACY_BYD.socId).toBe('sensor.byd_atto_3_nivel_de_bateria')
+    expect(LEGACY_EXTENSIONS.byd).toBe(LEGACY_BYD)
+  })
+
+  it('el schema zod acepta el módulo byd completo', () => {
+    const parsed = extensionsSchema.safeParse({
+      enabled: true,
+      carCharger: { enabled: false },
+      byd: { enabled: true, name: 'X', socId: 'sensor.x', unknownField: true },
+    })
+    expect(parsed.success).toBe(true)
+    expect(parsed.data.byd.socId).toBe('sensor.x')
+    expect(parsed.data.byd.enabled).toBe(true)
+  })
+})

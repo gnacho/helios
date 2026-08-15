@@ -33,6 +33,42 @@ const round3 = (v) => Math.round(v * 1000) / 1000
 const CHARGER_GLITCH_KWH = 50 // salto imposible entre ticks de 60 s
 const STEP_MIN = 5
 
+// ── Perfil LEGACY del módulo BYD: entidades reales de la instalación
+// (BYD Atto 3, integración hass-byd-vehicle; verificadas 15-Ago-2026 con
+// GET /api/states). APAGADO por defecto.
+export const LEGACY_BYD = {
+  enabled: false,
+  name: 'BYD Atto 3',
+  socId: 'sensor.byd_atto_3_nivel_de_bateria',
+  rangeId: 'sensor.byd_atto_3_autonomia',
+  odometerId: 'sensor.byd_atto_3_cuentakilometros',
+  batteryPowerId: 'sensor.byd_atto_3_battery_power',
+  chargingId: 'binary_sensor.byd_atto_3_cargando',
+  pluggedId: 'binary_sensor.byd_atto_3_enchufe',
+  onlineId: 'binary_sensor.byd_atto_3_en_linea',
+  lockedId: 'binary_sensor.byd_atto_3_bloqueado',
+  doorsId: 'binary_sensor.byd_atto_3_puertas_abiertas',
+  windowsId: 'binary_sensor.byd_atto_3_ventanas_abiertas',
+  sentryId: 'binary_sensor.byd_atto_3_modo_centinela',
+  cabinTempId: 'sensor.byd_atto_3_temperatura_de_la_cabina',
+  exteriorTempId: 'sensor.byd_atto_3_temperatura_exterior',
+  tireFlId: 'sensor.byd_atto_3_presion_neumatico_delantero_izquierdo',
+  tireFrId: 'sensor.byd_atto_3_presion_neumatico_delantero_derecho',
+  tireRlId: 'sensor.byd_atto_3_presion_neumatico_trasero_izquierdo',
+  tireRrId: 'sensor.byd_atto_3_presion_neumatico_trasero_derecho',
+  locationId: 'device_tracker.byd_atto_3_ubicacion',
+  gpsAgeId: 'sensor.byd_atto_3_gps_ultima_actualizacion',
+  lastUpdateId: 'sensor.byd_atto_3_ultima_actualizacion',
+  startChargeId: 'button.byd_atto_3_start_charging',
+  stopChargeId: 'button.byd_atto_3_stop_charging',
+  forcePollId: 'button.byd_atto_3_forzar_consulta',
+  chargeToFullId: 'switch.byd_atto_3_charge_to_full',
+  scheduleEnabledId: 'switch.byd_atto_3_schedule_enabled',
+  scheduleStartId: 'time.byd_atto_3_start_time',
+  scheduleEndId: 'time.byd_atto_3_end_time',
+  repeatDailyId: 'switch.byd_atto_3_repeat_daily',
+}
+
 // ── Perfil LEGACY: instalación existente → cargador local típico (localtuya).
 export const LEGACY_EXTENSIONS = {
   enabled: false,
@@ -57,6 +93,7 @@ export const LEGACY_EXTENSIONS = {
     chargingStates: ['charger_charging', 'charging'],
     connectedStates: ['charger_insert', 'charger_charging', 'charging'],
   },
+  byd: LEGACY_BYD,
 }
 
 // ── Perfil GENÉRICO: instalación nueva. El admin lo completa en Ajustes.
@@ -77,7 +114,40 @@ export const GENERIC_EXTENSIONS = {
     chargingStates: ['charging', 'charger_charging'],
     connectedStates: ['charger_insert', 'connected', 'charging', 'charger_charging'],
   },
+  byd: {
+    enabled: false,
+    name: 'BYD',
+    socId: 'sensor.byd_battery',
+    rangeId: 'sensor.byd_range',
+    odometerId: 'sensor.byd_odometer',
+    batteryPowerId: 'sensor.byd_battery_power',
+    chargingId: 'binary_sensor.byd_charging',
+    pluggedId: 'binary_sensor.byd_plug',
+    onlineId: 'binary_sensor.byd_online',
+    lockedId: 'binary_sensor.byd_locked',
+    doorsId: 'binary_sensor.byd_doors_open',
+    windowsId: 'binary_sensor.byd_windows_open',
+    sentryId: 'binary_sensor.byd_sentry',
+    cabinTempId: 'sensor.byd_cabin_temp',
+    exteriorTempId: 'sensor.byd_exterior_temp',
+    tireFlId: 'sensor.byd_tire_fl',
+    tireFrId: 'sensor.byd_tire_fr',
+    tireRlId: 'sensor.byd_tire_rl',
+    tireRrId: 'sensor.byd_tire_rr',
+    locationId: 'device_tracker.byd_location',
+    gpsAgeId: 'sensor.byd_gps_last_updated',
+    lastUpdateId: 'sensor.byd_last_updated',
+    startChargeId: 'button.byd_start_charging',
+    stopChargeId: 'button.byd_stop_charging',
+    forcePollId: 'button.byd_force_poll',
+    chargeToFullId: 'switch.byd_charge_to_full',
+    scheduleEnabledId: 'switch.byd_schedule_enabled',
+    scheduleStartId: 'time.byd_start_time',
+    scheduleEndId: 'time.byd_end_time',
+    repeatDailyId: 'switch.byd_repeat_daily',
+  },
 }
+
 
 // ── Estado resuelto (módulo) ────────────────────────────────────────────────
 let current = GENERIC_EXTENSIONS
@@ -117,6 +187,7 @@ export function normalizeExtensions(cfg, base = GENERIC_EXTENSIONS) {
   const out = {
     enabled: typeof cfg.enabled === 'boolean' ? cfg.enabled : base.enabled,
     carCharger: { ...base.carCharger, ...(cfg.carCharger || {}) },
+    byd: { ...base.byd, ...(cfg.byd || {}) },
   }
   const c = out.carCharger
   c.enabled = typeof c.enabled === 'boolean' ? c.enabled : false
@@ -128,6 +199,13 @@ export function normalizeExtensions(cfg, base = GENERIC_EXTENSIONS) {
   c.connectedStates = Array.isArray(c.connectedStates) ? c.connectedStates.filter((s) => typeof s === 'string') : []
   for (const k of ['powerId', 'energyTotalId', 'energySessionId', 'stateId', 'tempId', 'switchId']) {
     if (typeof c[k] !== 'string') c[k] = ''
+  }
+  const b = out.byd
+  b.enabled = typeof b.enabled === 'boolean' ? b.enabled : false
+  b.name = typeof b.name === 'string' && b.name.trim() ? b.name.trim() : base.byd.name
+  for (const k of Object.keys(base.byd)) {
+    if (k === 'enabled' || k === 'name') continue
+    if (typeof b[k] !== 'string') b[k] = ''
   }
   return out
 }
@@ -191,6 +269,129 @@ export function computeChargerLive(ha, ext = getExtensions()) {
     totalKwh: divOpt(entityNumOrUndef(ha, c.energyTotalId), c.energyDivisor),
     tempC: entityNumOrUndef(ha, c.tempId),
     switchOn: sw === undefined ? undefined : sw === 'on',
+  }
+}
+
+// ── BYD: estado, suscripciones y acciones (#100) ────────────────────────────
+
+/** ¿El marco está activo Y la extensión BYD encendida? */
+export function bydActive(ext = getExtensions()) {
+  return !!(ext.enabled && ext.byd && ext.byd.enabled)
+}
+
+/** IDs para subscribe_entities cuando el módulo BYD está activo. */
+export function bydEntities(ext = getExtensions()) {
+  if (!bydActive(ext)) return []
+  const b = ext.byd
+  return [
+    ...new Set(
+      [
+        b.socId, b.rangeId, b.odometerId, b.batteryPowerId,
+        b.chargingId, b.pluggedId, b.onlineId, b.lockedId, b.doorsId, b.windowsId, b.sentryId,
+        b.cabinTempId, b.exteriorTempId,
+        b.tireFlId, b.tireFrId, b.tireRlId, b.tireRrId,
+        b.locationId, b.gpsAgeId, b.lastUpdateId,
+        b.startChargeId, b.stopChargeId, b.forcePollId, b.chargeToFullId,
+        b.scheduleEnabledId, b.scheduleStartId, b.scheduleEndId, b.repeatDailyId,
+      ].filter(Boolean),
+    ),
+  ]
+}
+
+function entityBoolOrUndef(ha, id) {
+  const s = entityStateOrUndef(ha, id)
+  return s === undefined ? undefined : s === 'on'
+}
+
+/** Antigüedad (minutos) de un sensor timestamp ISO; undefined si no hay dato. */
+function entityAgeMinOrUndef(ha, id) {
+  const s = entityStateOrUndef(ha, id)
+  if (!s) return undefined
+  const ts = new Date(s).getTime()
+  if (Number.isNaN(ts)) return undefined
+  return Math.max(0, Math.round((Date.now() - ts) / 60000))
+}
+
+/** Snapshot en vivo del BYD (viaja en el SSE `live` como `byd`). */
+export function computeBydLive(ha, ext = getExtensions()) {
+  if (!bydActive(ext)) return undefined
+  const b = ext.byd
+  const powerW = entityNumOrUndef(ha, b.batteryPowerId)
+  const tires = {
+    fl: entityNumOrUndef(ha, b.tireFlId),
+    fr: entityNumOrUndef(ha, b.tireFrId),
+    rl: entityNumOrUndef(ha, b.tireRlId),
+    rr: entityNumOrUndef(ha, b.tireRrId),
+  }
+  return {
+    name: b.name,
+    online: entityBoolOrUndef(ha, b.onlineId) ?? false,
+    soc: entityNumOrUndef(ha, b.socId),
+    rangeKm: entityNumOrUndef(ha, b.rangeId),
+    odometerKm: entityNumOrUndef(ha, b.odometerId),
+    charging: entityBoolOrUndef(ha, b.chargingId) ?? false,
+    plugged: entityBoolOrUndef(ha, b.pluggedId) ?? false,
+    powerKw: powerW === undefined ? undefined : round3(powerW / 1000),
+    locked: entityBoolOrUndef(ha, b.lockedId),
+    doorsOpen: entityBoolOrUndef(ha, b.doorsId) ?? false,
+    windowsOpen: entityBoolOrUndef(ha, b.windowsId) ?? false,
+    sentry: entityBoolOrUndef(ha, b.sentryId),
+    cabinTempC: entityNumOrUndef(ha, b.cabinTempId),
+    exteriorTempC: entityNumOrUndef(ha, b.exteriorTempId),
+    tires,
+    location: entityStateOrUndef(ha, b.locationId),
+    gpsAgeMin: entityAgeMinOrUndef(ha, b.gpsAgeId),
+    lastUpdateMin: entityAgeMinOrUndef(ha, b.lastUpdateId),
+    // Estado de acciones (para pintar switches coherentes)
+    chargeToFullOn: entityBoolOrUndef(ha, b.chargeToFullId),
+    scheduleEnabledOn: entityBoolOrUndef(ha, b.scheduleEnabledId),
+    scheduleStart: entityStateOrUndef(ha, b.scheduleStartId),
+    scheduleEnd: entityStateOrUndef(ha, b.scheduleEndId),
+    repeatDailyOn: entityBoolOrUndef(ha, b.repeatDailyId),
+  }
+}
+
+/**
+ * Ejecuta una acción del módulo BYD contra HAOS con whitelist estricta de
+ * servicios. `ha` es el cliente websocket; `action` viene del frontend.
+ * Devuelve true si el servicio se despachó (sin esperar resultado).
+ */
+export async function bydAction(ha, ext, action, value) {
+  if (!bydActive(ext)) throw new Error('byd_disabled')
+  const b = ext.byd
+  const press = (id) =>
+    ha.call({ type: 'call_service', domain: 'button', service: 'press', target: { entity_id: id } })
+  const setSwitch = (id, on) =>
+    ha.call({ type: 'call_service', domain: 'switch', service: on ? 'turn_on' : 'turn_off', target: { entity_id: id } })
+
+  switch (action) {
+    case 'start_charging':
+      if (!b.startChargeId) throw new Error('unknown_action')
+      return press(b.startChargeId)
+    case 'stop_charging':
+      if (!b.stopChargeId) throw new Error('unknown_action')
+      return press(b.stopChargeId)
+    case 'force_poll':
+      if (!b.forcePollId) throw new Error('unknown_action')
+      return press(b.forcePollId)
+    case 'charge_to_full':
+      if (!b.chargeToFullId || typeof value !== 'boolean') throw new Error('unknown_action')
+      return setSwitch(b.chargeToFullId, value)
+    case 'repeat_daily':
+      if (!b.repeatDailyId || typeof value !== 'boolean') throw new Error('unknown_action')
+      return setSwitch(b.repeatDailyId, value)
+    case 'schedule_enabled':
+      if (!b.scheduleEnabledId || typeof value !== 'boolean') throw new Error('unknown_action')
+      return setSwitch(b.scheduleEnabledId, value)
+    case 'schedule_start':
+    case 'schedule_end': {
+      const id = action === 'schedule_start' ? b.scheduleStartId : b.scheduleEndId
+      // HH:MM (o HH:MM:SS, lo acepta HA) — validación estricta antes del servicio
+      if (!id || typeof value !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(value)) throw new Error('unknown_action')
+      return ha.call({ type: 'call_service', domain: 'time', service: 'set_value', target: { entity_id: id }, time: value })
+    }
+    default:
+      throw new Error('unknown_action')
   }
 }
 

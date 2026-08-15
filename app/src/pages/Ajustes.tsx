@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   BatteryCharging,
   Bell,
+  Car,
   CarFront,
   Check,
   ChevronDown,
@@ -679,20 +680,24 @@ function ExtensionsSection() {
   const [draft, setDraft] = useState<ExtensionsConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  // Opciones del cargador PLEGADAS por defecto: se despliegan con el icono de
-  // config (solo visible con el componente aplicado).
+  // Opciones PLEGADAS por defecto: se despliegan con el icono de config
+  // (solo visible con el componente aplicado). Un estado por módulo.
   const [configOpen, setConfigOpen] = useState(false);
+  const [bydConfigOpen, setBydConfigOpen] = useState(false);
 
   // La draft se inicializa desde la config resuelta (y se refresca si aún no
-  // había cargado). Guardar escribe { enabled, carCharger } completos.
+  // había cargado). Guardar escribe { enabled, carCharger, byd } completos.
   useEffect(() => {
-    if (ext && !draft) setDraft({ ...ext, chargerActive: undefined });
+    if (ext && !draft) setDraft({ ...ext, chargerActive: undefined, bydActive: undefined });
   }, [ext, draft]);
 
-  // Al desactivar el cargador se vuelve a plegar (estado por defecto).
+  // Al desactivar un módulo se vuelve a plegar (estado por defecto).
   useEffect(() => {
     if (!draft?.carCharger?.enabled) setConfigOpen(false);
   }, [draft?.carCharger?.enabled]);
+  useEffect(() => {
+    if (!draft?.byd?.enabled) setBydConfigOpen(false);
+  }, [draft?.byd?.enabled]);
 
   if (!ext || !draft) {
     return <p className="text-sm text-faint">…</p>;
@@ -707,6 +712,7 @@ function ExtensionsSection() {
       await apiPut<{ ok: boolean; restartNeeded?: boolean }>('/api/extensions', {
         enabled: next.enabled,
         carCharger: next.carCharger,
+        byd: next.byd,
       });
       invalidateExtensions();
       setSaved(true);
@@ -722,14 +728,47 @@ function ExtensionsSection() {
   const toggleMaster = (checked: boolean) => void save({ ...draft, enabled: checked });
   const toggleCharger = (checked: boolean) =>
     void save({ ...draft, carCharger: { ...draft.carCharger, enabled: checked } });
+  const toggleByd = (checked: boolean) =>
+    void save({ ...draft, byd: { ...draft.byd, enabled: checked } });
 
   const ch = draft.carCharger;
   const setCh = (patch: Partial<ExtensionsConfig['carCharger']>) =>
     setDraft({ ...draft, carCharger: { ...ch, ...patch } });
+  const byd = draft.byd;
+  const setByd = (patch: Partial<ExtensionsConfig['byd']>) =>
+    setDraft({ ...draft, byd: { ...byd, ...patch } });
+
+  const configBtn = (open: boolean, onClick: () => void, controls: string) => (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      aria-controls={controls}
+      aria-label={t('ajustes.extensions.configure')}
+      title={t('ajustes.extensions.configure')}
+      className={cn(
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
+        open
+          ? 'border-brand bg-brand/10 text-brand'
+          : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
+      )}
+    >
+      <Settings2 size={15} strokeWidth={1.75} />
+    </button>
+  );
+
+  const bydField = (key: keyof ExtensionsConfig['byd'], labelKey: string, ph = '') => (
+    <EntityField
+      label={t(labelKey)}
+      value={byd[key] as string}
+      onChange={(v) => setByd({ [key]: v } as Partial<ExtensionsConfig['byd']>)}
+      placeholder={ph}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Barra horizontal: interruptor maestro + módulo cargador en la misma fila */}
+      {/* Barra horizontal: interruptor maestro + módulos en la misma fila */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="flex items-center gap-2.5">
           <Puzzle size={18} strokeWidth={1.75} className="shrink-0 text-brand" />
@@ -743,24 +782,14 @@ function ExtensionsSection() {
               <CarFront size={18} strokeWidth={1.75} className="shrink-0 text-brand" />
               <span className="text-sm font-semibold text-app">{t('ajustes.extensions.carCharger')}</span>
               <Switch checked={ch.enabled} onCheckedChange={toggleCharger} disabled={saving} aria-label={t('ajustes.extensions.carCharger')} />
-              {ch.enabled && (
-                <button
-                  type="button"
-                  onClick={() => setConfigOpen((v) => !v)}
-                  aria-expanded={configOpen}
-                  aria-controls="ext-charger-config"
-                  aria-label={t('ajustes.extensions.configure')}
-                  title={t('ajustes.extensions.configure')}
-                  className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors',
-                    configOpen
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
-                  )}
-                >
-                  <Settings2 size={15} strokeWidth={1.75} />
-                </button>
-              )}
+              {ch.enabled && configBtn(configOpen, () => setConfigOpen((v) => !v), 'ext-charger-config')}
+            </div>
+            <div className="hidden h-6 w-px bg-app sm:block" />
+            <div className="flex items-center gap-2.5">
+              <Car size={18} strokeWidth={1.75} className="shrink-0 text-brand" />
+              <span className="text-sm font-semibold text-app">{t('ajustes.extensions.byd')}</span>
+              <Switch checked={byd.enabled} onCheckedChange={toggleByd} disabled={saving} aria-label={t('ajustes.extensions.byd')} />
+              {byd.enabled && configBtn(bydConfigOpen, () => setBydConfigOpen((v) => !v), 'ext-byd-config')}
             </div>
           </>
         )}
@@ -770,11 +799,11 @@ function ExtensionsSection() {
 
       {!draft.enabled ? (
         <p className="text-sm text-muted">{t('ajustes.extensions.offHint')}</p>
-      ) : !ch.enabled ? (
+      ) : !ch.enabled && !byd.enabled ? (
         <p className="text-sm text-muted">{t('ajustes.extensions.carChargerOffHint')}</p>
       ) : (
         <AnimatePresence initial={false}>
-          {configOpen && (
+          {configOpen && ch.enabled && (
             <motion.div
               key="ext-charger-config"
               id="ext-charger-config"
@@ -816,6 +845,64 @@ function ExtensionsSection() {
                   <EntityField label={t('ajustes.extensions.f.tempId')} value={ch.tempId} onChange={(v) => setCh({ tempId: v })} />
                   <EntityField label={t('ajustes.extensions.f.switchId')} value={ch.switchId} onChange={(v) => setCh({ switchId: v })} />
                   <EntityField label={t('ajustes.extensions.f.connectedStates')} value={ch.connectedStates.join(', ')} onChange={(v) => setCh({ connectedStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="connected" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void save(draft)}
+                    disabled={saving}
+                    className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                  >
+                    {t('ajustes.extensions.save')}
+                  </button>
+                  <p className="text-xs text-faint">{t('ajustes.extensions.entitiesHint')}</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {bydConfigOpen && byd.enabled && (
+            <motion.div
+              key="ext-byd-config"
+              id="ext-byd-config"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted">{t('ajustes.extensions.bydDesc')}</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {bydField('name', 'ajustes.extensions.f.name')}
+                  {bydField('socId', 'ajustes.extensions.f_byd.soc')}
+                  {bydField('rangeId', 'ajustes.extensions.f_byd.range')}
+                  {bydField('odometerId', 'ajustes.extensions.f_byd.odometer')}
+                  {bydField('batteryPowerId', 'ajustes.extensions.f_byd.batteryPower')}
+                  {bydField('cabinTempId', 'ajustes.extensions.f_byd.cabinTemp')}
+                  {bydField('exteriorTempId', 'ajustes.extensions.f_byd.exteriorTemp')}
+                  {bydField('chargingId', 'ajustes.extensions.f_byd.charging')}
+                  {bydField('pluggedId', 'ajustes.extensions.f_byd.plugged')}
+                  {bydField('onlineId', 'ajustes.extensions.f_byd.online')}
+                  {bydField('lockedId', 'ajustes.extensions.f_byd.locked')}
+                  {bydField('doorsId', 'ajustes.extensions.f_byd.doors')}
+                  {bydField('windowsId', 'ajustes.extensions.f_byd.windows')}
+                  {bydField('sentryId', 'ajustes.extensions.f_byd.sentry')}
+                  {bydField('tireFlId', 'ajustes.extensions.f_byd.tireFl')}
+                  {bydField('tireFrId', 'ajustes.extensions.f_byd.tireFr')}
+                  {bydField('tireRlId', 'ajustes.extensions.f_byd.tireRl')}
+                  {bydField('tireRrId', 'ajustes.extensions.f_byd.tireRr')}
+                  {bydField('locationId', 'ajustes.extensions.f_byd.location')}
+                  {bydField('gpsAgeId', 'ajustes.extensions.f_byd.gpsAge')}
+                  {bydField('lastUpdateId', 'ajustes.extensions.f_byd.lastUpdate')}
+                  {bydField('startChargeId', 'ajustes.extensions.f_byd.startCharge')}
+                  {bydField('stopChargeId', 'ajustes.extensions.f_byd.stopCharge')}
+                  {bydField('forcePollId', 'ajustes.extensions.f_byd.forcePoll')}
+                  {bydField('chargeToFullId', 'ajustes.extensions.f_byd.chargeToFull')}
+                  {bydField('scheduleEnabledId', 'ajustes.extensions.f_byd.scheduleEnabled')}
+                  {bydField('scheduleStartId', 'ajustes.extensions.f_byd.scheduleStart')}
+                  {bydField('scheduleEndId', 'ajustes.extensions.f_byd.scheduleEnd')}
+                  {bydField('repeatDailyId', 'ajustes.extensions.f_byd.repeatDaily')}
                 </div>
                 <div className="flex items-center gap-3">
                   <button

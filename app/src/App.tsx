@@ -9,6 +9,7 @@ import Bateria from '@/pages/Bateria';
 import Historico from '@/pages/Historico';
 import Ajustes from '@/pages/Ajustes';
 import Cargador from '@/pages/Cargador';
+import Coche from '@/pages/Coche';
 import StubPage from '@/pages/StubPage';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
               <Route path="/bateria" element={<Bateria />} />
               <Route path="/historico" element={<Historico />} />
               <Route path="/cargador" element={<Cargador />} />
+              <Route path="/coche" element={<Coche />} />
               <Route path="/ajustes" element={<Ajustes />} />
               <Route path="*" element={<StubPage />} />
             </Routes>

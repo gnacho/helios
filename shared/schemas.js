@@ -126,6 +126,42 @@ export function createSchemas(z) {
         chargingStates: z.array(z.string()).optional().default([]),
         connectedStates: z.array(z.string()).optional().default([]),
       }).optional().default({}),
+      // Módulo BYD (#100): panel del vehículo eléctrico (integración
+      // hass-byd-vehicle en HAOS). Todos los IDs son editables; los del
+      // perfil legacy son los reales de la instalación (BYD Atto 3).
+      byd: z.object({
+        enabled: z.boolean().optional().default(false),
+        name: z.string().min(1).max(60).optional().default(''),
+        socId: z.string().optional().default(''),
+        rangeId: z.string().optional().default(''),
+        odometerId: z.string().optional().default(''),
+        batteryPowerId: z.string().optional().default(''),
+        chargingId: z.string().optional().default(''),
+        pluggedId: z.string().optional().default(''),
+        onlineId: z.string().optional().default(''),
+        lockedId: z.string().optional().default(''),
+        doorsId: z.string().optional().default(''),
+        windowsId: z.string().optional().default(''),
+        sentryId: z.string().optional().default(''),
+        cabinTempId: z.string().optional().default(''),
+        exteriorTempId: z.string().optional().default(''),
+        tireFlId: z.string().optional().default(''),
+        tireFrId: z.string().optional().default(''),
+        tireRlId: z.string().optional().default(''),
+        tireRrId: z.string().optional().default(''),
+        locationId: z.string().optional().default(''),
+        gpsAgeId: z.string().optional().default(''),
+        lastUpdateId: z.string().optional().default(''),
+        // Acciones (servicios HAOS; vacío = botón oculto)
+        startChargeId: z.string().optional().default(''),
+        stopChargeId: z.string().optional().default(''),
+        forcePollId: z.string().optional().default(''),
+        chargeToFullId: z.string().optional().default(''),
+        scheduleEnabledId: z.string().optional().default(''),
+        scheduleStartId: z.string().optional().default(''),
+        scheduleEndId: z.string().optional().default(''),
+        repeatDailyId: z.string().optional().default(''),
+      }).optional().default({}),
     }),
   }
 }
