@@ -587,9 +587,25 @@
     dots.forEach((d, j) => d.addEventListener('click', () => go(j)))
 
     const lb = $('#lightbox'), lbImg = $('#lightboxImg')
-    const close = () => { lb.hidden = true; document.body.style.overflow = '' }
+    const open = (img) => {
+      lbImg.src = img.src
+      lb.hidden = false
+      lb.classList.remove('closing')
+      lb.classList.add('open')
+      document.body.style.overflow = 'hidden'
+    }
+    const close = () => {
+      if (lb.hidden) return
+      lb.classList.remove('open')
+      lb.classList.add('closing')
+      document.body.style.overflow = ''
+      setTimeout(() => {
+        lb.hidden = true
+        lb.classList.remove('closing')
+      }, reduceMotion ? 0 : 150)
+    }
     track.querySelectorAll('.slide img').forEach((img) => {
-      img.addEventListener('click', () => { lbImg.src = img.src; lb.hidden = false; document.body.style.overflow = 'hidden' })
+      img.addEventListener('click', () => open(img))
     })
     $('#lightboxClose').addEventListener('click', close)
     lb.addEventListener('click', (e) => { if (e.target === lb) close() })
