@@ -113,9 +113,12 @@ export class HAClient extends EventEmitter {
         if (diff['+']) {
           const cur = this.entities.get(id) || { state: undefined, attributes: {}, lastUpdated: undefined }
           const plus = diff['+']
+          // '+a' es un diff PARCIAL de attributes (solo los cambiados): hay
+          // que hacer merge con los existentes, no reemplazarlos (bug que
+          // evaporaba p.ej. lat/lon del device_tracker tras el primer update).
           this.entities.set(id, {
             state: plus.s !== undefined ? plus.s : cur.state,
-            attributes: plus.a !== undefined ? plus.a : cur.attributes,
+            attributes: plus.a !== undefined ? { ...cur.attributes, ...plus.a } : cur.attributes,
             lastUpdated: plus.lu !== undefined ? plus.lu : cur.lastUpdated,
           })
           this.emit('entity', id)
