@@ -101,6 +101,7 @@ button { font: inherit; cursor: pointer; background: none; border: none; color: 
   background: rgb(255 255 255 / 0.06);
 }
 .btn-ghost:hover { background: rgb(255 255 255 / 0.14); }
+.btn:active, .btn-primary:active, .btn-ghost:active { transform: translateY(0) scale(0.97); }
 .btn-lg { padding: 14px 28px; font-size: 1.02rem; }
 .btn-small { padding: 8px 16px; font-size: 0.86rem; }
 
@@ -527,6 +528,21 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
   background: rgb(0 0 0 / 0.85); backdrop-filter: blur(8px);
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+  pointer-events: none;
+}
+.lightbox.open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.lightbox.closing {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 150ms cubic-bezier(0.4, 0, 1, 1), transform 150ms cubic-bezier(0.4, 0, 1, 1);
+  pointer-events: none;
 }
 .lightbox[hidden] { display: none; }
 .slide img { cursor: zoom-in; }
@@ -540,7 +556,7 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
 .lightbox-close:hover { background: rgb(255 255 255 / 0.22); }
 
 /* ── Animaciones de entrada ── */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity 340ms var(--ease-out), transform 340ms var(--ease-out); }
 .reveal.visible { opacity: 1; transform: none; }
 
 /* ── Responsive ── */
@@ -560,7 +576,8 @@ ol.statutes { list-style: none; display: grid; grid-template-columns: 1fr; gap: 
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ticker-track, .live-dot { animation: none; }
-  .flow-particle { animation: none; }
   html { scroll-behavior: auto; }
+  .ticker-track, .live-dot { animation: none; }
+  .reveal, .reveal.visible { opacity: 1; transform: none; transition: none; }
+  .lightbox { transition: none; }
 }

@@ -587,9 +587,25 @@
     dots.forEach((d, j) => d.addEventListener('click', () => go(j)))
 
     const lb = $('#lightbox'), lbImg = $('#lightboxImg')
-    const close = () => { lb.hidden = true; document.body.style.overflow = '' }
+    const open = (img) => {
+      lbImg.src = img.src
+      lb.hidden = false
+      lb.classList.remove('closing')
+      lb.classList.add('open')
+      document.body.style.overflow = 'hidden'
+    }
+    const close = () => {
+      if (lb.hidden) return
+      lb.classList.remove('open')
+      lb.classList.add('closing')
+      document.body.style.overflow = ''
+      setTimeout(() => {
+        lb.hidden = true
+        lb.classList.remove('closing')
+      }, reduceMotion ? 0 : 150)
+    }
     track.querySelectorAll('.slide img').forEach((img) => {
-      img.addEventListener('click', () => { lbImg.src = img.src; lb.hidden = false; document.body.style.overflow = 'hidden' })
+      img.addEventListener('click', () => open(img))
     })
     $('#lightboxClose').addEventListener('click', close)
     lb.addEventListener('click', (e) => { if (e.target === lb) close() })
@@ -602,7 +618,7 @@
 
   /* ── Reveal ── */
   function setupReveal() {
-    const els = document.querySelectorAll('.section-head, .feature-card, .how-step, .slide, .faq-item, .thanks-card, .cta-final, .statute')
+    const els = document.querySelectorAll('.feature-card, .how-step, .faq-item, .thanks-card, .cta-final, .statute')
     els.forEach((el) => el.classList.add('reveal'))
     const io = new IntersectionObserver((entries) => {
       entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('visible'); io.unobserve(en.target) } })
@@ -672,24 +688,39 @@
       chartState.set(canvas, st)
       return dirty
     }
-    function frame(ts) {
-      const h = hourNow()
-      drawSky(scrollPhase(), h)
-      theaterScroll()
+    function renderCharts() {
       const heroChart = $('#heroChart'), theaterChart = $('#theaterChart'), theaterHist = $('#theaterHist')
       if (chartNeedsRedraw(heroChart)) drawDayChart(heroChart, true)
       if (chartNeedsRedraw(theaterChart)) drawDayChart(theaterChart, false)
       if (chartNeedsRedraw(theaterHist)) drawHist(theaterHist)
+    }
+    function tick() {
+      const h = hourNow()
+      updateStats()
+      updateBattery(h)
+      updateFlow(h)
+      renderCharts()
+    }
+    function frame(ts) {
+      const h = hourNow()
+      drawSky(scrollPhase(), h)
+      theaterScroll()
+      renderCharts()
       updateFlowParticles(ts)
       if (ts - lastDom > 1000) {
         lastDom = ts
-        updateStats()
-        updateBattery(h)
-        updateFlow(h)
+        tick()
       }
       requestAnimationFrame(frame)
     }
-    requestAnimationFrame(frame)
+    if (reduceMotion) {
+      drawSky(scrollPhase(), hourNow())
+      renderCharts()
+      tick()
+      setInterval(tick, 1000)
+    } else {
+      requestAnimationFrame(frame)
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init)
