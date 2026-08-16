@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://helios.cloudless.club/sitemap.xml

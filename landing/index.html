@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Helios — Tu sol, en tu pantalla. Sin nube.</title>
+  <title>Helios, tu sol en tu pantalla. Sin nube.</title>
   <meta name="description" content="Helios es un monitor solar de solo lectura para cualquier instalación Home Assistant: producción, consumo, batería y ahorro en euros. Sin nube, 100% AGPL-3.0." />
   <meta name="theme-color" content="#0b1030" />
   <link rel="canonical" href="https://helios.cloudless.club/" />
@@ -12,12 +12,12 @@
   <link rel="alternate" hreflang="x-default" href="https://helios.cloudless.club/" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Helios" />
-  <meta property="og:title" content="Helios — Tu sol, en tu pantalla. Sin nube." />
+  <meta property="og:title" content="Helios, tu sol en tu pantalla. Sin nube." />
   <meta property="og:description" content="Monitor solar de solo lectura para cualquier instalación Home Assistant. Sin nube, 100% AGPL-3.0." />
   <meta property="og:url" content="https://helios.cloudless.club/" />
   <meta property="og:image" content="https://helios.cloudless.club/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Helios — Tu sol, en tu pantalla. Sin nube." />
+  <meta name="twitter:title" content="Helios, tu sol en tu pantalla. Sin nube." />
   <meta name="twitter:description" content="Monitor solar de solo lectura para cualquier instalación Home Assistant. Sin nube, 100% AGPL-3.0." />
   <meta name="twitter:image" content="https://helios.cloudless.club/og.png" />
   <link rel="icon" type="image/png" href="/favicon-32.png" />
@@ -28,6 +28,24 @@
   <link rel="stylesheet" href="/styles.css?v=8" />
   <script defer src="/i18n.js?v=8"></script>
   <script defer src="/app.js?v=8"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Organization", "name": "Helios", "url": "https://helios.cloudless.club/",
+        "logo": "https://helios.cloudless.club/og.png",
+        "sameAs": ["https://github.com/gnacho/panelsolar", "https://ko-fi.com/gnacho", "https://cloudless.club"] },
+      { "@type": "WebSite", "name": "Helios", "url": "https://helios.cloudless.club/", "description": "Monitor solar de solo lectura para Home Assistant, sin nube.", "inLanguage": "es",
+        "publisher": { "@type": "Organization", "name": "Helios" } },
+      { "@type": "SoftwareApplication", "name": "Helios", "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any", "url": "https://github.com/gnacho/panelsolar",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "description": "Monitor solar de solo lectura para cualquier instalación Home Assistant: producción, consumo, batería y ahorro en euros. Sin nube.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }, "isAccessibleForFree": true,
+        "author": { "@type": "Organization", "name": "Helios" } }
+    ]
+  }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="misc.skip">Saltar al contenido</a>
