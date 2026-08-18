@@ -508,6 +508,40 @@ describe('motor de alertas', () => {
     expect(llamadas).toHaveLength(2)
   })
 
+  it('batería llena: dispara al llegar al 100 % y se rearma con histéresis', () => {
+    const { llamadas, notifyFn } = capturaNotifs()
+    const solar = mockSolar({ soc: 100 })
+    const engine = createAlertsEngine({ db, ha: mockHa(), solar, notifyFn })
+    engine.tick()
+    expect(llamadas.map((l) => l.tipo)).toEqual(['bateria_llena'])
+    expect(llamadas[0].datos).toEqual({ soc: 100 })
+    expect(llamadas[0].opciones.severity).toBe('normal')
+    engine.tick()
+    expect(llamadas).toHaveLength(1) // no repite mientras sigue al 100
+    // Baja a 97 (rearma a <95): sigue alertado
+    solar.computeLive = mockSolar({ soc: 97 }).computeLive
+    engine.tick()
+    expect(llamadas).toHaveLength(1)
+    // Vuelve a 100 sin haber bajado de 95: NO repite
+    solar.computeLive = mockSolar({ soc: 100 }).computeLive
+    engine.tick()
+    expect(llamadas).toHaveLength(1)
+    // Baja de 95: rearma; una nueva subida al 100 dispara de nuevo
+    solar.computeLive = mockSolar({ soc: 80 }).computeLive
+    engine.tick()
+    solar.computeLive = mockSolar({ soc: 100 }).computeLive
+    engine.tick()
+    expect(llamadas).toHaveLength(2)
+  })
+
+  it('batería llena: no dispara por debajo del 100 %', () => {
+    const { llamadas, notifyFn } = capturaNotifs()
+    const engine = createAlertsEngine({ db, ha: mockHa(), solar: mockSolar({ soc: 99.6 }), notifyFn })
+    engine.tick()
+    engine.tick()
+    expect(llamadas).toHaveLength(0)
+  })
+
   it('batería: respeta la reserva configurada en install_config', () => {
     const { llamadas, notifyFn } = capturaNotifs()
     db.prepare('INSERT INTO kv (key, value) VALUES (?, ?)').run('install_config', JSON.stringify({ batteryReservePct: 30 }))
