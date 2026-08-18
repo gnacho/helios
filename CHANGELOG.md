@@ -7,6 +7,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.11] - 2026-08-18
+
+### Added
+
+- **Aviso de batería llena**: nueva alerta push que avisa una vez cuando la
+  batería llega al 100 % y se rearma al bajar del 95 % (la misma histéresis
+  de 5 puntos que la alerta de batería baja). Severidad normal: respeta las
+  horas de silencio y tiene interruptor propio en las preferencias de
+  notificaciones de Ajustes. (#104)
+
 ## [0.8.10] - 2026-08-15
 
 ### Added
