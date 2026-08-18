@@ -34,6 +34,9 @@
 //   critical: la casa sigue funcionando, solo falta producción.
 // - bateria_baja: SOC ≤ reserva (install_config.batteryReservePct, defecto 20).
 //   Se rearma cuando SOC > reserva + 5.
+// - bateria_llena: SOC ≥ 100 (flanco, un aviso). Se rearma cuando SOC baja de
+//   95 (misma histéresis de 5 puntos que bateria_baja). Severidad normal:
+//   es informativa (respeta quiet hours).
 // - resumen_diario: scheduler propio que se envía al ANOCHECER (next_setting de
 //   sun.sun + un offset para asentar las últimas lecturas) con los KPI del día.
 //   Fallback a hora fija si falta el dato solar. Ver proximoEnvioResumen.
@@ -66,6 +69,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     fox: { mal: 0, alertado: false },
     red: { mal: 0, ok: 0, alertado: false },
     bateria: { alertado: false },
+    bateriaLlena: { alertado: false },
   }
 
   function disparar(tipo, datos, opciones) {
@@ -201,6 +205,16 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
       disparar('bateria_baja', { soc: live.soc, reserva }, { severity: 'high' })
     } else if (estado.bateria.alertado && live.soc > reserva + HISTERESIS_SOC) {
       estado.bateria.alertado = false
+    }
+
+    // ── Batería llena (SOC ≥ 100) ───────────────────────────────────
+    // Flanco simple: avisa una vez al llegar al 100 % y se rearma al bajar
+    // de 95, para no repetir el aviso si el SOC oscila en 99-100.
+    if (!estado.bateriaLlena.alertado && live.soc >= 100) {
+      estado.bateriaLlena.alertado = true
+      disparar('bateria_llena', { soc: live.soc }, { severity: 'normal' })
+    } else if (estado.bateriaLlena.alertado && live.soc < 100 - HISTERESIS_SOC) {
+      estado.bateriaLlena.alertado = false
     }
   }
 

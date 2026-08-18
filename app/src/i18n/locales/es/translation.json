@@ -494,6 +494,7 @@
         "corte_red": "Corte de red",
         "corte_red_ok": "Red recuperada",
         "bateria_baja": "Batería baja",
+        "bateria_llena": "Batería llena",
         "resumen_diario": "Resumen diario al anochecer"
       }
     },

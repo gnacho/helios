@@ -59,6 +59,7 @@ const CATALOGO = {
     corte_red: { titulo: 'Corte de red', cuerpo: () => 'Posible corte de red eléctrica: consumo desde batería/PV' },
     corte_red_ok: { titulo: 'Red recuperada', cuerpo: () => 'La red eléctrica vuelve a estar presente' },
     bateria_baja: { titulo: 'Batería baja', cuerpo: (d) => `SOC en ${d.soc}% (reserva ${d.reserva}%)` },
+    bateria_llena: { titulo: 'Batería llena', cuerpo: (d) => `La batería está al ${d.soc}%` },
     resumen_diario: {
       titulo: 'Resumen del día',
       cuerpo: (d) => `Producción ${d.produccion} kWh · Consumo ${d.consumo} kWh · Autoconsumo ${d.autoconsumo}%`,
@@ -73,6 +74,7 @@ const CATALOGO = {
     corte_red: { titulo: 'Grid outage', cuerpo: () => 'Possible grid outage: running on battery/PV' },
     corte_red_ok: { titulo: 'Grid restored', cuerpo: () => 'Grid power is back' },
     bateria_baja: { titulo: 'Low battery', cuerpo: (d) => `SOC at ${d.soc}% (reserve ${d.reserva}%)` },
+    bateria_llena: { titulo: 'Battery full', cuerpo: (d) => `The battery is at ${d.soc}%` },
     resumen_diario: {
       titulo: 'Daily summary',
       cuerpo: (d) => `Production ${d.produccion} kWh · Consumption ${d.consumo} kWh · Self-consumption ${d.autoconsumo}%`,
@@ -87,6 +89,7 @@ const CATALOGO = {
     corte_red: { titulo: '电网停电', cuerpo: () => '可能电网停电：正在使用电池/光伏供电' },
     corte_red_ok: { titulo: '电网已恢复', cuerpo: () => '电网供电已恢复' },
     bateria_baja: { titulo: '电池电量低', cuerpo: (d) => `SOC ${d.soc}%（保留 ${d.reserva}%）` },
+    bateria_llena: { titulo: '电池已满', cuerpo: (d) => `电池电量已达 ${d.soc}%` },
     resumen_diario: {
       titulo: '每日总结',
       cuerpo: (d) => `发电 ${d.produccion} kWh · 用电 ${d.consumo} kWh · 自用 ${d.autoconsumo}%`,
@@ -104,6 +107,7 @@ export const TIPOS_ALERTA = [
   'corte_red',
   'corte_red_ok',
   'bateria_baja',
+  'bateria_llena',
   'resumen_diario',
 ]
 

@@ -1202,6 +1202,7 @@ const TIPOS_NOTIF_USUARIO = [
   'corte_red',
   'corte_red_ok',
   'bateria_baja',
+  'bateria_llena',
   'resumen_diario',
 ] as const;
 
