@@ -8,6 +8,9 @@
 <p align="center">
   <a href="https://helios.cloudless.club"><img alt="Website" src="https://img.shields.io/badge/Website-helios.cloudless.club-blue"></a>
   <a href="https://demo.helios.cloudless.club"><img alt="Live demo" src="https://img.shields.io/badge/Live%20demo-demo.helios.cloudless.club-blue"></a>
+  <a href="https://github.com/gnacho/helios/releases"><img alt="Release" src="https://img.shields.io/github/v/release/gnacho/helios"></a>
+  <a href="https://github.com/gnacho/helios/actions/workflows/release.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gnacho/helios/release.yml?branch=main"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/gnacho/helios"></a>
   <a href="https://ko-fi.com/gnacho"><img alt="Support on Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
