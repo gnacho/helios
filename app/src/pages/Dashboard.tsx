@@ -115,7 +115,7 @@ export default function Dashboard() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
-          className="helios-card col-span-12 order-2 p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3"
+          className="helios-card col-span-12 order-2 flex flex-col p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3"
         >
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[15px] font-semibold text-app">{t('dashboard.flowTitle')}</h2>
@@ -127,7 +127,7 @@ export default function Dashboard() {
               {t('dashboard.live')}
             </span>
           </div>
-          <EnergyFlowDiagram live={live} />
+          <EnergyFlowDiagram live={live} className="my-auto" />
         </motion.section>
 
         <motion.div
