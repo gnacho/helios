@@ -14,6 +14,8 @@
   <a href="https://ko-fi.com/gnacho"><img alt="Support on Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
+<p align="center"><a href="https://demo.helios.cloudless.club"><strong>Try the live demo</strong></a> on <code>demo.helios.cloudless.club</code></p>
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-en-dark.png">
@@ -32,6 +34,10 @@ Helios is a solar monitor for a home installation: two inverters (Solis
 from Home Assistant, and savings in euros computed against the real
 electricity tariff. One Node + SQLite service running in an LXC at home.
 No cloud.
+
+> **Try the live demo**
+>
+> See it running without installing anything. Head to **[demo.helios.cloudless.club](https://demo.helios.cloudless.club)** — a sample solar installation with realistic solar data, no sign-up required. In read-only mode, so you can explore freely.
 
 > **Started as one install, now mostly configurable.** Helios began as my own
 > setup (two specific inverters and one battery) and those details were

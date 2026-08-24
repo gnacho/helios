@@ -14,6 +14,8 @@
   <a href="https://ko-fi.com/gnacho"><img alt="Apóyame en Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
+<p align="center"><a href="https://demo.helios.cloudless.club"><strong>Prueba la demo en vivo</strong></a> en <code>demo.helios.cloudless.club</code></p>
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-es-dark.png">
@@ -32,6 +34,10 @@ Helios es el monitor solar de una instalación doméstica: dos inversores
 histórico, datos en vivo desde Home Assistant y el ahorro en euros
 calculado contra la tarifa eléctrica real. Un único servicio Node +
 SQLite corriendo en un LXC en casa. Sin nube.
+
+> **Prueba la demo en vivo**
+>
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.helios.cloudless.club](https://demo.helios.cloudless.club)** — una instalación solar de ejemplo con datos solares realistas, sin registro. En modo de solo lectura, para que explores sin riesgo.
 
 > **Nació hecho a medida, ahora es mayormente configurable.** Helios empezó
 > como mi propia configuración — dos inversores concretos y una batería — y
