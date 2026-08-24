@@ -35,6 +35,10 @@ histórico, datos en vivo desde Home Assistant y el ahorro en euros
 calculado contra la tarifa eléctrica real. Un único servicio Node +
 SQLite corriendo en un LXC en casa. Sin nube.
 
+> **Prueba la demo en vivo**
+>
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.helios.cloudless.club](https://demo.helios.cloudless.club)** — una instalación solar de ejemplo con datos solares realistas, sin registro. En modo de solo lectura, para que explores sin riesgo.
+
 > **Nació hecho a medida, ahora es mayormente configurable.** Helios empezó
 > como mi propia configuración — dos inversores concretos y una batería — y
 > esos datos estaban hardcodeados. Desde 0.7.x la topología de la instalación

@@ -35,6 +35,10 @@ from Home Assistant, and savings in euros computed against the real
 electricity tariff. One Node + SQLite service running in an LXC at home.
 No cloud.
 
+> **Try the live demo**
+>
+> See it running without installing anything. Head to **[demo.helios.cloudless.club](https://demo.helios.cloudless.club)** — a sample solar installation with realistic solar data, no sign-up required. In read-only mode, so you can explore freely.
+
 > **Started as one install, now mostly configurable.** Helios began as my own
 > setup (two specific inverters and one battery) and those details were
 > hardcoded. Since 0.7.x the installation topology (inverters, battery, grid
