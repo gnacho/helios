@@ -7,6 +7,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+### Added
+
+- **Histórico ilimitado de curvas**: Helios guarda la curva de cada día en su
+  propia base de datos (`day_series`), de modo que las gráficas del histórico
+  dejan de depender de la retención (10 días) del recorder de HAOS. Al arrancar
+  y en la consolidación nocturna, un backfill idempotente rellena las curvas de
+  los días que HAOS aún conserva y, si existe un backup de HAOS previo, también
+  los días de esa fuente. Los días sin sensor de potencia de un inversor se
+  marcan como curva estimada. (#114)
+
 ## [0.8.11] - 2026-08-18
 
 ### Added

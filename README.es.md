@@ -8,8 +8,13 @@
 <p align="center">
   <a href="https://helios.cloudless.club"><img alt="Sitio web" src="https://img.shields.io/badge/Website-helios.cloudless.club-blue"></a>
   <a href="https://demo.helios.cloudless.club"><img alt="Demo en vivo" src="https://img.shields.io/badge/Live%20demo-demo.helios.cloudless.club-blue"></a>
+  <a href="https://github.com/gnacho/helios/releases"><img alt="Release" src="https://img.shields.io/github/v/release/gnacho/helios"></a>
+  <a href="https://github.com/gnacho/helios/actions/workflows/release.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/gnacho/helios/release.yml?branch=main"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/gnacho/helios"></a>
   <a href="https://ko-fi.com/gnacho"><img alt="Apóyame en Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
+
+<p align="center"><a href="https://demo.helios.cloudless.club"><strong>Prueba la demo en vivo</strong></a> en <code>demo.helios.cloudless.club</code></p>
 
 <p align="center">
   <picture>
@@ -29,6 +34,10 @@ Helios es el monitor solar de una instalación doméstica: dos inversores
 histórico, datos en vivo desde Home Assistant y el ahorro en euros
 calculado contra la tarifa eléctrica real. Un único servicio Node +
 SQLite corriendo en un LXC en casa. Sin nube.
+
+> **Prueba la demo en vivo**
+>
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.helios.cloudless.club](https://demo.helios.cloudless.club)** — una instalación solar de ejemplo con datos solares realistas, sin registro. En modo de solo lectura, para que explores sin riesgo.
 
 > **Nació hecho a medida, ahora es mayormente configurable.** Helios empezó
 > como mi propia configuración — dos inversores concretos y una batería — y
