@@ -83,6 +83,9 @@ ha.on('connected', async () => {
       const r = await solar.maybeBackfill(ha, db)
       if (r.ran) console.log(`[helios] backfill inicial: ${r.rows} días`)
       await solar.ensureConsumptionBaseline(ha, db)
+      const daySeriesBackup = path.join(config.dataDir, 'day-series-backup.json')
+      const s = await solar.backfillDaySeries(ha, db, daySeriesBackup)
+      if (s.ran) console.log(`[helios] backfill curvas: ${s.rows} días`)
       const charged = await extensions.backfillChargerHistory(ha, db).catch((err) => {
         console.error('[helios] backfill cargador error:', err.message)
         return 0
@@ -829,6 +832,9 @@ function scheduleNightly() {
     try {
       const n = await solar.backfillHistory(ha, db)
       await solar.ensureConsumptionBaseline(ha, db)
+      const daySeriesBackup = path.join(config.dataDir, 'day-series-backup.json')
+      const s = await solar.backfillDaySeries(ha, db, daySeriesBackup)
+      if (s.ran) console.log(`[helios] backfill curvas nocturno: ${s.rows} días`)
       await extensions.backfillChargerHistory(ha, db).catch(() => 0)
       purgeAudit(db)
       console.log(`[helios] consolidación nocturna: ${n} días`)

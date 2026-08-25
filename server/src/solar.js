@@ -5,8 +5,9 @@
 // Contrato hacia el frontend: computeLive y las series mantienen solis/fox como
 // claves de los 2 PRIMEROS inversores (compatibilidad con el frontend actual)
 // y añaden inverters[] para topologías con N inversores o nombres distintos.
+import fs from 'node:fs'
 import { config } from './config.js'
-import { upsertDaily, dailyEmpty, kvGet, kvSet } from './db.js'
+import { upsertDaily, dailyEmpty, kvGet, kvSet, upsertDaySeries, getDaySeriesRow, daySeriesDates } from './db.js'
 import { getInstall, getEntities, getEnergyEntities, deepSources, deepSourceDailyKeys } from './install.js'
 
 const num = (v) => {
@@ -273,6 +274,22 @@ async function getDaySeriesUncached(ha, dateStr, db) {
     types: ['mean'],
   })
 
+  return buildDaySeries(stats, dateStr, db)
+}
+
+// Construye los puntos de la curva de un día a partir de las estadísticas
+// 5-minutos ({sensorId: [{start, mean}]}). Reutilizable para la curva en vivo
+// (HAOS) y para el backfill desde una fuente externa (backup de HAOS). El
+// heurístico de curva estimada (Solis sin state_class) también aplica aquí.
+function buildDaySeries(stats, dateStr, db) {
+  const t = getInstall()
+  const invIds = t.inverters.map((inv) => inv.powerId).filter(Boolean)
+  const ids = [...invIds, ...t.consumption.powerIds]
+  if (t.battery.enabled) {
+    if (t.battery.powerId) ids.push(t.battery.powerId)
+    if (t.battery.socId) ids.push(t.battery.socId)
+  }
+
   const buckets = new Map()
   for (const id of ids) {
     for (const row of stats[id] || []) {
@@ -364,13 +381,127 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   return { points, estimated }
 }
 
-// Serie del día cacheada: hoy TTL 60 s (cambia con cada estadística de 5 min),
-// días pasados TTL 6 h (inmutables salvo recálculo de backfill nocturno).
-export const getDaySeries = cachedCollector(
+// Caché en memoria de la serie: hoy TTL 60 s (cambia con cada estadística de
+// 5 min), días pasados TTL 6 h (inmutables salvo recálculo de backfill
+// nocturno). La persistencia en day_series (BD propia, ilimitada) la añade el
+// wrapper getDaySeries: los días pasados con fila se sirven de la BD sin tocar
+// HAOS, y cada cómputo (hoy o pasado) refresca la fila.
+const getDaySeriesCached = cachedCollector(
   (_ha, dateStr) => dateStr || todayStr(),
   (_ha, dateStr) => ((dateStr || todayStr()) === todayStr() ? 60_000 : 6 * 3600_000),
   getDaySeriesUncached
 )
+
+export async function getDaySeries(ha, dateStr, db) {
+  const key = dateStr || todayStr()
+  const isToday = key === todayStr()
+  if (db && !isToday) {
+    const row = getDaySeriesRow(db, key)
+    if (row) return { points: JSON.parse(row.points_json), estimated: row.estimated === 1 }
+  }
+  const result = await getDaySeriesCached(ha, dateStr, db)
+  if (db && result.points.length) {
+    upsertDaySeries(db, {
+      date: key,
+      points_json: JSON.stringify(result.points),
+      estimated: result.estimated ? 1 : 0,
+      source: isToday ? 'live' : 'haos',
+      updated_at: Date.now(),
+    })
+  }
+  return result
+}
+
+// Backfill de curvas: rellena day_series para todos los días que aún tenga
+// HAOS (curva en vivo, ventana de retención ~15 días) y, si se pasa un
+// backupFilePath (JSON con la salida de statisticsDuringPeriod de un HAOS
+// antiguo), también los días de esa fuente. Días fuera de ambas fuentes se
+// saltan (no hay datos). Es idempotente: no toca días ya persistidos.
+// Devuelve { ran, rows }.
+export async function backfillDaySeries(ha, db, backupFilePath) {
+  const firstDaily = db.prepare('SELECT MIN(date) AS d FROM daily').get().d
+  if (!firstDaily) return { ran: false, rows: 0 }
+  const done = new Set(daySeriesDates(db))
+  const backup = backupFilePath ? fs.existsSync(backupFilePath) ? JSON.parse(fs.readFileSync(backupFilePath, 'utf8')) : null : null
+
+  // Ventana HAOS en vivo: los últimos 15 días (la retención del recorder con
+  // keep_days=10 deja ~10 días; 15 da margen). Días más viejos solo pueden
+  // venir del backup.
+  const haosFloor = new Date()
+  haosFloor.setDate(haosFloor.getDate() - 15)
+  haosFloor.setHours(0, 0, 0, 0)
+
+  let ran = false
+  let rows = 0
+  const cursor = new Date(firstDaily + 'T00:00:00')
+  const end = new Date()
+  end.setDate(end.getDate() + 1)
+
+  for (const key of eachDayKey(cursor, end)) {
+    if (done.has(key)) continue
+    const keyDate = new Date(key + 'T00:00:00')
+    const fromBackup = backup && Object.keys(sliceStatsByDay(backup, key)).length > 0
+    if (!fromBackup && keyDate < haosFloor) continue
+    // Fuente externa (backup de HAOS) primero: curva del día con sus stats.
+    let points = null
+    let estimated = false
+    let source = 'haos'
+    if (fromBackup) {
+      const res = buildDaySeries(sliceStatsByDay(backup, key), key, db)
+      points = res.points
+      estimated = res.estimated
+      source = 'backup'
+    }
+    if (!points || !points.length) {
+      const res = await getDaySeriesUncached(ha, key, db).catch(() => ({ points: [], estimated: false }))
+      points = res.points
+      estimated = res.estimated
+      source = 'haos'
+    }
+    if (!points || !points.length) continue
+    upsertDaySeries(db, {
+      date: key,
+      points_json: JSON.stringify(points),
+      estimated: estimated ? 1 : 0,
+      source,
+      updated_at: Date.now(),
+    })
+    done.add(key)
+    ran = true
+    rows++
+  }
+  return { ran, rows }
+}
+
+// sliceStatsByDay filtra un mapa {sensorId: [{start, mean}]} a las filas cuyo
+// start cae dentro del día 'key' (YYYY-MM-DD).
+function sliceStatsByDay(stats, key) {
+  const out = {}
+  const dayStart = new Date(key + 'T00:00:00')
+  const dayEnd = new Date(dayStart)
+  dayEnd.setDate(dayEnd.getDate() + 1)
+  for (const [sid, rows] of Object.entries(stats)) {
+    const inDay = (rows || []).filter((r) => {
+      const d = new Date(r.start)
+      return d >= dayStart && d < dayEnd
+    })
+    if (inDay.length) out[sid] = inDay
+  }
+  return out
+}
+
+// eachDayKey itera los días (YYYY-MM-DD) entre dos Date (start incluido, end
+// excluido).
+function eachDayKey(start, end) {
+  const out = []
+  const cur = new Date(start)
+  cur.setHours(0, 0, 0, 0)
+  while (cur < end) {
+    out.push(dateKey(cur))
+    cur.setDate(cur.getDate() + 1)
+  }
+  return out
+}
 
 export async function getKpis(ha, dateStr, db) {
   const today = todayStr()
