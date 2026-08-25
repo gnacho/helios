@@ -14,6 +14,13 @@ export function initSchema(db) {
       battery_charged_kwh REAL,
       battery_discharged_kwh REAL
     );
+    CREATE TABLE IF NOT EXISTS day_series (
+      date TEXT PRIMARY KEY,
+      points_json TEXT NOT NULL,
+      estimated INTEGER DEFAULT 0,
+      source TEXT DEFAULT 'live',
+      updated_at INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
@@ -192,6 +199,26 @@ export function dailyCount(db, from, to) {
 
 export function dailyEmpty(db) {
   return db.prepare('SELECT COUNT(*) AS n FROM daily').get().n === 0
+}
+
+export function upsertDaySeries(db, row) {
+  db.prepare(
+    `INSERT INTO day_series (date, points_json, estimated, source, updated_at)
+     VALUES (@date, @points_json, @estimated, @source, @updated_at)
+     ON CONFLICT(date) DO UPDATE SET
+       points_json=excluded.points_json,
+       estimated=excluded.estimated,
+       source=excluded.source,
+       updated_at=excluded.updated_at`
+  ).run(row)
+}
+
+export function getDaySeriesRow(db, date) {
+  return db.prepare('SELECT * FROM day_series WHERE date = ?').get(date)
+}
+
+export function daySeriesDates(db) {
+  return db.prepare('SELECT date FROM day_series').all().map((r) => r.date)
 }
 
 export function createUser(db, username, passwordHash, language = 'es', role = 'user') {
