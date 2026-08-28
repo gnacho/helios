@@ -196,28 +196,11 @@ function AdminZone() {
     setChecking(true);
     setUpdateStatus('idle');
     try {
-      const repo = REPO_URL.match(/github\.com\/([^/]+\/[^/.]+)/)?.[1];
-      if (!repo) throw new Error('no repo');
-      const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-        headers: { Accept: 'application/vnd.github+json' },
-      });
-      let version = '';
-      if (res.ok) {
-        const data = await res.json();
-        version = data.tag_name || '';
-      } else if (res.status === 404) {
-        const tagRes = await fetch(`https://api.github.com/repos/${repo}/tags?per_page=1`, {
-          headers: { Accept: 'application/vnd.github+json' },
-        });
-        if (tagRes.ok) {
-          const tags = await tagRes.json();
-          version = tags[0]?.name || '';
-        }
-      }
-      if (!version || compareSemver(version, pkg.version) <= 0) {
+      const status = await apiFetch<{ current: string; latest: string; available: boolean }>('/api/update/status');
+      if (!status?.available || !status.latest) {
         setUpdateStatus('uptodate');
       } else {
-        setLatestVersion(version);
+        setLatestVersion(status.latest);
         setUpdateStatus('available');
       }
     } catch {
@@ -1989,13 +1972,6 @@ function InstallSection({ state, install }: { state: InstallState; install: () =
 // ── § Acerca de ──────────────────────────────────────────────────────────────
 
 const REPO_URL = 'https://github.com/gnacho/helios';
-
-function compareSemver(a: string, b: string): number {
-  const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  return 0;
-}
 
 function AboutSection() {
   const { t } = useTranslation();

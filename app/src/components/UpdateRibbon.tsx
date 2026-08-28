@@ -3,21 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw, X } from 'lucide-react';
 import { apiFetch } from '@/data/api-client';
 import { applyRelease } from '@/data/apply-update';
-import pkg from '../../package.json';
 
 const CHECK_KEY = 'helios-last-update-check';
 const DISMISS_KEY = 'helios-release-dismissed';
 const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000;
 const REPO_URL = 'https://github.com/gnacho/helios';
-
-function compareSemver(a: string, b: string): number {
-  const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  }
-  return 0;
-}
 
 function getDismissed(): string {
   try { return window.localStorage.getItem(DISMISS_KEY) ?? ''; } catch { return ''; }
@@ -40,31 +30,15 @@ export default function UpdateRibbon() {
         if (Date.now() - last < CHECK_INTERVAL) return;
         window.localStorage.setItem(CHECK_KEY, String(Date.now()));
 
-        const repo = REPO_URL.match(/github\.com\/([^/]+\/[^/.]+)/)?.[1];
-        if (!repo) return;
         setState('checking');
-        const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-          headers: { Accept: 'application/vnd.github+json' },
-        });
-        let version = '';
-        if (res.ok) {
-          const data = (await res.json()) as { tag_name?: string };
-          version = data.tag_name || '';
-        } else if (res.status === 404) {
-          const tagRes = await fetch(`https://api.github.com/repos/${repo}/tags?per_page=1`, {
-            headers: { Accept: 'application/vnd.github+json' },
-          });
-          if (tagRes.ok) {
-            const tags = (await tagRes.json()) as { name?: string }[];
-            version = tags[0]?.name || '';
-          }
-        }
+        const status = await apiFetch<{ current: string; latest: string; available: boolean }>('/api/update/status');
         if (stale) return;
-        const ver = version.replace(/^v/, '');
-        if (!version || compareSemver(version, pkg.version) <= 0) setState('uptodate');
-        else if (ver === getDismissed()) setState('uptodate');
-        else {
-          setLatestVersion(ver);
+        if (!status?.available || !status.latest) {
+          setState('uptodate');
+        } else if (status.latest === getDismissed()) {
+          setState('uptodate');
+        } else {
+          setLatestVersion(status.latest);
           setState('available');
         }
       } catch {
