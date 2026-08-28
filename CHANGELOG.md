@@ -7,6 +7,22 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.13] - 2026-08-28
+
+### Added
+
+- **Asistente de actualización**: diálogo completo con confirmación, changelog
+  de la release, pasos detallados (buscar, descargar, verificar, instalar,
+  reiniciar) con barra de progreso y porcentaje. Requiere confirmar la caída
+  del servicio antes de aplicar. Recibe el progreso en tiempo real por SSE
+  con fallback a polling. (#117)
+
+### Fixed
+
+- **Script de update con progreso fino**: `helios-update.sh` ahora escribe
+  `update-progress.json` en cada paso para que el frontend muestre el avance
+  detallado en lugar de un spinner genérico. (#117)
+
 ## [0.8.12] - 2026-08-28
 
 ### Added
