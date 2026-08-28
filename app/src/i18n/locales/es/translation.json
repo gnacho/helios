@@ -644,5 +644,28 @@
     "actor": "Usuario",
     "when": "Cuándo",
     "empty": "Sin actividad registrada"
+  },
+  "update": {
+    "dialog": {
+      "title": "Actualizar Helios",
+      "desc": "Se descargará e instalará la nueva versión.",
+      "changelogTitle": "Novedades",
+      "downNotice": "El servicio estará caído mientras se reinicia",
+      "cancel": "Cancelar",
+      "start": "Actualizar",
+      "progressLabel": "Progreso de la actualización",
+      "hideHint": "Puedes cerrar esta ventana; la actualización continúa en segundo plano",
+      "restarting": "Reiniciando…",
+      "reloadSoon": "La página se recargará automáticamente",
+      "failed": "No se pudo completar la actualización",
+      "close": "Cerrar"
+    },
+    "step": {
+      "fetch": "Buscando nueva versión",
+      "download": "Descargando",
+      "verify": "Verificando integridad",
+      "install": "Instalando",
+      "restart": "Reiniciando servicio"
+    }
   }
 }

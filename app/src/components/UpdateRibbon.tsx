@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, X } from 'lucide-react';
 import { apiFetch } from '@/data/api-client';
-import { applyRelease } from '@/data/apply-update';
+import { UpdateDialog } from '@/components/UpdateDialog';
 
 const CHECK_KEY = 'helios-last-update-check';
 const DISMISS_KEY = 'helios-release-dismissed';
@@ -17,7 +17,7 @@ export default function UpdateRibbon() {
   const { t } = useTranslation();
   const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
-  const [applying, setApplying] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     let stale = false;
@@ -56,49 +56,39 @@ export default function UpdateRibbon() {
 
   if (state !== 'available') return null;
 
-  const apply = async () => {
-    if (applying) return;
-    setApplying(true);
-    try {
-      const done = await applyRelease();
-      if (done) window.location.reload();
-      else setApplying(false);
-    } catch {
-      setApplying(false);
-    }
-  };
-
   return (
-    <div
-      role="status"
-      className="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3.5 py-2.5 text-[13px] font-semibold text-amber-500"
-    >
-      <RefreshCw className="h-4 w-4 shrink-0" />
-      <span>{t('ajustes.about.updateAvailable', { version: latestVersion })}</span>
-      <a
-        href={`${REPO_URL}/releases`}
-        target="_blank"
-        rel="noreferrer"
-        className="hidden h-8 shrink-0 items-center rounded-lg border border-amber-500/40 px-3 text-xs font-medium text-amber-500 transition-colors hover:bg-amber-500/15 sm:flex"
+    <>
+      <div
+        role="status"
+        className="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3.5 py-2.5 text-[13px] font-semibold text-amber-500"
       >
-        {t('ajustes.about.viewRelease')}
-      </a>
-      <button
-        type="button"
-        onClick={() => void apply()}
-        disabled={applying}
-        className="ml-auto flex h-8 shrink-0 items-center rounded-lg border border-amber-500/40 bg-amber-500 px-3 text-xs font-medium text-white transition-colors hover:brightness-110 disabled:opacity-60"
-      >
-        {applying ? t('ajustes.about.applying') : t('ajustes.about.updateNow')}
-      </button>
-      <button
-        type="button"
-        onClick={dismissVersion}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 text-amber-500 transition-colors hover:bg-amber-500/10"
-        aria-label={t('ajustes.about.dismiss')}
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
+        <RefreshCw className="h-4 w-4 shrink-0" />
+        <span>{t('ajustes.about.updateAvailable', { version: latestVersion })}</span>
+        <a
+          href={`${REPO_URL}/releases`}
+          target="_blank"
+          rel="noreferrer"
+          className="hidden h-8 shrink-0 items-center rounded-lg border border-amber-500/40 px-3 text-xs font-medium text-amber-500 transition-colors hover:bg-amber-500/15 sm:flex"
+        >
+          {t('ajustes.about.viewRelease')}
+        </a>
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          className="ml-auto flex h-8 shrink-0 items-center rounded-lg border border-amber-500/40 bg-amber-500 px-3 text-xs font-medium text-white transition-colors hover:brightness-110"
+        >
+          {t('ajustes.about.updateNow')}
+        </button>
+        <button
+          type="button"
+          onClick={dismissVersion}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/40 text-amber-500 transition-colors hover:bg-amber-500/10"
+          aria-label={t('ajustes.about.dismiss')}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <UpdateDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+    </>
   );
 }
