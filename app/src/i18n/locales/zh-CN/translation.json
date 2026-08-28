@@ -641,5 +641,28 @@
     "actor": "用户",
     "when": "时间",
     "empty": "暂无操作记录"
+  },
+  "update": {
+    "dialog": {
+      "title": "更新 Helios",
+      "desc": "将下载并安装新版本。",
+      "changelogTitle": "更新内容",
+      "downNotice": "重启期间服务将暂时不可用",
+      "cancel": "取消",
+      "start": "更新",
+      "progressLabel": "更新进度",
+      "hideHint": "您可以关闭此窗口；更新将在后台继续",
+      "restarting": "正在重启…",
+      "reloadSoon": "页面将自动重新加载",
+      "failed": "更新未能完成",
+      "close": "关闭"
+    },
+    "step": {
+      "fetch": "检查新版本",
+      "download": "下载中",
+      "verify": "验证完整性",
+      "install": "安装中",
+      "restart": "重启服务"
+    }
   }
 }
