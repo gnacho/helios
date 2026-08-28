@@ -7,6 +7,8 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+## [0.8.12] - 2026-08-28
+
 ### Added
 
 - **Histórico ilimitado de curvas**: Helios guarda la curva de cada día en su
@@ -16,6 +18,14 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   los días que HAOS aún conserva y, si existe un backup de HAOS previo, también
   los días de esa fuente. Los días sin sensor de potencia de un inversor se
   marcan como curva estimada. (#114)
+
+### Fixed
+
+- **Comprobación de actualizaciones sin rate-limit**: el ribbon y el botón
+  "Comprobar actualizaciones" de Ajustes ahora usan el endpoint del servidor
+  (`/api/update/status`, con caché de 5 min) en lugar de consultar
+  `api.github.com` directamente desde el navegador. Elimina los 403 silenciosos
+  por rate-limit en IPs compartidas. (#116)
 
 ## [0.8.11] - 2026-08-18
 
