@@ -247,7 +247,7 @@ function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggle
           <NavLink
             to={SETTINGS_ITEM.to}
             className={cn(
-              'flex h-9 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors',
+              'flex h-9 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors',
               settingsActive
                 ? 'bg-brand/15 text-brand'
                 : 'bg-brand/8 text-brand hover:bg-brand/15',
