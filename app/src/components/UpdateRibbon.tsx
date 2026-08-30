@@ -3,15 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw, X } from 'lucide-react';
 import { apiFetch } from '@/data/api-client';
 import { UpdateDialog } from '@/components/UpdateDialog';
+import { CHECK_KEY, CHECK_INTERVAL, DISMISS_KEY, getDismissed, onRibbonSignal } from '@/lib/update-check';
 
-const CHECK_KEY = 'helios-last-update-check';
-const DISMISS_KEY = 'helios-release-dismissed';
-const CHECK_INTERVAL = 7 * 24 * 60 * 60 * 1000;
 const REPO_URL = 'https://github.com/gnacho/helios';
-
-function getDismissed(): string {
-  try { return window.localStorage.getItem(DISMISS_KEY) ?? ''; } catch { return ''; }
-}
 
 export default function UpdateRibbon() {
   const { t } = useTranslation();
@@ -46,7 +40,14 @@ export default function UpdateRibbon() {
       }
     };
     void run();
-    return () => { stale = true; };
+    const off = onRibbonSignal((latest) => {
+      if (stale) return;
+      if (latest !== getDismissed()) {
+        setLatestVersion(latest);
+        setState('available');
+      }
+    });
+    return () => { stale = true; off(); };
   }, []);
 
   const dismissVersion = useCallback(() => {
