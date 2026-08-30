@@ -88,12 +88,17 @@ export async function registerUser(db, username, password, language = 'es', role
   return createUser(db, username, hash, language, role)
 }
 
+const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
+
 export async function handleLogin(db, c, body) {
   const { username, password } = body || {}
   if (!username || !password) return null
   
   const user = getUserByUsername(db, username)
-  if (!user) return null
+  if (!user) {
+    await bcrypt.compare(password, DUMMY_HASH)
+    return null
+  }
   
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) return null

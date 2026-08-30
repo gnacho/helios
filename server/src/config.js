@@ -4,23 +4,32 @@ import { z } from 'zod'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const envSchema = z.object({
-  PORT: z.coerce.number().int().min(1).max(65535).default(80),
-  HOST: z.string().default('0.0.0.0'),
-  HAOS_URL: z.url().default('http://192.168.10.244:8123'),
-  HAOS_TOKEN: z.string().min(1, 'FALTA HAOS_TOKEN en .env'),
-  AUTH_USER: z.string().min(1).default('admin'),
-  AUTH_PASS: z.string().min(1, 'FALTA AUTH_PASS en .env'),
-  SESSION_SECRET: z.string().default(''),
-  DATA_DIR: z.string().optional(),
-  STATIC_DIR: z.string().optional(),
-  PRICE_IMPORT_EUR: z.coerce.number().default(0.15),
-  PRICE_EXPORT_EUR: z.coerce.number().default(0.08),
-  CO2_KG_PER_KWH: z.coerce.number().default(0.25),
-  VAPID_PUBLIC_KEY: z.string().optional(),
-  VAPID_PRIVATE_KEY: z.string().optional(),
-  VAPID_SUBJECT: z.string().optional(),
-})
+const envSchema = z
+  .object({
+    PORT: z.coerce.number().int().min(1).max(65535).default(80),
+    HOST: z.string().default('0.0.0.0'),
+    HAOS_URL: z.url().default('http://192.168.10.244:8123'),
+    HAOS_TOKEN: z.string().min(1, 'FALTA HAOS_TOKEN en .env'),
+    AUTH_USER: z.string().min(1).default('admin'),
+    AUTH_PASS: z.string().min(1, 'FALTA AUTH_PASS en .env'),
+    SESSION_SECRET: z.string().default(''),
+    DATA_DIR: z.string().optional(),
+    STATIC_DIR: z.string().optional(),
+    PRICE_IMPORT_EUR: z.coerce.number().default(0.15),
+    PRICE_EXPORT_EUR: z.coerce.number().default(0.08),
+    CO2_KG_PER_KWH: z.coerce.number().default(0.25),
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().optional(),
+  })
+  .superRefine((env, ctx) => {
+    const MARKERS = ['cambia', 'changeme', 'change-me', 'example', 'placeholder', 'your-secret', 'replace_me', 'xxx']
+    for (const [key, val] of [['AUTH_PASS', env.AUTH_PASS], ['SESSION_SECRET', env.SESSION_SECRET], ['HAOS_TOKEN', env.HAOS_TOKEN]]) {
+      if (val && MARKERS.some((m) => val.toLowerCase().includes(m))) {
+        ctx.addIssue({ code: 'custom', path: [key], message: `${key} contiene un valor de ejemplo del .env.example; genera un secreto real` })
+      }
+    }
+  })
 
 const parsed = envSchema.safeParse(process.env)
 if (!parsed.success) {

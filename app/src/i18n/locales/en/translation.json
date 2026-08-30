@@ -761,5 +761,28 @@
     "consumption50": "Last 50 km",
     "consumptionToday": "Today",
     "consumptionLifetime": "Lifetime"
+  },
+  "update": {
+    "dialog": {
+      "title": "Update Helios",
+      "desc": "The new version will be downloaded and installed.",
+      "changelogTitle": "What's new",
+      "downNotice": "The service will be down while restarting",
+      "cancel": "Cancel",
+      "start": "Update",
+      "progressLabel": "Update progress",
+      "hideHint": "You can close this window; the update continues in the background",
+      "restarting": "Restarting…",
+      "reloadSoon": "The page will reload automatically",
+      "failed": "Update could not be completed",
+      "close": "Close"
+    },
+    "step": {
+      "fetch": "Checking for new version",
+      "download": "Downloading",
+      "verify": "Verifying integrity",
+      "install": "Installing",
+      "restart": "Restarting service"
+    }
   }
 }

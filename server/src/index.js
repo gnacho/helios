@@ -39,7 +39,7 @@ const auth = await import('./auth.js')
 const push = await import('./push.js')
 const { registerPushRoutes } = await import('./routes-push.js')
 const alerts = await import('./alerts.js')
-const { updateStatus, requestUpdate, currentId } = await import('./update.js')
+const { updateStatus, requestUpdate, currentId, subscribe, watchProgress, readProgress } = await import('./update.js')
 const install = await import('./install.js')
 const extensions = await import('./extensions.js')
 const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
@@ -173,7 +173,43 @@ app.get('/api/update/status', async (c) => {
   if (!user || user.role !== 'admin') {
     return c.json({ error: 'solo administradores pueden consultar actualizaciones' }, 403)
   }
-  return c.json(await updateStatus(db))
+  return c.json(await updateStatus(db, config.dataDir))
+})
+
+app.get('/api/update/progress', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores' }, 403)
+  }
+  const p = readProgress(config.dataDir)
+  return c.json(p ?? { step: 'idle', pct: 0 })
+})
+
+app.get('/api/update/stream', async (c) => {
+  const session = auth.sessionIdFromCookie(db, c)
+  if (!session) return c.json({ authenticated: false }, 401)
+  const user = dbModule.getUserById(db, session.userId)
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'solo administradores' }, 403)
+  }
+  return streamSSE(c, async (stream) => {
+    const send = (data) => {
+      stream.writeSSE({ event: 'update', data: JSON.stringify(data) }).catch(() => {})
+    }
+    const unsub = subscribe(send)
+    const initial = await updateStatus(db, config.dataDir)
+    send(initial)
+    const heartbeat = setInterval(() => {
+      stream.writeSSE({ event: 'heartbeat', data: '' }).catch(() => clearInterval(heartbeat))
+    }, 15000)
+    stream.onAbort(() => {
+      unsub()
+      clearInterval(heartbeat)
+    })
+    await new Promise(() => {})
+  })
 })
 
 app.post('/api/update/apply', async (c) => {
@@ -184,12 +220,6 @@ app.post('/api/update/apply', async (c) => {
     return c.json({ error: 'solo administradores pueden actualizar' }, 403)
   }
   audit(db, user.username, user.id, 'update.apply', '')
-  // El servicio va sandboxeado (User=helios + ProtectSystem=full +
-  // NoNewPrivileges): no puede ejecutar helios-update.sh con privilegios.
-  // Escribe un flag en el dir de datos (escribible); un systemd .path
-  // (helios-update.path) lo detecta y lanza helios-update.service (root)
-  // on-demand. El apply es async: el front sondea /api/version hasta que el
-  // build cambia.
   const ok = requestUpdate(config.dataDir)
   if (!ok) return c.json({ error: 'no se pudo solicitar la actualización' }, 500)
   return c.json({ ok: true, restarting: true }, 202)
@@ -822,6 +852,8 @@ app.get('*', (c) => {
     return c.text('frontend no desplegado', 404)
   }
 })
+
+watchProgress(config.dataDir)
 
 serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
   console.log(`[helios] escuchando en http://${config.host}:${info.port}`)

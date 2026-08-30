@@ -56,7 +56,8 @@ import { LANG_MODE_KEY, resolveNavigatorLanguage, numLocale } from '@/i18n';
 import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-client';
-import { applyRelease } from '@/data/apply-update';
+import { UpdateDialog } from '@/components/UpdateDialog';
+import { notifyRibbon } from '@/lib/update-check';
 import pkg from '../../package.json';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
@@ -175,51 +176,19 @@ function AdminZone() {
   const [checking, setChecking] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'uptodate' | 'available' | 'error'>('idle');
   const [latestVersion, setLatestVersion] = useState('');
-  const [applying, setApplying] = useState(false);
-
-  const applyUpdate = async () => {
-    if (applying) return;
-    setApplying(true);
-    try {
-      const done = await applyRelease();
-      if (done) window.location.reload();
-      else {
-        setApplying(false);
-        setUpdateStatus('error');
-      }
-    } catch {
-      setApplying(false);
-      setUpdateStatus('error');
-    }
-  };
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const checkUpdates = async () => {
     setChecking(true);
     setUpdateStatus('idle');
     try {
-      const repo = REPO_URL.match(/github\.com\/([^/]+\/[^/.]+)/)?.[1];
-      if (!repo) throw new Error('no repo');
-      const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-        headers: { Accept: 'application/vnd.github+json' },
-      });
-      let version = '';
-      if (res.ok) {
-        const data = await res.json();
-        version = data.tag_name || '';
-      } else if (res.status === 404) {
-        const tagRes = await fetch(`https://api.github.com/repos/${repo}/tags?per_page=1`, {
-          headers: { Accept: 'application/vnd.github+json' },
-        });
-        if (tagRes.ok) {
-          const tags = await tagRes.json();
-          version = tags[0]?.name || '';
-        }
-      }
-      if (!version || compareSemver(version, pkg.version) <= 0) {
+      const status = await apiFetch<{ current: string; latest: string; available: boolean }>('/api/update/status');
+      if (!status?.available || !status.latest) {
         setUpdateStatus('uptodate');
       } else {
-        setLatestVersion(version);
+        setLatestVersion(status.latest);
         setUpdateStatus('available');
+        notifyRibbon(status.latest);
       }
     } catch {
       setUpdateStatus('error');
@@ -279,11 +248,10 @@ function AdminZone() {
               </a>
               <button
                 type="button"
-                onClick={() => void applyUpdate()}
-                disabled={applying}
-                className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20 disabled:opacity-60"
+                onClick={() => setDialogOpen(true)}
+                className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20"
               >
-                {applying ? t('ajustes.about.applying') : t('ajustes.about.updateNow')}
+                {t('ajustes.about.updateNow')}
               </button>
             </>
           )}
@@ -330,6 +298,7 @@ function AdminZone() {
           <AuditSection />
         </motion.div>
       )}
+      <UpdateDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </motion.section>
   );
 }
@@ -2087,13 +2056,6 @@ function InstallSection({ state, install }: { state: InstallState; install: () =
 // ── § Acerca de ──────────────────────────────────────────────────────────────
 
 const REPO_URL = 'https://github.com/gnacho/helios';
-
-function compareSemver(a: string, b: string): number {
-  const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  return 0;
-}
 
 function AboutSection() {
   const { t } = useTranslation();
