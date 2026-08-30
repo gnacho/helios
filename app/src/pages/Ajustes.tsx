@@ -56,6 +56,7 @@ import { fmtTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { ApiError, apiDelete, apiFetch, apiPost, apiPut } from '@/data/api-client';
 import { UpdateDialog } from '@/components/UpdateDialog';
+import { notifyRibbon } from '@/lib/update-check';
 import pkg from '../../package.json';
 
 const easeOutQuart = [0.25, 1, 0.5, 1] as [number, number, number, number];
@@ -186,6 +187,7 @@ function AdminZone() {
       } else {
         setLatestVersion(status.latest);
         setUpdateStatus('available');
+        notifyRibbon(status.latest);
       }
     } catch {
       setUpdateStatus('error');
