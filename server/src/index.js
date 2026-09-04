@@ -801,6 +801,7 @@ app.use('*', async (c, next) => {
   await next()
   const path = c.req.path
   if (path.startsWith('/assets/')) c.header('Cache-Control', 'public, max-age=31536000, immutable')
+  else if (path.startsWith('/api/')) c.header('Cache-Control', 'no-cache')
   else if (path === '/' || path === '/index.html' || path === '/sw.js' || path === '/manifest.webmanifest') {
     c.header('Cache-Control', 'no-cache')
   }
