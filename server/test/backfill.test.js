@@ -197,3 +197,57 @@ describe('backup power source per inverter (issue #124)', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 })
+
+describe('consumption gap filled from previous-day pattern (issue 125)', () => {
+  afterEach(() => _setForTests(LEGACY_TOPOLOGY))
+
+  it('rellena un hueco sin NINGÚN medidor con la forma del día anterior escalada', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'helios-bf-'))
+    const db = openDb(dir)
+
+    const hourBuckets = (iso, mean) =>
+      Array.from({ length: 12 }, (_, i) => ({
+        start: new Date(new Date(iso).getTime() + i * 5 * 60000).toISOString(),
+        mean,
+      }))
+    // Solis (inv0) produce 07-08 y 10-11 (los buckets existen).
+    const stats = {
+      'sensor.solis_potencia_actual': [
+        ...hourBuckets('2026-07-22T07:00:00Z', 1.5),
+        ...hourBuckets('2026-07-22T10:00:00Z', 2.0),
+      ],
+    }
+    // 07-08 NO tiene medidores de consumo (hueco); 10-11 los 3 miden 1000 W.
+    for (const id of ['sensor.medidor_respaldo_power', 'sensor.vivienda_medidor_power', 'sensor.almacen_pinza_power_a']) {
+      stats[id] = hourBuckets('2026-07-22T10:00:00Z', 1000)
+    }
+    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() }
+
+    // Fila daily del día: consumo real total 3.5 kWh (3 medidos + 0.5 hueco).
+    db.prepare(
+      "INSERT INTO daily (date, production_kwh, consumption_kwh) VALUES ('2026-07-22', 5, 3.5)"
+    ).run()
+
+    // Patrón del día anterior: el hueco (07-08) consumía 0.5 kW de forma.
+    const prevPts = [
+      ...hourBuckets('2026-07-21T07:00:00Z', 500).map((r, i) => {
+        const d = new Date(r.start)
+        return { t: d.getHours() * 60 + d.getMinutes(), label: '07:00', consumption: 0.5 }
+      }),
+    ]
+    db.prepare(
+      `INSERT INTO day_series (date, points_json, estimated, source, updated_at)
+       VALUES ('2026-07-21', ?, 0, 'haos', ?)`
+    ).run(JSON.stringify(prevPts), Date.now())
+
+    const res = await getDaySeries(ha, '2026-07-22', db)
+    expect(res.estimated).toBe(true)
+
+    const dtH = 5 / 60
+    const integ = res.points.reduce((acc, p) => acc + (p.consumption || 0) * dtH, 0)
+    expect(integ).toBeCloseTo(3.5, 1)
+
+    db.close()
+    rmSync(dir, { recursive: true, force: true })
+  })
+})
