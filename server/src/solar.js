@@ -260,7 +260,7 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   const end = new Date(start)
   end.setDate(end.getDate() + 1)
 
-  const invIds = t.inverters.map((inv) => inv.powerId).filter(Boolean)
+  const invIds = t.inverters.flatMap((inv) => [inv.powerId, inv.backupPowerId].filter(Boolean))
   const ids = [...invIds, ...t.consumption.powerIds]
   if (t.battery.enabled) {
     if (t.battery.powerId) ids.push(t.battery.powerId)
@@ -274,16 +274,34 @@ async function getDaySeriesUncached(ha, dateStr, db) {
     types: ['mean'],
   })
 
-  return buildDaySeries(stats, dateStr, db)
+  // HOY aún no tiene fila `daily`: el total de referencia para escalar el
+  // tramo rellenado por respaldo es el KPI en vivo del energyId (la UM del
+  // día). Para días pasados buildDaySeries lee la fila daily directamente.
+  const liveTargets = {}
+  const isToday = !dateStr || dateStr === todayStr()
+  if (isToday) {
+    for (const inv of t.inverters) {
+      if (inv.backupPowerId && inv.energyId) liveTargets[inv.key] = entityNum(ha, inv.energyId)
+    }
+  }
+
+  return buildDaySeries(stats, dateStr, db, liveTargets)
 }
 
 // Construye los puntos de la curva de un día a partir de las estadísticas
 // 5-minutos ({sensorId: [{start, mean}]}). Reutilizable para la curva en vivo
 // (HAOS) y para el backfill desde una fuente externa (backup de HAOS). El
 // heurístico de curva estimada (Solis sin state_class) también aplica aquí.
-function buildDaySeries(stats, dateStr, db) {
+//
+// Respaldo por inversor (issue 124): si en un bucket no hay fila del sensor
+// de potencia principal (unavailable), se usa `backupPowerId` del mismo
+// inversor. El tramo rellenado se ESCALA al total diario real del inversor
+// (fila `daily` para días pasados; `liveTargets` para HOY, que aún no tiene
+// fila), para que la curva integre el mismo total que la fuente profunda.
+// Si se usó respaldo en algún bucket, la curva se marca `estimated`.
+function buildDaySeries(stats, dateStr, db, liveTargets) {
   const t = getInstall()
-  const invIds = t.inverters.map((inv) => inv.powerId).filter(Boolean)
+  const invIds = t.inverters.flatMap((inv) => [inv.powerId, inv.backupPowerId].filter(Boolean))
   const ids = [...invIds, ...t.consumption.powerIds]
   if (t.battery.enabled) {
     if (t.battery.powerId) ids.push(t.battery.powerId)
@@ -305,12 +323,23 @@ function buildDaySeries(stats, dateStr, db) {
   let prevSoc = null
   const minutes = [...buckets.keys()].sort((a, b) => a - b)
   const consDiv = t.consumption.powerUnit === 'W' ? 1000 : 1
-  for (const min of minutes) {
+  const backupIdx = {} // inv.key -> índices de points que usaron respaldo
+  minutes.forEach((min, pointIdx) => {
     const b = buckets.get(min)
     let production = 0
     const perInv = {}
     for (const inv of t.inverters) {
-      let kw = num(b[inv.powerId]) / (inv.powerUnit === 'W' ? 1000 : 1)
+      let kw = 0
+      const raw = b[inv.powerId]
+      if (raw !== undefined && raw !== null) {
+        kw = num(raw) / (inv.powerUnit === 'W' ? 1000 : 1)
+      } else if (inv.backupPowerId) {
+        const backRaw = b[inv.backupPowerId]
+        if (backRaw !== undefined && backRaw !== null) {
+          kw = num(backRaw) / ((inv.backupPowerUnit || 'kW') === 'W' ? 1000 : 1)
+          ;(backupIdx[inv.key] ||= []).push(pointIdx)
+        }
+      }
       if (kw < 0.02) kw = 0
       perInv[inv.key] = kw
       production += kw
@@ -349,11 +378,69 @@ function buildDaySeries(stats, dateStr, db) {
       soc: round1(soc),
       grid: round3(grid),
     })
-  }
+  })
 
   const dtH = 5 / 60
   const sumInv = (key) => points.reduce((acc, p) => acc + (p.inverters[key] || 0) * dtH, 0)
+  const dayKey = dateStr || todayStr()
   let estimated = false
+  // Escalado de tramos rellenados por respaldo al total diario real. El total
+  // de referencia es la fila daily del día si existe; para HOY (sin fila aún)
+  // lo aporta `liveTargets` (KPI en vivo del energyId). Solo se escala el
+  // tramo con respaldo: la parte medida por el sensor principal se respeta.
+  const backupKeys = Object.keys(backupIdx)
+  if (backupKeys.length && points.length) {
+    estimated = true
+    let row = null
+    if (db) {
+      row = db.prepare('SELECT solis_kwh, fox_kwh, inverters_kwh FROM daily WHERE date = ?').get(dayKey)
+    }
+    for (const inv of t.inverters) {
+      const idxs = backupIdx[inv.key] || []
+      if (!idxs.length) continue
+      let target = liveTargets && liveTargets[inv.key] > 0 ? liveTargets[inv.key] : 0
+      if (!(target > 0) && row) {
+        if (row.inverters_kwh) {
+          try {
+            const ik = JSON.parse(row.inverters_kwh)
+            target = ik[inv.key] || 0
+          } catch {}
+        }
+        if (!(target > 0)) {
+          const invIdx = t.inverters.findIndex((x) => x.key === inv.key)
+          if (invIdx === 0) target = row.solis_kwh || 0
+          else if (invIdx === 1) target = row.fox_kwh || 0
+        }
+      }
+      if (!(target > 0)) continue
+      const idxSet = new Set(idxs)
+      let sumReal = 0
+      let sumBackup = 0
+      points.forEach((p, i) => {
+        const kw = p.inverters[inv.key] || 0
+        if (idxSet.has(i)) sumBackup += kw
+        else sumReal += kw
+      })
+      sumReal *= dtH
+      sumBackup *= dtH
+      if (sumBackup <= 0) continue
+      const gap = target - (sumReal + sumBackup)
+      if (gap < 0.05) continue // ya cuadra o la parte real supera el total
+      const factor = (target - sumReal) / sumBackup
+      const compat = inv.key === t.inverters[0]?.key ? 'solis' : inv.key === t.inverters[1]?.key ? 'fox' : null
+      for (const i of idxs) {
+        const p = points[i]
+        const v = (p.inverters[inv.key] || 0) * factor
+        p.inverters[inv.key] = round3(v)
+        if (compat === 'solis') p.solis = p.inverters[inv.key]
+        if (compat === 'fox') p.fox = p.inverters[inv.key]
+        p.production = round3(t.inverters.reduce((acc, x) => acc + (p.inverters[x.key] || 0), 0))
+        let grid = p.consumption - p.production + p.batteryPower
+        if (Math.abs(grid) < 0.03) grid = 0
+        p.grid = round3(grid)
+      }
+    }
+  }
   // Estimación de curva: si el inversor 0 no tiene statistics pero el total
   // diario sí, se escala la curva del resto (fallback típico de sensores sin
   // state_class). Se mantiene el heurístico original Solis→Fox.
@@ -363,7 +450,7 @@ function buildDaySeries(stats, dateStr, db) {
     const sum0 = sumInv(inv0Key)
     const sum1 = inv1Key ? sumInv(inv1Key) : 0
     if (sum0 < 0.5 && sum1 > 1 && inv0Key && inv1Key) {
-      const row = db.prepare('SELECT solis_kwh, fox_kwh FROM daily WHERE date = ?').get(dateStr || todayStr())
+      const row = db.prepare('SELECT solis_kwh, fox_kwh FROM daily WHERE date = ?').get(dayKey)
       if (row && row.solis_kwh > 1 && sum1 > 1) {
         const ratio = row.solis_kwh / sum1
         for (const p of points) {
@@ -436,9 +523,13 @@ export async function backfillDaySeries(ha, db, backupFilePath) {
   const cursor = new Date(firstDaily + 'T00:00:00')
   const end = new Date()
   end.setDate(end.getDate() + 1)
+  // Ayer se regenera SIEMPRE aunque tenga fila: la consolidación nocturna
+  // acaba de escribir su fila `daily` real y la curva persistida en vivo (con
+  // huecos por respaldo sin consolidar) debe re-escalarse a ese total.
+  const yesterdayKey = dateKey(addDays(new Date(), -1))
 
   for (const key of eachDayKey(cursor, end)) {
-    if (done.has(key)) continue
+    if (done.has(key) && key !== yesterdayKey) continue
     const keyDate = new Date(key + 'T00:00:00')
     const fromBackup = backup && Object.keys(sliceStatsByDay(backup, key)).length > 0
     if (!fromBackup && keyDate < haosFloor) continue
