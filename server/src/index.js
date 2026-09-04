@@ -112,6 +112,19 @@ ha.start()
 
 const app = new Hono()
 
+// Cache HTTP: los bundles llevan hash en el nombre (inmutables); el shell
+// (index.html, sw.js, manifest) y TODA la API SIEMPRE se revalidan para que un
+// deploy o un recálculo de datos se vea al refrescar (sin esto el navegador
+// puede servir la respuesta vieja de /api/* por caché heurística).
+app.use('*', async (c, next) => {
+  await next()
+  const path = c.req.path
+  if (path.startsWith('/assets/')) c.header('Cache-Control', 'public, max-age=31536000, immutable')
+  else if (path.startsWith('/api/') || path === '/' || path === '/index.html' || path === '/sw.js' || path === '/manifest.webmanifest') {
+    c.header('Cache-Control', 'no-cache')
+  }
+})
+
 app.get('/health', (c) => {
   let dbOk = true
   try {
@@ -791,20 +804,6 @@ app.route('/api', guarded)
 app.onError((err, c) => {
   console.error('[helios] error:', err.message)
   return c.json({ error: 'error interno' }, 500)
-})
-
-// Cache HTTP: los bundles llevan hash en el nombre (inmutables); el shell
-// (index.html, sw.js, manifest) SIEMPRE se revalida para que un deploy se vea
-// al refrescar (sin esto el navegador puede servir HTML viejo por caché
-// heurística y el usuario ver una app antigua tras un deploy).
-app.use('*', async (c, next) => {
-  await next()
-  const path = c.req.path
-  if (path.startsWith('/assets/')) c.header('Cache-Control', 'public, max-age=31536000, immutable')
-  else if (path.startsWith('/api/')) c.header('Cache-Control', 'no-cache')
-  else if (path === '/' || path === '/index.html' || path === '/sw.js' || path === '/manifest.webmanifest') {
-    c.header('Cache-Control', 'no-cache')
-  }
 })
 
 app.use('/*', serveStatic({ root: config.staticDir }))
