@@ -250,4 +250,39 @@ describe('consumption gap filled from previous-day pattern (issue 125)', () => {
     db.close()
     rmSync(dir, { recursive: true, force: true })
   })
+
+  it('HOY sin fila daily: rellena el hueco con el patrón del día anterior sin escalar', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'helios-bf-'))
+    const db = openDb(dir)
+
+    const hourBuckets = (iso, mean) =>
+      Array.from({ length: 12 }, (_, i) => ({
+        start: new Date(new Date(iso).getTime() + i * 5 * 60000).toISOString(),
+        mean,
+      }))
+    const stats = {
+      'sensor.solis_potencia_actual': hourBuckets('2026-07-23T07:00:00Z', 1.5),
+    }
+    // Hueco: 07-08 sin NINGÚN medidor. Sin fila daily (caso HOY en vivo).
+    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() }
+
+    const prevPts = [
+      ...hourBuckets('2026-07-22T07:00:00Z', 500).map((r) => {
+        const d = new Date(r.start)
+        return { t: d.getHours() * 60 + d.getMinutes(), label: '07:00', consumption: 0.5 }
+      }),
+    ]
+    db.prepare(
+      `INSERT INTO day_series (date, points_json, estimated, source, updated_at)
+       VALUES ('2026-07-22', ?, 0, 'haos', ?)`
+    ).run(JSON.stringify(prevPts), Date.now())
+
+    const res = await getDaySeries(ha, '2026-07-23', db)
+    expect(res.estimated).toBe(true)
+    const p = res.points.find((x) => x.consumption > 0)
+    expect(p.consumption).toBeCloseTo(0.5, 1)
+
+    db.close()
+    rmSync(dir, { recursive: true, force: true })
+  })
 })

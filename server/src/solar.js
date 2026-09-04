@@ -283,15 +283,12 @@ async function getDaySeriesUncached(ha, dateStr, db) {
     for (const inv of t.inverters) {
       if (inv.backupPowerId && inv.energyId) liveTargets[inv.key] = entityNum(ha, inv.energyId)
     }
-    // Consumo: el total real de HOY sale de los contadores de energía (los
-    // medidores de potencia pueden haber caído y los contadores saltan al
-    // volver). Sirve de target para rellenar huecos con el patrón del día
-    // anterior (issue 125).
-    const baseline = await ensureConsumptionBaseline(ha, db).catch(() => null)
-    const consToday = consumptionTodayFromCounters(ha, baseline)
-    if (consToday !== null && consToday !== undefined && consToday > 0) {
-      liveTargets.consumption = consToday
-    }
+    // NOTA: el consumo de HOY NO se escala contra los contadores en vivo: los
+    // contadores de energía actualizan lento y se quedan congelados mientras
+    // la potencia medida sigue creciendo, lo que encoge el relleno del hueco
+    // en cada recálculo. Para HOY se usa el patrón del día anterior tal cual
+    // (estimated); la consolidación nocturna regenera "ayer" y lo re-escala al
+    // total `daily` consolidado (issue 125).
   }
 
   return buildDaySeries(stats, dateStr, db, liveTargets)
@@ -458,44 +455,45 @@ function buildDaySeries(stats, dateStr, db, liveTargets) {
   }
   // Hueco de consumo (issue 125): si todos los medidores cayeron a la vez y no
   // hay sensor redundante que mida el consumo, se rellena el tramo con la FORMA
-  // del día anterior (mismos buckets 5-min), escalada para que la integral del
-  // consumo del día cuadre con el total real (contadores de energía). El
-  // consumo exacto del hueco es incognoscible, pero la curva queda continua y
-  // el área diaria correcta. La curva se marca estimated.
+  // del día anterior (mismos buckets 5-min). El consumo exacto del hueco es
+  // incognoscible: para días pasados se escala a la fila daily consolidada
+  // (total real del día); para HOY (sin fila aún) se usa el patrón tal cual y
+  // la consolidación nocturna lo re-escala al regenerar ayer. La curva se marca
+  // estimated.
   if (db && consGapIdx.length && points.length) {
-    let consTarget = liveTargets && liveTargets.consumption > 0 ? liveTargets.consumption : 0
-    if (!(consTarget > 0)) {
-      const rowC = db.prepare('SELECT consumption_kwh FROM daily WHERE date = ?').get(dayKey)
-      if (rowC && rowC.consumption_kwh > 0) consTarget = rowC.consumption_kwh
-    }
+    let consTarget = 0
+    const rowC = db.prepare('SELECT consumption_kwh FROM daily WHERE date = ?').get(dayKey)
+    if (rowC && rowC.consumption_kwh > 0) consTarget = rowC.consumption_kwh
     const prevKey = dateKey(addDays(new Date(dayKey + 'T00:00:00'), -1))
-    const prevRow = consTarget > 0 ? getDaySeriesRow(db, prevKey) : null
+    const prevRow = getDaySeriesRow(db, prevKey)
     if (prevRow) {
       const prevPts = JSON.parse(prevRow.points_json)
       const prevByT = new Map(prevPts.map((p) => [p.t, p.consumption || 0]))
       const gapSet = new Set(consGapIdx)
-      let realSum = 0 // consumo integrado FUERA del hueco (medidores reales)
-      let patSum = 0 // patrón del día anterior integrado DENTRO del hueco
-      points.forEach((p, i) => {
-        if (gapSet.has(i)) patSum += prevByT.get(p.t) || 0
-        else realSum += p.consumption || 0
-      })
-      realSum *= dtH
-      patSum *= dtH
-      const deficit = consTarget - realSum
-      if (patSum > 0.01 && deficit > 0.05) {
-        const factor = deficit / patSum
-        for (const i of consGapIdx) {
-          const p = points[i]
-          const pat = prevByT.get(p.t)
-          if (!pat) continue
-          p.consumption = round3(pat * factor)
-          let grid = p.consumption - p.production + p.batteryPower
-          if (Math.abs(grid) < 0.03) grid = 0
-          p.grid = round3(grid)
-        }
-        estimated = true
+      let factor = null
+      if (consTarget > 0) {
+        let realSum = 0 // consumo integrado FUERA del hueco (medidores reales)
+        let patSum = 0 // patrón del día anterior integrado DENTRO del hueco
+        points.forEach((p, i) => {
+          if (gapSet.has(i)) patSum += prevByT.get(p.t) || 0
+          else realSum += p.consumption || 0
+        })
+        realSum *= dtH
+        patSum *= dtH
+        const deficit = consTarget - realSum
+        if (patSum > 0.01 && deficit > 0.05) factor = deficit / patSum
       }
+      if (factor === null || factor <= 0) factor = 1 // HOY: patrón sin escalar
+      for (const i of consGapIdx) {
+        const p = points[i]
+        const pat = prevByT.get(p.t)
+        if (!pat) continue
+        p.consumption = round3(pat * factor)
+        let grid = p.consumption - p.production + p.batteryPower
+        if (Math.abs(grid) < 0.03) grid = 0
+        p.grid = round3(grid)
+      }
+      estimated = true
     }
   }
   // Estimación de curva: si el inversor 0 no tiene statistics pero el total
