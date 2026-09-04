@@ -519,6 +519,7 @@
       "panels": "面板",
       "powerId": "功率传感器",
       "powerUnit": "单位",
+      "backupPowerId": "备用功率传感器",
       "energyCap": "每日上限 (kWh)",
       "energyId": "今日能量传感器",
       "energyAcc": "累加器",

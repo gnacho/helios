@@ -522,6 +522,7 @@
       "panels": "Panels",
       "powerId": "Power sensor",
       "powerUnit": "Unit",
+      "backupPowerId": "Backup power sensor",
       "energyCap": "Daily cap (kWh)",
       "energyId": "Today's energy sensor",
       "energyAcc": "Accumulator",

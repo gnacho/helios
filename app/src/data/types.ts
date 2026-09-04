@@ -220,6 +220,9 @@ export interface TopologyInverter {
   batteryKwh: number;
   powerId: string;
   powerUnit: 'kW' | 'W';
+  /** Fuente secundaria de potencia para rellenar huecos de la curva (issue 124). */
+  backupPowerId?: string;
+  backupPowerUnit?: 'kW' | 'W';
   energyId: string;
   energyAcc: 'sum' | 'state';
   energyCap: number;

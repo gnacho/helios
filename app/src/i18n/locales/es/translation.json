@@ -522,6 +522,7 @@
       "panels": "Placas",
       "powerId": "Sensor de potencia",
       "powerUnit": "Unidad",
+      "backupPowerId": "Sensor de potencia de respaldo",
       "energyCap": "Límite diario (kWh)",
       "energyId": "Sensor de energía de hoy",
       "energyAcc": "Acumulador",
