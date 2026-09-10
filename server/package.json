@@ -15,7 +15,7 @@
     "@hono/node-server": "^2.1.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
-    "hono": "^4.13.0",
+    "hono": "^4.13.7",
     "web-push": "^3.6.7",
     "ws": "^8.18.0",
     "zod": "^4.4.3"
