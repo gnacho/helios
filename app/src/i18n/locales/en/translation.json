@@ -561,7 +561,8 @@
       "environment": "Sun and weather",
       "sun": "Sun",
       "weather": "Weather",
-      "weatherTemp": "Outdoor temperature"
+      "weatherTemp": "Outdoor temperature",
+      "backupPowerUnit": "Backup unit"
     },
     "extensions": {
       "enable": "Enable extensions",
