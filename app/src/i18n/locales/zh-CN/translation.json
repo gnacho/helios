@@ -557,7 +557,8 @@
       "environment": "太阳与天气",
       "sun": "太阳",
       "weather": "天气",
-      "weatherTemp": "室外温度"
+      "weatherTemp": "室外温度",
+      "backupPowerUnit": "备用传感器单位"
     },
     "extensions": {
       "enable": "启用扩展",

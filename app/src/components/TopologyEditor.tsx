@@ -165,18 +165,20 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                     </Field>
                   </div>
                   <Field label={t('ajustes.topology.backupPowerId')}>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={inv.backupPowerId || ''}
-                        placeholder="sensor.inverter_power_backup"
-                        className="font-mono text-xs flex-1"
-                        onChange={(e) => kv.inv(i, { backupPowerId: e.target.value })}
-                      />
+                    <Input
+                      value={inv.backupPowerId || ''}
+                      placeholder="sensor.inverter_cloud_power"
+                      className="font-mono text-xs"
+                      onChange={(e) => kv.inv(i, { backupPowerId: e.target.value })}
+                    />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label={t('ajustes.topology.backupPowerUnit')}>
                       <Select
-                        value={inv.backupPowerUnit || inv.powerUnit || 'kW'}
+                        value={inv.backupPowerUnit || 'W'}
                         onValueChange={(v) => kv.inv(i, { backupPowerUnit: v as 'kW' | 'W' })}
                       >
-                        <SelectTrigger className="w-[76px] shrink-0">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -184,8 +186,8 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                           <SelectItem value="W">W</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                  </Field>
+                    </Field>
+                  </div>
                   <Field label={t('ajustes.topology.energyId')}>
                     <Input
                       value={inv.energyId}
@@ -266,7 +268,7 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                         powerId: '',
                         powerUnit: 'kW',
                         backupPowerId: '',
-                        backupPowerUnit: 'kW',
+                        backupPowerUnit: 'W',
                         energyId: '',
                         energyAcc: 'state',
                         energyCap: 100,
