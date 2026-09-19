@@ -295,6 +295,19 @@ export function deleteSession(db, id) {
   db.prepare('DELETE FROM sessions WHERE id = ?').run(id)
 }
 
+// Expiración deslizante: si a la sesión le queda menos de la mitad del TTL,
+// extiende expires_at un TTL completo desde ahora. Un usuario activo no pierde
+// la sesión en el límite fijo. Devuelve true si renovó (el caller re-emite la
+// cookie con maxAge fresco).
+export function renewSessionIfDue(db, id, ttlMs) {
+  const row = db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get(id)
+  if (!row) return false
+  const now = Date.now()
+  if (row.expires_at - now >= ttlMs / 2) return false
+  db.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(now + ttlMs, id)
+  return true
+}
+
 export function cleanSessions(db) {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now())
   const oneHourAgo = Date.now() - 3600 * 1000
