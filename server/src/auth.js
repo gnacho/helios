@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
-import { createSession, getSession, deleteSession, createUser, getUserByUsername, getUserById, updateUser } from './db.js'
+import { createSession, getSession, deleteSession, renewSessionIfDue, createUser, getUserByUsername, getUserById, updateUser } from './db.js'
 import { config } from './config.js'
 
 const COOKIE_NAME = 'helios_session'
@@ -143,6 +143,18 @@ export function requireAuth(db) {
   return async (c, next) => {
     const session = sessionIdFromCookie(db, c)
     if (!session) return c.json({ error: 'no autorizado' }, 401)
+    // Expiración deslizante (#130): si la sesión queda por debajo de la mitad
+    // del TTL, extender su vida y re-emitir la cookie con maxAge fresco.
+    if (renewSessionIfDue(db, session.id, config.sessionTtlMs)) {
+      const isHttps = c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https://')
+      setCookie(c, COOKIE_NAME, `${session.id}.${sign(db, session.id)}`, {
+        httpOnly: true,
+        sameSite: 'Lax',
+        secure: isHttps,
+        maxAge: Math.floor(config.sessionTtlMs / 1000),
+        path: '/',
+      })
+    }
     c.set('userId', session.userId)
     return next()
   }
