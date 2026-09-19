@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { initSchema, getUserByUsername } from '../src/db.js'
-import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin, ensureBootstrapAdmin, changeOwnPassword } from '../src/auth.js'
+import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin, ensureBootstrapAdmin, changeOwnPassword, requireAuth } from '../src/auth.js'
 
 function mockContext(ip, cookie) {
   const headers = new Headers()
@@ -13,6 +13,7 @@ function mockContext(ip, cookie) {
       raw: { headers },
     },
     header: () => {},
+    set: () => {},
     res: { headers: { append: () => {} } },
     env: {},
   }
@@ -110,5 +111,57 @@ describe('rate-limit de login (SQLite)', () => {
     for (let i = 0; i < 5; i++) registerLoginFail(db, a)
     expect(loginRateLimited(db, a)).toBe(true)
     expect(loginRateLimited(db, b)).toBe(false)
+  })
+})
+
+describe('expiración deslizante de sesiones (#130)', () => {
+  const TTL_MS = 30 * 24 * 3600 * 1000
+
+  async function loginCapturingCookie(username, password) {
+    const c = mockContext('1.1.1.1')
+    const captured = []
+    c.header = (k, v) => captured.push([k, v])
+    const res = await handleLogin(db, c, { username, password })
+    const setCookie = captured.find(([k]) => k === 'Set-Cookie')?.[1] || ''
+    const cookie = setCookie.split(';')[0] // helios_session=<id>.<sig>
+    return { res, cookie }
+  }
+
+  it('sesión por debajo de la mitad del TTL: renueva expires_at y re-emite cookie', async () => {
+    await registerUser(db, 'slide', 'secreto123')
+    const { cookie } = await loginCapturingCookie('slide', 'secreto123')
+    expect(cookie).toMatch(/^helios_session=.+\..+/)
+    const sessionId = cookie.split('=')[1].split('.')[0]
+    const soon = Date.now() + 10 * 24 * 3600 * 1000 // 10 días < 15 (mitad del TTL)
+    db.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(soon, sessionId)
+
+    const c2 = mockContext('1.1.1.1', cookie)
+    const captured = []
+    c2.header = (k, v) => captured.push([k, v])
+    let nextCalled = false
+    await requireAuth(db)(c2, async () => { nextCalled = true })
+    expect(nextCalled).toBe(true)
+    const renewed = captured.find(([k]) => k === 'Set-Cookie')?.[1] || ''
+    expect(renewed).toMatch(/^helios_session=.+\..+/)
+    expect(renewed).toMatch(/Max-Age=2592000/)
+    const after = db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get(sessionId).expires_at
+    expect(after).toBeGreaterThan(Date.now() + 25 * 24 * 3600 * 1000)
+  })
+
+  it('sesión por encima de la mitad del TTL: no renueva ni re-emite cookie', async () => {
+    await registerUser(db, 'fresh', 'secreto123')
+    const { cookie } = await loginCapturingCookie('fresh', 'secreto123')
+    const sessionId = cookie.split('=')[1].split('.')[0]
+    const fresh = Date.now() + 20 * 24 * 3600 * 1000 // 20 días > 15
+    db.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(fresh, sessionId)
+
+    const c2 = mockContext('1.1.1.1', cookie)
+    const captured = []
+    c2.header = (k, v) => captured.push([k, v])
+    let nextCalled = false
+    await requireAuth(db)(c2, async () => { nextCalled = true })
+    expect(nextCalled).toBe(true)
+    expect(captured.find(([k]) => k === 'Set-Cookie')).toBeUndefined()
+    expect(db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get(sessionId).expires_at).toBe(fresh)
   })
 })
