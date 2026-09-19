@@ -14,6 +14,36 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   ese plazo, la sesión se extiende y la cookie se re-emite: un usuario activo
   no vuelve a perder la sesión por calendario.
 
+## [0.8.20] - 2026-09-19
+
+### Fixed
+
+- **Caducidad deslizante de la sesión (#130).** La sesión renueva su expiración
+  y la cookie al usar la app: un usuario activo no vuelve a perder el login por
+  calendario.
+- **Relleno de huecos en la curva del día (#124).** Cada inversor puede declarar
+  un sensor de respaldo (p. ej. el feed de nube del fabricante): cuando el
+  primario no tiene datos para un tramo, la curva se completa con el respaldo
+  y se escala al total diario real; la curva se marca como estimada.
+- **Hueco de consumo total (#125).** Si todos los medidores de consumo caen a
+  la vez, el hueco se rellena con la forma del día anterior, escalada al total
+  consolidado de ese día.
+- **Cabeceras de caché en la API.** Las respuestas de /api y el shell de la
+  app ahora se sirven siempre con no-cache (antes la API podía cachearse por
+  heurística del navegador).
+
+### Added
+
+- **Tracker de analítica en la demo pública (#112).** La demo de
+  demo.helios.cloudless.club registra visitas en GoatCounter (prefijo /demo).
+  Solo existe en el build de la demo: las instalaciones self-hosted no llaman a
+  casa.
+
+### Security
+
+- **Dependencias actualizadas (#133).** hono 4.13.8, vitest 4.1.11 y js-yaml
+  4.3.2 (transitivo): cierra 6 alertas de Dependabot (1 alta).
+
 ## [Unreleased]
 
 ## [0.8.14] - 2026-08-29
