@@ -59,6 +59,10 @@ export const LEGACY_TOPOLOGY = {
       hasBattery: false,
       powerId: 'sensor.almacen_pinza_power_b',
       powerUnit: 'W',
+      // Respaldo de potencia: la nube del fabricante (mismo shape, ~4-5% más
+      // baja). Rellena los huecos de la curva cuando la pinza local cae.
+      backupPowerId: 'sensor.foxess_solar_power',
+      backupPowerUnit: 'kW',
       energyId: 'sensor.energia_fox_diaria',
       energyAcc: 'state',
       energyCap: 20,
@@ -229,6 +233,8 @@ export function normalizeTopology(cfg, base = GENERIC_TOPOLOGY) {
     name: inv.name || `Inverter ${i + 1}`,
     powerId: inv.powerId || '',
     powerUnit: inv.powerUnit || 'kW',
+    backupPowerId: inv.backupPowerId || '',
+    backupPowerUnit: inv.backupPowerUnit || inv.powerUnit || 'kW',
     energyId: inv.energyId || '',
     energyAcc: inv.energyAcc || 'state',
     energyCap: typeof inv.energyCap === 'number' ? inv.energyCap : 100,

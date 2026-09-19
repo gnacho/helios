@@ -164,6 +164,30 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                       />
                     </Field>
                   </div>
+                  <Field label={t('ajustes.topology.backupPowerId')}>
+                    <Input
+                      value={inv.backupPowerId || ''}
+                      placeholder="sensor.inverter_cloud_power"
+                      className="font-mono text-xs"
+                      onChange={(e) => kv.inv(i, { backupPowerId: e.target.value })}
+                    />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label={t('ajustes.topology.backupPowerUnit')}>
+                      <Select
+                        value={inv.backupPowerUnit || 'W'}
+                        onValueChange={(v) => kv.inv(i, { backupPowerUnit: v as 'kW' | 'W' })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kW">kW</SelectItem>
+                          <SelectItem value="W">W</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </div>
                   <Field label={t('ajustes.topology.energyId')}>
                     <Input
                       value={inv.energyId}
@@ -243,6 +267,8 @@ export function TopologyEditor({ open, onOpenChange, install }: Props) {
                         batteryKwh: 0,
                         powerId: '',
                         powerUnit: 'kW',
+                        backupPowerId: '',
+                        backupPowerUnit: 'W',
                         energyId: '',
                         energyAcc: 'state',
                         energyCap: 100,

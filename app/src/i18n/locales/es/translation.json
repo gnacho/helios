@@ -521,6 +521,7 @@
       "panels": "Placas",
       "powerId": "Sensor de potencia",
       "powerUnit": "Unidad",
+      "backupPowerId": "Sensor de potencia de respaldo",
       "energyCap": "Límite diario (kWh)",
       "energyId": "Sensor de energía de hoy",
       "energyAcc": "Acumulador",
@@ -559,7 +560,8 @@
       "environment": "Sol y tiempo",
       "sun": "Sol",
       "weather": "Tiempo",
-      "weatherTemp": "Temperatura exterior"
+      "weatherTemp": "Temperatura exterior",
+      "backupPowerUnit": "Unidad del respaldo"
     },
     "extensions": {
       "enable": "Activar extensiones",

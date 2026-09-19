@@ -58,6 +58,10 @@ export function createSchemas(z) {
           batteryKwh: z.number().min(0).optional().default(0),
           powerId: z.string().optional().default(''),
           powerUnit: z.enum(['kW', 'W']).optional().default('kW'),
+          // Fuente secundaria de potencia para rellenar huecos de la curva del
+          // día cuando el sensor principal está unavailable (issue 124).
+          backupPowerId: z.string().optional().default(''),
+          backupPowerUnit: z.enum(['kW', 'W']).optional().default('kW'),
           energyId: z.string().optional().default(''),
           energyAcc: z.enum(['sum', 'state']).optional().default('state'),
           energyCap: z.number().min(0).optional().default(100),
