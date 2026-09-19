@@ -5,6 +5,15 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.8.18] - 2026-09-19
+
+### Fixed
+
+- **Caducidad deslizante de la sesión (#130).** Antes la sesión caducaba 30 días
+  después del login, sin renovación. Ahora, cuando queda menos de la mitad de
+  ese plazo, la sesión se extiende y la cookie se re-emite: un usuario activo
+  no vuelve a perder la sesión por calendario.
+
 ## [Unreleased]
 
 ## [0.8.14] - 2026-08-29
