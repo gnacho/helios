@@ -44,6 +44,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 - **Dependencias actualizadas (#133).** hono 4.13.8, vitest 4.1.11 y js-yaml
   4.3.2 (transitivo): cierra 6 alertas de Dependabot (1 alta).
 
+## [0.8.21] - 2026-10-03
+
+### Changed
+
+- **Diálogo de actualización más grande (#137).** El diálogo de actualización
+  ahora ocupa casi toda la ventana en escritorio, con las notas de la release
+  en un área con scroll que crece, cabeceras de secciones en negrita y las
+  acciones ancladas abajo. En móvil se mantiene el comportamiento actual.
+
 ## [Unreleased]
 
 ## [0.8.14] - 2026-08-29
