@@ -62,6 +62,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   dentro, y la página de fondo ahora se ve claramente difuminada, no solo
   oscurecida.
 
+## [0.8.23] - 2026-10-03
+
+### Fixed
+
+- **Dependencias con vulnerabilidades conocidas (#141).** brace-expansion (2
+  alertas de Dependabot) estaba pineado por overrides a versiones vulnerables;
+  ahora va a las parcheadas (1.1.21 / 5.0.12) y nanoid se actualiza por encima
+  del aviso GHSA-2v37-7h3g-55p8. npm audit queda limpio; build, lint y los 115
+  tests del servidor siguen en verde.
+
 ## [Unreleased]
 
 ## [0.8.14] - 2026-08-29
