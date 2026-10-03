@@ -231,7 +231,7 @@ export function UpdateDialog({ open, onOpenChange, initialStatus }: UpdateDialog
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
-      <DialogContent className="flex max-h-[92vh] w-full flex-col gap-4 overflow-y-auto md:h-[calc(100vh-2rem)] md:w-[calc(100vw-2rem)] md:max-w-none md:overflow-hidden">
+      <DialogContent className="flex max-h-[92vh] w-full flex-col gap-4 overflow-y-auto md:h-[600px] md:max-h-[calc(100vh-2rem)] md:w-[800px] md:max-w-[calc(100vw-2rem)] md:overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DownloadCloud className="h-5 w-5 text-accent" strokeWidth={1.75} aria-hidden="true" />
