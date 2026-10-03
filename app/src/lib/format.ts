@@ -24,8 +24,9 @@ export function fmtPower(kW: number): [string, string] {
   return [nf2().format(kW), 'kW'];
 }
 
-/** Potencia siempre en kW con 2 decimales (para series del día). */
-export function fmtKw(kW: number): string {
+/** Potencia siempre en kW con 2 decimales (para series del día). null = sin dato (medidores caídos). */
+export function fmtKw(kW: number | null | undefined): string {
+  if (kW === null || kW === undefined || !Number.isFinite(kW)) return '—';
   return nf2().format(kW);
 }
 

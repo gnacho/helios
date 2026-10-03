@@ -83,6 +83,11 @@ export function computeLive(ha) {
     invLive.push({ key: inv.key, name: inv.name, kw: round3(kw) })
   }
   const consumption = consumptionKw(ha)
+  // Medidores de consumo caídos con HAOS conectado (issue 135): el consumo
+  // derivado no es fiable → null + alerta. Un 0 fabricaría exportaciones
+  // imposibles al alimentar la curva del día.
+  const isDown = (e) => e === undefined || e.state === 'unavailable' || e.state === 'unknown'
+  const consDown = ha.connected && (t.consumption.powerIds || []).some((id) => isDown(ha.getState(id)))
 
   const b = t.battery
   const batMag = b.enabled ? entityNum(ha, b.powerId) : 0
@@ -109,18 +114,29 @@ export function computeLive(ha) {
     }
   }
 
+  // Fuente de red caída con HAOS conectado (issue 135): grid → null en vez
+  // de un 0 espurio que los fallbacks convertirían en import/export inventado.
+  const gridDown =
+    ha.connected &&
+    ((t.grid.mode === 'attrs' && t.grid.attrsId && isDown(ha.getState(t.grid.attrsId))) ||
+      (t.grid.mode !== 'attrs' && t.grid.sensorId && isDown(ha.getState(t.grid.sensorId))) ||
+      (t.grid.mode !== 'attrs' &&
+        !t.grid.sensorId &&
+        ((t.grid.importId && isDown(ha.getState(t.grid.importId))) || (t.grid.exportId && isDown(ha.getState(t.grid.exportId))))))
+
   const sun = ha.getState(t.sun)
   const weather = ha.getState(t.weather)
   const elevation = num(sun?.attributes?.elevation)
 
   // Sanity check: de noche sin sol, no puede haber export solar
-  if (elevation < 0 && grid < -0.03 && production < 0.02) grid = -grid
+  if (!gridDown && elevation < 0 && grid < -0.03 && production < 0.02) grid = -grid
 
   // Fallback: si no hay datos de grid pero hay consumo y no hay producción, estimar import
-  if (grid === 0 && consumption > 0.1 && production < 0.02) grid = consumption
+  if (!gridDown && grid === 0 && consumption > 0.1 && production < 0.02) grid = consumption
 
   const alerts = []
   if (!ha.connected) alerts.push({ id: 'haos', severity: 'critical', text: 'Sin conexión con Home Assistant' })
+  if (consDown) alerts.push({ id: 'consumo', severity: 'warning', text: 'Medidores de consumo sin datos' })
 
   // Estado del inversor: desde statusAttrsId (opcional). Si no hay sensor con
   // esos atributos, no hay alerta de inversor/scraper (genérico). Textos sin
@@ -145,13 +161,13 @@ export function computeLive(ha) {
   const inv1 = invLive[1] || { kw: 0 }
   return {
     production: round3(production),
-    consumption: round3(consumption),
+    consumption: consDown ? null : round3(consumption),
     respaldoKw: round3(entityNum(ha, t.consumption.respaldoId, t.consumption.powerUnit === 'W' ? 1000 : 1)),
     noRespaldadaKw: round3(entityNum(ha, t.consumption.noRespaldadaId, t.consumption.powerUnit === 'W' ? 1000 : 1)),
     batteryPower: round3(batteryPower),
     batteryStatus: batState || 'Desconocido',
     soc: round1(soc),
-    grid: round3(grid),
+    grid: gridDown ? null : round3(grid),
     solis: round3(inv0.kw),
     fox: round3(inv1.kw),
     inverters: invLive,
@@ -305,7 +321,7 @@ async function getDaySeriesUncached(ha, dateStr, db) {
 // (fila `daily` para días pasados; `liveTargets` para HOY, que aún no tiene
 // fila), para que la curva integre el mismo total que la fuente profunda.
 // Si se usó respaldo en algún bucket, la curva se marca `estimated`.
-function buildDaySeries(stats, dateStr, db, liveTargets) {
+export function buildDaySeries(stats, dateStr, db, liveTargets) {
   const t = getInstall()
   const invIds = t.inverters.flatMap((inv) => [inv.powerId, inv.backupPowerId].filter(Boolean))
   const ids = [...invIds, ...t.consumption.powerIds]
@@ -373,6 +389,15 @@ function buildDaySeries(stats, dateStr, db, liveTargets) {
 
     let grid = consumption - production + batteryPower
     if (Math.abs(grid) < 0.03) grid = 0
+    // Issue 135: si falta CUALQUIER entrada de la fórmula en el bucket
+    // (medidores de consumo o sensor de batería caídos), el grid derivado no
+    // es fiable → se suprime (null) en vez de computar con ceros, que de
+    // noche fabrica exportaciones imposibles. Si el hueco de consumo se
+    // rellena después (issue 125), el grid se recompute con el consumo
+    // estimado y el día queda marcado `estimated`.
+    const consMissing = consMeterIds.some((id) => b[id] === undefined || b[id] === null)
+    const batMissing = t.battery.enabled && t.battery.powerId && (b[t.battery.powerId] === undefined || b[t.battery.powerId] === null)
+    if (consMissing || batMissing) grid = null
 
     const hh = String(Math.floor(min / 60)).padStart(2, '0')
     const mm = String(min % 60).padStart(2, '0')
@@ -388,7 +413,7 @@ function buildDaySeries(stats, dateStr, db, liveTargets) {
       consumption: round3(consumption),
       batteryPower: round3(batteryPower),
       soc: round1(soc),
-      grid: round3(grid),
+      grid: grid === null ? null : round3(grid),
     })
   })
 
