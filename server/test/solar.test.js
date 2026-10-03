@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { computeLive, cachedCollector } from '../src/solar.js'
+import { computeLive, cachedCollector, buildDaySeries } from '../src/solar.js'
 import { _setForTests } from '../src/install.js'
 import { LEGACY_TOPOLOGY, GENERIC_TOPOLOGY } from '../src/install.js'
 
@@ -97,6 +97,92 @@ describe('computeLive — topología genérica (issue #37)', () => {
     _setForTests(t)
     const live = computeLive(haDischarging)
     expect(live.batteryPower).toBeCloseTo(-1.0, 2)
+  })
+})
+
+describe('issue #135 — grid derivado con entradas caídas', () => {
+  // HA conectado con la topología LEGACY (3 medidores de consumo en W,
+  // batería con powerId/socId, grid por attrs del shim).
+  function haLegacy(overrides = {}) {
+    const map = {
+      'sensor.solis_potencia_actual': { state: '0' },
+      'sensor.almacen_pinza_power_b': { state: '0' },
+      'sensor.medidor_respaldo_power': { state: '500' },
+      'sensor.vivienda_medidor_power': { state: '200' },
+      'sensor.almacen_pinza_power_a': { state: '50' },
+      'sensor.solis_bateria_potencia': { state: '0' },
+      'sensor.solis_bateria_soc': { state: '50' },
+      'sensor.solis_bateria_estado': { state: 'Descargando' },
+      'sensor.solis_scraper': { state: 'ok', attributes: { currentGridPower: 0.7, gridDirection: 'import' } },
+      'sun.sun': { state: 'below_horizon', attributes: { elevation: -20 } },
+      ...overrides,
+    }
+    return { connected: true, getState: (id) => map[id] }
+  }
+
+  it('computeLive: un medidor de consumo caído → consumption null + alerta, grid intacto', () => {
+    _setForTests(LEGACY_TOPOLOGY)
+    const live = computeLive(haLegacy({ 'sensor.medidor_respaldo_power': { state: 'unavailable' } }))
+    expect(live.consumption).toBeNull()
+    expect(live.alerts.some((a) => a.id === 'consumo' && a.severity === 'warning')).toBe(true)
+    expect(live.grid).toBeCloseTo(0.7, 2) // la fuente de red sigue viva
+  })
+
+  it('computeLive: fuente de red (attrs) caída → grid null, sin fallback inventado', () => {
+    _setForTests(LEGACY_TOPOLOGY)
+    const live = computeLive(haLegacy({ 'sensor.solis_scraper': { state: 'unavailable', attributes: {} } }))
+    expect(live.grid).toBeNull()
+  })
+
+  // Buckets de noche que reproducen el caso real del 26-Sep: medidores de
+  // consumo caídos y batería descargando 3,3 kW. Antes: grid -3,3 kW
+  // (exportación imposible de noche). Ahora: null.
+  it('buildDaySeries: bucket sin medidores de consumo → grid null (no export imposible)', () => {
+    _setForTests(LEGACY_TOPOLOGY)
+    const stats = {
+      'sensor.medidor_respaldo_power': [
+        { start: '2026-09-26T19:55:00', mean: 500 },
+        { start: '2026-09-26T20:05:00', mean: 500 },
+      ],
+      'sensor.vivienda_medidor_power': [
+        { start: '2026-09-26T19:55:00', mean: 200 },
+        { start: '2026-09-26T20:05:00', mean: 200 },
+      ],
+      'sensor.almacen_pinza_power_a': [
+        { start: '2026-09-26T19:55:00', mean: 50 },
+        { start: '2026-09-26T20:05:00', mean: 50 },
+      ],
+      'sensor.solis_bateria_potencia': [
+        { start: '2026-09-26T19:55:00', mean: 3.3 },
+        { start: '2026-09-26T20:00:00', mean: 3.3 },
+        { start: '2026-09-26T20:05:00', mean: 3.3 },
+      ],
+      'sensor.solis_bateria_soc': [
+        { start: '2026-09-26T19:55:00', mean: 50 },
+        { start: '2026-09-26T20:00:00', mean: 49 },
+        { start: '2026-09-26T20:05:00', mean: 49 },
+      ],
+    }
+    const { points } = buildDaySeries(stats, '2026-09-26', null, {})
+    const p1955 = points.find((p) => p.label === '19:55')
+    const p2000 = points.find((p) => p.label === '20:00')
+    const p2005 = points.find((p) => p.label === '20:05')
+    expect(p1955.grid).toBeCloseTo(0.75, 2) // todo presente: 0,75 kW de import
+    expect(p2000.grid).toBeNull() // medidores caídos + batería descargando: antes -3,3 kW
+    expect(p2005.grid).toBeCloseTo(0.75, 2) // medidores recuperados
+  })
+
+  it('buildDaySeries: falta UN medidor de consumo (hueco parcial) → grid null', () => {
+    _setForTests(LEGACY_TOPOLOGY)
+    const stats = {
+      'sensor.medidor_respaldo_power': [{ start: '2026-09-26T21:00:00', mean: 500 }],
+      'sensor.almacen_pinza_power_a': [{ start: '2026-09-26T21:00:00', mean: 50 }],
+      'sensor.solis_bateria_potencia': [{ start: '2026-09-26T21:00:00', mean: 0 }],
+      'sensor.solis_bateria_soc': [{ start: '2026-09-26T21:00:00', mean: 50 }],
+    }
+    const { points } = buildDaySeries(stats, '2026-09-26', null, {})
+    expect(points).toHaveLength(1)
+    expect(points[0].grid).toBeNull() // consumo infrarreportado (0,55 en vez de 0,75): no fiable
   })
 })
 

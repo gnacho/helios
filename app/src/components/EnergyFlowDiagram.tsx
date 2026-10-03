@@ -131,12 +131,13 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
   const { t } = useTranslation();
   const uid = useId().replace(/[:]/g, '');
 
-  const fvToHome = Math.min(live.production, live.consumption);
+  const cons = live.consumption ?? 0;
+  const fvToHome = Math.min(live.production, cons);
   const charging = live.batteryPower > 0 ? live.batteryPower : 0;
   const discharging = live.batteryPower < 0 ? -live.batteryPower : 0;
-  const exporting = live.grid < 0 ? -live.grid : 0;
-  const importing = live.grid > 0 ? live.grid : 0;
-  const solarSurplus = Math.max(0, live.production - live.consumption);
+  const exporting = live.grid != null && live.grid < 0 ? -live.grid : 0;
+  const importing = live.grid != null && live.grid > 0 ? live.grid : 0;
+  const solarSurplus = Math.max(0, live.production - cons);
   const gridToBattery = Math.max(0, Math.min(charging - solarSurplus, importing));
   const fvToBattery = Math.max(0, charging - gridToBattery);
 
@@ -165,7 +166,13 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         ? `${fmtKw(-live.batteryPower)} kW`
         : t('common.idle');
   const gridText =
-    live.grid < -0.05 ? `${fmtKw(-live.grid)} kW ↑` : live.grid > 0.05 ? `${fmtKw(live.grid)} kW ↓` : '0 W';
+    live.grid === null
+      ? '—'
+      : live.grid < -0.05
+        ? `${fmtKw(-live.grid)} kW ↑`
+        : live.grid > 0.05
+          ? `${fmtKw(live.grid)} kW ↓`
+          : '0 W';
 
   return (
     <motion.svg
@@ -198,8 +205,8 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         x={NODES.home.x}
         y={NODES.home.y}
         label={t('flow.home')}
-        valueText={`${fmtKw(live.consumption)} kW`}
-        active={live.consumption > 0.1}
+        valueText={live.consumption === null ? '—' : `${fmtKw(live.consumption)} kW`}
+        active={cons > 0.1}
         glowColor={homeColor}
       >
         <House size={30} style={{ color: homeColor }} />
@@ -227,11 +234,11 @@ export default function EnergyFlowDiagram({ live, className }: EnergyFlowDiagram
         y={NODES.grid.y}
         label={t('common.grid')}
         valueText={gridText}
-        active={Math.abs(live.grid) > 0.1}
-        glowColor={live.grid < 0 ? palette.redVertido : palette.redCompra}
+        active={live.grid != null && Math.abs(live.grid) > 0.1}
+        glowColor={live.grid != null && live.grid < 0 ? palette.redVertido : palette.redCompra}
         onClick={() => navigate('/historico')}
       >
-        <UtilityPole size={26} style={{ color: live.grid < 0 ? palette.redVertido : palette.redCompra }} />
+        <UtilityPole size={26} style={{ color: live.grid != null && live.grid < 0 ? palette.redVertido : palette.redCompra }} />
       </FlowNode>
     </motion.svg>
   );
