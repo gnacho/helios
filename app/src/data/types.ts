@@ -8,7 +8,8 @@ export interface PowerPoint {
   consumption: number;
   batteryPower: number;
   soc: number;
-  grid: number;
+  /** null = entradas de la fórmula caídas en ese bucket (issue 135): sin dato fiable. */
+  grid: number | null;
 }
 
 /** Valor de serie de un inversor por clave: p.inverters[key] o p[key] (solis/fox). */
@@ -31,10 +32,12 @@ export interface LiveInverter {
 
 export interface LivePower {
   production: number;
-  consumption: number;
+  /** null = algún medidor de consumo caído (issue 135): consumo no fiable. */
+  consumption: number | null;
   batteryPower: number;
   soc: number;
-  grid: number;
+  /** null = fuente de red caída (issue 135): sin dato de red. */
+  grid: number | null;
   solis: number;
   fox: number;
   inverters?: LiveInverter[];

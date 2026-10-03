@@ -12,7 +12,8 @@ import { cn } from '@/lib/utils';
 interface StripValueProps {
   icon: LucideIcon;
   label: string;
-  kw: number;
+  /** null = sin dato fiable (medidor caído, issue 135): se muestra '—'. */
+  kw: number | null;
   status?: string;
   color: string;
   /** Color del icono; si se omite, usa `color` (icono y celda iguales). */
@@ -24,7 +25,7 @@ interface StripValueProps {
 }
 
 function StripValue({ icon: Icon, label, kw, status, color, iconColor, className, altValue, altUnit }: StripValueProps) {
-  const animated = useAnimatedNumber(altValue === undefined ? kw : NaN);
+  const animated = useAnimatedNumber(altValue === undefined ? (kw ?? NaN) : NaN);
   return (
     <div className={cn('flex items-center gap-3 px-4 py-3 sm:px-5', className)}>
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}1F`, color: iconColor ?? color }}>
@@ -33,10 +34,10 @@ function StripValue({ icon: Icon, label, kw, status, color, iconColor, className
       <div className="min-w-0">
         <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-faint">{label}</p>
         <p className="font-display text-[22px] font-semibold leading-tight text-app" aria-live="off">
-          {altValue !== undefined ? altValue : fmtKw(animated)}
+          {altValue !== undefined ? altValue : kw === null ? '—' : fmtKw(animated)}
           {altUnit !== undefined ? (
             <span className="ml-1 text-[0.6em] font-medium text-faint">{altUnit}</span>
-          ) : (
+          ) : kw === null ? null : (
             <span className="ml-1 text-[0.6em] font-medium text-faint">kW</span>
           )}
         </p>
@@ -60,14 +61,15 @@ interface LivePowerStripProps {
 export default function LivePowerStrip({ live, atMin }: LivePowerStripProps) {
   const palette = useEnergyColors();
   const { t } = useTranslation();
-  const exporting = live.grid < -0.05;
+  const exporting = live.grid != null && live.grid < -0.05;
 
   const batteryLabel = (bp: number): string => {
     if (bp > 0.05) return t('common.charging');
     if (bp < -0.05) return t('common.discharging');
     return t('common.idle');
   };
-  const gridLabel = (grid: number): string => {
+  const gridLabel = (grid: number | null): string => {
+    if (grid === null) return '—';
     if (grid > 0.05) return t('live.buying');
     if (grid < -0.05) return t('live.exporting');
     return t('live.balanced');
@@ -106,7 +108,7 @@ export default function LivePowerStrip({ live, atMin }: LivePowerStripProps) {
         <StripValue
           icon={exporting ? ArrowUpFromLine : ArrowDownToLine}
           label={t('common.grid')}
-          kw={Math.abs(live.grid)}
+          kw={live.grid === null ? null : Math.abs(live.grid)}
           status={gridLabel(live.grid)}
           color={exporting ? palette.redVertido : palette.redCompra}
           className="border-l border-t border-app lg:border-t-0"

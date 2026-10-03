@@ -81,8 +81,10 @@ function integrateSeries(series: PowerPoint[], untilMin: number, socFallback: nu
     if (p.t >= untilMin) break;
     productionKwh += p.production * dtH;
     consumptionKwh += p.consumption * dtH;
-    if (p.grid > 0) gridImportKwh += p.grid * dtH;
-    else gridExportKwh += -p.grid * dtH;
+    if (p.grid != null) {
+      if (p.grid > 0) gridImportKwh += p.grid * dtH;
+      else gridExportKwh += -p.grid * dtH;
+    }
     if (p.batteryPower > 0) batteryChargedKwh += p.batteryPower * dtH;
     if (p.batteryPower < 0) batteryDischargedKwh += -p.batteryPower * dtH;
     directFvKwh += Math.min(p.production, p.consumption) * dtH;
