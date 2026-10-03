@@ -231,7 +231,7 @@ export function UpdateDialog({ open, onOpenChange, initialStatus }: UpdateDialog
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="flex max-h-[92vh] w-full flex-col gap-4 overflow-y-auto md:h-[calc(100vh-2rem)] md:w-[calc(100vw-2rem)] md:max-w-none md:overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DownloadCloud className="h-5 w-5 text-accent" strokeWidth={1.75} aria-hidden="true" />
@@ -241,7 +241,7 @@ export function UpdateDialog({ open, onOpenChange, initialStatus }: UpdateDialog
         </DialogHeader>
 
         {phase === 'confirm' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex min-h-0 flex-col gap-4 md:flex-1 md:overflow-hidden">
             <div className="flex items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
               <span className="font-mono text-sm text-text-secondary">{status?.current ?? '...'}</span>
               <ArrowRight className="h-4 w-4 text-text-muted" strokeWidth={1.75} aria-hidden="true" />
@@ -254,14 +254,21 @@ export function UpdateDialog({ open, onOpenChange, initialStatus }: UpdateDialog
                 <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   {t('update.dialog.changelogTitle')}
                 </p>
-                <div className="max-h-44 overflow-y-auto rounded-xl border border-border bg-surface px-3.5 py-2.5">
+                <div className="max-h-44 overflow-y-auto rounded-xl border border-border bg-surface px-3.5 py-2.5 md:max-h-none md:flex-1 md:min-h-0">
                   <ul className="flex flex-col gap-1">
-                    {changelogLines.map((l, i) => (
-                      <li key={i} className="flex items-start gap-2 text-caption leading-snug text-text-secondary">
-                        <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-text-muted/60" aria-hidden="true" />
-                        {l.replace(/^[-*]\s+/, '')}
-                      </li>
-                    ))}
+                    {changelogLines.map((l, i) => {
+                      const heading = l.match(/^#{1,3}\s+(.*)$/)
+                      return heading ? (
+                        <li key={i} className="mt-1.5 first:mt-0 text-sm font-semibold text-text-primary">
+                          {heading[1]}
+                        </li>
+                      ) : (
+                        <li key={i} className="flex items-start gap-2 text-caption leading-snug text-text-secondary">
+                          <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-text-muted/60" aria-hidden="true" />
+                          {l.replace(/^[-*]\s+/, '')}
+                        </li>
+                      )
+                    })}
                   </ul>
                 </div>
               </div>
@@ -275,7 +282,7 @@ export function UpdateDialog({ open, onOpenChange, initialStatus }: UpdateDialog
               />
               <span>{t('update.dialog.downNotice')}</span>
             </label>
-            <DialogFooter>
+            <DialogFooter className="md:mt-auto">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {t('update.dialog.cancel')}
               </Button>
