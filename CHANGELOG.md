@@ -53,6 +53,15 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   en un área con scroll que crece, cabeceras de secciones en negrita y las
   acciones ancladas abajo. En móvil se mantiene el comportamiento actual.
 
+## [0.8.22] - 2026-10-03
+
+### Fixed
+
+- **Diálogo de actualización ajustado (#139).** El diálogo ya no ocupa casi
+  toda la pantalla: unos 800x600 en escritorio con las notas haciendo scroll
+  dentro, y la página de fondo ahora se ve claramente difuminada, no solo
+  oscurecida.
+
 ## [Unreleased]
 
 ## [0.8.14] - 2026-08-29
