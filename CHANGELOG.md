@@ -62,6 +62,16 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   dentro, y la página de fondo ahora se ve claramente difuminada, no solo
   oscurecida.
 
+## [0.8.24] - 2026-10-07
+
+### Changed
+
+- **Scrollable mobile bottom nav (#142).** The mobile bottom nav is now a
+  horizontally scrollable row with every section as a direct tab,
+  auto-centering the active one. The fixed 4/5-column grid (which depended
+  on the charger extension being on) is gone, consistent with the other
+  apps in the stack.
+
 ## [0.8.23] - 2026-10-03
 
 ### Fixed
