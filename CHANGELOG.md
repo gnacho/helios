@@ -44,6 +44,44 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 - **Dependencias actualizadas (#133).** hono 4.13.8, vitest 4.1.11 y js-yaml
   4.3.2 (transitivo): cierra 6 alertas de Dependabot (1 alta).
 
+## [0.8.21] - 2026-10-03
+
+### Changed
+
+- **Diálogo de actualización más grande (#137).** El diálogo de actualización
+  ahora ocupa casi toda la ventana en escritorio, con las notas de la release
+  en un área con scroll que crece, cabeceras de secciones en negrita y las
+  acciones ancladas abajo. En móvil se mantiene el comportamiento actual.
+
+## [0.8.22] - 2026-10-03
+
+### Fixed
+
+- **Diálogo de actualización ajustado (#139).** El diálogo ya no ocupa casi
+  toda la pantalla: unos 800x600 en escritorio con las notas haciendo scroll
+  dentro, y la página de fondo ahora se ve claramente difuminada, no solo
+  oscurecida.
+
+## [0.8.24] - 2026-10-07
+
+### Changed
+
+- **Scrollable mobile bottom nav (#142).** The mobile bottom nav is now a
+  horizontally scrollable row with every section as a direct tab,
+  auto-centering the active one. The fixed 4/5-column grid (which depended
+  on the charger extension being on) is gone, consistent with the other
+  apps in the stack.
+
+## [0.8.23] - 2026-10-03
+
+### Fixed
+
+- **Dependencias con vulnerabilidades conocidas (#141).** brace-expansion (2
+  alertas de Dependabot) estaba pineado por overrides a versiones vulnerables;
+  ahora va a las parcheadas (1.1.21 / 5.0.12) y nanoid se actualiza por encima
+  del aviso GHSA-2v37-7h3g-55p8. npm audit queda limpio; build, lint y los 115
+  tests del servidor siguen en verde.
+
 ## [Unreleased]
 
 ## [0.8.14] - 2026-08-29

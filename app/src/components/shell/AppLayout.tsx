@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
 import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
@@ -409,8 +409,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const titleKey = TITLE_KEYS.find(([re]) => re.test(pathname))?.[1] ?? 'nav.dashboard';
   const count = useInverterCount();
-  const { navItems, chargerOn, bydOn } = useNavItems();
-  const navCols = chargerOn && bydOn ? 'grid-cols-6' : chargerOn || bydOn ? 'grid-cols-5' : 'grid-cols-4';
+  const { navItems } = useNavItems();
+  /* Bottom-nav deslizable: centra el tab activo en la fila scrolleable. */
+  const bottomNavRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = bottomNavRef.current;
+    const activeEl = el?.querySelector('[data-active="true"]');
+    if (el && activeEl) {
+      activeEl.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
+  }, [pathname]);
   const resolvedTitleKey = titleKey === 'nav.inversores' ? invLabelKey(count) : titleKey;
   const lgMargin = collapsed ? 'lg:ml-16' : 'lg:ml-[232px]';
 
@@ -473,13 +481,22 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         className="[view-transition-name:helios-nav] fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden"
         aria-label={t('nav.dashboard')}
       >
-        {/* Sin Ajustes: en móvil el acceso es el avatar del header (→ /ajustes) */}
-        <div className={cn('grid h-16', navCols)}>
+        {/* Fila deslizable (keynest #284 / deltos #290 / netpulse #1312):
+            min-width por tab, scrollbar oculta y auto-scroll al activo.
+            El flex absorbe cualquier número de items (cargador/byd). */}
+        <div ref={bottomNavRef} className="flex h-16 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map(({ to, labelKey, icon: Icon }) => {
             const active = isActive(pathname, to);
             const label = t(labelKey === 'nav.inversores' ? invLabelKey(count) : labelKey);
             return (
-              <NavLink key={to} to={to} onClick={handleMobileNav(to)} className="relative flex flex-col items-center justify-center gap-1" aria-label={label}>
+              <NavLink
+                key={to}
+                to={to}
+                onClick={handleMobileNav(to)}
+                data-active={active ? 'true' : undefined}
+                className="relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1"
+                aria-label={label}
+              >
                 <motion.span
                   animate={active ? { scale: [1, 1.15, 1] } : { scale: 1 }}
                   transition={{ duration: 0.25, type: 'spring', stiffness: 500, damping: 20 }}
@@ -493,9 +510,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             );
           })}
         </div>
-      </nav>
-
-      <HeliosToaster />
+      </nav>      <HeliosToaster />
     </div>
   );
 }

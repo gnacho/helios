@@ -1,6 +1,6 @@
 {
   "name": "helios-server",
-  "version": "0.8.20",
+  "version": "0.8.24",
   "private": true,
   "type": "module",
   "engines": {
