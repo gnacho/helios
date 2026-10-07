@@ -475,7 +475,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         className="[view-transition-name:helios-nav] fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden"
         aria-label={t('nav.dashboard')}
       >
-        {/* Fila deslizable (keynest #284 / deltos #290 / netpulse #1312):
+        {/* Fila deslizable (mismo patrón que el resto de apps del stack):
             min-width por tab, scrollbar oculta y auto-scroll al activo. */}
         <div ref={bottomNavRef} className="flex h-16 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map(({ to, labelKey, icon: Icon }) => {
