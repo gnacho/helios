@@ -554,9 +554,18 @@ export const chargerDayCurve = cachedCollector(
     }
     if (!steps.length) return { points: [] }
 
+    // HOY: la curva termina en el minuto actual (los buckets posteriores solo
+    // tendrían el último estado repetido: pintaría "encendido" hasta medianoche
+    // aunque el día no haya acabado, al contrario que la generación solar en el
+    // DayChart, que se dibuja hasta ahora). Días pasados: día completo.
+    const isToday = key === todayStr()
+    const limitMin = isToday
+      ? Math.max(0, Math.floor((Date.now() - start.getTime()) / 60000))
+      : 1440
+
     const points = []
     let idx = 0
-    for (let min = 0; min < 1440; min += STEP_MIN) {
+    for (let min = 0; min < limitMin; min += STEP_MIN) {
       while (idx < steps.length - 1 && steps[idx + 1].min <= min) idx++
       if (steps[idx].min > min) break // aún no hay dato en este tramo
       const hh = String(Math.floor(min / 60)).padStart(2, '0')

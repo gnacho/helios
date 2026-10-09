@@ -18,6 +18,7 @@ import {
   dailyDeltasFromHistory,
   chargerPvFromCurves,
   backfillChargerHistory,
+  chargerDayCurve,
   addChargerKwh,
   setChargerKwhIfNull,
   chargerHistory,
@@ -522,5 +523,38 @@ describe('atribución solar (iteración 4)', () => {
     const days = chargerHistory(db, '2026-08-12', '2026-08-13')
     expect(days[0].pvKwh).toBe(6) // excedente 11 > carga 6 → todo solar
     expect(days[1].pvKwh).toBe(0) // producción < consumo del resto → 0
+  })
+})
+
+describe('chargerDayCurve', () => {
+  it('hoy: la curva termina en el minuto actual, no en medianoche', async () => {
+    _setForTests(chargerExt({ powerId: 'sensor.chg_power' }))
+    const midnight = new Date()
+    midnight.setHours(0, 0, 0, 0)
+    const rows = [
+      { state: '0', last_changed: midnight.toISOString() },
+      { state: '2', last_changed: new Date(Date.now() - 1800000).toISOString() }, // enchufado hace 30 min
+    ]
+    const res = await chargerDayCurve({ historyDuringPeriod: async () => rows })
+    expect(res.points.length).toBeGreaterThan(0)
+    const last = res.points[res.points.length - 1]
+    const nowMin = Math.floor((Date.now() - midnight.getTime()) / 60000)
+    // el último bucket es el último tramo de 5 min cerrado ANTES de ahora
+    expect(last.t).toBeLessThanOrEqual(nowMin)
+    expect(last.t).toBeGreaterThan(nowMin - 6)
+    expect(last.kw).toBe(2) // y mantiene el último estado real, sin extenderlo a 00:00
+  })
+
+  it('día pasado: curva completa de 24 h (288 buckets)', async () => {
+    _setForTests(chargerExt({ powerId: 'sensor.chg_power' }))
+    const rows = [
+      { state: '0', last_changed: new Date(2026, 7, 12, 0, 0, 0).toISOString() },
+      { state: '2', last_changed: new Date(2026, 7, 12, 11, 50, 0).toISOString() },
+    ]
+    const res = await chargerDayCurve({ historyDuringPeriod: async () => rows }, '2026-08-12')
+    expect(res.points).toHaveLength(288)
+    expect(res.points[0].label).toBe('00:00')
+    expect(res.points[res.points.length - 1].label).toBe('23:55')
+    expect(res.points[res.points.length - 1].kw).toBe(2) // hold-last legítimo en día cerrado
   })
 })
