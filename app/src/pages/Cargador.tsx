@@ -300,7 +300,6 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
     { Icon: Zap, label: t('cargador.currentPower'), value: live ? `${fmtKw(live.powerKw)} kW` : '…' },
     { Icon: Clock, label: t('cargador.session'), value: live?.sessionKwh !== undefined ? `${fmtEnergy(live.sessionKwh)} kWh` : '—' },
     { Icon: Gauge, label: t('cargador.lifetime'), value: live?.totalKwh !== undefined ? `${fmtEnergy(live.totalKwh)} kWh` : '—' },
-    { Icon: Thermometer, label: t('cargador.temperature'), value: live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—' },
   ];
 
   return (
@@ -311,33 +310,33 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE_OUT }}
-          className="helios-card col-span-12 flex flex-col items-center gap-6 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:flex-row"
+          className="helios-card col-span-12 flex flex-col gap-5 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:flex-row lg:items-stretch"
         >
-          <div className="flex shrink-0 flex-col items-center gap-4 lg:w-[38%]">
-            <motion.div
-              animate={live?.charging ? { scale: [1, 1.04, 1] } : { scale: 1 }}
-              transition={live?.charging ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-              className={cn(
-                'flex h-32 w-32 items-center justify-center rounded-3xl border',
-                live?.charging ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-app bg-surface-2',
-              )}
-            >
-              {charger.imageUrl ? (
-                <img
-                  src={charger.imageUrl}
-                  alt={charger.name}
-                  draggable={false}
-                  className="h-28 w-28 object-contain select-none"
-                />
-              ) : (
-                <CarFront
-                  size={64}
-                  strokeWidth={1.5}
-                  className={live?.charging ? 'text-emerald-500' : 'text-faint'}
-                />
-              )}
-            </motion.div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
+          {/* Foto del coche: ocupa el alto de la tarjeta, fondo blanco sin acento */}
+          <motion.div
+            animate={live?.charging ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+            transition={live?.charging ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
+            className="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[40%] lg:min-h-60"
+          >
+            {charger.imageUrl ? (
+              <img
+                src={charger.imageUrl}
+                alt={charger.name}
+                draggable={false}
+                className="max-h-52 w-full object-contain select-none lg:max-h-60"
+              />
+            ) : (
+              <CarFront
+                size={72}
+                strokeWidth={1.5}
+                className={live?.charging ? 'text-emerald-500' : 'text-faint'}
+              />
+            )}
+          </motion.div>
+
+          {/* Acciones a la derecha: estado, encender/apagar, amperaje, temperatura */}
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-4">
+            <div className="flex flex-wrap items-center gap-2">
               <span className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold', stateChip.cls)}>
                 <stateChip.Icon size={14} />
                 {stateChip.text}
@@ -362,7 +361,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
             </div>
             {/* Amperaje (solo con entidad de corriente configurada) */}
             {charger.ampId && (
-              <div className="flex flex-wrap items-center justify-center gap-1.5" role="group" aria-label={t('cargador.ampsAria')}>
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('cargador.ampsAria')}>
                 <span className="mr-1 text-xs text-faint">{t('cargador.amps')}</span>
                 {AMP_STEPS.map((a) => (
                   <button
@@ -383,24 +382,12 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="flex min-w-0 flex-1 items-center lg:border-l lg:border-app lg:pl-6">
-            <div className="grid w-full grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-              {liveStats.map((d, i) => (
-                <motion.div
-                  key={d.label}
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.35, delay: i * 0.05 }}
-                  className="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-surface-2"
-                >
-                  <d.Icon size={15} className="shrink-0 text-faint" />
-                  <span className="text-[13px] text-muted">{d.label}</span>
-                  <span className="ml-auto text-[15px] font-semibold tabular-nums text-app">{d.value}</span>
-                </motion.div>
-              ))}
+            <div className="flex items-center gap-2 px-1">
+              <Thermometer size={15} className="shrink-0 text-faint" />
+              <span className="text-[13px] text-muted">{t('cargador.temperature')}</span>
+              <span className="ml-auto text-[15px] font-semibold tabular-nums text-app">
+                {live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—'}
+              </span>
             </div>
           </div>
         </motion.section>
@@ -416,6 +403,15 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
           <div className="px-4 pb-1 pt-4 sm:px-5">
             <h2 className="text-[15px] font-semibold text-app">{t('cargador.todayTitle')}</h2>
             <p className="text-xs text-faint">{t('cargador.todaySubtitle')}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 pb-2 sm:px-5">
+            {liveStats.map((d) => (
+              <span key={d.label} className="inline-flex items-center gap-1.5 text-[13px] text-muted">
+                <d.Icon size={13} className="shrink-0 text-faint" />
+                {d.label}
+                <span className="font-semibold tabular-nums text-app">{d.value}</span>
+              </span>
+            ))}
           </div>
           <div className="px-1">
             {curve === null ? (
