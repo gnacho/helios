@@ -315,6 +315,16 @@ export function computeOneChargerLive(ha, c) {
   const charging = (state !== undefined && c.chargingStates.includes(state)) || (powerKw !== undefined && powerKw > 0.05)
   const connected = charging || (state !== undefined && c.connectedStates.includes(state))
   const sw = entityStateOrUndef(ha, c.switchId)
+  // Opciones validas de la entidad de corriente (input_select/select): la UI
+  // muestra solo esas; con number u otra entidad cae a los presets fijos.
+  let ampOptions
+  if (c.ampId) {
+    const e = ha.getState(c.ampId)
+    const opts = e?.attributes?.options
+    if (Array.isArray(opts)) {
+      ampOptions = opts.map((o) => Number(o)).filter((n) => Number.isFinite(n)).sort((a, b) => a - b)
+    }
+  }
   return {
     key: c.key,
     name: c.name,
@@ -327,6 +337,7 @@ export function computeOneChargerLive(ha, c) {
     tempC: entityNumOrUndef(ha, c.tempId),
     switchOn: sw === undefined ? undefined : sw === 'on',
     amps: entityNumOrUndef(ha, c.ampId),
+    ampOptions,
   }
 }
 

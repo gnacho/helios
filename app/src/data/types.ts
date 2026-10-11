@@ -73,6 +73,8 @@ export interface ChargerLive {
   totalKwh?: number;
   tempC?: number;
   switchOn?: boolean;
+  /** Opciones validas de la entidad de corriente (si las expone). */
+  ampOptions?: number[];
 }
 
 /** Punto de la curva diaria del cargador (kW por tramos de 5 min). */

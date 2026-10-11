@@ -906,7 +906,10 @@ guarded.put('/charger/image/:key', async (c) => {
   if (!CHARGER_KEY_RE.test(key)) return c.json({ error: 'clave invalida' }, 400)
   const body = await c.req.json().catch(() => null)
   const res = extensions.saveChargerImage(db, config.dataDir, key, body?.image)
-  if (!res.ok) return c.json({ error: res.error }, 400)
+  if (!res.ok) {
+    console.error(`[helios] cargador ${key}: subida de imagen rechazada: ${res.error}`)
+    return c.json({ error: res.error }, 400)
+  }
   audit(db, me?.username || 'unknown', c.get('userId'), 'charger.image', { charger: key })
   return c.json({ ok: true, url: `/api/charger/image/${key}` })
 })
