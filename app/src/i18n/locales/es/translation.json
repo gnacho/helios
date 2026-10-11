@@ -197,7 +197,11 @@
     "powerToastOff": "{{name}} apagado",
     "amps": "Amperaje",
     "ampsAria": "Seleccionar amperaje de carga",
-    "ampsToast": "Amperaje de {{name}} a {{amps}} A"
+    "ampsToast": "Amperaje de {{name}} a {{amps}} A",
+    "imageEdit": "Cambiar imagen (PNG con transparencia, alto recomendado 460 px; se reescala solo)",
+    "imageClear": "Quitar imagen",
+    "imageOk": "Imagen actualizada",
+    "imageCleared": "Imagen quitada"
   },
   "inversores": {
     "title": "Inversores",

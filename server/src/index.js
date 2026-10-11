@@ -853,6 +853,41 @@ guarded.post('/charger/action', async (c) => {
   }
 })
 
+
+// Imagen del coche de un cargador (subida editable, fuera del repo)
+const CHARGER_KEY_RE = /^[a-z0-9-]{1,20}$/
+guarded.get('/charger/image/:key', (c) => {
+  const key = c.req.param('key')
+  if (!CHARGER_KEY_RE.test(key)) return c.json({ error: 'clave invalida' }, 400)
+  const img = extensions.findChargerImage(config.dataDir, key)
+  if (!img) return c.body(null, 404)
+  const buf = fs.readFileSync(img.path)
+  return new Response(buf, { headers: { 'Content-Type': img.mime, 'Cache-Control': 'no-cache' } })
+})
+
+guarded.put('/charger/image/:key', async (c) => {
+  const me = dbModule.getUserById(db, c.get('userId'))
+  if (me?.role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const key = c.req.param('key')
+  if (!CHARGER_KEY_RE.test(key)) return c.json({ error: 'clave invalida' }, 400)
+  const body = await c.req.json().catch(() => null)
+  const res = extensions.saveChargerImage(db, config.dataDir, key, body?.image)
+  if (!res.ok) return c.json({ error: res.error }, 400)
+  audit(db, me?.username || 'unknown', c.get('userId'), 'charger.image', { charger: key })
+  return c.json({ ok: true, url: `/api/charger/image/${key}` })
+})
+
+guarded.delete('/charger/image/:key', async (c) => {
+  const me = dbModule.getUserById(db, c.get('userId'))
+  if (me?.role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const key = c.req.param('key')
+  if (!CHARGER_KEY_RE.test(key)) return c.json({ error: 'clave invalida' }, 400)
+  const res = extensions.clearChargerImage(db, config.dataDir, key)
+  if (!res.ok) return c.json({ error: res.error }, 400)
+  audit(db, me?.username || 'unknown', c.get('userId'), 'charger.image.clear', { charger: key })
+  return c.json({ ok: true })
+})
+
 app.route('/api', guarded)
 
 app.onError((err, c) => {
