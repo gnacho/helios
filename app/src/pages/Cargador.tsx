@@ -327,7 +327,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                   src={charger.imageUrl}
                   alt={charger.name}
                   draggable={false}
-                  className="h-20 w-20 object-contain select-none"
+                  className="h-28 w-28 object-contain select-none"
                 />
               ) : (
                 <CarFront
