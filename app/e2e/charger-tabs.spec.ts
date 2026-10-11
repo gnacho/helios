@@ -10,7 +10,7 @@ const DOS = {
   carCharger: {
     enabled: true,
     chargers: [
-      { key: 'main', name: 'Pared', powerId: 'sensor.a', powerUnit: 'W', energyTotalId: 'sensor.at', stateId: 'sensor.as', switchId: 'switch.a', ampId: 'number.a', chargingStates: ['charging'], connectedStates: ['charging'] },
+      { key: 'main', name: 'Pared', powerId: 'sensor.a', powerUnit: 'W', energyTotalId: 'sensor.at', stateId: 'sensor.as', switchId: 'switch.a', ampId: 'number.a', chargingStates: ['charging'], connectedStates: ['charging'] , imageUrl: '/chargers/pared.png' },
       { key: 'c2', name: 'Portatil', powerId: 'sensor.b', powerUnit: 'kW', energyTotalId: 'sensor.bt', stateId: 'sensor.bs', switchId: 'switch.b', ampId: 'select.b', chargingStates: ['charging'], connectedStates: ['charging'] },
     ],
   },
@@ -55,8 +55,10 @@ test.describe('cargador: pestanas por cargador', () => {
     page.on('pageerror', (e) => errores.push(String(e)));
     await page.goto('/cargador?tab=main');
 
+    // Imagen del coche en lugar del icono (imageUrl configurada)
+    await expect(page.getByRole('img', { name: 'Pared' })).toBeVisible({ timeout: 15000 });
     const power = page.getByRole('button', { name: /encender|apagar|turn on|turn off/i }).first();
-    await expect(power).toBeVisible({ timeout: 15000 });
+    await expect(power).toBeVisible();
     // Sin HAOS real switchOn es undefined: el boton queda deshabilitado
     await expect(power).toBeDisabled();
     for (const a of [6, 8, 10, 13, 16, 20, 25, 32]) {
