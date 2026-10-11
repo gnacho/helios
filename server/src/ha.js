@@ -146,6 +146,17 @@ export class HAClient extends EventEmitter {
     })
   }
 
+  /** Llama a un servicio de HAOS por websocket (target/entity_id separado). */
+  callService(domain, service, serviceData) {
+    const msg = { type: 'call_service', domain, service }
+    const data = serviceData ?? {}
+    if (data.entity_id) msg.target = { entity_id: data.entity_id }
+    const rest = { ...data }
+    delete rest.entity_id
+    if (Object.keys(rest).length > 0) msg.service_data = rest
+    return this.call(msg)
+  }
+
   getState(id) {
     return this.entities.get(id)
   }

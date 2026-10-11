@@ -250,7 +250,7 @@ app.use('*', async (c, next) => {
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
   c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-  c.header('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline'${gcOrigin}; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.github.com${gcOrigin}`)
+  c.header('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline'${gcOrigin}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://api.github.com${gcOrigin}`)
   await next()
 })
 const sseClients = new Set()

@@ -18,9 +18,15 @@ export default function ChargerImageButtons({ charger }: { charger: ChargerCfg }
     if (busy) return;
     setBusy(true);
     try {
-      const url = URL.createObjectURL(file);
+      // data: URL de partida (CSP: img-src permite data:, blob: NO)
+      const original: string = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result));
+        fr.onerror = rej;
+        fr.readAsDataURL(file);
+      });
       const img = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      await new Promise((res, rej) => { img.onload = () => res(null); img.onerror = () => rej(new Error(`load fail len=${original.length} w=${img.naturalWidth} h=${img.naturalHeight} head=${original.slice(0, 30)}`)); img.src = original; });
       const scale = Math.min(1, 460 / img.naturalHeight);
       const w = Math.max(1, Math.round(img.naturalWidth * scale));
       const h = Math.max(1, Math.round(img.naturalHeight * scale));
@@ -28,15 +34,7 @@ export default function ChargerImageButtons({ charger }: { charger: ChargerCfg }
       canvas.width = w;
       canvas.height = h;
       canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      const blob: Blob | null = await new Promise((res2) => canvas.toBlob((b) => res2(b), 'image/png'));
-      if (!blob) throw new Error('canvas');
-      const dataUrl: string = await new Promise((res2, rej) => {
-        const fr = new FileReader();
-        fr.onload = () => res2(String(fr.result));
-        fr.onerror = rej;
-        fr.readAsDataURL(blob);
-      });
+      const dataUrl = canvas.toDataURL('image/png');
       await apiFetch(`/api/charger/image/${charger.key}`, {
         method: 'PUT',
         body: JSON.stringify({ image: dataUrl }),
@@ -45,6 +43,7 @@ export default function ChargerImageButtons({ charger }: { charger: ChargerCfg }
       invalidateExtensions();
       heliosToast(t('cargador.imageOk'));
     } catch (err) {
+      console.error('[imagen]', err);
       heliosToast(err instanceof Error ? err.message : t('common.error'), { tone: 'warning' });
     } finally {
       setBusy(false);
