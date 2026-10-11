@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   BatteryCharging,
@@ -7,10 +7,8 @@ import {
   Clock,
   Gauge,
   PlugZap,
-  ImagePlus,
   Power,
   Thermometer,
-  Trash2,
   Zap,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -28,7 +26,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useEnergyData } from '@/data/EnergyDataProvider';
-import { useExtensions, invalidateExtensions } from '@/hooks/useExtensions';
+import { useExtensions } from '@/hooks/useExtensions';
 import { chargerEnabled } from '@/data/types';
 import type { ChargerCfg, ChargerCurvePoint, ChargerLive } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
@@ -38,6 +36,7 @@ import { heliosToast } from '@/lib/toast';
 import { dateLocale } from '@/i18n';
 import { cn } from '@/lib/utils';
 import PeriodSelector from '@/components/PeriodSelector';
+import ChargerImageButtons from '@/components/ChargerImageButtons';
 import type { Period } from '@/lib/historyStats';
 import {
   periodWindow,
@@ -128,56 +127,6 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
   const [history, setHistory] = useState<HistoryDay[] | null>(null);
   const [pwrBusy, setPwrBusy] = useState(false);
   const [ampBusy, setAmpBusy] = useState(false);
-  const [imgBusy, setImgBusy] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  /** Reescala la imagen a 460 px de alto (canvas) y la sube como PNG. */
-  const onImageFile = async (file: File) => {
-    if (imgBusy) return;
-    setImgBusy(true);
-    try {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-      const scale = Math.min(1, 460 / img.naturalHeight);
-      const w = Math.max(1, Math.round(img.naturalWidth * scale));
-      const h = Math.max(1, Math.round(img.naturalHeight * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      const blob: Blob | null = await new Promise((res) => canvas.toBlob((b) => res(b), 'image/png'));
-      if (!blob) throw new Error('canvas');
-      const dataUrl: string = await new Promise((res, rej) => {
-        const fr = new FileReader();
-        fr.onload = () => res(String(fr.result));
-        fr.onerror = rej;
-        fr.readAsDataURL(blob);
-      });
-      await apiFetch(`/api/charger/image/${key}`, { method: 'PUT', body: JSON.stringify({ image: dataUrl }), headers: { 'Content-Type': 'application/json' } });
-      invalidateExtensions();
-      heliosToast(t('cargador.imageOk'));
-    } catch (err) {
-      heliosToast(err instanceof Error ? err.message : t('common.error'), { tone: 'warning' });
-    } finally {
-      setImgBusy(false);
-    }
-  };
-
-  const clearImage = async () => {
-    if (imgBusy) return;
-    setImgBusy(true);
-    try {
-      await apiFetch(`/api/charger/image/${key}`, { method: 'DELETE' });
-      invalidateExtensions();
-      heliosToast(t('cargador.imageCleared'));
-    } catch (err) {
-      heliosToast(err instanceof Error ? err.message : t('common.error'), { tone: 'warning' });
-    } finally {
-      setImgBusy(false);
-    }
-  };
 
   const key = charger.key;
 
@@ -370,49 +319,15 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
               <stateChip.Icon size={14} />
               {stateChip.text}
             </span>
-              <div className="ml-auto flex items-center gap-1.5">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void onImageFile(f);
-                    e.target.value = '';
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={imgBusy}
-                  title={t('cargador.imageEdit')}
-                  aria-label={t('cargador.imageEdit')}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
-                >
-                  <ImagePlus size={15} strokeWidth={1.75} />
-                </button>
-                {charger.imageUrl && (
-                  <button
-                    type="button"
-                    onClick={() => void clearImage()}
-                    disabled={imgBusy}
-                    title={t('cargador.imageClear')}
-                    aria-label={t('cargador.imageClear')}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-red-500 disabled:opacity-50"
-                  >
-                    <Trash2 size={15} strokeWidth={1.75} />
-                  </button>
-                )}
-              </div>
+              <ChargerImageButtons charger={charger} />
           </div>
 
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch lg:h-80">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
             {/* Foto del coche: ocupa el alto del bloque, fondo blanco/oscuro sin acento */}
             <motion.div
               animate={live?.charging ? { scale: [1, 1.02, 1] } : { scale: 1 }}
               transition={live?.charging ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-              className="flex min-h-56 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:min-h-0 lg:w-[42%] dark:bg-transparent"
+              className="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[42%] dark:bg-transparent"
             >
               {charger.imageUrl ? (
                 <img
@@ -439,19 +354,19 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                 aria-pressed={live?.switchOn === true}
                 title={t(live?.switchOn ? 'cargador.powerOff' : 'cargador.powerOn')}
                 className={cn(
-                  'inline-flex h-16 w-full items-center justify-center gap-3 rounded-2xl text-lg font-semibold transition-colors disabled:opacity-50',
+                  'inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50',
                   live?.switchOn
                     ? 'bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
                     : 'bg-brand text-white hover:opacity-90',
                 )}
               >
-                <Power size={22} strokeWidth={2} className={pwrBusy ? 'animate-pulse' : undefined} />
+                <Power size={20} strokeWidth={2} className={pwrBusy ? 'animate-pulse' : undefined} />
                 {t(live?.switchOn ? 'cargador.powerOff' : 'cargador.powerOn')}
               </button>
               {/* Amperaje (solo con entidad de corriente configurada) */}
               {charger.ampId && (
                 <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('cargador.ampsAria')}>
-                  <span className="mr-1 text-sm text-faint">{t('cargador.amps')}</span>
+                  <span className="mr-1 text-xs text-faint">{t('cargador.amps')}</span>
                   {AMP_STEPS.map((a) => (
                     <button
                       key={a}
@@ -460,7 +375,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                       disabled={ampBusy || live?.amps === a}
                       aria-pressed={live?.amps === a}
                       className={cn(
-                        'inline-flex h-9 min-w-11 items-center justify-center rounded-full border px-3 text-sm font-semibold tabular-nums transition-colors disabled:opacity-50',
+                        'inline-flex h-7 min-w-9 items-center justify-center rounded-full border px-2 text-xs font-semibold tabular-nums transition-colors disabled:opacity-50',
                         live?.amps === a
                           ? 'border-brand bg-brand/10 text-brand'
                           : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
@@ -472,9 +387,9 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                 </div>
               )}
               <div className="flex items-center gap-2 px-1">
-                <Thermometer size={17} className="shrink-0 text-faint" />
-                <span className="text-sm text-muted">{t('cargador.temperature')}</span>
-                <span className="text-base font-semibold tabular-nums text-app">
+                <Thermometer size={15} className="shrink-0 text-faint" />
+                <span className="text-[13px] text-muted">{t('cargador.temperature')}</span>
+                <span className="text-[15px] font-semibold tabular-nums text-app">
                   {live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—'}
                 </span>
               </div>
