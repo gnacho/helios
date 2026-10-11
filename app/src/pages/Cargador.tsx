@@ -305,43 +305,46 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
-        {/* Estado del cargador */}
+        {/* Cargador: titulo, foto y acciones */}
         <motion.section
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE_OUT }}
-          className="helios-card col-span-12 flex flex-col gap-5 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:flex-row lg:items-stretch"
+          className="helios-card col-span-12 flex flex-col gap-4 p-5 shadow-card dark:shadow-card-dark sm:p-6"
         >
-          {/* Foto del coche: ocupa el alto de la tarjeta, fondo blanco sin acento */}
-          <motion.div
-            animate={live?.charging ? { scale: [1, 1.02, 1] } : { scale: 1 }}
-            transition={live?.charging ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-            className="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[40%] lg:min-h-60 dark:bg-neutral-900"
-          >
-            {charger.imageUrl ? (
-              <img
-                src={charger.imageUrl}
-                alt={charger.name}
-                draggable={false}
-                className="h-full max-h-full w-full object-contain select-none"
-              />
-            ) : (
-              <CarFront
-                size={72}
-                strokeWidth={1.5}
-                className={live?.charging ? 'text-emerald-500' : 'text-faint'}
-              />
-            )}
-          </motion.div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-[17px] font-semibold text-app">{charger.name}</h2>
+            <span className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold', stateChip.cls)}>
+              <stateChip.Icon size={14} />
+              {stateChip.text}
+            </span>
+          </div>
 
-          {/* Acciones a la derecha: estado, encender/apagar, amperaje, temperatura */}
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold', stateChip.cls)}>
-                <stateChip.Icon size={14} />
-                {stateChip.text}
-              </span>
-              {/* Encender/apagar (switch del cargador); mismo tamaño que el chip */}
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
+            {/* Foto del coche: ocupa el alto del bloque, fondo blanco/oscuro sin acento */}
+            <motion.div
+              animate={live?.charging ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+              transition={live?.charging ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
+              className="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[42%] dark:bg-neutral-900"
+            >
+              {charger.imageUrl ? (
+                <img
+                  src={charger.imageUrl}
+                  alt={charger.name}
+                  draggable={false}
+                  className="h-full max-h-full w-full object-contain select-none"
+                />
+              ) : (
+                <CarFront
+                  size={72}
+                  strokeWidth={1.5}
+                  className={live?.charging ? 'text-emerald-500' : 'text-faint'}
+                />
+              )}
+            </motion.div>
+
+            {/* Acciones: encender/apagar grande, amperaje y temperatura */}
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-5">
               <button
                 type="button"
                 onClick={togglePower}
@@ -349,45 +352,45 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                 aria-pressed={live?.switchOn === true}
                 title={t(live?.switchOn ? 'cargador.powerOff' : 'cargador.powerOn')}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50',
+                  'inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50',
                   live?.switchOn
                     ? 'bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
-                    : 'bg-surface-2 text-muted hover:bg-surface hover:text-app',
+                    : 'bg-brand text-white hover:opacity-90',
                 )}
               >
-                <Power size={14} strokeWidth={2} className={pwrBusy ? 'animate-pulse' : undefined} />
+                <Power size={20} strokeWidth={2} className={pwrBusy ? 'animate-pulse' : undefined} />
                 {t(live?.switchOn ? 'cargador.powerOff' : 'cargador.powerOn')}
               </button>
-            </div>
-            {/* Amperaje (solo con entidad de corriente configurada) */}
-            {charger.ampId && (
-              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('cargador.ampsAria')}>
-                <span className="mr-1 text-xs text-faint">{t('cargador.amps')}</span>
-                {AMP_STEPS.map((a) => (
-                  <button
-                    key={a}
-                    type="button"
-                    onClick={() => void setAmps(a)}
-                    disabled={ampBusy || live?.amps === a}
-                    aria-pressed={live?.amps === a}
-                    className={cn(
-                      'inline-flex h-7 min-w-9 items-center justify-center rounded-full border px-2 text-xs font-semibold tabular-nums transition-colors disabled:opacity-50',
-                      live?.amps === a
-                        ? 'border-brand bg-brand/10 text-brand'
-                        : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
-                    )}
-                  >
-                    {a}
-                  </button>
-                ))}
+              {/* Amperaje (solo con entidad de corriente configurada) */}
+              {charger.ampId && (
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('cargador.ampsAria')}>
+                  <span className="mr-1 text-xs text-faint">{t('cargador.amps')}</span>
+                  {AMP_STEPS.map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => void setAmps(a)}
+                      disabled={ampBusy || live?.amps === a}
+                      aria-pressed={live?.amps === a}
+                      className={cn(
+                        'inline-flex h-7 min-w-9 items-center justify-center rounded-full border px-2 text-xs font-semibold tabular-nums transition-colors disabled:opacity-50',
+                        live?.amps === a
+                          ? 'border-brand bg-brand/10 text-brand'
+                          : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
+                      )}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2 px-1">
+                <Thermometer size={15} className="shrink-0 text-faint" />
+                <span className="text-[13px] text-muted">{t('cargador.temperature')}</span>
+                <span className="text-[15px] font-semibold tabular-nums text-app">
+                  {live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—'}
+                </span>
               </div>
-            )}
-            <div className="flex items-center gap-2 px-1">
-              <Thermometer size={15} className="shrink-0 text-faint" />
-              <span className="text-[13px] text-muted">{t('cargador.temperature')}</span>
-              <span className="text-[15px] font-semibold tabular-nums text-app">
-                {live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—'}
-              </span>
             </div>
           </div>
         </motion.section>
