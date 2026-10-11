@@ -323,7 +323,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                 src={charger.imageUrl}
                 alt={charger.name}
                 draggable={false}
-                className="max-h-52 w-full object-contain select-none lg:max-h-60"
+                className="h-full max-h-full w-full object-contain select-none"
               />
             ) : (
               <CarFront
@@ -385,7 +385,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
             <div className="flex items-center gap-2 px-1">
               <Thermometer size={15} className="shrink-0 text-faint" />
               <span className="text-[13px] text-muted">{t('cargador.temperature')}</span>
-              <span className="ml-auto text-[15px] font-semibold tabular-nums text-app">
+              <span className="text-[15px] font-semibold tabular-nums text-app">
                 {live?.tempC !== undefined ? `${Math.round(live.tempC)} °C` : '—'}
               </span>
             </div>
