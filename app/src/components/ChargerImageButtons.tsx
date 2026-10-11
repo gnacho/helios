@@ -44,7 +44,8 @@ export default function ChargerImageButtons({ charger }: { charger: ChargerCfg }
       heliosToast(t('cargador.imageOk'));
     } catch (err) {
       console.error('[imagen]', err);
-      heliosToast(err instanceof Error ? err.message : t('common.error'), { tone: 'warning' });
+      const detalle = err instanceof Error && err.message ? err.message : String(err);
+      heliosToast(detalle || t('common.error'), { tone: 'warning' });
     } finally {
       setBusy(false);
     }

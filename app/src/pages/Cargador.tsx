@@ -367,7 +367,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
               {charger.ampId && (
                 <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('cargador.ampsAria')}>
                   <span className="mr-1 text-xs text-faint">{t('cargador.amps')}</span>
-                  {AMP_STEPS.map((a) => (
+                  {(live?.ampOptions?.length ? live.ampOptions : AMP_STEPS).map((a) => (
                     <button
                       key={a}
                       type="button"
