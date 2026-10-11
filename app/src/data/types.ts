@@ -97,6 +97,8 @@ export interface ChargerCfg {
   switchId: string;
   /** Entidad de corriente de carga (number/input_select/select). */
   ampId: string;
+  /** Imagen del coche (ruta publica, p.ej. /chargers/coche.png); vacia = icono. */
+  imageUrl: string;
   /** Los medidores de la casa incluyen el circuito de este cargador. */
   chargerInHouseMeters: boolean;
   chargingStates: string[];
