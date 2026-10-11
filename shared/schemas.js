@@ -134,6 +134,8 @@ export function createSchemas(z) {
               switchId: z.string().optional().default(''),
               // Entidad de corriente de carga (A): number/input_select/select.
               ampId: z.string().optional().default(''),
+              // Imagen del coche (URL o ruta publica, p.ej. /chargers/x.png).
+              imageUrl: z.string().max(500).optional().default(''),
               chargingStates: z.array(z.string()).optional().default([]),
               connectedStates: z.array(z.string()).optional().default([]),
             })

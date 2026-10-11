@@ -657,6 +657,7 @@ const NEW_CHARGER: ChargerCfg = {
   tempId: '',
   switchId: '',
   ampId: '',
+  imageUrl: '',
   chargerInHouseMeters: true,
   chargingStates: ['charging'],
   connectedStates: ['charger_insert', 'charging'],
@@ -893,6 +894,7 @@ function ExtensionsSection() {
                   <EntityField label={t('ajustes.extensions.f.tempId')} value={charger.tempId} onChange={(v) => setCh({ tempId: v })} />
                   <EntityField label={t('ajustes.extensions.f.switchId')} value={charger.switchId} onChange={(v) => setCh({ switchId: v })} />
                   <EntityField label={t('ajustes.extensions.f.ampId')} value={charger.ampId} onChange={(v) => setCh({ ampId: v })} placeholder="number.cargador_corriente" />
+                  <EntityField label={t('ajustes.extensions.f.imageUrl')} value={charger.imageUrl} onChange={(v) => setCh({ imageUrl: v })} placeholder="/chargers/coche.png" />
                   <EntityField label={t('ajustes.extensions.f.connectedStates')} value={charger.connectedStates.join(', ')} onChange={(v) => setCh({ connectedStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="connected" />
                 </div>
                 <div className="flex items-center gap-3">

@@ -322,11 +322,20 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
                 live?.charging ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-app bg-surface-2',
               )}
             >
-              <CarFront
-                size={64}
-                strokeWidth={1.5}
-                className={live?.charging ? 'text-emerald-500' : 'text-faint'}
-              />
+              {charger.imageUrl ? (
+                <img
+                  src={charger.imageUrl}
+                  alt={charger.name}
+                  draggable={false}
+                  className="h-20 w-20 object-contain select-none"
+                />
+              ) : (
+                <CarFront
+                  size={64}
+                  strokeWidth={1.5}
+                  className={live?.charging ? 'text-emerald-500' : 'text-faint'}
+                />
+              )}
             </motion.div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <span className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold', stateChip.cls)}>

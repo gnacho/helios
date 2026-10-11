@@ -596,7 +596,8 @@
         "connectedStates": "Estados de conectado (CSV)",
         "chargerInHouseMeters": "Cargador en medidores de casa",
         "chargerInHouseMetersHint": "Actívalo solo si tus medidores de consumo ya miden el circuito del cargador.",
-        "ampId": "Entidad de corriente (A)"
+        "ampId": "Entidad de corriente (A)",
+        "imageUrl": "Imagen del coche (URL)"
       },
       "chargerSelect": "Cargadores",
       "chargerN": "Cargador {{n}}",

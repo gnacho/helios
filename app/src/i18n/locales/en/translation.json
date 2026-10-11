@@ -596,7 +596,8 @@
         "connectedStates": "Connected states (CSV)",
         "chargerInHouseMeters": "Charger in house meters",
         "chargerInHouseMetersHint": "Enable only if your consumption meters already measure the charger circuit.",
-        "ampId": "Current entity (A)"
+        "ampId": "Current entity (A)",
+        "imageUrl": "Car image (URL)"
       },
       "chargerSelect": "Chargers",
       "chargerN": "Charger {{n}}",

@@ -201,7 +201,7 @@ function normalizeCharger(raw, baseC, index) {
   const out = {}
   // La key NUNCA hereda del base (dos cargadores colisionarian en 'main');
   // un campo PRESENTE pero invalido va a '' (no hereda el placeholder).
-  for (const k of ['key', 'name', 'powerId', 'energyTotalId', 'energySessionId', 'stateId', 'tempId', 'switchId', 'ampId']) {
+  for (const k of ['key', 'name', 'powerId', 'energyTotalId', 'energySessionId', 'stateId', 'tempId', 'switchId', 'ampId', 'imageUrl']) {
     if (typeof c[k] === 'string') out[k] = c[k]
     else if (k === 'key') out[k] = ''
     else if (c[k] === undefined) out[k] = b[k] ?? ''
