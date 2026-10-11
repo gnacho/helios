@@ -7,12 +7,13 @@ import {
   Clock,
   Gauge,
   PlugZap,
+  Power,
   Thermometer,
   Zap,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { Navigate } from 'react-router';
+import { Navigate, useSearchParams } from 'react-router';
 import {
   Area,
   AreaChart,
@@ -27,10 +28,11 @@ import {
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useExtensions } from '@/hooks/useExtensions';
 import { chargerEnabled } from '@/data/types';
-import type { ChargerCurvePoint } from '@/data/types';
+import type { ChargerCfg, ChargerCurvePoint, ChargerLive } from '@/data/types';
 import { useEnergyColors } from '@/lib/colors';
 import { fmtEnergy, fmtKw } from '@/lib/format';
 import { apiFetch } from '@/data/api-client';
+import { heliosToast } from '@/lib/toast';
 import { dateLocale } from '@/i18n';
 import { cn } from '@/lib/utils';
 import PeriodSelector from '@/components/PeriodSelector';
@@ -48,6 +50,9 @@ const dateKeyOf = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const EASE_OUT: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+/** Presets de corriente de carga (A). IEC 61851: min 6 A. */
+const AMP_STEPS = [6, 8, 10, 13, 16, 20, 25, 32];
 
 interface HistoryDay {
   date: string;
@@ -101,18 +106,28 @@ function HistTooltip({ active, payload }: { active?: boolean; payload?: { payloa
   );
 }
 
-/** Página del cargador de coche (extensión #94): estado en vivo, curva del día
- *  e histórico de energía cargada. Sólo se llega con la extensión activa. */
-export default function Cargador() {
+/** Accion admin sobre un cargador (switch on/off o corriente). */
+async function chargerAction(key: string, action: 'on' | 'off' | 'amp', amps?: number) {
+  return apiFetch<{ ok: boolean; amps?: number }>('/api/charger/action', {
+    method: 'POST',
+    body: JSON.stringify({ charger: key, action, amps }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/** Pestaña de UN cargador: estado en vivo, curva del día e histórico propio
+ *  (energía diaria por cargador, issue 146). */
+function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLive }) {
   const { t, i18n } = useTranslation();
-  const ext = useExtensions();
   const palette = useEnergyColors();
-  const { getLivePower, getHistory, nowMin, liveTick } = useEnergyData();
+  const { getHistory } = useEnergyData();
 
   const [curve, setCurve] = useState<ChargerCurvePoint[] | null>(null);
   const [history, setHistory] = useState<HistoryDay[] | null>(null);
+  const [pwrBusy, setPwrBusy] = useState(false);
+  const [ampBusy, setAmpBusy] = useState(false);
 
-  const live = getLivePower(nowMin, liveTick).charger;
+  const key = charger.key;
 
   const todayKey = useMemo(() => {
     const d = new Date();
@@ -120,9 +135,8 @@ export default function Cargador() {
   }, []);
 
   useEffect(() => {
-    if (!chargerEnabled(ext)) return;
     let alive = true;
-    apiFetch<{ points: ChargerCurvePoint[] }>(`/api/charger/day?date=${todayKey}`)
+    apiFetch<{ points: ChargerCurvePoint[] }>(`/api/charger/day?date=${todayKey}&charger=${encodeURIComponent(key)}`)
       .then((res) => {
         if (alive) setCurve(res.points ?? []);
       })
@@ -133,7 +147,7 @@ export default function Cargador() {
     const from = new Date();
     from.setDate(from.getDate() - 400); // cubre la vista por año del año anterior
     const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    apiFetch<{ days: HistoryDay[] }>(`/api/charger/history?from=${fmt(from)}&to=${fmt(to)}`)
+    apiFetch<{ days: HistoryDay[] }>(`/api/charger/history?from=${fmt(from)}&to=${fmt(to)}&charger=${encodeURIComponent(key)}`)
       .then((res) => {
         if (alive) setHistory(res.days ?? []);
       })
@@ -143,9 +157,35 @@ export default function Cargador() {
     return () => {
       alive = false;
     };
-  }, [ext, todayKey]);
+  }, [key, todayKey]);
 
-  // ── Histórico tipo Histórico: Semana / Mes / Año con navegador ────────────
+  const togglePower = async () => {
+    if (!live || live.switchOn === undefined || pwrBusy) return;
+    setPwrBusy(true);
+    try {
+      await chargerAction(key, live.switchOn ? 'off' : 'on');
+      heliosToast(t(live.switchOn ? 'cargador.powerToastOff' : 'cargador.powerToastOn', { name: live.name }));
+    } catch (err) {
+      heliosToast(err instanceof Error ? err.message : t('common.error'), { tone: 'warning' });
+    } finally {
+      setPwrBusy(false);
+    }
+  };
+
+  const setAmps = async (amps: number) => {
+    if (ampBusy || live?.amps === amps) return;
+    setAmpBusy(true);
+    try {
+      await chargerAction(key, 'amp', amps);
+      heliosToast(t('cargador.ampsToast', { amps, name: live?.name ?? charger.name }));
+    } catch (err) {
+      heliosToast(err instanceof Error ? err.message : t('common.error'), { tone: 'warning' });
+    } finally {
+      setAmpBusy(false);
+    }
+  };
+
+  // Histórico tipo Histórico: Semana / Mes / Año con navegador
   const [period, setPeriod] = useState<Period>('semana');
   // Semana anclada a HOY (no a ayer como el Histórico): la carga de hoy es lo
   // primero que uno quiere ver. Ventana = últimos 7 días incluyendo hoy.
@@ -161,8 +201,8 @@ export default function Cargador() {
 
   /** Ancla "actual" para el cargador: semana = HOY (incluye el día en curso);
    *  mes/año igual que el Histórico. */
-  const homeAnchor = (p: Period, t: Date): Date =>
-    p === 'semana' ? new Date(t.getFullYear(), t.getMonth(), t.getDate()) : initialAnchor(p, t);
+  const homeAnchor = (p: Period, tt: Date): Date =>
+    p === 'semana' ? new Date(tt.getFullYear(), tt.getMonth(), tt.getDate()) : initialAnchor(p, tt);
 
   const changePeriod = (p: Period) => {
     setPeriod(p);
@@ -178,7 +218,7 @@ export default function Cargador() {
     const prodByDay = new Map<string, number>();
     for (const d of solarHistory) prodByDay.set(dateKeyOf(d.date), d.productionKwh);
 
-    const out: { label: string; full: string; kwh: number; pv: number; rest: number; prod: number }[] = [];
+    const out: HistRow[] = [];
 
     const dayRow = (date: Date) => {
       const k = dateKeyOf(date);
@@ -250,16 +290,6 @@ export default function Cargador() {
   // Ancho de barra adaptado al nº de categorías (mes = ~30 días).
   const barW = period === 'mes' ? 10 : 22;
 
-  // Mientras la config de extensiones carga (null) NO redirigimos (race de
-  // deep-link: un F5 en /cargador debe caer aquí, no en el dashboard).
-  // Extensión desactivada a mitad de sesión → vuelta al inicio.
-  if (ext !== null && !chargerEnabled(ext)) return <Navigate to="/" replace />;
-  if (ext === null) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center text-sm text-faint">…</div>
-    );
-  }
-
   const stateChip = live?.charging
     ? { text: `${t('common.charging')} · ${fmtKw(live.powerKw)} kW`, cls: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400', Icon: BatteryCharging }
     : live?.connected
@@ -276,7 +306,7 @@ export default function Cargador() {
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
-        {/* ── Estado del cargador ─────────────────────────────────────── */}
+        {/* Estado del cargador */}
         <motion.section
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -298,10 +328,52 @@ export default function Cargador() {
                 className={live?.charging ? 'text-emerald-500' : 'text-faint'}
               />
             </motion.div>
-            <span className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold', stateChip.cls)}>
-              <stateChip.Icon size={14} />
-              {stateChip.text}
-            </span>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold', stateChip.cls)}>
+                <stateChip.Icon size={14} />
+                {stateChip.text}
+              </span>
+              {/* Encender/apagar (switch del cargador); mismo tamaño que el chip */}
+              <button
+                type="button"
+                onClick={togglePower}
+                disabled={live?.switchOn === undefined || pwrBusy}
+                aria-pressed={live?.switchOn === true}
+                title={t(live?.switchOn ? 'cargador.powerOff' : 'cargador.powerOn')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50',
+                  live?.switchOn
+                    ? 'bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
+                    : 'bg-surface-2 text-muted hover:bg-surface hover:text-app',
+                )}
+              >
+                <Power size={14} strokeWidth={2} className={pwrBusy ? 'animate-pulse' : undefined} />
+                {t(live?.switchOn ? 'cargador.powerOff' : 'cargador.powerOn')}
+              </button>
+            </div>
+            {/* Amperaje (solo con entidad de corriente configurada) */}
+            {charger.ampId && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5" role="group" aria-label={t('cargador.ampsAria')}>
+                <span className="mr-1 text-xs text-faint">{t('cargador.amps')}</span>
+                {AMP_STEPS.map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => void setAmps(a)}
+                    disabled={ampBusy || live?.amps === a}
+                    aria-pressed={live?.amps === a}
+                    className={cn(
+                      'inline-flex h-7 min-w-9 items-center justify-center rounded-full border px-2 text-xs font-semibold tabular-nums transition-colors disabled:opacity-50',
+                      live?.amps === a
+                        ? 'border-brand bg-brand/10 text-brand'
+                        : 'border-app bg-surface text-muted hover:bg-surface-2 hover:text-app',
+                    )}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex min-w-0 flex-1 items-center lg:border-l lg:border-app lg:pl-6">
@@ -324,7 +396,7 @@ export default function Cargador() {
           </div>
         </motion.section>
 
-        {/* ── Curva de hoy ─────────────────────────────────────────────── */}
+        {/* Curva de hoy */}
         <motion.section
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -382,7 +454,7 @@ export default function Cargador() {
           </div>
         </motion.section>
 
-        {/* ── Histórico (14 días) + totales ────────────────────────────── */}
+        {/* Histórico + totales del periodo */}
         <motion.section
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -512,6 +584,85 @@ export default function Cargador() {
           </div>
         </motion.section>
       </div>
+    </div>
+  );
+}
+
+/** Página del cargador (extensión #94): pestañas por cargador (146). Solo se
+ *  llega con la extensión activa. */
+export default function Cargador() {
+  const { t } = useTranslation();
+  const ext = useExtensions();
+  const { getLivePower, nowMin, liveTick } = useEnergyData();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const live = getLivePower(nowMin, liveTick).chargers;
+  const cfg = ext?.carCharger;
+  const tabKeys = useMemo(() => (cfg?.chargers ?? []).map((c) => c.key), [cfg]);
+
+  const tabParam = searchParams.get('tab');
+  const tab = tabKeys.includes(tabParam ?? '') ? (tabParam as string) : (tabKeys[0] ?? 'main');
+  const setTab = (k: string) => setSearchParams({ tab: k }, { replace: true });
+
+  const charger = cfg?.chargers.find((c) => c.key === tab) ?? cfg?.chargers[0];
+  const liveOfTab = live?.find((c) => c.key === tab) ?? live?.[0];
+
+  // Mientras la config de extensiones carga (null) NO redirigimos (race de
+  // deep-link: un F5 en /cargador debe caer aquí, no en el dashboard).
+  // Extensión desactivada a mitad de sesión → vuelta al inicio.
+  if (ext !== null && !chargerEnabled(ext)) return <Navigate to="/" replace />;
+  if (ext === null || !charger || !cfg) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center text-sm text-faint">…</div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 lg:gap-5">
+      {/* Segmented control por cargador (mismo patrón que Inversores), solo
+       *  con más de un cargador configurado. */}
+      {tabKeys.length > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05 }}
+          className="sticky top-14 z-30 -mx-4 bg-[color-mix(in_srgb,var(--bg)_85%,transparent)] px-4 py-2 backdrop-blur-[16px] lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
+        >
+          <div className="flex h-10 w-full items-center gap-1 overflow-x-auto rounded-full border border-app bg-surface p-1 no-scrollbar lg:w-fit" role="tablist" aria-label={t('cargador.tabsAria')}>
+            {cfg.chargers.map((c) => {
+              const active = c.key === tab;
+              return (
+                <button
+                  key={c.key}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(c.key)}
+                  className={cn(
+                    'relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none',
+                    active ? 'text-app' : 'text-faint hover:text-muted',
+                  )}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="chg-tab-pill"
+                      className="absolute inset-0 rounded-full bg-surface-2 shadow-inner"
+                      transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    <span
+                      className={cn('h-2 w-2 rounded-full', live?.find((l) => l.key === c.key)?.charging ? 'bg-emerald-500' : 'bg-faint opacity-40')}
+                    />
+                    {c.name || c.key}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      <ChargerView charger={charger} live={liveOfTab} />
     </div>
   );
 }

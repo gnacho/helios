@@ -60,7 +60,8 @@ console.log(
 // datos) > genérico. Se instalan ANTES de conectar con HAOS (suscripciones).
 const extConfig = extensions.resolveAndSet(db)
 if (extensions.chargerActive(extConfig)) {
-  console.log(`[helios] extensión cargador activa (${extConfig.carCharger.name})`)
+  const chargerNames = extConfig.carCharger.chargers.map((c) => c.name).join(', ')
+  console.log(`[helios] extensión cargador activa (${chargerNames})`)
 }
 await auth.ensureBootstrapAdmin(db)
 push.configurePush({
@@ -256,10 +257,10 @@ const sseClients = new Set()
 const MAX_SSE_CLIENTS = 10
 
 let lastPush = 0
-// Payload live: datos solares + snapshot del cargador (si la extensión está
-// activa; computeChargerLive devuelve undefined y JSON.stringify lo omite).
+// Payload live: datos solares + snapshots de los cargadores (si la extensión
+// está activa; computeChargerLive devuelve [] y JSON.stringify lo omite).
 const livePayload = () =>
-  JSON.stringify({ type: 'live', data: { ...solar.computeLive(ha), charger: extensions.computeChargerLive(ha) } })
+  JSON.stringify({ type: 'live', data: { ...solar.computeLive(ha), chargers: extensions.computeChargerLive(ha) } })
 ha.on('entity', () => {
   const now = Date.now()
   if (now - lastPush < 1000 || sseClients.size === 0) return
@@ -780,7 +781,10 @@ guarded.get('/charger/day', async (c) => {
     if (!parsed.success) {
       return c.json({ error: 'formato inválido, usa YYYY-MM-DD' }, 400)
     }
-    const result = await extensions.chargerDayCurve(ha, parsed.data)
+    const ext = extensions.getExtensions()
+    const charger = extensions.getChargerByKey(ext, c.req.query('charger') || 'main')
+    if (!charger) return c.json({ error: 'cargador no encontrado' }, 404)
+    const result = await extensions.chargerDayCurve(ha, parsed.data, ext, charger)
     return c.json({ date: parsed.data || solar.todayStr(), points: result.points })
   } catch (err) {
     return c.json({ error: err.message }, 400)
@@ -798,8 +802,55 @@ guarded.get('/charger/history', (c) => {
   }
   const toFinal = toParsed.data || solar.todayStr()
   const fromFinal = fromParsed.data || shiftDays(toFinal, -364)
-  const days = extensions.chargerHistory(db, fromFinal, toFinal)
+  const charger = extensions.getChargerByKey(extensions.getExtensions(), c.req.query('charger') || 'main')
+  if (!charger) return c.json({ error: 'cargador no encontrado' }, 404)
+  const days = extensions.chargerHistory(db, fromFinal, toFinal, charger.key)
   return c.json({ from: fromFinal, to: toFinal, days })
+})
+
+// Acción sobre un cargador (solo admin): encender/apagar (switch) o fijar la
+// corriente de carga (number/input_select/select). Validación estricta de la
+// entidad configurada y del rango del amperaje.
+const SWITCH_ID_RE = /^switch\.[a-z0-9_]+$/
+const AMP_ID_RE = /^(number|input_select|select)\.[a-z0-9_]+$/
+guarded.post('/charger/action', async (c) => {
+  const me = dbModule.getUserById(db, c.get('userId'))
+  if (me?.role !== 'admin') return c.json({ error: 'solo admin' }, 403)
+  const body = await c.req.json().catch(() => null)
+  if (!body || typeof body !== 'object') return c.json({ error: 'body inválido' }, 400)
+  const charger = extensions.getChargerByKey(extensions.getExtensions(), String(body.charger ?? 'main'))
+  if (!charger) return c.json({ error: 'cargador no encontrado' }, 404)
+  if (!haReady) return c.json({ error: 'HAOS no conectado' }, 503)
+  const action = body.action
+  audit(db, me?.username || 'unknown', c.get('userId'), 'charger.action', { charger: charger.key, action, amps: body.amps })
+  try {
+    if (action === 'on' || action === 'off') {
+      if (!SWITCH_ID_RE.test(charger.switchId)) {
+        return c.json({ error: 'el cargador no tiene switch configurado' }, 400)
+      }
+      await ha.callService('switch', action === 'on' ? 'turn_on' : 'turn_off', { entity_id: charger.switchId })
+      return c.json({ ok: true })
+    }
+    if (action === 'amp') {
+      const amps = Math.round(Number(body.amps) * 10) / 10
+      if (!Number.isFinite(amps) || amps < 6 || amps > 32) {
+        return c.json({ error: 'amperaje fuera de rango (6-32 A)' }, 400)
+      }
+      if (!AMP_ID_RE.test(charger.ampId)) {
+        return c.json({ error: 'el cargador no tiene entidad de corriente configurada' }, 400)
+      }
+      const domain = charger.ampId.split('.')[0]
+      if (domain === 'number') {
+        await ha.callService('number', 'set_value', { entity_id: charger.ampId, value: amps })
+      } else {
+        await ha.callService(domain, 'select_option', { entity_id: charger.ampId, option: String(amps) })
+      }
+      return c.json({ ok: true, amps })
+    }
+    return c.json({ error: 'acción no soportada' }, 400)
+  } catch (err) {
+    return c.json({ error: err.message }, 502)
+  }
 })
 
 app.route('/api', guarded)

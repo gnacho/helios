@@ -54,12 +54,15 @@ export interface LivePower {
   weatherTemp?: number;
   station?: string;
   inverterOnline?: boolean;
-  charger?: ChargerLive;
+  chargers?: ChargerLive[];
   ts?: string;
 }
 
 /** Snapshot en vivo del cargador (extensión, issue #94). Viaja en el SSE. */
 export interface ChargerLive {
+  key: string;
+  /** Corriente de carga configurada (A), si hay entidad ampId. */
+  amps?: number;
   name: string;
   charging: boolean;
   connected: boolean;
@@ -79,25 +82,34 @@ export interface ChargerCurvePoint {
 }
 
 /** Config de extensiones (GET/PUT /api/extensions). */
+/** Un cargador configurado (entidades HAOS editables en Ajustes). */
+export interface ChargerCfg {
+  key: string;
+  name: string;
+  powerId: string;
+  powerUnit: 'kW' | 'W';
+  energyTotalId: string;
+  /** Divisor del contador (unidades a kWh); 1 = ya esta en kWh. */
+  energyDivisor: number;
+  energySessionId: string;
+  stateId: string;
+  tempId: string;
+  switchId: string;
+  /** Entidad de corriente de carga (number/input_select/select). */
+  ampId: string;
+  /** Los medidores de la casa incluyen el circuito de este cargador. */
+  chargerInHouseMeters: boolean;
+  chargingStates: string[];
+  connectedStates: string[];
+}
+
 export interface ExtensionsConfig {
   enabled: boolean;
   chargerActive?: boolean;
   carCharger: {
     enabled: boolean;
-    name: string;
-    powerId: string;
-    powerUnit: 'kW' | 'W';
-    energyTotalId: string;
-    /** Divisor del contador (unidades → kWh); 1 = ya está en kWh. */
-    energyDivisor: number;
-    /** ¿Los medidores de consumo de la topología incluyen el circuito del cargador? */
-    chargerInHouseMeters: boolean;
-    energySessionId: string;
-    stateId: string;
-    tempId: string;
-    switchId: string;
-    chargingStates: string[];
-    connectedStates: string[];
+    /** Varios cargadores (issue 146): cada uno con sus entidades y nombre. */
+    chargers: ChargerCfg[];
   };
 }
 
