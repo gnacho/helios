@@ -198,7 +198,11 @@
     "powerToastOff": "{{name}} 已关闭",
     "amps": "充电电流",
     "ampsAria": "选择充电电流",
-    "ampsToast": "{{name}} 电流已设为 {{amps}} A"
+    "ampsToast": "{{name}} 电流已设为 {{amps}} A",
+    "imageEdit": "更换图片 (透明 PNG，建议高度 460 px；自动缩放)",
+    "imageClear": "移除图片",
+    "imageOk": "图片已更新",
+    "imageCleared": "图片已移除"
   },
   "inversores": {
     "title": "逆变器",

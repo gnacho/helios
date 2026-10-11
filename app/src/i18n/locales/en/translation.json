@@ -198,7 +198,11 @@
     "powerToastOff": "{{name}} turned off",
     "amps": "Current (A)",
     "ampsAria": "Select charging current",
-    "ampsToast": "{{name}} current set to {{amps}} A"
+    "ampsToast": "{{name}} current set to {{amps}} A",
+    "imageEdit": "Change image (transparent PNG, recommended height 460 px; auto-rescaled)",
+    "imageClear": "Remove image",
+    "imageOk": "Image updated",
+    "imageCleared": "Image removed"
   },
   "inversores": {
     "title": "Inverters",

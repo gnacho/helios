@@ -23,6 +23,8 @@
 // de entidades con HAOS se fijan al arrancar -> el cambio pleno requiere
 // reinicio (mismo contrato que la topologia).
 
+import fs from 'node:fs'
+import path from 'node:path'
 import { kvGet, kvSet } from './db.js'
 import { getInstall } from './install.js'
 import { cachedCollector } from './solar.js'
@@ -894,6 +896,72 @@ export async function backfillChargerHistory(ha, db, ext = getExtensions()) {
     }
   }
   return n
+}
+
+
+// ── Cargador: imagen del coche (subida editable; NUNCA en el repo) ─────────
+const CHARGER_IMAGE_EXTS = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
+const CHARGER_IMAGE_MAX = 4 * 1024 * 1024
+
+export function chargerImageDir(dataDir) {
+  const dir = path.join(dataDir, 'charger-images')
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+function setChargerImageUrl(db, key, url) {
+  const raw = kvGet(db, 'extensions_config')
+  if (!raw) return
+  try {
+    const cfg = JSON.parse(raw)
+    const list = cfg?.carCharger?.chargers
+    if (!Array.isArray(list)) return
+    const ch = list.find((c) => c.key === key)
+    if (!ch) return
+    ch.imageUrl = url
+    kvSet(db, 'extensions_config', JSON.stringify(cfg))
+    resolveAndSet(db)
+  } catch {
+    /* kv corrupto: no tocar */
+  }
+}
+
+/** Guarda la imagen (data URL) del cargador `key` y apunta imageUrl al endpoint. */
+export function saveChargerImage(db, dataDir, key, dataUrl) {
+  const m = typeof dataUrl === 'string' ? dataUrl.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/) : null
+  if (!m) return { ok: false, error: 'formato de imagen invalido' }
+  const buf = Buffer.from(m[2], 'base64')
+  if (!buf.length) return { ok: false, error: 'imagen vacia' }
+  if (buf.length > CHARGER_IMAGE_MAX) return { ok: false, error: 'imagen demasiado grande (max 4 MB)' }
+  const dir = chargerImageDir(dataDir)
+  for (const ext of Object.values(CHARGER_IMAGE_EXTS)) {
+    const f = path.join(dir, `${key}.${ext}`)
+    if (fs.existsSync(f)) fs.unlinkSync(f)
+  }
+  fs.writeFileSync(path.join(dir, `${key}.${CHARGER_IMAGE_EXTS['image/' + m[1]]}`), buf)
+  setChargerImageUrl(db, key, `/api/charger/image/${key}`)
+  return { ok: true }
+}
+
+/** Quita la imagen del cargador `key` (ficheros + imageUrl en kv). */
+export function clearChargerImage(db, dataDir, key) {
+  const dir = chargerImageDir(dataDir)
+  for (const ext of Object.values(CHARGER_IMAGE_EXTS)) {
+    const f = path.join(dir, `${key}.${ext}`)
+    if (fs.existsSync(f)) fs.unlinkSync(f)
+  }
+  setChargerImageUrl(db, key, '')
+  return { ok: true }
+}
+
+/** Fichero+mime de la imagen del cargador, o null. */
+export function findChargerImage(dataDir, key) {
+  const dir = chargerImageDir(dataDir)
+  for (const [mime, ext] of Object.entries(CHARGER_IMAGE_EXTS)) {
+    const f = path.join(dir, `${key}.${ext}`)
+    if (fs.existsSync(f)) return { path: f, mime }
+  }
+  return null
 }
 
 // Curva del dia (kW cada STEP_MIN) por interpolacion escalonada del historial
