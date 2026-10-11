@@ -190,7 +190,15 @@
     "fromGrid": "Red y batería",
     "periodTotal": "Cargado en el periodo",
     "ofProduction": "{{pct}} % de la producción se fue al coche",
-    "pctSolarAria": "Porcentaje de la carga de origen solar"
+    "pctSolarAria": "Porcentaje de la carga de origen solar",
+    "tabsAria": "Cargadores",
+    "powerOn": "Encender",
+    "powerOff": "Apagar",
+    "powerToastOn": "{{name}} encendido",
+    "powerToastOff": "{{name}} apagado",
+    "amps": "Amperaje",
+    "ampsAria": "Seleccionar amperaje de carga",
+    "ampsToast": "Amperaje de {{name}} a {{amps}} A"
   },
   "inversores": {
     "title": "Inversores",
@@ -587,8 +595,13 @@
         "chargingStates": "Estados de carga (CSV)",
         "connectedStates": "Estados de conectado (CSV)",
         "chargerInHouseMeters": "Cargador en medidores de casa",
-        "chargerInHouseMetersHint": "Actívalo solo si tus medidores de consumo ya miden el circuito del cargador."
+        "chargerInHouseMetersHint": "Actívalo solo si tus medidores de consumo ya miden el circuito del cargador.",
+        "ampId": "Entidad de corriente (A)"
       },
+      "chargerSelect": "Cargadores",
+      "chargerN": "Cargador {{n}}",
+      "chargerAdd": "Añadir cargador",
+      "chargerRemove": "Quitar cargador",
       "byd": "Vehículo BYD",
       "bydOffHint": "El panel del coche está apagado: enciende el interruptor para ver el estado del vehículo.",
       "bydDesc": "Panel del vehículo eléctrico (integración BYD de Home Assistant). Mapea las entidades si difieren de las detectadas.",
@@ -699,6 +712,29 @@
     "when": "Cuándo",
     "empty": "Sin actividad registrada"
   },
+  "update": {
+    "dialog": {
+      "title": "Actualizar Helios",
+      "desc": "Se descargará e instalará la nueva versión.",
+      "changelogTitle": "Novedades",
+      "downNotice": "El servicio estará caído mientras se reinicia",
+      "cancel": "Cancelar",
+      "start": "Actualizar",
+      "progressLabel": "Progreso de la actualización",
+      "hideHint": "Puedes cerrar esta ventana; la actualización continúa en segundo plano",
+      "restarting": "Reiniciando…",
+      "reloadSoon": "La página se recargará automáticamente",
+      "failed": "No se pudo completar la actualización",
+      "close": "Cerrar"
+    },
+    "step": {
+      "fetch": "Buscando nueva versión",
+      "download": "Descargando",
+      "verify": "Verificando integridad",
+      "install": "Instalando",
+      "restart": "Reiniciando servicio"
+    }
+  },
   "coche": {
     "soc": "Nivel de batería",
     "odometer": "Cuentakilómetros",
@@ -763,28 +799,5 @@
     "consumption50": "Últimos 50 km",
     "consumptionToday": "Hoy",
     "consumptionLifetime": "Histórico"
-  },
-  "update": {
-    "dialog": {
-      "title": "Actualizar Helios",
-      "desc": "Se descargará e instalará la nueva versión.",
-      "changelogTitle": "Novedades",
-      "downNotice": "El servicio estará caído mientras se reinicia",
-      "cancel": "Cancelar",
-      "start": "Actualizar",
-      "progressLabel": "Progreso de la actualización",
-      "hideHint": "Puedes cerrar esta ventana; la actualización continúa en segundo plano",
-      "restarting": "Reiniciando…",
-      "reloadSoon": "La página se recargará automáticamente",
-      "failed": "No se pudo completar la actualización",
-      "close": "Cerrar"
-    },
-    "step": {
-      "fetch": "Buscando nueva versión",
-      "download": "Descargando",
-      "verify": "Verificando integridad",
-      "install": "Instalando",
-      "restart": "Reiniciando servicio"
-    }
   }
 }

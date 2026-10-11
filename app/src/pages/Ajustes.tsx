@@ -26,6 +26,7 @@ import {
   RefreshCw,
   Settings2,
   ShieldCheck,
+  Plus,
   Smartphone,
   Sun,
   Sunrise,
@@ -45,7 +46,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useInstall } from '@/hooks/useInstall';
 import { useExtensions, invalidateExtensions } from '@/hooks/useExtensions';
-import type { ExtensionsConfig } from '@/data/types';
+import type { ChargerCfg, ExtensionsConfig } from '@/data/types';
 import { TopologyEditor } from '@/components/TopologyEditor';
 import { THEME_BG, THEME_SURFACE, THEME_BAR, ACCENTS } from '@/lib/colors';
 import { useEnergySettings } from '@/hooks/useEnergySettings';
@@ -643,6 +644,24 @@ function EntityField({
   );
 }
 
+// Placeholder para un cargador nuevo; el server normaliza la key (main/cN).
+const NEW_CHARGER: ChargerCfg = {
+  key: '',
+  name: '',
+  powerId: '',
+  powerUnit: 'kW',
+  energyTotalId: '',
+  energyDivisor: 1,
+  energySessionId: '',
+  stateId: '',
+  tempId: '',
+  switchId: '',
+  ampId: '',
+  chargerInHouseMeters: true,
+  chargingStates: ['charging'],
+  connectedStates: ['charger_insert', 'charging'],
+};
+
 function ExtensionsSection() {
   const { t } = useTranslation();
   const ext = useExtensions();
@@ -653,6 +672,8 @@ function ExtensionsSection() {
   // (solo visible con el componente aplicado). Un estado por módulo.
   const [configOpen, setConfigOpen] = useState(false);
   const [bydConfigOpen, setBydConfigOpen] = useState(false);
+  // Cargador seleccionado en el panel (indice en carCharger.chargers).
+  const [sel, setSel] = useState(0);
 
   // La draft se inicializa desde la config resuelta (y se refresca si aún no
   // había cargado). Guardar escribe { enabled, carCharger, byd } completos.
@@ -701,8 +722,6 @@ function ExtensionsSection() {
     void save({ ...draft, byd: { ...draft.byd, enabled: checked } });
 
   const ch = draft.carCharger;
-  const setCh = (patch: Partial<ExtensionsConfig['carCharger']>) =>
-    setDraft({ ...draft, carCharger: { ...ch, ...patch } });
   const byd = draft.byd;
   const setByd = (patch: Partial<ExtensionsConfig['byd']>) =>
     setDraft({ ...draft, byd: { ...byd, ...patch } });
@@ -734,6 +753,29 @@ function ExtensionsSection() {
       placeholder={ph}
     />
   );
+  const si = Math.min(sel, ch.chargers.length - 1);
+  const charger = ch.chargers[si];
+  const setCh = (patch: Partial<ChargerCfg>) =>
+    setDraft({
+      ...draft,
+      carCharger: { ...ch, chargers: ch.chargers.map((c, i) => (i === si ? { ...c, ...patch } : c)) },
+    });
+  const addCharger = () => {
+    const name = t('ajustes.extensions.chargerN', { n: ch.chargers.length + 1 });
+    setDraft({
+      ...draft,
+      carCharger: {
+        ...ch,
+        chargers: [...ch.chargers, { ...NEW_CHARGER, name }],
+      },
+    });
+    setSel(ch.chargers.length);
+  };
+  const removeCharger = () => {
+    if (ch.chargers.length <= 1) return;
+    setDraft({ ...draft, carCharger: { ...ch, chargers: ch.chargers.filter((_, i) => i !== si) } });
+    setSel(Math.max(0, si - 1));
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -783,12 +825,49 @@ function ExtensionsSection() {
               className="overflow-hidden"
             >
               <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label={t('ajustes.extensions.chargerSelect')}>
+                  {ch.chargers.map((c, i) => (
+                    <button
+                      key={c.key || `c-${i}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={i === si}
+                      onClick={() => setSel(i)}
+                      className={cn(
+                        'inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
+                        i === si ? 'border-brand bg-brand/10 text-brand' : 'border-app bg-surface text-muted hover:text-app',
+                      )}
+                    >
+                      {c.name || t('ajustes.extensions.chargerN', { n: i + 1 })}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addCharger}
+                    aria-label={t('ajustes.extensions.chargerAdd')}
+                    title={t('ajustes.extensions.chargerAdd')}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app"
+                  >
+                    <Plus size={14} strokeWidth={1.75} />
+                  </button>
+                  {ch.chargers.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={removeCharger}
+                      aria-label={t('ajustes.extensions.chargerRemove')}
+                      title={t('ajustes.extensions.chargerRemove')}
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-red-500"
+                    >
+                      <Trash2 size={14} strokeWidth={1.75} />
+                    </button>
+                  )}
+                </div>
                 <p className="text-sm text-muted">{t('ajustes.extensions.carChargerDesc')}</p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <EntityField label={t('ajustes.extensions.f.name')} value={ch.name} onChange={(v) => setCh({ name: v })} />
+                  <EntityField label={t('ajustes.extensions.f.name')} value={charger.name} onChange={(v) => setCh({ name: v })} />
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-xs text-muted">{t('ajustes.extensions.f.powerUnit')}</Label>
-                    <Select value={ch.powerUnit} onValueChange={(v: 'kW' | 'W') => setCh({ powerUnit: v })}>
+                    <Select value={charger.powerUnit} onValueChange={(v: 'kW' | 'W') => setCh({ powerUnit: v })}>
                       <SelectTrigger className="h-9 w-full">
                         <SelectValue />
                       </SelectTrigger>
@@ -798,22 +877,23 @@ function ExtensionsSection() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <EntityField label={t('ajustes.extensions.f.chargingStates')} value={ch.chargingStates.join(', ')} onChange={(v) => setCh({ chargingStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="charging" />
-                  <EntityField label={t('ajustes.extensions.f.powerId')} value={ch.powerId} onChange={(v) => setCh({ powerId: v })} />
-                  <EntityField label={t('ajustes.extensions.f.energyTotalId')} value={ch.energyTotalId} onChange={(v) => setCh({ energyTotalId: v })} />
-                  <EntityField label={t('ajustes.extensions.f.energyDivisor')} value={String(ch.energyDivisor)} onChange={(v) => setCh({ energyDivisor: Math.max(1, Math.min(100000, Math.round(Number(v) || 1))) })} placeholder="1" />
+                  <EntityField label={t('ajustes.extensions.f.chargingStates')} value={charger.chargingStates.join(', ')} onChange={(v) => setCh({ chargingStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="charging" />
+                  <EntityField label={t('ajustes.extensions.f.powerId')} value={charger.powerId} onChange={(v) => setCh({ powerId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.energyTotalId')} value={charger.energyTotalId} onChange={(v) => setCh({ energyTotalId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.energyDivisor')} value={String(charger.energyDivisor)} onChange={(v) => setCh({ energyDivisor: Math.max(1, Math.min(100000, Math.round(Number(v) || 1))) })} placeholder="1" />
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted">{t('ajustes.extensions.f.chargerInHouseMeters')}</Label>
               <div className="flex h-9 items-center gap-2">
-                <Switch checked={ch.chargerInHouseMeters} onCheckedChange={(v) => setCh({ chargerInHouseMeters: v })} aria-label={t('ajustes.extensions.f.chargerInHouseMeters')} />
+                <Switch checked={charger.chargerInHouseMeters} onCheckedChange={(v) => setCh({ chargerInHouseMeters: v })} aria-label={t('ajustes.extensions.f.chargerInHouseMeters')} />
                 <span className="text-xs text-faint">{t('ajustes.extensions.f.chargerInHouseMetersHint')}</span>
               </div>
             </div>
-                  <EntityField label={t('ajustes.extensions.f.energySessionId')} value={ch.energySessionId} onChange={(v) => setCh({ energySessionId: v })} />
-                  <EntityField label={t('ajustes.extensions.f.stateId')} value={ch.stateId} onChange={(v) => setCh({ stateId: v })} />
-                  <EntityField label={t('ajustes.extensions.f.tempId')} value={ch.tempId} onChange={(v) => setCh({ tempId: v })} />
-                  <EntityField label={t('ajustes.extensions.f.switchId')} value={ch.switchId} onChange={(v) => setCh({ switchId: v })} />
-                  <EntityField label={t('ajustes.extensions.f.connectedStates')} value={ch.connectedStates.join(', ')} onChange={(v) => setCh({ connectedStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="connected" />
+                  <EntityField label={t('ajustes.extensions.f.energySessionId')} value={charger.energySessionId} onChange={(v) => setCh({ energySessionId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.stateId')} value={charger.stateId} onChange={(v) => setCh({ stateId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.tempId')} value={charger.tempId} onChange={(v) => setCh({ tempId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.switchId')} value={charger.switchId} onChange={(v) => setCh({ switchId: v })} />
+                  <EntityField label={t('ajustes.extensions.f.ampId')} value={charger.ampId} onChange={(v) => setCh({ ampId: v })} placeholder="number.cargador_corriente" />
+                  <EntityField label={t('ajustes.extensions.f.connectedStates')} value={charger.connectedStates.join(', ')} onChange={(v) => setCh({ connectedStates: v.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="connected" />
                 </div>
                 <div className="flex items-center gap-3">
                   <button

@@ -162,6 +162,24 @@ function migrate(db) {
     if (!cols.includes('ext_charger_pv_kwh')) db.exec('ALTER TABLE daily ADD COLUMN ext_charger_pv_kwh REAL')
     db.pragma('user_version = 6')
   }
+
+  if (version < 7) {
+    // v7 (issue 146): energia del cargador por dia Y por cargador (varios
+    // cargadores configurables). La clave del cargador 1 es 'main'; las
+    // columnas daily.ext_charger_kwh/pv_kwh quedan congeladas y todo lo
+    // acumulado hasta ahora se copia a 'main' (el cargador original).
+    db.exec(`CREATE TABLE IF NOT EXISTS daily_charger (
+      date TEXT NOT NULL,
+      charger TEXT NOT NULL,
+      kwh REAL,
+      pv_kwh REAL,
+      PRIMARY KEY (date, charger)
+    )`)
+    db.exec(`INSERT OR IGNORE INTO daily_charger (date, charger, kwh, pv_kwh)
+             SELECT date, 'main', ext_charger_kwh, ext_charger_pv_kwh FROM daily
+             WHERE ext_charger_kwh IS NOT NULL`)
+    db.pragma('user_version = 7')
+  }
 }
 
 export function openDb(dataDir) {
