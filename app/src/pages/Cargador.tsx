@@ -316,7 +316,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
           <motion.div
             animate={live?.charging ? { scale: [1, 1.02, 1] } : { scale: 1 }}
             transition={live?.charging ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-            className="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[40%] lg:min-h-60"
+            className="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[40%] lg:min-h-60 dark:bg-neutral-900"
           >
             {charger.imageUrl ? (
               <img
