@@ -189,7 +189,19 @@
     "fromGrid": "Grid & battery",
     "periodTotal": "Charged in the period",
     "ofProduction": "{{pct}} % of production went to the car",
-    "pctSolarAria": "Share of charging from solar"
+    "pctSolarAria": "Share of charging from solar",
+    "tabsAria": "Chargers",
+    "powerOn": "Turn on",
+    "powerOff": "Turn off",
+    "powerToastOn": "{{name}} turned on",
+    "powerToastOff": "{{name}} turned off",
+    "amps": "Current (A)",
+    "ampsAria": "Select charging current",
+    "ampsToast": "{{name}} current set to {{amps}} A",
+    "imageEdit": "Change image (transparent PNG, recommended height 460 px; auto-rescaled)",
+    "imageClear": "Remove image",
+    "imageOk": "Image updated",
+    "imageCleared": "Image removed"
   },
   "inversores": {
     "title": "Inverters",
@@ -586,8 +598,14 @@
         "chargingStates": "Charging states (CSV)",
         "connectedStates": "Connected states (CSV)",
         "chargerInHouseMeters": "Charger in house meters",
-        "chargerInHouseMetersHint": "Enable only if your consumption meters already measure the charger circuit."
-      }
+        "chargerInHouseMetersHint": "Enable only if your consumption meters already measure the charger circuit.",
+        "ampId": "Current entity (A)",
+        "imageUrl": "Car image (URL)"
+      },
+      "chargerSelect": "Chargers",
+      "chargerN": "Charger {{n}}",
+      "chargerAdd": "Add charger",
+      "chargerRemove": "Remove charger"
     }
   },
   "footer": {

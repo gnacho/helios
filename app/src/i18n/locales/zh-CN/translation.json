@@ -189,7 +189,19 @@
     "fromGrid": "电网和电池",
     "periodTotal": "期间充电量",
     "ofProduction": "{{pct}} % 的发电量给了车",
-    "pctSolarAria": "太阳能充电占比"
+    "pctSolarAria": "太阳能充电占比",
+    "tabsAria": "充电桩",
+    "powerOn": "开启",
+    "powerOff": "关闭",
+    "powerToastOn": "{{name}} 已开启",
+    "powerToastOff": "{{name}} 已关闭",
+    "amps": "充电电流",
+    "ampsAria": "选择充电电流",
+    "ampsToast": "{{name}} 电流已设为 {{amps}} A",
+    "imageEdit": "更换图片 (透明 PNG，建议高度 460 px；自动缩放)",
+    "imageClear": "移除图片",
+    "imageOk": "图片已更新",
+    "imageCleared": "图片已移除"
   },
   "inversores": {
     "title": "逆变器",
@@ -583,8 +595,14 @@
         "chargingStates": "充电状态 (CSV)",
         "connectedStates": "连接状态 (CSV)",
         "chargerInHouseMeters": "充电器计入家中电表",
-        "chargerInHouseMetersHint": "仅当家中电表已测量充电器回路时启用。"
-      }
+        "chargerInHouseMetersHint": "仅当家中电表已测量充电器回路时启用。",
+        "ampId": "电流实体 (A)",
+        "imageUrl": "车辆图片 (URL)"
+      },
+      "chargerSelect": "充电桩",
+      "chargerN": "充电桩 {{n}}",
+      "chargerAdd": "添加充电桩",
+      "chargerRemove": "移除充电桩"
     }
   },
   "footer": {

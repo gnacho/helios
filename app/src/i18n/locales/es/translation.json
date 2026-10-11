@@ -189,7 +189,19 @@
     "fromGrid": "Red y batería",
     "periodTotal": "Cargado en el periodo",
     "ofProduction": "{{pct}} % de la producción se fue al coche",
-    "pctSolarAria": "Porcentaje de la carga de origen solar"
+    "pctSolarAria": "Porcentaje de la carga de origen solar",
+    "tabsAria": "Cargadores",
+    "powerOn": "Encender",
+    "powerOff": "Apagar",
+    "powerToastOn": "{{name}} encendido",
+    "powerToastOff": "{{name}} apagado",
+    "amps": "Amperaje",
+    "ampsAria": "Seleccionar amperaje de carga",
+    "ampsToast": "Amperaje de {{name}} a {{amps}} A",
+    "imageEdit": "Cambiar imagen (PNG con transparencia, alto recomendado 460 px; se reescala solo)",
+    "imageClear": "Quitar imagen",
+    "imageOk": "Imagen actualizada",
+    "imageCleared": "Imagen quitada"
   },
   "inversores": {
     "title": "Inversores",
@@ -586,8 +598,14 @@
         "chargingStates": "Estados de carga (CSV)",
         "connectedStates": "Estados de conectado (CSV)",
         "chargerInHouseMeters": "Cargador en medidores de casa",
-        "chargerInHouseMetersHint": "Actívalo solo si tus medidores de consumo ya miden el circuito del cargador."
-      }
+        "chargerInHouseMetersHint": "Actívalo solo si tus medidores de consumo ya miden el circuito del cargador.",
+        "ampId": "Entidad de corriente (A)",
+        "imageUrl": "Imagen del coche (URL)"
+      },
+      "chargerSelect": "Cargadores",
+      "chargerN": "Cargador {{n}}",
+      "chargerAdd": "Añadir cargador",
+      "chargerRemove": "Quitar cargador"
     }
   },
   "footer": {

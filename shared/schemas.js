@@ -105,30 +105,44 @@ export function createSchemas(z) {
       weatherTemp: z.string().optional().default(''),
     }),
 
-    // Extensiones (issue #94): marco opcional de módulos. Interrupor maestro
-    // + primer módulo (cargador de coche) con sus entidades HAOS editables.
+    // Extensiones (issue #94, varios cargadores issue #146): marco opcional de
+    // módulos. Interruptor maestro + el módulo del cargador con una LISTA de
+    // cargadores (cada uno con sus entidades HAOS editables y su nombre).
     extensionsSchema: z.object({
       enabled: z.boolean().optional().default(false),
       carCharger: z.object({
         enabled: z.boolean().optional().default(false),
-        name: z.string().min(1).max(60).optional().default(''),
-        powerId: z.string().optional().default(''),
-        powerUnit: z.enum(['kW', 'W']).optional().default('kW'),
-        energyTotalId: z.string().optional().default(''),
-        energySessionId: z.string().optional().default(''),
-        // Divisor del contador de energía (unidades → kWh): muchos cargadores
-        // Tuya reportan en centésimas de kWh (DPS 1) aunque la integración los
-        // etiquete como kWh. 1 = ya está en kWh.
-        energyDivisor: z.number().int().min(1).max(100000).optional().default(1),
-        // ¿Los medidores de consumo de la topología ya incluyen el circuito
-        // del cargador? Si true, la atribución solar descuenta la potencia del
-        // cargador del consumo medido; si false (circuito dedicado aparte), no.
-        chargerInHouseMeters: z.boolean().optional().default(true),
-        stateId: z.string().optional().default(''),
-        tempId: z.string().optional().default(''),
-        switchId: z.string().optional().default(''),
-        chargingStates: z.array(z.string()).optional().default([]),
-        connectedStates: z.array(z.string()).optional().default([]),
+        chargers: z
+          .array(
+            z.object({
+              key: z.string().regex(/^[a-z0-9-]{1,20}$/).optional(),
+              name: z.string().min(1).max(60).optional().default(''),
+              powerId: z.string().optional().default(''),
+              powerUnit: z.enum(['kW', 'W']).optional().default('kW'),
+              energyTotalId: z.string().optional().default(''),
+              energySessionId: z.string().optional().default(''),
+              // Divisor del contador de energía (unidades → kWh): muchos
+              // cargadores Tuya reportan centésimas de kWh (DPS 1) aunque la
+              // integración los etiquete como kWh. 1 = ya está en kWh.
+              energyDivisor: z.number().int().min(1).max(100000).optional().default(1),
+              // ¿Los medidores de consumo de la topología ya incluyen el
+              // circuito de ESTE cargador? Si true, la atribución solar
+              // descuenta su potencia del consumo medido.
+              chargerInHouseMeters: z.boolean().optional().default(true),
+              stateId: z.string().optional().default(''),
+              tempId: z.string().optional().default(''),
+              switchId: z.string().optional().default(''),
+              // Entidad de corriente de carga (A): number/input_select/select.
+              ampId: z.string().optional().default(''),
+              // Imagen del coche (URL o ruta publica, p.ej. /chargers/x.png).
+              imageUrl: z.string().max(500).optional().default(''),
+              chargingStates: z.array(z.string()).optional().default([]),
+              connectedStates: z.array(z.string()).optional().default([]),
+            })
+          )
+          .max(4)
+          .optional()
+          .default([]),
       }).optional().default({}),
     }),
   }
