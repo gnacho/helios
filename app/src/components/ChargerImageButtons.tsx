@@ -2,14 +2,13 @@ import { useRef, useState } from 'react';
 import { ImagePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ChargerCfg } from '@/data/types';
-import { invalidateExtensions } from '@/hooks/useExtensions';
 import { apiFetch } from '@/data/api-client';
 import { heliosToast } from '@/lib/toast';
 
 /** Boton pequeno (arriba-derecha de la tarjeta) para cambiar la foto del
  *  coche: reescala a 460 px de alto en canvas (conserva transparencia) y la
  *  sube al endpoint del cargador. La imagen vive en dataDir, no en el repo. */
-export default function ChargerImageButtons({ charger }: { charger: ChargerCfg }) {
+export default function ChargerImageButtons({ charger, onUploaded }: { charger: ChargerCfg; onUploaded?: () => void }) {
   const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -40,7 +39,7 @@ export default function ChargerImageButtons({ charger }: { charger: ChargerCfg }
         body: JSON.stringify({ image: dataUrl }),
         headers: { 'Content-Type': 'application/json' },
       });
-      invalidateExtensions();
+      onUploaded?.();
       heliosToast(t('cargador.imageOk'));
     } catch (err) {
       console.error('[imagen]', err);
