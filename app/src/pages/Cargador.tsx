@@ -124,6 +124,8 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
   const { getHistory } = useEnergyData();
 
   const [curve, setCurve] = useState<ChargerCurvePoint[] | null>(null);
+  // cache-bust de la foto tras subirla (sin recargar la config global)
+  const [imgBust, setImgBust] = useState(0);
   const [history, setHistory] = useState<HistoryDay[] | null>(null);
   const [pwrBusy, setPwrBusy] = useState(false);
   const [ampBusy, setAmpBusy] = useState(false);
@@ -319,7 +321,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
               <stateChip.Icon size={14} />
               {stateChip.text}
             </span>
-              <ChargerImageButtons charger={charger} />
+              <ChargerImageButtons charger={charger} onUploaded={() => setImgBust(Date.now())} />
           </div>
 
           <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch">
@@ -331,7 +333,7 @@ function ChargerView({ charger, live }: { charger: ChargerCfg; live?: ChargerLiv
             >
               {charger.imageUrl ? (
                 <img
-                  src={charger.imageUrl}
+                  src={`${charger.imageUrl}${imgBust ? `?t=${imgBust}` : ''}`}
                   alt={charger.name}
                   draggable={false}
                   className="h-full max-h-full w-full object-contain select-none"
