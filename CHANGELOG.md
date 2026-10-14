@@ -5,6 +5,23 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.8.25] - 2026-10-14
+
+### Added
+
+- **Varios cargadores de coche con pestañas (#146).** La página del cargador
+  admite más de un cargador (pared, portátil...) con pestañas para alternar,
+  foto propia por cargador con botón para cambiarla, botón de
+  encendido/apagado junto al estado y control de la corriente de carga con
+  chips de amperaje cuando la entidad configurada lo permite. La energía del
+  día, las curvas y el histórico se acumulan por cargador.
+
+### Fixed
+
+- **La curva de carga de hoy se detiene en la hora actual (#145).** Antes se
+  dibujaba plana hasta medianoche.
+- **Subir la foto del cargador ya no deja la página en blanco (#148).**
+
 ## [0.8.18] - 2026-09-19
 
 ### Fixed
