@@ -12,12 +12,66 @@
 //   las preferencias por tipo filtran por usuario.
 import crypto from 'node:crypto'
 import webpush from 'web-push'
+import type { PushSubscription, RequestOptions, SendResult } from 'web-push'
+import type Database from 'better-sqlite3'
+
+type Db = Database.Database
+
+type Lang = 'es' | 'en' | 'zh'
+
+interface DatosAlerta {
+  nombre?: string
+  soc?: number
+  reserva?: number
+  produccion?: number
+  consumo?: number
+  autoconsumo?: number
+  total?: number
+  [key: string]: unknown
+}
+
+interface OpcionesNotificacion {
+  severity?: string
+  url?: string
+  ttl?: number
+}
+
+interface Entrada {
+  titulo: string
+  cuerpo: (d: DatosAlerta) => string
+}
+
+type SendFn = (sub: PushSubscription, payload: string, opts: RequestOptions) => Promise<SendResult>
+
+interface Sub {
+  id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+}
+
+interface DbStatement {
+  run(...params: unknown[]): unknown
+  get(...params: unknown[]): any
+  all(...params: unknown[]): any[]
+}
+
+interface Stmts {
+  subsPorUsuario: DbStatement
+  idioma: DbStatement
+  pref: DbStatement
+  quiet: DbStatement
+  borrarPorEndpoint: DbStatement
+  encolar: DbStatement
+  colaAgrupada: DbStatement
+  todosUsuarios: DbStatement
+}
 
 let vapidOk = false
-let sendFn = (sub, payload, opts) => webpush.sendNotification(sub, payload, opts)
+let sendFn: SendFn = (sub, payload, opts) => webpush.sendNotification(sub, payload, opts)
 
 // Configura VAPID una vez al arrancar. Devuelve true si el push queda activo.
-export function configurePush({ publicKey, privateKey, subject } = {}) {
+export function configurePush({ publicKey, privateKey, subject }: { publicKey?: string; privateKey?: string; subject?: string } = {}) {
   if (!publicKey || !privateKey || !subject) {
     vapidOk = false
     console.warn('[push] sin VAPID_PUBLIC_KEY/PRIVATE_KEY/SUBJECT: notificaciones push desactivadas')
@@ -38,7 +92,7 @@ export function pushPublicKey() {
 }
 
 // --- Tests: inyectar un sender falso y resetear estado ----------------------
-export function _setSendFn(fn) {
+export function _setSendFn(fn: SendFn | null) {
   sendFn = fn || ((sub, payload, opts) => webpush.sendNotification(sub, payload, opts))
 }
 export function _resetForTests() {
@@ -50,7 +104,7 @@ export function _resetForTests() {
 // Catálogo i18n (texto FINAL compuesto en servidor; el SW no traduce). Textos
 // sin marcas de inversor (issue #39): el nombre real sale de la topología y se
 // pasa en `datos.nombre` donde aplica (fox_offline/fox_ok usan el 2º inversor).
-const CATALOGO = {
+const CATALOGO: Record<Lang, Record<string, Entrada>> = {
   es: {
     inversor_offline: { titulo: 'Inversor offline', cuerpo: () => 'El inversor no responde' },
     inversor_ok: { titulo: 'Inversor recuperado', cuerpo: () => 'El inversor vuelve a estar online' },
@@ -114,8 +168,8 @@ export const TIPOS_ALERTA = [
 const SEVERIDADES = ['normal', 'high', 'critical']
 
 // --- Statements cacheados por BD (WeakMap: permite :memory: en tests) -------
-let stmtCache = new WeakMap()
-function stmts(db) {
+let stmtCache = new WeakMap<Db, Stmts>()
+function stmts(db: Db): Stmts {
   let s = stmtCache.get(db)
   if (!s) {
     s = {
@@ -136,7 +190,7 @@ function stmts(db) {
   return s
 }
 
-function idiomaDe(db, userId) {
+function idiomaDe(db: Db, userId: string): Lang {
   const lang = stmts(db).idioma.get(userId)?.language
   if (lang === 'en') return 'en'
   if (lang === 'zh-CN' || lang === 'zh') return 'zh'
@@ -144,7 +198,7 @@ function idiomaDe(db, userId) {
 }
 
 // Quiet hours en la zona horaria del usuario (Intl, sin dependencias).
-function enQuietHours(db, userId) {
+function enQuietHours(db: Db, userId: string) {
   const q = stmts(db).quiet.get(userId)
   if (!q || q.quiet_start === null || q.quiet_end === null) return false
   const hora = Number(
@@ -154,7 +208,7 @@ function enQuietHours(db, userId) {
   return hora >= q.quiet_start || hora < q.quiet_end // cruza medianoche
 }
 
-function componerPayload(lang, tipo, datos, url) {
+function componerPayload(lang: Lang, tipo: string, datos: DatosAlerta, url: string) {
   const entrada = CATALOGO[lang][tipo] || CATALOGO[lang].resumen
   const title = entrada.titulo
   const body = entrada.cuerpo(datos)
@@ -172,14 +226,14 @@ function componerPayload(lang, tipo, datos, url) {
 
 // Envío a UNA suscripción: 404/410 = muerta (borrar); 429/5xx = reintentar
 // con backoff + jitter (máx 3); otros status = bug nuestro (log sin endpoint).
-async function enviarAUna(db, sub, json, opciones) {
+async function enviarAUna(db: Db, sub: Sub, json: string, opciones: RequestOptions & { urgency?: string; topic?: string }) {
   const destino = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }
   for (let intento = 1; intento <= 3; intento++) {
     try {
       await sendFn(destino, json, { ...opciones, contentEncoding: 'aes128gcm' })
       return 'ok'
     } catch (err) {
-      const status = err?.statusCode
+      const status = (err as { statusCode?: number })?.statusCode
       if (status === 404 || status === 410) {
         stmts(db).borrarPorEndpoint.run(sub.endpoint)
         return 'borrada'
@@ -191,18 +245,26 @@ async function enviarAUna(db, sub, json, opciones) {
         }
         return 'fallido'
       }
-      console.error(`[push] error status=${status} sub=${sub.id}: ${err?.message}`)
+      console.error(`[push] error status=${status} sub=${sub.id}: ${(err as Error)?.message}`)
       return 'fallido'
     }
   }
   return 'fallido'
 }
 
+interface NotifyResult {
+  enviados: number
+  borrados: number
+  fallidos: number
+  pospuestos: number
+  omitidos: number
+}
+
 /**
  * Notifica por push a usuarios (app CERRADA; con la app abierta ya se enteran
  * por SSE). Respeta preferencias y quiet hours. Devuelve contadores.
  */
-export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) {
+export async function notifyUsers(db: Db, userIds: string[], tipo: string, datos: DatosAlerta = {}, opciones: OpcionesNotificacion = {}): Promise<NotifyResult> {
   const { severity = 'normal', url = '/', ttl = severity === 'critical' ? 3600 : 21600 } = opciones
   const res = { enviados: 0, borrados: 0, fallidos: 0, pospuestos: 0, omitidos: 0 }
   const s = stmts(db)
@@ -226,7 +288,7 @@ export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) 
       res.omitidos++
       continue
     }
-    const subs = s.subsPorUsuario.all(userId)
+    const subs = s.subsPorUsuario.all(userId) as Sub[]
     if (subs.length === 0) {
       res.omitidos++
       continue
@@ -244,7 +306,7 @@ export async function notifyUsers(db, userIds, tipo, datos = {}, opciones = {}) 
 
 // Atajo para alertas de sistema (energía): avisa a TODOS los usuarios.
 // Fire-and-forget desde el motor (nunca bloquea el tick del motor).
-export function notifyAll(db, tipo, datos, opciones = {}) {
+export function notifyAll(db: Db, tipo: string, datos: DatosAlerta, opciones: OpcionesNotificacion = {}) {
   const ids = stmts(db).todosUsuarios.all().map((r) => r.id)
   if (ids.length === 0) return
   notifyUsers(db, ids, tipo, datos, opciones).catch((err) => console.error('[push] error en notifyAll:', err))
@@ -252,7 +314,7 @@ export function notifyAll(db, tipo, datos, opciones = {}) {
 
 // Mantenimiento horario: consolida la cola de quiet hours en UN resumen por
 // usuario+tipo y vacía la cola. Llamado desde el intervalo horario de index.js.
-export async function flushNotificationQueue(db) {
+export async function flushNotificationQueue(db: Db) {
   const s = stmts(db)
   const grupos = s.colaAgrupada.all()
   if (grupos.length === 0) return

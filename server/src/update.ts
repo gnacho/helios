@@ -1,6 +1,9 @@
 import { writeFileSync, readFileSync, watchFile, unwatchFile } from 'node:fs'
 import { join } from 'node:path'
+import type Database from 'better-sqlite3'
 import { kvGet, kvSet } from './db.js'
+
+type Db = Database.Database
 
 const REPO = process.env.GITHUB_REPO || 'gnacho/helios'
 const MARKER = process.env.RELEASE_MARKER || '/opt/helios/.release-id'
@@ -9,14 +12,32 @@ const CACHE_TTL = 5 * 60 * 1000
 const PROGRESS_FILE = 'update-progress.json'
 const PROGRESS_STALE_MS = 15 * 60 * 1000
 
-const listeners = new Set()
+interface ProgressPayload {
+  type: string
+  step?: string
+  pct?: number
+}
 
-export function subscribe(fn) {
+interface ReleaseEntry {
+  at: number
+  id: string
+  body: string
+}
+
+interface ProgressState {
+  ts?: number
+  step?: string
+  pct?: number
+}
+
+const listeners = new Set<(payload: ProgressPayload) => void>()
+
+export function subscribe(fn: (payload: ProgressPayload) => void) {
   listeners.add(fn)
   return () => listeners.delete(fn)
 }
 
-function broadcast(payload) {
+function broadcast(payload: ProgressPayload) {
   for (const fn of listeners) {
     try { fn(payload) } catch { /* listener muerto */ }
   }
@@ -30,11 +51,11 @@ export function currentId() {
   }
 }
 
-async function latestRelease(db) {
+async function latestRelease(db: Db): Promise<ReleaseEntry | null> {
   const cached = kvGet(db, CACHE_KEY)
   if (cached) {
     try {
-      const c = JSON.parse(cached)
+      const c = JSON.parse(cached) as ReleaseEntry
       if (Date.now() - c.at < CACHE_TTL) return c
     } catch { /* noop */ }
   }
@@ -43,7 +64,7 @@ async function latestRelease(db) {
     signal: AbortSignal.timeout(10000),
   })
   if (!res.ok) return null
-  const data = await res.json()
+  const data = (await res.json()) as { tag_name?: string; body?: string }
   const id = String(data.tag_name ?? '').replace(/^v/, '')
   const body = String(data.body ?? '').trim()
   const entry = { at: Date.now(), id, body }
@@ -51,7 +72,7 @@ async function latestRelease(db) {
   return entry
 }
 
-function compareSemver(a, b) {
+function compareSemver(a: string, b: string) {
   const pa = String(a).replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
   const pb = String(b).replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
   for (let i = 0; i < 3; i++) {
@@ -60,10 +81,10 @@ function compareSemver(a, b) {
   return 0
 }
 
-export function readProgress(dataDir) {
+export function readProgress(dataDir: string): ProgressState | null {
   try {
     const raw = readFileSync(join(dataDir, PROGRESS_FILE), 'utf8')
-    const p = JSON.parse(raw)
+    const p = JSON.parse(raw) as ProgressState
     if (p.ts && Date.now() - p.ts > PROGRESS_STALE_MS) return null
     return p
   } catch {
@@ -71,7 +92,7 @@ export function readProgress(dataDir) {
   }
 }
 
-export async function updateStatus(db, dataDir) {
+export async function updateStatus(db: Db, dataDir: string) {
   const current = currentId()
   const rel = await latestRelease(db).catch(() => null)
   const latest = rel?.id ?? null
@@ -90,7 +111,7 @@ export async function updateStatus(db, dataDir) {
   }
 }
 
-export function requestUpdate(dataDir) {
+export function requestUpdate(dataDir: string) {
   const flag = join(dataDir, '.update-requested')
   try {
     writeFileSync(flag, new Date().toISOString())
@@ -100,7 +121,7 @@ export function requestUpdate(dataDir) {
   }
 }
 
-export function watchProgress(dataDir) {
+export function watchProgress(dataDir: string) {
   const file = join(dataDir, PROGRESS_FILE)
   let lastMtime = 0
   watchFile(file, { interval: 500 }, (curr) => {

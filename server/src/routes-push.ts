@@ -4,7 +4,21 @@
 // El endpoint push es una capability URL SECRETA: nunca se loguea.
 import crypto from 'node:crypto'
 import { z } from 'zod'
+import type { Hono } from 'hono'
+import type Database from 'better-sqlite3'
 import { isPushConfigured, pushPublicKey, TIPOS_ALERTA } from './push.js'
+
+type Db = Database.Database
+
+interface PushEnv {
+  Bindings: { incoming?: { socket?: { remoteAddress?: string } } }
+  Variables: { userId: string }
+}
+
+interface SubRow {
+  tipo: string
+  enabled: number
+}
 
 const subscribeSchema = z.object({
   endpoint: z.url().max(1000),
@@ -25,7 +39,7 @@ const prefSchema = z.object({
 })
 
 // Registra las rutas en un router que YA lleva requireAuth (c.get('userId')).
-export function registerPushRoutes(router, db) {
+export function registerPushRoutes(router: Hono<PushEnv>, db: Db) {
   // Clave pública VAPID para applicationServerKey. No es secreta, pero solo
   // se sirve con sesión. Sin claves configuradas la UI muestra el aviso.
   router.get('/push/vapid-public-key', (c) => {
@@ -80,7 +94,7 @@ export function registerPushRoutes(router, db) {
   router.get('/push/preferences', (c) => {
     const filas = db
       .prepare('SELECT tipo, enabled FROM notification_preferences WHERE user_id = ?')
-      .all(c.get('userId'))
+      .all(c.get('userId')) as SubRow[]
     const mapa = Object.fromEntries(filas.map((f) => [f.tipo, f.enabled === 1]))
     const prefs = Object.fromEntries(TIPOS_ALERTA.map((t) => [t, mapa[t] !== false]))
     return c.json({ prefs })

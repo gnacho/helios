@@ -42,7 +42,7 @@ const alerts = await import('./alerts.js')
 const { updateStatus, requestUpdate, currentId, subscribe, watchProgress, readProgress } = await import('./update.js')
 const install = await import('./install.js')
 const extensions = await import('./extensions.js')
-const schemas = (await import('../../shared/schemas.js')).createSchemas(z)
+const schemas = (await import('./schemas.js')).createSchemas(z)
 const { dateSchema, loginSchema, registerSchema, profileSchema, passwordSchema, historyQuerySchema, auditQuerySchema, adminPasswordSchema, adminLanguageSchema, adminRoleSchema, topologySchema, extensionsSchema } = schemas
 
 const db = dbModule.openDb(config.dataDir)
@@ -88,14 +88,14 @@ ha.on('connected', async () => {
       const s = await solar.backfillDaySeries(ha, db, daySeriesBackup)
       if (s.ran) console.log(`[helios] backfill curvas: ${s.rows} días`)
       const charged = await extensions.backfillChargerHistory(ha, db).catch((err) => {
-        console.error('[helios] backfill cargador error:', err.message)
+        console.error('[helios] backfill cargador error:', (err as Error).message)
         return 0
       })
       if (charged) console.log(`[helios] backfill cargador: ${charged} días`)
       backfillState = 'done'
     } catch (err) {
       backfillState = 'error'
-      console.error('[helios] backfill error:', err.message)
+      console.error('[helios] backfill error:', (err as Error).message)
     }
   }
 })
@@ -111,7 +111,16 @@ ha.on('wsError', (msg) => {
 })
 ha.start()
 
-const app = new Hono()
+interface AppEnv {
+  Bindings: { incoming?: { socket?: { remoteAddress?: string } } }
+  Variables: { userId: string }
+}
+
+interface SseClient {
+  write: (payload: string) => void
+}
+
+const app = new Hono<AppEnv>()
 
 // Cache HTTP: los bundles llevan hash en el nombre (inmutables); el shell
 // (index.html, sw.js, manifest) y TODA la API SIEMPRE se revalidan para que un
@@ -209,7 +218,7 @@ app.get('/api/update/stream', async (c) => {
     return c.json({ error: 'solo administradores' }, 403)
   }
   return streamSSE(c, async (stream) => {
-    const send = (data) => {
+    const send = (data: unknown) => {
       stream.writeSSE({ event: 'update', data: JSON.stringify(data) }).catch(() => {})
     }
     const unsub = subscribe(send)
@@ -253,7 +262,7 @@ app.use('*', async (c, next) => {
   c.header('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline'${gcOrigin}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://api.github.com${gcOrigin}`)
   await next()
 })
-const sseClients = new Set()
+const sseClients = new Set<SseClient>()
 const MAX_SSE_CLIENTS = 10
 
 let lastPush = 0
@@ -527,7 +536,7 @@ app.post('/api/auth/recover', async (c) => {
   return c.json({ ok: true, tempPassword: temp })
 })
 
-const guarded = new Hono()
+const guarded = new Hono<AppEnv>()
 guarded.use('*', auth.requireAuth(db))
 registerPushRoutes(guarded, db)
 
@@ -545,7 +554,7 @@ guarded.get('/solar/day', async (c) => {
     const result = await solar.getDaySeries(ha, parsed.data, db)
     return c.json({ date: parsed.data || solar.todayStr(), points: result.points, estimated: result.estimated })
   } catch (err) {
-    return c.json({ error: err.message }, 400)
+    return c.json({ error: (err as Error).message }, 400)
   }
 })
 
@@ -559,7 +568,7 @@ guarded.get('/solar/kpis', async (c) => {
     const kpis = await solar.getKpis(ha, parsed.data, db)
     return c.json({ date: parsed.data || solar.todayStr(), ...kpis })
   } catch (err) {
-    return c.json({ error: err.message }, 400)
+    return c.json({ error: (err as Error).message }, 400)
   }
 })
 
@@ -584,7 +593,7 @@ guarded.get('/solar/history', async (c) => {
   // acumular), se refresca con los KPIs en vivo para no mostrar un falso 0.
   const todayKey = solar.todayStr()
   const todayRaw = rows.find((r) => r.date === todayKey)
-  if (todayRaw && !(todayRaw.production_kwh > 0)) {
+  if (todayRaw && !((todayRaw.production_kwh ?? 0) > 0)) {
     try {
       const baseline = await solar.ensureConsumptionBaseline(ha, db).catch(() => null)
       const k = solar.computeTodayKpis(ha, solar.consumptionTodayFromCounters(ha, baseline))
@@ -601,19 +610,23 @@ guarded.get('/solar/history', async (c) => {
       /* sin HAOS: queda la fila tal cual */
     }
   }
-  const days = rows.map((r) => ({
-    date: r.date,
-    productionKwh: r.production_kwh,
-    solisKwh: r.solis_kwh ?? 0,
-    foxKwh: r.fox_kwh ?? 0,
-    consumptionKwh: r.consumption_kwh,
-    gridImportKwh: r.grid_import_kwh,
-    gridExportKwh: r.grid_export_kwh,
-    batteryChargedKwh: r.battery_charged_kwh,
-    batteryDischargedKwh: r.battery_discharged_kwh,
-    autoconsumoPct:
-      r.production_kwh > 0 ? Math.min(100, ((r.production_kwh - r.grid_export_kwh) / r.production_kwh) * 100) : 0,
-  }))
+  const days = rows.map((r) => {
+    const production = r.production_kwh ?? 0
+    const gridExport = r.grid_export_kwh ?? 0
+    return {
+      date: r.date,
+      productionKwh: r.production_kwh,
+      solisKwh: r.solis_kwh ?? 0,
+      foxKwh: r.fox_kwh ?? 0,
+      consumptionKwh: r.consumption_kwh,
+      gridImportKwh: r.grid_import_kwh,
+      gridExportKwh: r.grid_export_kwh,
+      batteryChargedKwh: r.battery_charged_kwh,
+      batteryDischargedKwh: r.battery_discharged_kwh,
+      autoconsumoPct:
+        production > 0 ? Math.min(100, ((production - gridExport) / production) * 100) : 0,
+    }
+  })
   return c.json({ from: fromFinal, to: toFinal, backfill: backfillState, total, limit: pageParsed.data.limit, offset: pageParsed.data.offset, days })
 })
 
@@ -625,7 +638,7 @@ guarded.get('/solar/stream', (c) => {
   c.header('Cache-Control', 'no-cache')
   return streamSSE(c, async (stream) => {
     const client = {
-      write: (payload) => stream.write(payload),
+      write: (payload: string) => stream.write(payload),
     }
     sseClients.add(client)
     await stream.write(`data: ${livePayload()}\n\n`)
@@ -784,10 +797,10 @@ guarded.get('/charger/day', async (c) => {
     const ext = extensions.getExtensions()
     const charger = extensions.getChargerByKey(ext, c.req.query('charger') || 'main')
     if (!charger) return c.json({ error: 'cargador no encontrado' }, 404)
-    const result = await extensions.chargerDayCurve(ha, parsed.data, ext, charger)
+    const result = await extensions.chargerDayCurve(ha, parsed.data ?? solar.todayStr(), ext, charger)
     return c.json({ date: parsed.data || solar.todayStr(), points: result.points })
   } catch (err) {
-    return c.json({ error: err.message }, 400)
+    return c.json({ error: (err as Error).message }, 400)
   }
 })
 
@@ -849,7 +862,7 @@ guarded.post('/charger/action', async (c) => {
     }
     return c.json({ error: 'acción no soportada' }, 400)
   } catch (err) {
-    return c.json({ error: err.message }, 502)
+    return c.json({ error: (err as Error).message }, 502)
   }
 })
 
@@ -894,7 +907,7 @@ guarded.delete('/charger/image/:key', async (c) => {
 app.route('/api', guarded)
 
 app.onError((err, c) => {
-  console.error('[helios] error:', err.message)
+  console.error('[helios] error:', (err as Error).message)
   return c.json({ error: 'error interno' }, 500)
 })
 
@@ -925,7 +938,7 @@ setInterval(() => {
   try {
     alertsEngine.tick()
   } catch (err) {
-    console.error('[helios] alerts tick error:', err.message)
+    console.error('[helios] alerts tick error:', (err as Error).message)
   }
 }, 60 * 1000).unref()
 // Acumulación diaria del cargador (deltas del contador total → daily v5).
@@ -934,7 +947,7 @@ setInterval(() => {
   try {
     extensions.accumulateChargerDaily(ha, db)
   } catch (err) {
-    console.error('[helios] charger accumulate error:', err.message)
+    console.error('[helios] charger accumulate error:', (err as Error).message)
   }
 }, 60 * 1000).unref()
 alerts.scheduleResumenDiario(db, ha, solar)
@@ -942,9 +955,9 @@ setInterval(() => {
   try {
     db.pragma('wal_checkpoint(TRUNCATE)')
   } catch (err) {
-    console.error('[helios] wal_checkpoint error:', err.message)
+    console.error('[helios] wal_checkpoint error:', (err as Error).message)
   }
-  push.flushNotificationQueue(db).catch((err) => console.error('[helios] flush cola push error:', err.message))
+  push.flushNotificationQueue(db).catch((err) => console.error('[helios] flush cola push error:', (err as Error).message))
 }, 3600 * 1000).unref()
 
 function scheduleNightly() {
@@ -963,7 +976,7 @@ function scheduleNightly() {
       purgeAudit(db)
       console.log(`[helios] consolidación nocturna: ${n} días`)
     } catch (err) {
-      console.error('[helios] consolidación nocturna error:', err.message)
+      console.error('[helios] consolidación nocturna error:', (err as Error).message)
     }
     scheduleNightly()
   }, next.getTime() - now.getTime()).unref()
@@ -971,7 +984,7 @@ function scheduleNightly() {
 scheduleNightly()
 
 // Graceful shutdown
-function gracefulShutdown(signal) {
+function gracefulShutdown(signal: string) {
   console.log(`[helios] ${signal} recibido, cerrando...`)
   ha.stop()
   for (const client of sseClients) {
@@ -983,7 +996,7 @@ function gracefulShutdown(signal) {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 
-function shiftDays(dateStr, days) {
+function shiftDays(dateStr: string, days: number) {
   const d = new Date(dateStr + 'T00:00:00')
   d.setDate(d.getDate() + days)
   const y = d.getFullYear()
