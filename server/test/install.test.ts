@@ -15,7 +15,7 @@ import {
   LEGACY_TOPOLOGY,
   GENERIC_TOPOLOGY,
 } from '../src/install.js'
-import { createSchemas } from '../../shared/schemas.js'
+import { createSchemas } from '../src/schemas.js'
 
 const { topologySchema } = createSchemas(z)
 

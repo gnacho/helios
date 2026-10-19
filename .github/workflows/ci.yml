@@ -14,6 +14,10 @@ jobs:
           node-version: 24
       - run: npm ci
         working-directory: server
+      - run: npm run typecheck
+        working-directory: server
+      - run: npm run build
+        working-directory: server
       - run: npm test
         working-directory: server
 
@@ -32,6 +36,8 @@ jobs:
         working-directory: app
       - run: npm run check:bundlesize
         working-directory: app
+      - run: npm ci --no-audit --no-fund && npm run build
+        working-directory: landing
 
   e2e:
     runs-on: ubuntu-latest
@@ -41,6 +47,8 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+        working-directory: server
+      - run: npm run build
         working-directory: server
       - run: npm ci
         working-directory: app

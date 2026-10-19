@@ -1,7 +1,9 @@
 // Contrato API compartido (única fuente de verdad de los payloads del servidor).
 // El frontend tipa contra estas mismas formas en app/src/data/types.ts.
 // Factory: recibe zod del consumidor (shared/ no tiene node_modules propio).
-export function createSchemas(z) {
+import type { z as zod } from 'zod'
+
+export function createSchemas(z: typeof zod) {
   return {
     dateSchema: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 
@@ -77,14 +79,14 @@ export function createSchemas(z) {
         capacityKwh: z.number().min(0).optional().default(0),
         chargingStates: z.array(z.string()).optional().default([]),
         dischargingStates: z.array(z.string()).optional().default([]),
-      }).optional().default({}),
+      }).optional().default({} as never),
       grid: z.object({
         mode: z.enum(['attrs', 'sensor']).optional().default('sensor'),
         attrsId: z.string().nullable().optional().default(null),
         sensorId: z.string().nullable().optional().default(null),
         importId: z.string().nullable().optional().default(null),
         exportId: z.string().nullable().optional().default(null),
-      }).optional().default({}),
+      }).optional().default({} as never),
       statusAttrsId: z.string().nullable().optional().default(null),
       consumption: z.object({
         powerIds: z.array(z.string()).optional().default([]),
@@ -92,14 +94,14 @@ export function createSchemas(z) {
         energyIds: z.array(z.string()).optional().default([]),
         respaldoId: z.string().nullable().optional().default(null),
         noRespaldadaId: z.string().nullable().optional().default(null),
-      }).optional().default({}),
+      }).optional().default({} as never),
       energy: z.object({
         gridImportId: z.string().optional().default(''),
         gridExportId: z.string().optional().default(''),
         batChargeId: z.string().optional().default(''),
         batDischargeId: z.string().optional().default(''),
         consumptionId: z.string().optional().default(''),
-      }).optional().default({}),
+      }).optional().default({} as never),
       sun: z.string().optional().default('sun.sun'),
       weather: z.string().optional().default(''),
       weatherTemp: z.string().optional().default(''),
@@ -143,7 +145,7 @@ export function createSchemas(z) {
           .max(4)
           .optional()
           .default([]),
-      }).optional().default({}),
+      }).optional().default({} as never),
     }),
   }
 }

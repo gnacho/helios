@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:sw && tsc -b && tsc -p tsconfig.sw.json && vite build",
     "lint": "eslint . && node scripts/theme-audit.mjs && node scripts/check-dashes.mjs",
     "format": "prettier --write .",
     "check:dashes": "node scripts/check-dashes.mjs",
     "check:bundlesize": "node scripts/check-bundle-size.mjs",
     "test:e2e": "playwright test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:sw": "esbuild src/sw.ts --outfile=public/sw.js --target=es2020"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -53,6 +54,7 @@
     "@types/suncalc": "^1.9.2",
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "^10.4.23",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",

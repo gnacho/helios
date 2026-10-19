@@ -5,9 +5,9 @@ Single-page app React (Vite) servida por un backend Node.js ligero en el mismo c
 sin Docker. Backend lee Home Assistant en local (WebSocket), expone API REST + SSE al
 frontend por el mismo puerto, y NPM (Nginx Proxy Manager) pone SSL delante.
 
-## Backend — Node 20, sin TypeScript, sin framework pesado
+## Backend — Node 24, TypeScript (strict, tsc → dist/), sin framework pesado
 - **Servidor HTTP**: Hono + `@hono/node-server` (≈ Express pero más ligero y con tipado)
-- **WebSocket HAOS**: `ws` + protocolo nativo de Home Assistant (`subscribe_entities`, `recorder/statistics_during_period`). Cliente propio en `ha.js` con reconexión automática y RPC por id
+- **WebSocket HAOS**: `ws` + protocolo nativo de Home Assistant (`subscribe_entities`, `recorder/statistics_during_period`). Cliente propio en `ha.ts` con reconexión automática y RPC por id
 - **SQLite**: `better-sqlite3` (síncrono, rapidísimo, prebuilt por plataforma). Sin ORM: queries directas + WAL + migraciones `ALTER TABLE` tolerantes. Retiene el histórico propio para no depender de la purga de HA
 - **Auth**: cookie `id.hmac` httpOnly 30d, sesiones en SQLite, `Secure` condicional por `x-forwarded-proto`, rate-limit de login en memoria
 - **SSE**: `streamSSE` de Hono para push de datos en vivo al frontend, con heartbeat y throttle

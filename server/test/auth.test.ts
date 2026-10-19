@@ -1,14 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
+import type { Context } from 'hono'
 import { initSchema, getUserByUsername } from '../src/db.js'
 import { loginRateLimited, registerLoginFail, loginOk, registerUser, handleLogin, ensureBootstrapAdmin, changeOwnPassword, requireAuth } from '../src/auth.js'
 
-function mockContext(ip, cookie) {
+function mockContext(ip: string, cookie?: string): Context {
   const headers = new Headers()
   if (cookie) headers.set('cookie', cookie)
   return {
     req: {
-      header: (name) => (name === 'x-forwarded-for' ? ip : undefined),
+      header: (name: string) => (name === 'x-forwarded-for' ? ip : undefined),
       url: 'http://localhost/',
       raw: { headers },
     },
@@ -16,10 +17,10 @@ function mockContext(ip, cookie) {
     set: () => {},
     res: { headers: { append: () => {} } },
     env: {},
-  }
+  } as unknown as Context
 }
 
-let db
+let db: Database.Database
 
 beforeEach(() => {
   db = initSchema(new Database(':memory:'))
@@ -27,7 +28,7 @@ beforeEach(() => {
 
 describe('schema', () => {
   it('crea la tabla login_attempts (rate-limit)', () => {
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name)
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>).map((r) => r.name)
     expect(tables).toContain('login_attempts')
     expect(tables).toContain('users')
     expect(tables).toContain('sessions')
@@ -37,9 +38,9 @@ describe('schema', () => {
 describe('registerUser', () => {
   it('crea usuario con hash bcrypt verificable', async () => {
     const u = await registerUser(db, 'demo', 'secreto123')
-    expect(u.username).toBe('demo')
+    expect(u!.username).toBe('demo')
     const row = getUserByUsername(db, 'demo')
-    expect(row.password_hash).not.toBe('secreto123')
+    expect(row!.password_hash).not.toBe('secreto123')
   })
 
   it('rechaza duplicados', async () => {
@@ -57,8 +58,8 @@ describe('handleLogin', () => {
   it('acepta credenciales correctas y devuelve el usuario', async () => {
     await registerUser(db, 'demo', 'secreto123')
     const res = await handleLogin(db, mockContext('1.1.1.1'), { username: 'demo', password: 'secreto123' })
-    expect(res.user.username).toBe('demo')
-    expect(res.user.password_hash).toBeUndefined()
+    expect(res!.user.username).toBe('demo')
+    expect((res!.user as { password_hash?: unknown }).password_hash).toBeUndefined()
   })
 })
 
@@ -66,30 +67,30 @@ describe('ensureBootstrapAdmin', () => {
   it('crea el admin desde .env en el primer arranque e idempotente', async () => {
     await ensureBootstrapAdmin(db) // AUTH_USER=admin / AUTH_PASS=test (script test)
     const admin = getUserByUsername(db, 'admin')
-    expect(admin.role).toBe('admin')
+    expect(admin!.role).toBe('admin')
     await ensureBootstrapAdmin(db)
-    expect(db.prepare('SELECT COUNT(*) AS n FROM users').get().n).toBe(1)
+    expect((db.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number }).n).toBe(1)
     const res = await handleLogin(db, mockContext('1.1.1.1'), { username: 'admin', password: 'test' })
-    expect(res.user.username).toBe('admin')
+    expect(res!.user.username).toBe('admin')
   })
 })
 
 describe('changeOwnPassword', () => {
   it('rechaza si la actual no coincide y acepta con la correcta', async () => {
     const u = await registerUser(db, 'demo', 'secreto123')
-    expect((await changeOwnPassword(db, u.id, 'mal', 'nueva456')).reason).toBe('wrong_current')
-    expect((await changeOwnPassword(db, u.id, 'secreto123', 'nueva456')).ok).toBe(true)
+    expect((await changeOwnPassword(db, u!.id, 'mal', 'nueva456')).reason).toBe('wrong_current')
+    expect((await changeOwnPassword(db, u!.id, 'secreto123', 'nueva456')).ok).toBe(true)
     expect(await handleLogin(db, mockContext('1.1.1.1'), { username: 'demo', password: 'secreto123' })).toBeNull()
     const res = await handleLogin(db, mockContext('1.1.1.1'), { username: 'demo', password: 'nueva456' })
-    expect(res.user.username).toBe('demo')
+    expect(res!.user.username).toBe('demo')
   })
 
   it('cierra las demás sesiones del usuario salvo la actual', async () => {
     const u = await registerUser(db, 'demo', 'secreto123')
     const { createSession, getSession } = await import('../src/db.js')
-    const s1 = createSession(db, u.id, 100000, 'ua1')
-    const s2 = createSession(db, u.id, 100000, 'ua2')
-    await changeOwnPassword(db, u.id, 'secreto123', 'nueva456', s1)
+    const s1 = createSession(db, u!.id, 100000, 'ua1')
+    const s2 = createSession(db, u!.id, 100000, 'ua2')
+    await changeOwnPassword(db, u!.id, 'secreto123', 'nueva456', s1)
     expect(getSession(db, s1)).not.toBeNull()
     expect(getSession(db, s2)).toBeNull()
   })
@@ -117,9 +118,9 @@ describe('rate-limit de login (SQLite)', () => {
 describe('expiración deslizante de sesiones (#130)', () => {
   const TTL_MS = 30 * 24 * 3600 * 1000
 
-  async function loginCapturingCookie(username, password) {
+  async function loginCapturingCookie(username: string, password: string) {
     const c = mockContext('1.1.1.1')
-    const captured = []
+    const captured: Array<[string, string | undefined]> = []
     c.header = (k, v) => captured.push([k, v])
     const res = await handleLogin(db, c, { username, password })
     const setCookie = captured.find(([k]) => k === 'Set-Cookie')?.[1] || ''
@@ -136,7 +137,7 @@ describe('expiración deslizante de sesiones (#130)', () => {
     db.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(soon, sessionId)
 
     const c2 = mockContext('1.1.1.1', cookie)
-    const captured = []
+    const captured: Array<[string, string | undefined]> = []
     c2.header = (k, v) => captured.push([k, v])
     let nextCalled = false
     await requireAuth(db)(c2, async () => { nextCalled = true })
@@ -144,7 +145,7 @@ describe('expiración deslizante de sesiones (#130)', () => {
     const renewed = captured.find(([k]) => k === 'Set-Cookie')?.[1] || ''
     expect(renewed).toMatch(/^helios_session=.+\..+/)
     expect(renewed).toMatch(/Max-Age=2592000/)
-    const after = db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get(sessionId).expires_at
+    const after = (db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get(sessionId) as { expires_at: number }).expires_at
     expect(after).toBeGreaterThan(Date.now() + 25 * 24 * 3600 * 1000)
   })
 
@@ -156,12 +157,12 @@ describe('expiración deslizante de sesiones (#130)', () => {
     db.prepare('UPDATE sessions SET expires_at = ? WHERE id = ?').run(fresh, sessionId)
 
     const c2 = mockContext('1.1.1.1', cookie)
-    const captured = []
+    const captured: Array<[string, string | undefined]> = []
     c2.header = (k, v) => captured.push([k, v])
     let nextCalled = false
     await requireAuth(db)(c2, async () => { nextCalled = true })
     expect(nextCalled).toBe(true)
     expect(captured.find(([k]) => k === 'Set-Cookie')).toBeUndefined()
-    expect(db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get(sessionId).expires_at).toBe(fresh)
+    expect((db.prepare('SELECT expires_at FROM sessions WHERE id = ?').get(sessionId) as { expires_at: number }).expires_at).toBe(fresh)
   })
 })

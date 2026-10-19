@@ -48,6 +48,37 @@
 import { kvGet, kvSet, audit } from './db.js'
 import { getInstall } from './install.js'
 import { notifyAll } from './push.js'
+import type Database from 'better-sqlite3'
+import type { HAClient } from './ha.js'
+import type { LiveData, DayKpis } from './solar.js'
+
+type Db = Database.Database
+
+interface DatosAlerta {
+  nombre?: string
+  soc?: number
+  reserva?: number
+  produccion?: number
+  consumo?: number
+  autoconsumo?: number
+  total?: number
+  [key: string]: unknown
+}
+
+interface OpcionesNotificacion {
+  severity?: string
+  url?: string
+  ttl?: number
+  [key: string]: unknown
+}
+
+type NotifyFn = (db: Db, tipo: string, datos: DatosAlerta, opciones: OpcionesNotificacion) => void | Promise<void>
+
+interface Solar {
+  computeLive(ha: HAClient): LiveData
+  getKpis(ha: HAClient, dateStr: string, db: Db): Promise<DayKpis>
+  todayStr(): string
+}
 
 const TICKS_INVERSOR_OFFLINE = 2
 const TICKS_FOX_OFFLINE = 3
@@ -63,7 +94,7 @@ export const RESUMEN_OFFSET_MIN = 10
 // estados). Si el fallback aún queda lejos, reprogramamos al anochecer real.
 const RECHECK_BOOT_MS = 30_000
 
-export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
+export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }: { db: Db; ha: HAClient; solar: Solar; notifyFn?: NotifyFn }) {
   const estado = {
     inversor: { mal: 0, alertado: false },
     fox: { mal: 0, alertado: false },
@@ -72,7 +103,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     bateriaLlena: { alertado: false },
   }
 
-  function disparar(tipo, datos, opciones) {
+  function disparar(tipo: string, datos: DatosAlerta, opciones: OpcionesNotificacion) {
     notifyFn(db, tipo, datos, opciones)
     try {
       audit(db, 'system', null, 'alert:' + tipo, { severity: opciones?.severity || 'normal', ...datos })
@@ -83,7 +114,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
 
   function reservaPct() {
     try {
-      const cfg = JSON.parse(kvGet(db, 'install_config') || '{}')
+      const cfg = JSON.parse(kvGet(db, 'install_config') || '{}') as { batteryReservePct?: number }
       return typeof cfg.batteryReservePct === 'number' ? cfg.batteryReservePct : 20
     } catch {
       return 20
@@ -100,7 +131,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
   // Para rehabilitarlo: `install_config.corteRedEnabled = true` (kv).
   function corteRedEnabled() {
     try {
-      const cfg = JSON.parse(kvGet(db, 'install_config') || '{}')
+      const cfg = JSON.parse(kvGet(db, 'install_config') || '{}') as { corteRedEnabled?: boolean }
       return cfg.corteRedEnabled === true
     } catch {
       return false
@@ -114,7 +145,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
     // Estado del inversor: sensor HAOS con atributos (statusAttrsId, opcional).
     // Sin él no hay señal de online/scraper → la alerta inversor no se evalúa.
     const statusAttrs = t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes || {} : {}
-    const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate).getTime() : null
+    const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate as string).getTime() : null
     const fresco = lastUpd !== null && Date.now() - lastUpd < 15 * 60000
 
     // ── Inversor offline: solo con statusAttrs, de día y con datos frescos ──
@@ -223,7 +254,7 @@ export function createAlertsEngine({ db, ha, solar, notifyFn = notifyAll }) {
 
 // Resumen diario: KPI del día (producción/consumo/autoconsumo) a todos los
 // usuarios con el tipo activado. Severidad normal (respeta quiet hours).
-export async function enviarResumenDiario(db, ha, solar, notifyFn = notifyAll) {
+export async function enviarResumenDiario(db: Db, ha: HAClient, solar: Solar, notifyFn: NotifyFn = notifyAll) {
   const kpis = await solar.getKpis(ha, solar.todayStr(), db)
   const datos = {
     produccion: kpis.productionKwh,
@@ -245,9 +276,9 @@ export async function enviarResumenDiario(db, ha, solar, notifyFn = notifyAll) {
 // HORA_RESUMEN_DIARIO (hoy si no ha pasado, mañana en caso contrario). Así nunca
 // se salta un día. La guarda anti-doble-envío del mismo día la lleva
 // ejecutarResumenSiToca (persistida en kv). `ahora` se inyecta para tests.
-export function proximoEnvioResumen(ha, ahora = new Date()) {
+export function proximoEnvioResumen(ha: HAClient, ahora = new Date()) {
   const sunsetIso = ha.getState(getInstall().sun)?.attributes?.next_setting
-  const sunset = sunsetIso ? new Date(sunsetIso) : null
+  const sunset = sunsetIso ? new Date(sunsetIso as string) : null
   if (sunset && Number.isFinite(sunset.getTime())) {
     return new Date(sunset.getTime() + RESUMEN_OFFSET_MIN * 60000)
   }
@@ -259,7 +290,7 @@ export function proximoEnvioResumen(ha, ahora = new Date()) {
 
 // Clave de día local (YYYY-MM-DD) — la hora del anochecer es local y la guarda
 // debe contar por día calendario del servidor.
-function fechaLocalKey(d) {
+function fechaLocalKey(d: Date) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const dia = String(d.getDate()).padStart(2, '0')
@@ -271,7 +302,7 @@ const KV_RESUMEN_FECHA = 'resumen_ultimo_envio'
 // Envía el resumen SOLO si no se ha enviado ya hoy (guarda persistida en kv,
 // sobrevive a reinicios). Devuelve true si envió. Evita el doble-envío cuando
 // el path fallback (21:00) y el path sunset (+offset) caen el mismo día.
-export async function ejecutarResumenSiToca(db, ha, solar, notifyFn = notifyAll) {
+export async function ejecutarResumenSiToca(db: Db, ha: HAClient, solar: Solar, notifyFn: NotifyFn = notifyAll) {
   const ahora = new Date()
   if (kvGet(db, KV_RESUMEN_FECHA) === fechaLocalKey(ahora)) return false
   await enviarResumenDiario(db, ha, solar, notifyFn)
@@ -282,7 +313,7 @@ export async function ejecutarResumenSiToca(db, ha, solar, notifyFn = notifyAll)
 // Scheduler del resumen: se envía al anochecer (ver proximoEnvioResumen); la
 // consolidación nocturna corre a las 00:10. Delay con suelo de 1 min por
 // seguridad anti-bucle cerrado.
-export function scheduleResumenDiario(db, ha, solar, notifyFn) {
+export function scheduleResumenDiario(db: Db, ha: HAClient, solar: Solar, notifyFn: NotifyFn = notifyAll) {
   const ahora = new Date()
   const next = proximoEnvioResumen(ha, ahora)
   const sunsetDisponible = !!ha.getState(getInstall().sun)?.attributes?.next_setting
@@ -302,7 +333,7 @@ export function scheduleResumenDiario(db, ha, solar, notifyFn) {
       const envio = await ejecutarResumenSiToca(db, ha, solar, notifyFn)
       console.log(envio ? '[helios] resumen diario enviado' : '[helios] resumen diario ya enviado hoy, omitido')
     } catch (err) {
-      console.error('[helios] resumen diario error:', err.message)
+      console.error('[helios] resumen diario error:', (err as Error).message)
     }
     scheduleResumenDiario(db, ha, solar, notifyFn)
   }, Math.max(delay, 60_000)).unref()
