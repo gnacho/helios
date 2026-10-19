@@ -8,24 +8,26 @@ en otras apps del entorno.
 
 ```
 server/
-  package.json        # type: module, node >= 20, 4 deps: hono, @hono/node-server, ws, better-sqlite3
+  package.json        # type: module, node >= 24, deps: hono, @hono/node-server, ws, better-sqlite3
   .env                # PORT, HAOS_URL, HAOS_TOKEN, AUTH_USER, AUTH_PASS, STATIC_DIR, DATA_DIR, precios
-  src/
-    index.js          # entry: carga .env manual, arranca HA + Hono + jobs
-    config.js         # config por env + ENTITIES + LIVE_ENTITIES + ENERGY_ENTITIES
-    ha.js             # cliente WebSocket HAOS
-    solar.js          # lógica de negocio (live, series, KPIs, backfill)
-    auth.js           # login/sesiones/rate-limit/middleware
-    db.js             # better-sqlite3: schema + helpers
+  src/                # TypeScript (NodeNext, strict)
+    index.ts          # entry: carga .env manual, arranca HA + Hono + jobs
+    config.ts         # config por env + ENTITIES + LIVE_ENTITIES + ENERGY_ENTITIES
+    ha.ts             # cliente WebSocket HAOS
+    solar.ts          # lógica de negocio (live, series, KPIs, backfill)
+    auth.ts           # login/sesiones/rate-limit/middleware
+    db.ts             # better-sqlite3: schema + helpers
+    schemas.ts        # contrato zod server↔front (antes shared/schemas.js)
+  dist/               # salida de tsc; el servicio corre node dist/index.js
   data/helios.db      # SQLite (WAL)
   public/             # dist/ del frontend (SPA)
 ```
 
-Sin ORM, sin framework de más, sin TypeScript en backend (JS plano ESM).
+Sin ORM ni framework de más. Backend completo en TypeScript (strict), compilado con tsc.
 Despliegue: systemd con usuario dedicado + `AmbientCapabilities=CAP_NET_BIND_SERVICE`
 para escuchar en :80 sin root. NPM (Nginx Proxy Manager) delante con SSL.
 
-## 2. Conexión con Home Assistant (`ha.js`)
+## 2. Conexión con Home Assistant (`ha.ts`)
 
 WebSocket persistente a `ws://<haos>/api/websocket`, protocolo nativo HA:
 
@@ -48,7 +50,7 @@ Series históricas: `recorder/statistics_during_period`:
   - Utility meters / templates diarios: diario = **diff de `sum`** (el `state` de la
     fila diaria es el valor a las 00:00 = 0 — trampa importante).
 
-## 3. Backend HTTP (`index.js`)
+## 3. Backend HTTP (`index.ts`)
 
 ```
 POST /api/auth/login      user+pass timingSafeEqual → cookie helios_session=id.hmac
@@ -64,15 +66,15 @@ GET  /api/solar/stream    SSE: push live throttled 1s + heartbeat 25s (mensaje
 
 ## Alertas push (v0.3)
 
-- Motor `server/src/alerts.js` (tick 60 s, flancos + anti-rebote): inversor_offline
+- Motor `server/src/alerts.ts` (tick 60 s, flancos + anti-rebote): inversor_offline
   (solo de día + scraper fresco), fox_offline (pinza unavailable solo de día),
   corte_red (heurística isla), bateria_baja (SOC ≤ reserva), resumen_diario al
   anochecer (sun.sun next_setting + offset, fallback 21:00 sin dato solar).
-- Web Push VAPID (`push.js`, `routes-push.js`): prefs por tipo, quiet hours con
+- Web Push VAPID (`push.ts`, `routes-push.ts`): prefs por tipo, quiet hours con
   cola consolidada, i18n server-side es/en/zh. Sin VAPID arranca con push off.
 - Toda alerta disparada se audita (`audit_log`, action `alert:<tipo>`) para
   ajustar umbrales con historial real.
-- Migraciones de esquema: `user_version` en db.js (v1 daily solis/fox, v2 sessions
+- Migraciones de esquema: `user_version` en db.ts (v1 daily solis/fox, v2 sessions
   viejo). Los CREATE IF NOT EXISTS son idempotentes; las transformaciones van en
   migraciones numeradas, nunca editadas a posteriori.
 GET/PUT /api/config       ajustes instalación (kv)
@@ -88,7 +90,7 @@ GET/PUT /api/config       ajustes instalación (kv)
 - Jobs: consolidación nocturna 00:10 (backfill diario + baseline consumo),
   limpieza de sesiones cada hora.
 
-## 4. SQLite (`db.js`)
+## 4. SQLite (`db.ts`)
 
 ```sql
 daily(date PK, production_kwh, consumption_kwh, grid_import_kwh, grid_export_kwh,

@@ -13,7 +13,7 @@ export default defineConfig({
   retries: 0,
   use: { baseURL: 'http://127.0.0.1:8199' },
   webServer: {
-    command: 'node ../server/src/index.js',
+    command: 'node ../server/dist/index.js',
     url: 'http://127.0.0.1:8199/health',
     timeout: 20000,
     reuseExistingServer: !process.env.CI,

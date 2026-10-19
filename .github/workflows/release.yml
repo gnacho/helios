@@ -41,7 +41,7 @@ jobs:
 
       - name: Tests del server (vitest)
         working-directory: server
-        run: npm ci --no-audit --no-fund && npm test
+        run: npm ci --no-audit --no-fund && npm run typecheck && npm run build && npm test
 
       - name: Build frontend
         working-directory: app
@@ -59,8 +59,8 @@ jobs:
           [ "${{ github.ref_type }}" = "tag" ] || VERSION="0.0.0-SNAPSHOT-${GITHUB_SHA::7}"
           mkdir -p stage/server
           cp -r app/dist stage/dist
-          cp -r server/src server/package.json stage/server/
-          cp -r shared stage/shared
+          cp -r server/dist stage/server/dist
+          cp -r server/package.json stage/server/
           cp -r server/node_modules stage/server/node_modules
           tar -czf "helios_${VERSION}_linux_${{ matrix.arch }}.tar.gz" -C stage .
 
