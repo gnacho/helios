@@ -25,11 +25,102 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import type Database from 'better-sqlite3'
 import { kvGet, kvSet } from './db.js'
 import { getInstall } from './install.js'
 import { cachedCollector } from './solar.js'
 
-const round3 = (v) => Math.round(v * 1000) / 1000
+type Db = Database.Database
+
+export interface Charger {
+  key: string
+  name: string
+  powerId: string
+  powerUnit: 'kW' | 'W'
+  energyTotalId: string
+  energyDivisor: number
+  energySessionId: string
+  stateId: string
+  tempId: string
+  switchId: string
+  ampId: string
+  imageUrl?: string
+  chargerInHouseMeters: boolean
+  chargingStates: string[]
+  connectedStates: string[]
+}
+
+interface CarChargerConfig {
+  enabled: boolean
+  chargers: Charger[]
+}
+
+export interface BydConfig {
+  enabled: boolean
+  name: string
+  socId: string
+  rangeId: string
+  odometerId: string
+  batteryPowerId: string
+  chargingId: string
+  pluggedId: string
+  onlineId: string
+  lockedId: string
+  doorsId: string
+  windowsId: string
+  sentryId: string
+  cabinTempId: string
+  exteriorTempId: string
+  tireFlId: string
+  tireFrId: string
+  tireRlId: string
+  tireRrId: string
+  locationId: string
+  gpsAgeId: string
+  lastUpdateId: string
+  startChargeId: string
+  stopChargeId: string
+  forcePollId: string
+  chargeToFullId: string
+  scheduleEnabledId: string
+  scheduleStartId: string
+  scheduleEndId: string
+  repeatDailyId: string
+  lockId?: string
+  acSwitchId?: string
+  flashLightsId?: string
+  findCarId?: string
+  closeWindowsId?: string
+  remainingHoursId?: string
+  remainingMinutesId?: string
+  consumptionRecentId?: string
+  consumption50Id?: string
+  consumptionLifetimeId?: string
+  consumptionTodayId?: string
+}
+
+export interface ExtensionsConfig {
+  enabled: boolean
+  carCharger: CarChargerConfig
+  byd: BydConfig
+}
+
+interface HA {
+  getState(id: string): any
+  statisticsDuringPeriod(opts: any): Promise<any>
+  historyDuringPeriod(opts: any): Promise<any>
+}
+
+interface HACaller {
+  call(message: Record<string, unknown>): Promise<unknown>
+}
+
+interface ImageResult {
+  ok: boolean
+  error?: string
+}
+
+const round3 = (v: number) => Math.round(v * 1000) / 1000
 
 const CHARGER_GLITCH_KWH = 50 // salto imposible entre ticks de 60 s
 const STEP_MIN = 5
@@ -70,7 +161,7 @@ export const LEGACY_BYD = {
   repeatDailyId: 'switch.byd_atto_3_repeat_daily',
 }
 // Cargador generico (placeholders; el admin lo completa en Ajustes).
-export const GENERIC_CHARGER = {
+export const GENERIC_CHARGER: Charger = {
   key: '',
   name: 'Car charger',
   powerId: 'sensor.charger_power',
@@ -88,7 +179,7 @@ export const GENERIC_CHARGER = {
 }
 
 // Perfil LEGACY: instalacion existente -> cargador local tipico (localtuya).
-export const LEGACY_EXTENSIONS = {
+export const LEGACY_EXTENSIONS: ExtensionsConfig = {
   enabled: false,
   carCharger: {
     enabled: false,
@@ -123,7 +214,7 @@ export const LEGACY_EXTENSIONS = {
 }
 
 // Perfil GENERICO: instalacion nueva. El admin lo completa en Ajustes.
-export const GENERIC_EXTENSIONS = {
+export const GENERIC_EXTENSIONS: ExtensionsConfig = {
   enabled: false,
   carCharger: {
     enabled: false,
@@ -164,9 +255,9 @@ export const GENERIC_EXTENSIONS = {
 }
 
 // Estado resuelto (modulo)
-let current = GENERIC_EXTENSIONS
+let current: ExtensionsConfig = GENERIC_EXTENSIONS
 
-export function resolveAndSet(db) {
+export function resolveAndSet(db: Db) {
   current = resolveExtensions(db)
   return current
 }
@@ -176,12 +267,12 @@ export function getExtensions() {
 }
 
 // --- Tests: inyectar extensiones sin BD --------------------------------------
-export function _setForTests(ext) {
+export function _setForTests(ext: ExtensionsConfig) {
   current = ext
   return current
 }
 
-export function resolveExtensions(db) {
+export function resolveExtensions(db: Db): ExtensionsConfig {
   const raw = kvGet(db, 'extensions_config')
   if (raw) {
     try {
@@ -191,16 +282,16 @@ export function resolveExtensions(db) {
       /* config corrupta -> fallback al perfil base */
     }
   }
-  const hasDaily = db.prepare('SELECT COUNT(*) AS n FROM daily').get().n > 0
+  const hasDaily = (db.prepare('SELECT COUNT(*) AS n FROM daily').get() as { n: number }).n > 0
   return hasDaily ? LEGACY_EXTENSIONS : GENERIC_EXTENSIONS
 }
 
 // Normaliza UN cargador sobre su base (placeholder del perfil). No lanza:
 // tipos inesperados revierten a valores seguros.
-function normalizeCharger(raw, baseC, index) {
+function normalizeCharger(raw: any, baseC: any, index: number): Charger {
   const c = raw && typeof raw === 'object' ? raw : {}
   const b = baseC && typeof baseC === 'object' ? baseC : GENERIC_CHARGER
-  const out = {}
+  const out: any = {}
   // La key NUNCA hereda del base (dos cargadores colisionarian en 'main');
   // un campo PRESENTE pero invalido va a '' (no hereda el placeholder).
   for (const k of ['key', 'name', 'powerId', 'energyTotalId', 'energySessionId', 'stateId', 'tempId', 'switchId', 'ampId', 'imageUrl']) {
@@ -231,13 +322,14 @@ function normalizeCharger(raw, baseC, index) {
 // Normaliza una config escrita por el admin sobre el perfil generico. No
 // lanza: tipos inesperados revierten a valores seguros. Acepta la forma
 // antigua (campos sueltos en carCharger) y la migra a chargers[0].
-export function normalizeExtensions(cfg, base = GENERIC_EXTENSIONS) {
-  const out = {
+export function normalizeExtensions(cfg: Record<string, unknown>, base: ExtensionsConfig = GENERIC_EXTENSIONS): ExtensionsConfig {
+  const rawByd = (cfg.byd && typeof cfg.byd === 'object' ? cfg.byd : {}) as Partial<BydConfig>
+  const out: ExtensionsConfig = {
     enabled: typeof cfg.enabled === 'boolean' ? cfg.enabled : base.enabled,
-    carCharger: {},
-    byd: { ...base.byd, ...(cfg.byd || {}) },
+    carCharger: { enabled: false, chargers: [] },
+    byd: { ...base.byd, ...rawByd } as BydConfig,
   }
-  const inC = cfg.carCharger && typeof cfg.carCharger === 'object' ? cfg.carCharger : {}
+  const inC = (cfg.carCharger && typeof cfg.carCharger === 'object' ? cfg.carCharger : {}) as Record<string, unknown>
   const baseC = base.carCharger && typeof base.carCharger === 'object' ? base.carCharger : GENERIC_EXTENSIONS.carCharger
   out.carCharger.enabled = typeof inC.enabled === 'boolean' ? inC.enabled : !!baseC.enabled
   let list = Array.isArray(inC.chargers) ? inC.chargers : null
@@ -249,7 +341,7 @@ export function normalizeExtensions(cfg, base = GENERIC_EXTENSIONS) {
   }
   const baseList = Array.isArray(baseC.chargers) && baseC.chargers.length > 0 ? baseC.chargers : [GENERIC_CHARGER]
   out.carCharger.chargers = list.map((raw, i) => normalizeCharger(raw, baseList[Math.min(i, baseList.length - 1)], i))
-  const b = out.byd
+  const b = out.byd as unknown as Record<string, unknown>
   b.enabled = typeof b.enabled === 'boolean' ? b.enabled : false
   b.name = typeof b.name === 'string' && b.name.trim() ? b.name.trim() : (base.byd?.name ?? 'BYD')
   for (const k of Object.keys(base.byd ?? {})) {
@@ -262,20 +354,20 @@ export function normalizeExtensions(cfg, base = GENERIC_EXTENSIONS) {
 // Cargador: estado y suscripciones
 
 /** Esta el marco activo, la extension del cargador encendida Y hay cargadores? */
-export function chargerActive(ext = getExtensions()) {
+export function chargerActive(ext: ExtensionsConfig = getExtensions()) {
   return !!(ext.enabled && ext.carCharger && ext.carCharger.enabled && ext.carCharger.chargers && ext.carCharger.chargers.length > 0)
 }
 
 /** Busca un cargador por key (null si no existe). */
-export function getChargerByKey(ext = getExtensions(), key) {
+export function getChargerByKey(ext: ExtensionsConfig = getExtensions(), key: string): Charger | null {
   const list = ext?.carCharger?.chargers ?? []
   return list.find((c) => c.key === key) ?? null
 }
 
 /** IDs para subscribe_entities cuando el cargador esta activo (todos). */
-export function chargerEntities(ext = getExtensions()) {
+export function chargerEntities(ext: ExtensionsConfig = getExtensions()): string[] {
   if (!chargerActive(ext)) return []
-  const ids = []
+  const ids: string[] = []
   for (const c of ext.carCharger.chargers) {
     ids.push(c.powerId, c.energyTotalId, c.energySessionId, c.stateId, c.tempId, c.switchId, c.ampId)
   }
@@ -284,7 +376,7 @@ export function chargerEntities(ext = getExtensions()) {
 
 // Lectura numerica de un estado HA: undefined si no hay entidad o esta
 // unavailable/unknown (asi la UI distingue "sin dato" de "0").
-function entityNumOrUndef(ha, id) {
+function entityNumOrUndef(ha: HA, id: string | undefined): number | undefined {
   if (!id) return undefined
   const e = ha.getState(id)
   if (!e || e.state === 'unavailable' || e.state === 'unknown') return undefined
@@ -293,11 +385,11 @@ function entityNumOrUndef(ha, id) {
 }
 
 /** Divide un valor leido por el divisor del contador (undefined lo respeta). */
-function divOpt(v, divisor) {
+function divOpt(v: number | undefined, divisor: number): number | undefined {
   return v === undefined ? undefined : round3(v / (divisor || 1))
 }
 
-function entityStateOrUndef(ha, id) {
+function entityStateOrUndef(ha: HA, id: string | undefined): string | undefined {
   if (!id) return undefined
   const e = ha.getState(id)
   if (!e || e.state === 'unavailable' || e.state === 'unknown') return undefined
@@ -305,7 +397,7 @@ function entityStateOrUndef(ha, id) {
 }
 
 /** Snapshot en vivo de UN cargador (viaja en el SSE `live` dentro de chargers[]). */
-export function computeOneChargerLive(ha, c) {
+export function computeOneChargerLive(ha: HA, c: Charger) {
   const rawPower = entityNumOrUndef(ha, c.powerId)
   const powerKw =
     rawPower === undefined ? undefined : c.powerUnit === 'W' ? round3(rawPower / 1000) : round3(rawPower)
@@ -317,7 +409,7 @@ export function computeOneChargerLive(ha, c) {
   const sw = entityStateOrUndef(ha, c.switchId)
   // Opciones validas de la entidad de corriente (input_select/select): la UI
   // muestra solo esas; con number u otra entidad cae a los presets fijos.
-  let ampOptions
+  let ampOptions: number[] | undefined
   if (c.ampId) {
     const e = ha.getState(c.ampId)
     const opts = e?.attributes?.options
@@ -342,7 +434,7 @@ export function computeOneChargerLive(ha, c) {
 }
 
 /** Snapshots en vivo de todos los cargadores (SSE: LivePower.chargers[]). */
-export function computeChargerLive(ha, ext = getExtensions()) {
+export function computeChargerLive(ha: HA, ext: ExtensionsConfig = getExtensions()) {
   if (!chargerActive(ext)) return []
   return ext.carCharger.chargers.map((c) => computeOneChargerLive(ha, c))
 }
@@ -373,16 +465,16 @@ export function bydEntities(ext = getExtensions()) {
         b.consumptionRecentId, b.consumption50Id, b.consumptionLifetimeId, b.consumptionTodayId,
       ].filter(Boolean),
     ),
-  ]
+  ] as string[]
 }
 
-function entityBoolOrUndef(ha, id) {
+function entityBoolOrUndef(ha: HA, id: string) {
   const s = entityStateOrUndef(ha, id)
   return s === undefined ? undefined : s === 'on'
 }
 
 /** Antigüedad (minutos) de un sensor timestamp ISO; undefined si no hay dato. */
-function entityAgeMinOrUndef(ha, id) {
+function entityAgeMinOrUndef(ha: HA, id: string) {
   const s = entityStateOrUndef(ha, id)
   if (!s) return undefined
   const ts = new Date(s).getTime()
@@ -391,7 +483,7 @@ function entityAgeMinOrUndef(ha, id) {
 }
 
 /** Snapshot en vivo del BYD (viaja en el SSE `live` como `byd`). */
-export function computeBydLive(ha, ext = getExtensions()) {
+export function computeBydLive(ha: HA, ext: ExtensionsConfig = getExtensions()) {
   if (!bydActive(ext)) return undefined
   const b = ext.byd
   const powerW = entityNumOrUndef(ha, b.batteryPowerId)
@@ -466,12 +558,12 @@ export function computeBydLive(ha, ext = getExtensions()) {
  * servicios. `ha` es el cliente websocket; `action` viene del frontend.
  * Devuelve true si el servicio se despachó (sin esperar resultado).
  */
-export async function bydAction(ha, ext, action, value) {
+export async function bydAction(ha: HACaller, ext: ExtensionsConfig, action: string, value?: boolean | string) {
   if (!bydActive(ext)) throw new Error('byd_disabled')
   const b = ext.byd
-  const press = (id) =>
+  const press = (id: string) =>
     ha.call({ type: 'call_service', domain: 'button', service: 'press', target: { entity_id: id } })
-  const setSwitch = (id, on) =>
+  const setSwitch = (id: string, on: boolean) =>
     ha.call({ type: 'call_service', domain: 'switch', service: on ? 'turn_on' : 'turn_off', target: { entity_id: id } })
 
   switch (action) {
@@ -552,7 +644,7 @@ function todayStr() {
   return `${y}-${m}-${day}`
 }
 
-function dateKey(d) {
+function dateKey(d: Date) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -561,7 +653,7 @@ function dateKey(d) {
 
 /** Suma `kwh` al dia del cargador `key` (crea la fila con ceros si no existe).
  *  `pvKwh` (0..kwh) es la fraccion de origen solar, clampeada al total. */
-export function addChargerKwh(db, key, date, kwh, pvKwh = 0) {
+export function addChargerKwh(db: Db, key: string, date: string, kwh: number, pvKwh = 0) {
   const pv = round3(Math.max(0, Math.min(pvKwh ?? 0, kwh)))
   db.prepare(
     `INSERT INTO daily_charger (date, charger, kwh, pv_kwh)
@@ -575,7 +667,7 @@ export function addChargerKwh(db, key, date, kwh, pvKwh = 0) {
 /** Fija (sin sumar) el kWh (y su fraccion solar) de un dia/cargador SOLO si
  *  estaba a NULL, CREANDO la fila si no existe (backfill: daily_charger no
  *  pre-crea filas por dia; los huecos se buscan contra daily). pv clampeado. */
-export function setChargerKwhIfNull(db, key, date, kwh, pvKwh) {
+export function setChargerKwhIfNull(db: Db, key: string, date: string, kwh: number, pvKwh: number | null = null) {
   const pv = pvKwh === undefined || pvKwh === null ? null : round3(Math.max(0, Math.min(pvKwh, kwh)))
   db.prepare('INSERT OR IGNORE INTO daily_charger (date, charger, kwh, pv_kwh) VALUES (?, ?, NULL, NULL)').run(date, key)
   db.prepare('UPDATE daily_charger SET kwh = ?, pv_kwh = ? WHERE date = ? AND charger = ? AND kwh IS NULL').run(
@@ -591,7 +683,7 @@ export function setChargerKwhIfNull(db, key, date, kwh, pvKwh) {
  *  circuito del cargador (chargerInHouseMeters), el "resto de la casa" es
  *  consumo - potCargador; si va en circuito aparte, es el consumo tal cual.
  *  Sin lectura de potencia del cargador -> reparto proporcion prod/consumo. */
-export function pvShareNow(ha, chargerPowerKw, ext = getExtensions(), charger) {
+export function pvShareNow(ha: HA, chargerPowerKw: number | undefined, ext: ExtensionsConfig = getExtensions(), charger: Charger) {
   const t = getInstall()
   let production = 0
   for (const inv of t.inverters) {
@@ -616,11 +708,11 @@ export function pvShareNow(ha, chargerPowerKw, ext = getExtensions(), charger) {
 
 // Base persistida del contador de un cargador. El key legacy plano
 // (`charger_counter`) pasa a ser heredado por 'main' (primera lectura).
-function counterKey(key) {
+function counterKey(key: string) {
   return `charger_counter:${key}`
 }
 
-function readCounterBase(db, key) {
+function readCounterBase(db: Db, key: string): { total: number } | null {
   const raw = kvGet(db, counterKey(key))
   if (raw) {
     try {
@@ -644,17 +736,17 @@ function readCounterBase(db, key) {
   return null
 }
 
-function writeCounterBase(db, key, total) {
+function writeCounterBase(db: Db, key: string, total: number) {
   kvSet(db, counterKey(key), JSON.stringify({ date: todayStr(), total }))
 }
 
 /** Tick de acumulacion (llamar cada ~60 s con HAOS conectado): todos. */
-export function accumulateChargerDaily(ha, db, ext = getExtensions()) {
+export function accumulateChargerDaily(ha: HA, db: Db, ext: ExtensionsConfig = getExtensions()) {
   if (!chargerActive(ext)) return
   for (const c of ext.carCharger.chargers) accumulateOneCharger(ha, db, c)
 }
 
-function accumulateOneCharger(ha, db, c) {
+function accumulateOneCharger(ha: HA, db: Db, c: Charger) {
   if (!c.energyTotalId) return
   const total = divOpt(entityNumOrUndef(ha, c.energyTotalId), c.energyDivisor)
   if (total === undefined) return
@@ -680,18 +772,18 @@ function accumulateOneCharger(ha, db, c) {
 /** Historico diario de UN cargador (kwh/dia + fraccion solar) desde
  *  daily_charger. Dias a NULL (o sin pv) se estiman por balance diario:
  *  solar = min(kwh, max(0, produccion - (consumo - kwh si va en casa))). */
-export function chargerHistory(db, from, to, key = 'main') {
+export function chargerHistory(db: Db, from: string, to: string, key = 'main') {
   const rows = db
     .prepare(
       `SELECT date, kwh, pv_kwh FROM daily_charger
        WHERE date >= ? AND date <= ? AND charger = ? ORDER BY date ASC`
     )
-    .all(from, to, key)
+    .all(from, to, key) as Array<{ date: string; kwh: number | null; pv_kwh: number | null }>
   if (rows.length === 0) return []
   const consRows = db
     .prepare('SELECT date, production_kwh, consumption_kwh FROM daily WHERE date >= ? AND date <= ?')
-    .all(from, to)
-  const consByDay = new Map(consRows.map((r) => [r.date, r]))
+    .all(from, to) as Array<{ date: string; production_kwh: number; consumption_kwh: number }>
+  const consByDay = new Map(consRows.map((r) => [r.date, r] as [string, { date: string; production_kwh: number; consumption_kwh: number }]))
   const inHouse = getChargerByKey(getExtensions(), key)?.chargerInHouseMeters ?? true
   return rows.map((r) => {
     const kwh = r.kwh ?? null
@@ -708,21 +800,21 @@ export function chargerHistory(db, from, to, key = 'main') {
 /** Atribucion solar por CURVAS para los dias del recorder: integra
  *  min(cargador, max(0, produccion - resto_casa)) sobre buckets de 5 min.
  *  Devuelve Map<dateKey, kWh>; vacio si no hay statistics disponibles. */
-export async function chargerPvFromCurves(ha, startTime, endTime, charger) {
+export async function chargerPvFromCurves(ha: HA, startTime: string, endTime: string, charger: Charger): Promise<Map<string, number>> {
   const t = getInstall()
   const c = charger
   const statIds = [...new Set([...t.inverters.map((i) => i.powerId).filter(Boolean), ...t.consumption.powerIds.filter(Boolean)])]
   if (!statIds.length) return new Map()
-  let stats = {}
+  let stats: Record<string, Array<{ start: string; mean: number | null }>> = {}
   try {
     stats = await ha.statisticsDuringPeriod({ startTime, endTime, statisticIds: statIds, period: '5minute', types: ['mean'] })
   } catch {
     return new Map()
   }
   // bucketStartMs -> mean, por sensor
-  const bySensor = new Map()
+  const bySensor = new Map<string, Map<number, number>>()
   for (const [id, rows] of Object.entries(stats)) {
-    const m = new Map()
+    const m = new Map<number, number>()
     for (const r of rows || []) if (r.mean !== null && r.mean !== undefined) m.set(new Date(r.start).getTime(), r.mean)
     bySensor.set(id, m)
   }
@@ -732,7 +824,7 @@ export async function chargerPvFromCurves(ha, startTime, endTime, charger) {
   // Unavailable/unknown se trata como 0 kW, NUNCA como "mantener el ultimo
   // valor": el sensor cae entre sesiones (dropout localtuya) y un hold-last
   // fabricaria cargas fantasma de dias (bug cazado 14-Ago: 93% vs 74% real).
-  const steps = []
+  const steps: Array<{ t: number; kw: number }> = []
   if (c.powerId) {
     try {
       const rows = await ha.historyDuringPeriod({ startTime, endTime, entityId: c.powerId })
@@ -747,7 +839,7 @@ export async function chargerPvFromCurves(ha, startTime, endTime, charger) {
     }
   }
   if (!steps.length) return new Map()
-  const chgAt = (ms) => {
+  const chgAt = (ms: number) => {
     let v = 0
     for (const st of steps) {
       if (st.t > ms) break
@@ -757,7 +849,7 @@ export async function chargerPvFromCurves(ha, startTime, endTime, charger) {
   }
 
   const consDiv = t.consumption.powerUnit === 'W' ? 1000 : 1
-  const pvByDay = new Map()
+  const pvByDay = new Map<string, number>()
   const BUCKET = 5 * 60 * 1000
   const startMs = Math.ceil(new Date(startTime).getTime() / BUCKET) * BUCKET
   const endMs = Math.min(new Date(endTime).getTime(), Date.now())
@@ -797,9 +889,9 @@ export async function chargerPvFromCurves(ha, startTime, endTime, charger) {
 // Suma los INCREMENTOS POSITIVOS dentro de cada dia: un reset del contador
 // (bajada) no resta ni suma, y los saltos imposibles (> CHARGER_GLITCH_KWH)
 // se ignoran como glitch. Devuelve Map<dateKey, kWh>.
-export function dailyDeltasFromHistory(rows, divisor = 1) {
-  const perDay = new Map()
-  let prevKey = null
+export function dailyDeltasFromHistory(rows: Array<{ state: string; last_changed: string }>, divisor = 1): Map<string, number> {
+  const perDay = new Map<string, number>()
+  let prevKey: string | null = null
   let prevV = 0
   for (const r of rows) {
     const v = parseFloat(r.state)
@@ -823,7 +915,7 @@ export function dailyDeltasFromHistory(rows, divisor = 1) {
 
 /** Backfill de UN cargador: rellena dias a NULL (hoy incluida) desde el
  *  recorder de HAOS (ventana ~9 dias). Devuelve dias escritos. */
-export async function backfillOneCharger(ha, db, c) {
+export async function backfillOneCharger(ha: HA, db: Db, c: Charger) {
   if (!c.energyTotalId) return 0
   const today = todayStr()
   const from = new Date()
@@ -832,22 +924,21 @@ export async function backfillOneCharger(ha, db, c) {
 
   // Huecos = dias con fila en daily (creadas por la consolidacion solar)
   // SIN fila de este cargador en daily_charger.
-  const missing = db
+  const missing = (db
     .prepare(
       `SELECT d.date FROM daily d
        WHERE d.date >= ? AND d.date <= ?
        AND NOT EXISTS (SELECT 1 FROM daily_charger dc WHERE dc.date = d.date AND dc.charger = ?)
        ORDER BY d.date`
     )
-    .all(fromKey, today, c.key)
-    .map((r) => r.date)
+    .all(fromKey, today, c.key) as Array<{ date: string }>).map((r) => r.date)
   // Sin huecos el backfill no escribe dias, PERO sigue hasta el final:
   // la semilla de HOY del acumulador (primer arranque sin filas daily)
   // necesita las rows del recorder.
 
   const startTime = new Date(fromKey + 'T00:00:00').toISOString()
   const endTime = new Date().toISOString()
-  let rows
+  let rows: Array<{ state: string; last_changed: string }>
   try {
     rows = await ha.historyDuringPeriod({ startTime, endTime, entityId: c.energyTotalId })
   } catch {
@@ -858,7 +949,7 @@ export async function backfillOneCharger(ha, db, c) {
   const perDay = dailyDeltasFromHistory(rows, c.energyDivisor)
   // Atribucion solar por curvas (statistics 5 min de prod/cons + potencia del
   // cargador): solo para los dias que el recorder cubre.
-  const needCurves = missing.some((date) => perDay.has(date) && perDay.get(date) > 0)
+  const needCurves = missing.some((date) => perDay.has(date) && (perDay.get(date) ?? 0) > 0)
   const pvByDay = needCurves ? await chargerPvFromCurves(ha, startTime, endTime, c).catch(() => new Map()) : new Map()
   // Primer dia cubierto por el recorder: los dias sin estados a partir de ahi
   // son dias SIN carga (contador estatico) -> 0, no NULL (evita re-consultar).
@@ -866,7 +957,7 @@ export async function backfillOneCharger(ha, db, c) {
   let n = 0
   for (const date of missing) {
     if (perDay.has(date)) {
-      setChargerKwhIfNull(db, c.key, date, perDay.get(date), pvByDay.get(date))
+      setChargerKwhIfNull(db, c.key, date, perDay.get(date) ?? 0, pvByDay.get(date))
       n++
     } else if (date >= firstRowKey) {
       // Dia dentro de la ventana del recorder sin estados: contador estatico
@@ -896,14 +987,14 @@ export async function backfillOneCharger(ha, db, c) {
 }
 
 /** Backfill de todos los cargadores activos. Devuelve dias escritos (total). */
-export async function backfillChargerHistory(ha, db, ext = getExtensions()) {
+export async function backfillChargerHistory(ha: HA, db: Db, ext: ExtensionsConfig = getExtensions()) {
   if (!chargerActive(ext)) return 0
   let n = 0
   for (const c of ext.carCharger.chargers) {
     try {
       n += await backfillOneCharger(ha, db, c)
     } catch (err) {
-      console.warn(`[helios] cargador ${c.key}: backfill fallo: ${err?.message || err}`)
+      console.warn(`[helios] cargador ${c.key}: backfill fallo: ${(err as Error)?.message || err}`)
     }
   }
   return n
@@ -911,16 +1002,16 @@ export async function backfillChargerHistory(ha, db, ext = getExtensions()) {
 
 
 // ── Cargador: imagen del coche (subida editable; NUNCA en el repo) ─────────
-const CHARGER_IMAGE_EXTS = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
+const CHARGER_IMAGE_EXTS: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
 const CHARGER_IMAGE_MAX = 4 * 1024 * 1024
 
-export function chargerImageDir(dataDir) {
+export function chargerImageDir(dataDir: string) {
   const dir = path.join(dataDir, 'charger-images')
   fs.mkdirSync(dir, { recursive: true })
   return dir
 }
 
-function setChargerImageUrl(db, key, url) {
+function setChargerImageUrl(db: Db, key: string, url: string) {
   const raw = kvGet(db, 'extensions_config')
   if (!raw) return
   try {
@@ -938,7 +1029,7 @@ function setChargerImageUrl(db, key, url) {
 }
 
 /** Guarda la imagen (data URL) del cargador `key` y apunta imageUrl al endpoint. */
-export function saveChargerImage(db, dataDir, key, dataUrl) {
+export function saveChargerImage(db: Db, dataDir: string, key: string, dataUrl: string): ImageResult {
   const m = typeof dataUrl === 'string' ? dataUrl.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/) : null
   if (!m) return { ok: false, error: 'formato de imagen invalido' }
   const buf = Buffer.from(m[2], 'base64')
@@ -955,7 +1046,7 @@ export function saveChargerImage(db, dataDir, key, dataUrl) {
 }
 
 /** Quita la imagen del cargador `key` (ficheros + imageUrl en kv). */
-export function clearChargerImage(db, dataDir, key) {
+export function clearChargerImage(db: Db, dataDir: string, key: string): ImageResult {
   const dir = chargerImageDir(dataDir)
   for (const ext of Object.values(CHARGER_IMAGE_EXTS)) {
     const f = path.join(dir, `${key}.${ext}`)
@@ -966,7 +1057,7 @@ export function clearChargerImage(db, dataDir, key) {
 }
 
 /** Fichero+mime de la imagen del cargador, o null. */
-export function findChargerImage(dataDir, key) {
+export function findChargerImage(dataDir: string, key: string) {
   const dir = chargerImageDir(dataDir)
   for (const [mime, ext] of Object.entries(CHARGER_IMAGE_EXTS)) {
     const f = path.join(dir, `${key}.${ext}`)
@@ -978,9 +1069,9 @@ export function findChargerImage(dataDir, key) {
 // Curva del dia (kW cada STEP_MIN) por interpolacion escalonada del historial
 // de estados del sensor de potencia, POR CARGADOR. Cacheada: hoy 60 s, pasado 6 h.
 export const chargerDayCurve = cachedCollector(
-  (_ha, dateStr, _ext, charger) => `charger:${charger?.key || 'main'}:${dateStr || todayStr()}`,
-  (_ha, dateStr) => ((dateStr || todayStr()) === todayStr() ? 60_000 : 6 * 3600_000),
-  async (ha, dateStr, ext = getExtensions(), charger) => {
+  (_ha: HA, dateStr: string, _ext: ExtensionsConfig, charger: Charger | undefined) => `charger:${charger?.key || 'main'}:${dateStr || todayStr()}`,
+  (_ha: HA, dateStr: string) => ((dateStr || todayStr()) === todayStr() ? 60_000 : 6 * 3600_000),
+  async (ha: HA, dateStr: string, ext: ExtensionsConfig = getExtensions(), charger: Charger | undefined) => {
     if (!charger) return { points: [] }
     if (!charger.powerId) return { points: [] }
 
@@ -998,7 +1089,7 @@ export const chargerDayCurve = cachedCollector(
     // Estados con su timestamp (ms desde medianoche local). unavailable/
     // unknown cuenta como 0 kW (ver nota en chargerPvFromCurves: el hold-last
     // fabrica cargas fantasma en los dropouts del sensor).
-    const steps = []
+    const steps: Array<{ min: number; kw: number }> = []
     for (const r of rows) {
       const v = parseFloat(r.state)
       const ts = new Date(r.last_changed).getTime()
@@ -1017,7 +1108,7 @@ export const chargerDayCurve = cachedCollector(
       ? Math.max(0, Math.floor((Date.now() - start.getTime()) / 60000))
       : 1440
 
-    const points = []
+    const points: Array<{ t: number; label: string; kw: number }> = []
     let idx = 0
     for (let min = 0; min < limitMin; min += STEP_MIN) {
       while (idx < steps.length - 1 && steps[idx + 1].min <= min) idx++

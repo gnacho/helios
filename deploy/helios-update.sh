@@ -2,12 +2,12 @@
 # helios-update.sh — aplica la última release ESTABLE de Helios.
 # Patrón app-auto-update (variante Node), layout PLANO del CT:
 #   /opt/helios/{server,public,shared}
-#     server/  → código (src/) + package.json + node_modules + .env (se conserva)
+#     server/  → código compilado (dist/) + package.json + node_modules + .env (se conserva)
 #     public/  → dist/ del frontend
 #     shared/  → schemas compartidos
 #   datos en $STATE_DIR (/opt/helios/data, o server/data) — NUNCA se tocan.
 # El marker /opt/helios/.release-id es la fuente de verdad de la versión
-# instalada (server/src/update.js la lee para /api/update/status).
+# instalada (server/src/update.ts compilado la lee para /api/update/status).
 set -eu
 
 APP=helios
@@ -61,12 +61,11 @@ mkdir -p "$TMP_DIR/pkg"
 tar -xzf "$TMP_DIR/app.tar.gz" -C "$TMP_DIR/pkg"
 
 TS="$(date +%Y%m%d-%H%M%S)"
-[ -d "$OPT_DIR/server/src" ] && cp -a "$OPT_DIR/server/src" "$OPT_DIR/server/src.bak-$TS"
-[ -d "$OPT_DIR/shared" ] && cp -a "$OPT_DIR/shared" "$OPT_DIR/shared.bak-$TS"
+[ -d "$OPT_DIR/server/dist" ] && cp -a "$OPT_DIR/server/dist" "$OPT_DIR/server/dist.bak-$TS"
 [ -d "$OPT_DIR/public" ] && cp -a "$OPT_DIR/public" "$OPT_DIR/public.bak-$TS"
 
-rm -rf "$OPT_DIR/server/src"
-cp -a "$TMP_DIR/pkg/server/src" "$OPT_DIR/server/src"
+rm -rf "$OPT_DIR/server/dist"
+cp -a "$TMP_DIR/pkg/server/dist" "$OPT_DIR/server/dist"
 [ -f "$TMP_DIR/pkg/server/package.json" ] && \
   install -m 0644 "$TMP_DIR/pkg/server/package.json" "$OPT_DIR/server/package.json"
 if [ -d "$TMP_DIR/pkg/server/node_modules" ]; then
@@ -74,13 +73,11 @@ if [ -d "$TMP_DIR/pkg/server/node_modules" ]; then
   cp -a "$TMP_DIR/pkg/server/node_modules" "$OPT_DIR/server/node_modules"
 fi
 
-rm -rf "$OPT_DIR/shared"
-cp -a "$TMP_DIR/pkg/shared" "$OPT_DIR/shared"
 rm -rf "$OPT_DIR/public"
 mkdir -p "$OPT_DIR/public"
 cp -a "$TMP_DIR/pkg/dist/." "$OPT_DIR/public/"
 
-chown -R "$APP:$APP" "$OPT_DIR/server" "$OPT_DIR/shared" "$OPT_DIR/public"
+chown -R "$APP:$APP" "$OPT_DIR/server" "$OPT_DIR/public"
 chown "$APP:$APP" "$OPT_DIR/server/.env" 2>/dev/null || true
 
 progress "install" 88

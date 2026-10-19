@@ -2,12 +2,14 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { computeLive, cachedCollector, buildDaySeries } from '../src/solar.js'
 import { _setForTests } from '../src/install.js'
 import { LEGACY_TOPOLOGY, GENERIC_TOPOLOGY } from '../src/install.js'
+import type { HAClient } from '../src/ha.js'
+import type { Topology } from '../src/install.js'
 
 afterEach(() => {
   _setForTests(LEGACY_TOPOLOGY)
 })
 
-const emptyHa = { getState: () => undefined, connected: false }
+const emptyHa = { getState: () => undefined, connected: false } as unknown as HAClient
 
 describe('computeLive', () => {
   it('devuelve ceros y alerta crítica sin conexión HAOS', () => {
@@ -19,11 +21,11 @@ describe('computeLive', () => {
 })
 
 describe('computeLive — topología genérica (issue #37)', () => {
-  function ha() {
+  function ha(): HAClient {
     return {
       connected: true,
-      getState: (id) => {
-        const map = {
+      getState: (id: string) => {
+        const map: Record<string, { state: string; attributes?: Record<string, unknown> }> = {
           'sensor.inv1_power': { state: '3.2' },
           'sensor.inv2_power': { state: '1500' }, // W
           'sensor.house_power': { state: '800' }, // W
@@ -34,11 +36,11 @@ describe('computeLive — topología genérica (issue #37)', () => {
         }
         return map[id] || undefined
       },
-    }
+    } as unknown as HAClient
   }
 
   it('N inversores con unidades distintas: suma producción y expone inverters[]', () => {
-    const t = {
+    const t: Topology = {
       ...GENERIC_TOPOLOGY,
       inverters: [
         { ...GENERIC_TOPOLOGY.inverters[0], key: 'inv1', powerId: 'sensor.inv1_power', powerUnit: 'kW' },
@@ -58,7 +60,7 @@ describe('computeLive — topología genérica (issue #37)', () => {
   })
 
   it('grid sin scraper (sensor plano con signo): import = positivo, export = negativo', () => {
-    const t = { ...GENERIC_TOPOLOGY, grid: { ...GENERIC_TOPOLOGY.grid, mode: 'sensor', sensorId: 'sensor.grid_net' } }
+    const t: Topology = { ...GENERIC_TOPOLOGY, grid: { ...GENERIC_TOPOLOGY.grid, mode: 'sensor', sensorId: 'sensor.grid_net' } }
     _setForTests(t)
     const live = computeLive(ha())
     expect(live.grid).toBeCloseTo(-1.2, 2)
@@ -88,12 +90,12 @@ describe('computeLive — topología genérica (issue #37)', () => {
     }
     const haDischarging = {
       ...ha(),
-      getState: (id) => {
+      getState: (id: string) => {
         const base = ha().getState(id)
         if (id === 'sensor.battery_state') return { state: 'discharging' }
         return base
       },
-    }
+    } as unknown as HAClient
     _setForTests(t)
     const live = computeLive(haDischarging)
     expect(live.batteryPower).toBeCloseTo(-1.0, 2)
@@ -103,8 +105,8 @@ describe('computeLive — topología genérica (issue #37)', () => {
 describe('issue #135 — grid derivado con entradas caídas', () => {
   // HA conectado con la topología LEGACY (3 medidores de consumo en W,
   // batería con powerId/socId, grid por attrs del shim).
-  function haLegacy(overrides = {}) {
-    const map = {
+  function haLegacy(overrides: Record<string, { state: string; attributes?: Record<string, unknown> }> = {}): HAClient {
+    const map: Record<string, { state: string; attributes?: Record<string, unknown> }> = {
       'sensor.solis_potencia_actual': { state: '0' },
       'sensor.almacen_pinza_power_b': { state: '0' },
       'sensor.medidor_respaldo_power': { state: '500' },
@@ -117,7 +119,7 @@ describe('issue #135 — grid derivado con entradas caídas', () => {
       'sun.sun': { state: 'below_horizon', attributes: { elevation: -20 } },
       ...overrides,
     }
-    return { connected: true, getState: (id) => map[id] }
+    return { connected: true, getState: (id: string) => map[id] } as unknown as HAClient
   }
 
   it('computeLive: un medidor de consumo caído → consumption null + alerta, grid intacto', () => {
@@ -167,9 +169,9 @@ describe('issue #135 — grid derivado con entradas caídas', () => {
     const p1955 = points.find((p) => p.label === '19:55')
     const p2000 = points.find((p) => p.label === '20:00')
     const p2005 = points.find((p) => p.label === '20:05')
-    expect(p1955.grid).toBeCloseTo(0.75, 2) // todo presente: 0,75 kW de import
-    expect(p2000.grid).toBeNull() // medidores caídos + batería descargando: antes -3,3 kW
-    expect(p2005.grid).toBeCloseTo(0.75, 2) // medidores recuperados
+    expect(p1955!.grid).toBeCloseTo(0.75, 2) // todo presente: 0,75 kW de import
+    expect(p2000!.grid).toBeNull() // medidores caídos + batería descargando: antes -3,3 kW
+    expect(p2005!.grid).toBeCloseTo(0.75, 2) // medidores recuperados
   })
 
   it('buildDaySeries: falta UN medidor de consumo (hueco parcial) → grid null', () => {

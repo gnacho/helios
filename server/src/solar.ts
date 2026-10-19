@@ -8,27 +8,112 @@
 import fs from 'node:fs'
 import { config } from './config.js'
 import { upsertDaily, dailyEmpty, kvGet, kvSet, upsertDaySeries, getDaySeriesRow, daySeriesDates } from './db.js'
+import type { DB, DailyRow } from './db.js'
 import { getInstall, getEntities, getEnergyEntities, deepSources, deepSourceDailyKeys } from './install.js'
+import type { Inverter } from './install.js'
+import type { HAClient, HAEntityState, HAStats, HAStatsRow } from './ha.js'
 
-const num = (v) => {
-  const n = parseFloat(v)
+export interface LiveAlert {
+  id: string
+  severity: string
+  text: string
+}
+
+export interface LiveInverter {
+  key: string
+  name: string
+  kw: number
+}
+
+export interface LiveData {
+  production: number
+  consumption: number | null
+  respaldoKw: number
+  noRespaldadaKw: number
+  batteryPower: number
+  batteryStatus: string
+  soc: number
+  grid: number | null
+  solis: number
+  fox: number
+  inverters: LiveInverter[]
+  at: number
+  alerts: LiveAlert[]
+  sun: { state: string; elevation: number; nextRising: unknown; nextSetting: unknown }
+  weather: string
+  weatherTemp: number
+  station: string
+  inverterOnline: boolean
+  ts: string
+}
+
+export interface DayPoint {
+  t: number
+  label: string
+  solis: number
+  fox: number
+  inverters: Record<string, number>
+  production: number
+  consumption: number
+  batteryPower: number
+  soc: number
+  grid: number | null
+}
+
+export interface Kpis {
+  productionKwh: number
+  solisKwh: number
+  foxKwh: number
+  invertersKwh: Record<string, number>
+  consumptionKwh: number
+  gridImportKwh: number
+  gridExportKwh: number
+  batteryChargedKwh: number
+  batteryDischargedKwh: number
+}
+
+export interface DayKpis extends Kpis {
+  soc: number
+  peakProductionKw: number
+  peakAt: number
+  autoconsumoPct: number
+  autosuficienciaPct: number
+  ahorroEur: number
+  co2EvitadoKg: number
+}
+
+export interface ConsumptionBaseline {
+  date: string
+  values: Record<string, number | null>
+}
+
+const num = (v: unknown): number => {
+  const n = parseFloat(v as string)
   return Number.isFinite(n) ? n : 0
 }
 
 // Caché TTL + single-flight para colectores caros (recorder/statistics de HAOS):
 // N requests concurrentes a la misma clave = UNA query a HAOS.
-export function cachedCollector(keyFn, ttlFn, fn) {
-  const cache = new Map()
-  const inflight = new Map()
-  return (...args) => {
+export function cachedCollector<A extends unknown[], T>(
+  keyFn: (...args: A) => string,
+  ttlFn: (...args: A) => number,
+  fn: (...args: A) => T | Promise<T>
+): (...args: A) => Promise<T> {
+  const cache = new Map<string, { value: T; at: number; ttl: number }>()
+  const inflight = new Map<string, Promise<T>>()
+  return (...args: A): Promise<T> => {
     const key = keyFn(...args)
     const hit = cache.get(key)
     if (hit && Date.now() - hit.at < hit.ttl) return Promise.resolve(hit.value)
-    if (inflight.has(key)) return inflight.get(key)
+    const existing = inflight.get(key)
+    if (existing) return existing
     const p = Promise.resolve()
       .then(() => fn(...args))
       .then((value) => {
-        if (cache.size > 300) cache.delete(cache.keys().next().value)
+        if (cache.size > 300) {
+          const first = cache.keys().next()
+          if (!first.done) cache.delete(first.value)
+        }
         cache.set(key, { value, at: Date.now(), ttl: ttlFn(...args) })
         return value
       })
@@ -38,19 +123,19 @@ export function cachedCollector(keyFn, ttlFn, fn) {
   }
 }
 
-const entityNum = (ha, id, divisor = 1) => {
-  const e = ha.getState(id)
+const entityNum = (ha: HAClient, id: string | null, divisor = 1): number => {
+  const e = id ? ha.getState(id) : undefined
   if (!e) return 0
   return num(e.state) / divisor
 }
 
 // Potencia de cada inversor en kW, respetando la unidad del sensor (kW o W).
-function inverterPowerKw(ha, inv) {
+function inverterPowerKw(ha: HAClient, inv: Inverter): number {
   const raw = entityNum(ha, inv.powerId)
   return inv.powerUnit === 'W' ? raw / 1000 : raw
 }
 
-function consumptionKw(ha) {
+function consumptionKw(ha: HAClient): number {
   const t = getInstall()
   let total = 0
   for (const id of t.consumption.powerIds) total += entityNum(ha, id, t.consumption.powerUnit === 'W' ? 1000 : 1)
@@ -61,7 +146,7 @@ function consumptionKw(ha) {
 // El estado se interpreta por SINÓNIMOS configurables (topología.battery.
 // chargingStates/dischargingStates): HAOS puede reportar 'Cargando'/'charging'
 // según el idioma de la instalación. Sin estado reconocible → 0.
-function batteryPowerKw(ha, batMag) {
+function batteryPowerKw(ha: HAClient, batMag: number): number {
   const b = getInstall().battery
   if (!b.enabled) return 0
   const state = ha.getState(b.stateId)?.state || ''
@@ -70,12 +155,12 @@ function batteryPowerKw(ha, batMag) {
   return 0
 }
 
-export function computeLive(ha) {
+export function computeLive(ha: HAClient): LiveData {
   const t = getInstall()
   const ENTITIES = getEntities()
 
   let production = 0
-  const invLive = []
+  const invLive: LiveInverter[] = []
   for (const inv of t.inverters) {
     let kw = inverterPowerKw(ha, inv)
     if (kw < 0.02) kw = 0
@@ -86,7 +171,8 @@ export function computeLive(ha) {
   // Medidores de consumo caídos con HAOS conectado (issue 135): el consumo
   // derivado no es fiable → null + alerta. Un 0 fabricaría exportaciones
   // imposibles al alimentar la curva del día.
-  const isDown = (e) => e === undefined || e.state === 'unavailable' || e.state === 'unknown'
+  const isDown = (e: HAEntityState | undefined): boolean =>
+    e === undefined || e.state === 'unavailable' || e.state === 'unknown'
   const consDown = ha.connected && (t.consumption.powerIds || []).some((id) => isDown(ha.getState(id)))
 
   const b = t.battery
@@ -134,7 +220,7 @@ export function computeLive(ha) {
   // Fallback: si no hay datos de grid pero hay consumo y no hay producción, estimar import
   if (!gridDown && grid === 0 && consumption > 0.1 && production < 0.02) grid = consumption
 
-  const alerts = []
+  const alerts: LiveAlert[] = []
   if (!ha.connected) alerts.push({ id: 'haos', severity: 'critical', text: 'Sin conexión con Home Assistant' })
   if (consDown) alerts.push({ id: 'consumo', severity: 'warning', text: 'Medidores de consumo sin datos' })
 
@@ -144,7 +230,7 @@ export function computeLive(ha) {
   const statusAttrs = t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes || {} : {}
   if (t.statusAttrsId && statusAttrs.inverterOnline === 0)
     alerts.push({ id: 'inversor', severity: 'critical', text: 'Inversor offline' })
-  const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate).getTime() : null
+  const lastUpd = statusAttrs.lastUpdate ? new Date(statusAttrs.lastUpdate as string | number).getTime() : null
   if (t.statusAttrsId && lastUpd && (Date.now() - lastUpd) / 60000 > 15)
     alerts.push({
       id: 'scraper',
@@ -181,20 +267,20 @@ export function computeLive(ha) {
     },
     weather: weather?.state || 'unknown',
     weatherTemp: entityNum(ha, t.weatherTemp),
-    station: t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes?.stationName || '' : '',
+    station: t.statusAttrsId ? ((ha.getState(t.statusAttrsId)?.attributes?.stationName as string) || '') : '',
     inverterOnline: t.statusAttrsId ? ha.getState(t.statusAttrsId)?.attributes?.inverterOnline === 1 : true,
     ts: now.toISOString(),
   }
 }
 
-const CONSUMPTION_COUNTER_IDS = () => getInstall().consumption.energyIds
+const CONSUMPTION_COUNTER_IDS = (): string[] => getInstall().consumption.energyIds
 
-export async function ensureConsumptionBaseline(ha, db) {
+export async function ensureConsumptionBaseline(ha: HAClient, db: DB): Promise<ConsumptionBaseline> {
   const today = todayStr()
   const raw = kvGet(db, 'cons_baseline')
   if (raw) {
     try {
-      const b = JSON.parse(raw)
+      const b = JSON.parse(raw) as ConsumptionBaseline
       if (b.date === today) return b
     } catch {}
   }
@@ -211,7 +297,7 @@ export async function ensureConsumptionBaseline(ha, db) {
     period: 'day',
     types: ['state'],
   })
-  const values = {}
+  const values: Record<string, number | null> = {}
   for (const id of ids) {
     const rows = stats[id] || []
     values[id] = rows.length ? num(rows[rows.length - 1].state) : null
@@ -221,7 +307,7 @@ export async function ensureConsumptionBaseline(ha, db) {
   return b
 }
 
-export function consumptionTodayFromCounters(ha, baseline) {
+export function consumptionTodayFromCounters(ha: HAClient, baseline: ConsumptionBaseline | null): number | null {
   const ids = CONSUMPTION_COUNTER_IDS()
   let total = 0
   let usable = false
@@ -236,12 +322,12 @@ export function consumptionTodayFromCounters(ha, baseline) {
   return usable ? total : null
 }
 
-export function computeTodayKpis(ha, consumptionOverride) {
+export function computeTodayKpis(ha: HAClient, consumptionOverride: number | null): Kpis {
   const E = getEnergyEntities()
   const t = getInstall()
-  const g = (id) => (id ? entityNum(ha, id) : 0)
+  const g = (id: string | null): number => (id ? entityNum(ha, id) : 0)
   let production = 0
-  const perInv = {}
+  const perInv: Record<string, number> = {}
   for (const inv of t.inverters) {
     const k = g(inv.energyId)
     perInv[inv.key] = k
@@ -267,7 +353,7 @@ export function computeTodayKpis(ha, consumptionOverride) {
   }
 }
 
-async function getDaySeriesUncached(ha, dateStr, db) {
+async function getDaySeriesUncached(ha: HAClient, dateStr: string | undefined, db: DB | null): Promise<{ points: DayPoint[]; estimated: boolean }> {
   const t = getInstall()
   const day = dateStr ? new Date(dateStr + 'T00:00:00') : new Date()
   if (Number.isNaN(day.getTime())) throw new Error('fecha inválida')
@@ -276,7 +362,7 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   const end = new Date(start)
   end.setDate(end.getDate() + 1)
 
-  const invIds = t.inverters.flatMap((inv) => [inv.powerId, inv.backupPowerId].filter(Boolean))
+  const invIds = t.inverters.flatMap((inv) => [inv.powerId, inv.backupPowerId].filter((x): x is string => Boolean(x)))
   const ids = [...invIds, ...t.consumption.powerIds]
   if (t.battery.enabled) {
     if (t.battery.powerId) ids.push(t.battery.powerId)
@@ -293,7 +379,7 @@ async function getDaySeriesUncached(ha, dateStr, db) {
   // HOY aún no tiene fila `daily`: el total de referencia para escalar el
   // tramo rellenado por respaldo es el KPI en vivo del energyId (la UM del
   // día). Para días pasados buildDaySeries lee la fila daily directamente.
-  const liveTargets = {}
+  const liveTargets: Record<string, number> = {}
   const isToday = !dateStr || dateStr === todayStr()
   if (isToday) {
     for (const inv of t.inverters) {
@@ -321,37 +407,37 @@ async function getDaySeriesUncached(ha, dateStr, db) {
 // (fila `daily` para días pasados; `liveTargets` para HOY, que aún no tiene
 // fila), para que la curva integre el mismo total que la fuente profunda.
 // Si se usó respaldo en algún bucket, la curva se marca `estimated`.
-export function buildDaySeries(stats, dateStr, db, liveTargets) {
+export function buildDaySeries(stats: HAStats, dateStr: string | undefined, db: DB | null, liveTargets: Record<string, number> = {}): { points: DayPoint[]; estimated: boolean } {
   const t = getInstall()
-  const invIds = t.inverters.flatMap((inv) => [inv.powerId, inv.backupPowerId].filter(Boolean))
+  const invIds = t.inverters.flatMap((inv) => [inv.powerId, inv.backupPowerId].filter((x): x is string => Boolean(x)))
   const ids = [...invIds, ...t.consumption.powerIds]
   if (t.battery.enabled) {
     if (t.battery.powerId) ids.push(t.battery.powerId)
     if (t.battery.socId) ids.push(t.battery.socId)
   }
 
-  const buckets = new Map()
+  const buckets = new Map<number, Record<string, number>>()
   for (const id of ids) {
     for (const row of stats[id] || []) {
       if (row.mean === null || row.mean === undefined) continue
       const tm = new Date(row.start)
       const min = tm.getHours() * 60 + tm.getMinutes()
       if (!buckets.has(min)) buckets.set(min, {})
-      buckets.get(min)[id] = row.mean
+      buckets.get(min)![id] = row.mean
     }
   }
 
-  const points = []
-  let prevSoc = null
+  const points: DayPoint[] = []
+  let prevSoc: number | null = null
   const minutes = [...buckets.keys()].sort((a, b) => a - b)
   const consDiv = t.consumption.powerUnit === 'W' ? 1000 : 1
-  const backupIdx = {} // inv.key -> índices de points que usaron respaldo
-  const consGapIdx = [] // índices de points sin NINGÚN medidor de consumo
+  const backupIdx: Record<string, number[]> = {} // inv.key -> índices de points que usaron respaldo
+  const consGapIdx: number[] = [] // índices de points sin NINGÚN medidor de consumo
   const consMeterIds = t.consumption.powerIds || []
   minutes.forEach((min, pointIdx) => {
-    const b = buckets.get(min)
+    const b = buckets.get(min)!
     let production = 0
-    const perInv = {}
+    const perInv: Record<string, number> = {}
     for (const inv of t.inverters) {
       let kw = 0
       const raw = b[inv.powerId]
@@ -377,17 +463,17 @@ export function buildDaySeries(stats, dateStr, db, liveTargets) {
     let batteryPower = 0
     if (t.battery.enabled) {
       const batMag = num(b[t.battery.powerId])
-      const soc = num(b[t.battery.socId])
+      const socPrev = num(b[t.battery.socId])
       if (prevSoc !== null && batMag > 0.01) {
-        const socDelta = soc - prevSoc
+        const socDelta = socPrev - prevSoc
         if (socDelta > 0.02) batteryPower = batMag
         else if (socDelta < -0.02) batteryPower = -batMag
       }
-      if (soc > 0) prevSoc = soc
+      if (socPrev > 0) prevSoc = socPrev
     }
     const soc = t.battery.enabled ? num(b[t.battery.socId]) : 0
 
-    let grid = consumption - production + batteryPower
+    let grid: number = consumption - production + batteryPower
     if (Math.abs(grid) < 0.03) grid = 0
     // Issue 135: si falta CUALQUIER entrada de la fórmula en el bucket
     // (medidores de consumo o sensor de batería caídos), el grid derivado no
@@ -397,7 +483,7 @@ export function buildDaySeries(stats, dateStr, db, liveTargets) {
     // estimado y el día queda marcado `estimated`.
     const consMissing = consMeterIds.some((id) => b[id] === undefined || b[id] === null)
     const batMissing = t.battery.enabled && t.battery.powerId && (b[t.battery.powerId] === undefined || b[t.battery.powerId] === null)
-    if (consMissing || batMissing) grid = null
+    const gridValue: number | null = (consMissing || batMissing) ? null : grid
 
     const hh = String(Math.floor(min / 60)).padStart(2, '0')
     const mm = String(min % 60).padStart(2, '0')
@@ -413,12 +499,12 @@ export function buildDaySeries(stats, dateStr, db, liveTargets) {
       consumption: round3(consumption),
       batteryPower: round3(batteryPower),
       soc: round1(soc),
-      grid: grid === null ? null : round3(grid),
+      grid: gridValue === null ? null : round3(gridValue),
     })
   })
 
   const dtH = 5 / 60
-  const sumInv = (key) => points.reduce((acc, p) => acc + (p.inverters[key] || 0) * dtH, 0)
+  const sumInv = (key: string): number => points.reduce((acc, p) => acc + (p.inverters[key] || 0) * dtH, 0)
   const dayKey = dateStr || todayStr()
   let estimated = false
   // Escalado de tramos rellenados por respaldo al total diario real. El total
@@ -428,9 +514,10 @@ export function buildDaySeries(stats, dateStr, db, liveTargets) {
   const backupKeys = Object.keys(backupIdx)
   if (backupKeys.length && points.length) {
     estimated = true
-    let row = null
+    let row: { solis_kwh: number | null; fox_kwh: number | null; inverters_kwh: string | null } | null = null
     if (db) {
-      row = db.prepare('SELECT solis_kwh, fox_kwh, inverters_kwh FROM daily WHERE date = ?').get(dayKey)
+      row = db.prepare('SELECT solis_kwh, fox_kwh, inverters_kwh FROM daily WHERE date = ?').get(dayKey) as
+        { solis_kwh: number | null; fox_kwh: number | null; inverters_kwh: string | null } | null
     }
     for (const inv of t.inverters) {
       const idxs = backupIdx[inv.key] || []
@@ -487,15 +574,15 @@ export function buildDaySeries(stats, dateStr, db, liveTargets) {
   // estimated.
   if (db && consGapIdx.length && points.length) {
     let consTarget = 0
-    const rowC = db.prepare('SELECT consumption_kwh FROM daily WHERE date = ?').get(dayKey)
-    if (rowC && rowC.consumption_kwh > 0) consTarget = rowC.consumption_kwh
+    const rowC = db.prepare('SELECT consumption_kwh FROM daily WHERE date = ?').get(dayKey) as { consumption_kwh: number | null } | undefined
+    if (rowC && (rowC.consumption_kwh ?? 0) > 0) consTarget = rowC.consumption_kwh ?? 0
     const prevKey = dateKey(addDays(new Date(dayKey + 'T00:00:00'), -1))
     const prevRow = getDaySeriesRow(db, prevKey)
     if (prevRow) {
-      const prevPts = JSON.parse(prevRow.points_json)
+      const prevPts = JSON.parse(prevRow.points_json) as DayPoint[]
       const prevByT = new Map(prevPts.map((p) => [p.t, p.consumption || 0]))
       const gapSet = new Set(consGapIdx)
-      let factor = null
+      let factor: number | null = null
       if (consTarget > 0) {
         let realSum = 0 // consumo integrado FUERA del hueco (medidores reales)
         let patSum = 0 // patrón del día anterior integrado DENTRO del hueco
@@ -530,9 +617,9 @@ export function buildDaySeries(stats, dateStr, db, liveTargets) {
     const sum0 = sumInv(inv0Key)
     const sum1 = inv1Key ? sumInv(inv1Key) : 0
     if (sum0 < 0.5 && sum1 > 1 && inv0Key && inv1Key) {
-      const row = db.prepare('SELECT solis_kwh, fox_kwh FROM daily WHERE date = ?').get(dayKey)
-      if (row && row.solis_kwh > 1 && sum1 > 1) {
-        const ratio = row.solis_kwh / sum1
+      const row = db.prepare('SELECT solis_kwh, fox_kwh FROM daily WHERE date = ?').get(dayKey) as { solis_kwh: number | null; fox_kwh: number | null } | undefined
+      if (row && (row.solis_kwh ?? 0) > 1 && sum1 > 1) {
+        const ratio = (row.solis_kwh ?? 0) / sum1
         for (const p of points) {
           p.inverters[inv0Key] = round3(p.inverters[inv1Key] * ratio)
           p.solis = p.inverters[inv0Key]
@@ -559,7 +646,7 @@ const getDaySeriesCached = cachedCollector(
   getDaySeriesUncached
 )
 
-export async function getDaySeries(ha, dateStr, db) {
+export async function getDaySeries(ha: HAClient, dateStr: string | undefined, db: DB): Promise<{ points: DayPoint[]; estimated: boolean }> {
   const key = dateStr || todayStr()
   const isToday = key === todayStr()
   if (db && !isToday) {
@@ -585,11 +672,11 @@ export async function getDaySeries(ha, dateStr, db) {
 // antiguo), también los días de esa fuente. Días fuera de ambas fuentes se
 // saltan (no hay datos). Es idempotente: no toca días ya persistidos.
 // Devuelve { ran, rows }.
-export async function backfillDaySeries(ha, db, backupFilePath) {
-  const firstDaily = db.prepare('SELECT MIN(date) AS d FROM daily').get().d
+export async function backfillDaySeries(ha: HAClient, db: DB, backupFilePath: string | null): Promise<{ ran: boolean; rows: number }> {
+  const firstDaily = (db.prepare('SELECT MIN(date) AS d FROM daily').get() as { d: string | null }).d
   if (!firstDaily) return { ran: false, rows: 0 }
   const done = new Set(daySeriesDates(db))
-  const backup = backupFilePath ? fs.existsSync(backupFilePath) ? JSON.parse(fs.readFileSync(backupFilePath, 'utf8')) : null : null
+  const backup: HAStats | null = backupFilePath ? (fs.existsSync(backupFilePath) ? JSON.parse(fs.readFileSync(backupFilePath, 'utf8')) : null) : null
 
   // Ventana HAOS en vivo: los últimos 15 días (la retención del recorder con
   // keep_days=10 deja ~10 días; 15 da margen). Días más viejos solo pueden
@@ -614,7 +701,7 @@ export async function backfillDaySeries(ha, db, backupFilePath) {
     const fromBackup = backup && Object.keys(sliceStatsByDay(backup, key)).length > 0
     if (!fromBackup && keyDate < haosFloor) continue
     // Fuente externa (backup de HAOS) primero: curva del día con sus stats.
-    let points = null
+    let points: DayPoint[] | null = null
     let estimated = false
     let source = 'haos'
     if (fromBackup) {
@@ -624,7 +711,7 @@ export async function backfillDaySeries(ha, db, backupFilePath) {
       source = 'backup'
     }
     if (!points || !points.length) {
-      const res = await getDaySeriesUncached(ha, key, db).catch(() => ({ points: [], estimated: false }))
+      const res = await getDaySeriesUncached(ha, key, db).catch(() => ({ points: [] as DayPoint[], estimated: false }))
       points = res.points
       estimated = res.estimated
       source = 'haos'
@@ -646,8 +733,8 @@ export async function backfillDaySeries(ha, db, backupFilePath) {
 
 // sliceStatsByDay filtra un mapa {sensorId: [{start, mean}]} a las filas cuyo
 // start cae dentro del día 'key' (YYYY-MM-DD).
-function sliceStatsByDay(stats, key) {
-  const out = {}
+function sliceStatsByDay(stats: HAStats, key: string): HAStats {
+  const out: HAStats = {}
   const dayStart = new Date(key + 'T00:00:00')
   const dayEnd = new Date(dayStart)
   dayEnd.setDate(dayEnd.getDate() + 1)
@@ -663,8 +750,8 @@ function sliceStatsByDay(stats, key) {
 
 // eachDayKey itera los días (YYYY-MM-DD) entre dos Date (start incluido, end
 // excluido).
-function eachDayKey(start, end) {
-  const out = []
+function eachDayKey(start: Date, end: Date): string[] {
+  const out: string[] = []
   const cur = new Date(start)
   cur.setHours(0, 0, 0, 0)
   while (cur < end) {
@@ -674,14 +761,14 @@ function eachDayKey(start, end) {
   return out
 }
 
-export async function getKpis(ha, dateStr, db) {
+export async function getKpis(ha: HAClient, dateStr: string | undefined, db: DB): Promise<DayKpis> {
   const today = todayStr()
   if (!dateStr || dateStr === today) {
     const baseline = await ensureConsumptionBaseline(ha, db).catch(() => null)
     const consToday = consumptionTodayFromCounters(ha, baseline)
     const k = computeTodayKpis(ha, consToday)
     const live = computeLive(ha)
-    const { points: series } = await getDaySeries(ha, today, db).catch(() => ({ points: [] }))
+    const { points: series } = await getDaySeries(ha, today, db).catch(() => ({ points: [] as DayPoint[], estimated: false }))
     let peakProductionKw = 0
     let peakAt = 14 * 60
     for (const p of series) {
@@ -696,8 +783,8 @@ export async function getKpis(ha, dateStr, db) {
   const day = new Date(dateStr + 'T00:00:00')
   if (Number.isNaN(day.getTime())) throw new Error('fecha inválida')
 
-  const row = db.prepare('SELECT * FROM daily WHERE date = ?').get(dateStr)
-  const { points: series } = await getDaySeries(ha, dateStr, db).catch(() => ({ points: [] }))
+  const row = db.prepare('SELECT * FROM daily WHERE date = ?').get(dateStr) as DailyRow | undefined
+  const { points: series } = await getDaySeries(ha, dateStr, db).catch(() => ({ points: [] as DayPoint[], estimated: false }))
   let peakProductionKw = 0
   let peakAt = 14 * 60
   let soc = 0
@@ -742,7 +829,7 @@ export async function getKpis(ha, dateStr, db) {
     types: ['state'],
   })
 
-  const change = (id) => {
+  const change = (id: string): number => {
     const rows = stats[id] || []
     let total = 0
     for (const r of rows) total += num(r.state)
@@ -751,7 +838,7 @@ export async function getKpis(ha, dateStr, db) {
 
   const inv0Kwh = change(E.solis)
   const inv1Kwh = change(E.fox)
-  const invertersKwh = {}
+  const invertersKwh: Record<string, number> = {}
   t.inverters.forEach((inv, i) => {
     invertersKwh[inv.key] = i === 0 ? inv0Kwh : i === 1 ? inv1Kwh : change(inv.energyId)
   })
@@ -772,19 +859,19 @@ export async function getKpis(ha, dateStr, db) {
   })
 }
 
-function parseInvertersKwh(row) {
+function parseInvertersKwh(row: DailyRow): Record<string, number> {
   if (row.inverters_kwh) {
     try {
       return JSON.parse(row.inverters_kwh)
     } catch {}
   }
-  const out = {}
+  const out: Record<string, number> = {}
   if (row.solis_kwh !== null && row.solis_kwh !== undefined) out.solis = row.solis_kwh
   if (row.fox_kwh !== null && row.fox_kwh !== undefined) out.fox = row.fox_kwh
   return out
 }
 
-function decorateKpis(k) {
+function decorateKpis(k: Kpis & { soc: number; peakProductionKw: number; peakAt: number }): DayKpis {
   const autoconsumoPct =
     k.productionKwh > 0 ? Math.min(100, ((k.productionKwh - k.gridExportKwh) / k.productionKwh) * 100) : 0
   const autosuficienciaPct =
@@ -801,7 +888,7 @@ function decorateKpis(k) {
   }
 }
 
-export async function backfillHistory(ha, db) {
+export async function backfillHistory(ha: HAClient, db: DB): Promise<number> {
   const t = getInstall()
   const end = new Date()
   end.setDate(end.getDate() + 1)
@@ -818,24 +905,24 @@ export async function backfillHistory(ha, db) {
     types: ['state', 'sum'],
   })
 
-  const byDate = new Map()
-  const ensure = (key) => {
+  const byDate = new Map<string, Record<string, number>>()
+  const ensure = (key: string): Record<string, number> => {
     if (!byDate.has(key)) byDate.set(key, {})
-    return byDate.get(key)
+    return byDate.get(key)!
   }
   const minKey = dateKey(start)
 
   for (const [field, src] of Object.entries(srcs)) {
-    const perIdDaily = new Map()
+    const perIdDaily = new Map<string, Map<string, number>>()
     for (const id of src.ids) {
-      const rows = (stats[id] || []).filter((r) => (src.acc === 'sum' ? r.sum : r.state) !== null && (src.acc === 'sum' ? r.sum : r.state) !== undefined)
-      rows.sort((a, b) => a.start - b.start)
-      const daily = new Map()
+      const rows = (stats[id] || []).filter((r: HAStatsRow) => (src.acc === 'sum' ? r.sum : r.state) !== null && (src.acc === 'sum' ? r.sum : r.state) !== undefined)
+      rows.sort((a, b) => Number(a.start) - Number(b.start))
+      const daily = new Map<string, number>()
       let prev = 0
-      let prevKey = null // fecha de la fila anterior (para detectar huecos)
+      let prevKey: string | null = null // fecha de la fila anterior (para detectar huecos)
       for (const row of rows) {
         const key = dateKey(new Date(row.start))
-        const raw = src.acc === 'sum' ? row.sum : row.state
+        const raw = (src.acc === 'sum' ? row.sum : row.state) ?? 0
         if (key === todayStr()) {
           prev = raw
           prevKey = key
@@ -855,7 +942,8 @@ export async function backfillHistory(ha, db) {
         // la fila. Sin esto, un hueco de N días concentra N días de consumo
         // en el día posterior (bug de backfill, caza de bugs 6-Ago-2026).
         const invKey = map[field]
-        const glitch = invKey && t.inverters.find((i) => i.key === invKey)?.glitchOffsets?.[key] || 0
+        const inv = invKey ? t.inverters.find((i) => i.key === invKey) : undefined
+        const glitch = inv?.glitchOffsets?.[key] || 0
         let delta = Math.max(0, raw - prev - glitch)
         const gapDays = gapBetween(prevKey, key) // días intermedios sin fila
         if (prevKey && gapDays > 0) {
@@ -874,7 +962,7 @@ export async function backfillHistory(ha, db) {
       perIdDaily.set(id, daily)
     }
 
-    const allKeys = new Set()
+    const allKeys = new Set<string>()
     for (const daily of perIdDaily.values()) for (const key of daily.keys()) allKeys.add(key)
 
     const outKey = map[field] || field
@@ -894,9 +982,9 @@ export async function backfillHistory(ha, db) {
   let n = 0
   // Columna por inversor (índice): los 2 primeros se escriben en solis/fox
   // (compat); el resto en invN. deepSourceDailyKeys mapea igual.
-  const colForIndex = (i) => (i === 0 ? 'solis' : i === 1 ? 'fox' : `inv${i + 1}`)
+  const colForIndex = (i: number): string => (i === 0 ? 'solis' : i === 1 ? 'fox' : `inv${i + 1}`)
   for (const [date, f] of [...byDate.entries()].sort()) {
-    const perInv = {}
+    const perInv: Record<string, number> = {}
     let production = 0
     for (const [k, src] of Object.entries(srcs)) {
       if (!k.startsWith('inv')) continue
@@ -908,7 +996,7 @@ export async function backfillHistory(ha, db) {
     const derived = production + (f.gridImport || 0) - (f.gridExport || 0) - (f.batCharge || 0) + (f.batDischarge || 0)
     const consumption = medidores > 0 ? Math.min(100, Math.max(medidores, derived)) : 0
     // inverters_kwh guarda por clave real del inversor (issue #37).
-    const invertersKwh = {}
+    const invertersKwh: Record<string, number> = {}
     t.inverters.forEach((inv, i) => {
       invertersKwh[inv.key] = round2(perInv[colForIndex(i)] || 0)
     })
@@ -929,7 +1017,7 @@ export async function backfillHistory(ha, db) {
   return n
 }
 
-export async function maybeBackfill(ha, db) {
+export async function maybeBackfill(ha: HAClient, db: DB): Promise<{ ran: boolean; rows: number }> {
   if (dailyEmpty(db)) {
     const n = await backfillHistory(ha, db)
     return { ran: true, rows: n }
@@ -937,11 +1025,11 @@ export async function maybeBackfill(ha, db) {
   return { ran: false, rows: 0 }
 }
 
-export function todayStr() {
+export function todayStr(): string {
   return dateKey(new Date())
 }
 
-function dateKey(d) {
+function dateKey(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -950,20 +1038,20 @@ function dateKey(d) {
 
 // gapBetween devuelve los días intermedios SIN fila entre dos fechas
 // consecutivas del acumulador (prevKey < key). null/igual → 0.
-function gapBetween(prevKey, key) {
+function gapBetween(prevKey: string | null, key: string): number {
   if (!prevKey || prevKey >= key) return 0
   const a = new Date(prevKey + 'T00:00:00')
   const b = new Date(key + 'T00:00:00')
-  return Math.round((b - a) / 86400000) - 1
+  return Math.round((b.getTime() - a.getTime()) / 86400000) - 1
 }
 
 // addDays suma días a una fecha (para repartir el delta del hueco hacia atrás).
-function addDays(d, n) {
+function addDays(d: Date, n: number): Date {
   const out = new Date(d)
   out.setDate(out.getDate() + n)
   return out
 }
 
-const round1 = (n) => Math.round(n * 10) / 10
-const round2 = (n) => Math.round(n * 100) / 100
-const round3 = (n) => Math.round(n * 1000) / 1000
+const round1 = (n: number): number => Math.round(n * 10) / 10
+const round2 = (n: number): number => Math.round(n * 100) / 100
+const round3 = (n: number): number => Math.round(n * 1000) / 1000

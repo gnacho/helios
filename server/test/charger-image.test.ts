@@ -30,8 +30,8 @@ describe('imagen del cargador', () => {
     expect(res.ok).toBe(true)
     const img = findChargerImage(dir, 'main')
     expect(img?.mime).toBe('image/png')
-    expect(fs.existsSync(img.path)).toBe(true)
-    const cfg = JSON.parse(kvGet(db, 'extensions_config'))
+    expect(fs.existsSync(img!.path)).toBe(true)
+    const cfg = JSON.parse(kvGet(db, 'extensions_config')!)
     expect(cfg.carCharger.chargers[0].imageUrl).toBe('/api/charger/image/main')
   })
 
@@ -39,7 +39,7 @@ describe('imagen del cargador', () => {
     const { db, dir } = setup()
     expect(saveChargerImage(db, dir, 'main', 'data:text/html;base64,PGI+').ok).toBe(false)
     expect(saveChargerImage(db, dir, 'main', 'data:image/png;base64,').ok).toBe(false)
-    expect(saveChargerImage(db, dir, 'main', null).ok).toBe(false)
+    expect(saveChargerImage(db, dir, 'main', null as unknown as string).ok).toBe(false)
     expect(findChargerImage(dir, 'main')).toBeNull()
   })
 
@@ -58,7 +58,7 @@ describe('imagen del cargador', () => {
     saveChargerImage(db, dir, 'main', PNG)
     expect(clearChargerImage(db, dir, 'main').ok).toBe(true)
     expect(findChargerImage(dir, 'main')).toBeNull()
-    const cfg = JSON.parse(kvGet(db, 'extensions_config'))
+    const cfg = JSON.parse(kvGet(db, 'extensions_config')!)
     expect(cfg.carCharger.chargers[0].imageUrl).toBe('')
   })
 })

@@ -85,7 +85,7 @@ battery is doing, and what every self-consumed kWh is worth in euros.
 | Decision | Reason |
 |---|---|
 | **Node 22 + Hono** | This is a business/view app, not a 24/7 collector: the valuable logic is aggregation and data sanitation, already validated over 798 days. Rewriting it in Go was pure risk with no gain (decision closed 1-Aug-2026: Go for collectors/infra, Node for business). Hono because it's small, fast, and magic-free. |
-| **better-sqlite3 (plain ESM)** | An embedded transactional DB is all a home app needs: zero extra services, trivial backups, and 798 days fit in 90 MB. Plain JS instead of TS on the server: less build, less friction; contracts are enforced with **shared zod schemas** (`shared/schemas.js`). |
+| **better-sqlite3 (plain ESM)** | An embedded transactional DB is all a home app needs: zero extra services, trivial backups, and 798 days fit in 90 MB. The whole codebase is TypeScript: the server compiles with `tsc` to `dist/`, and contracts are enforced with **zod schemas** (`server/src/schemas.ts`). |
 | **React 19 + Vite + Tailwind** | The same front as every app in the house (shared `webapp-shell`): one way of doing shell, theme, settings and login. |
 | **HAOS as the live source** | HAOS already maintains the Solis/Fox integrations and their reconnections. Duplicating that in Helios means maintaining two drivers. Helios consumes, it doesn't integrate. |
 | **systemd + LXC, no Docker** | A Node binary with `node_modules` and a hardened unit (`ProtectSystem`, `ReadWritePaths`) is simpler to reason about and to roll back than a container, and the DB lives outside the code in `/opt/helios/data`. |
@@ -144,7 +144,7 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 
 - `server/`: Hono API + multi-user auth + aggregation + data sanitation.
 - `app/`: React 19 (views: Today, Inverters, Battery, History, Settings).
-- `shared/schemas.js`: zod contract server↔front.
+- `server/src/schemas.ts`: zod contract server↔front (shared types are exported from the server sources).
 - Full detail in `ARCHITECTURE.md` and `STACK.md`.
 
 ## Installation
@@ -169,7 +169,7 @@ and the `.env` always survives updates.
 
 - Production: a Proxmox CT, `helios.service`, port 80 (LAN
   only). The DB **is never touched** without a prior backup.
-- Local dev: `PORT=8199 AUTH_PASS=… node server/src/index.js` from
+- Local dev: `npm run build` (tsc → `dist/`) and `PORT=8199 AUTH_PASS=… node dist/index.js` from
   `server/` (the DB in `server/data/` is a development copy).
 - If the admin password is lost: `curl -X POST
   http://127.0.0.1:<port>/api/auth/recover` **from the host itself**

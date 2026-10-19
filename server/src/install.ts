@@ -20,6 +20,133 @@
 // consumían config.js y solar.js antes del refactor.
 
 import { kvGet, dailyEmpty } from './db.js'
+import type { DB } from './db.js'
+
+export type PowerUnit = 'kW' | 'W'
+export type EnergyAcc = 'sum' | 'state'
+
+export interface Inverter {
+  key: string
+  name: string
+  model: string
+  kwp: number
+  panels: string
+  tempC: number
+  hasBattery: boolean
+  batteryKwh?: number
+  powerId: string
+  powerUnit: PowerUnit
+  backupPowerId?: string
+  backupPowerUnit?: PowerUnit
+  energyId: string
+  energyAcc: EnergyAcc
+  energyCap: number
+  deepIds: string[]
+  glitchOffsets: Record<string, number>
+}
+
+export interface BatteryConfig {
+  enabled: boolean
+  powerId: string
+  stateId: string
+  socId: string
+  capacityKwh: number
+  chargingStates: string[]
+  dischargingStates: string[]
+}
+
+export interface GridConfig {
+  mode: 'attrs' | 'sensor'
+  attrsId: string | null
+  sensorId: string | null
+  importId: string | null
+  exportId: string | null
+}
+
+export interface ConsumptionConfig {
+  powerIds: string[]
+  powerUnit: PowerUnit
+  energyIds: string[]
+  respaldoId: string | null
+  noRespaldadaId: string | null
+}
+
+export interface EnergyConfig {
+  gridImportId: string
+  gridExportId: string
+  batChargeId: string
+  batDischargeId: string
+  consumptionId: string
+}
+
+export interface Topology {
+  inverters: Inverter[]
+  battery: BatteryConfig
+  grid: GridConfig
+  consumption: ConsumptionConfig
+  energy: EnergyConfig
+  sun: string
+  weather: string
+  weatherTemp: string
+  statusAttrsId: string | null
+}
+
+export interface EntitiesView {
+  pvSolis: string
+  pvFox: string
+  consRespaldo: string
+  consNoRespaldada: string
+  consAlmacen: string
+  consRespaldoEnergy: string
+  consNoRespaldadaEnergy: string
+  consAlmacenEnergy: string
+  batteryPower: string
+  batteryState: string
+  batterySoc: string
+  scraper: string | null
+  statusAttrsId: string | null
+  sun: string
+  weather: string
+  weatherTemp: string
+  eSolis: string
+  eFox: string
+  eConsumption: string
+  eGridImport: string
+  eGridExport: string
+  eBatCharge: string
+  eBatDischarge: string
+}
+
+export interface EnergyEntities {
+  solis: string
+  fox: string
+  consumption: string
+  gridImport: string
+  gridExport: string
+  batCharge: string
+  batDischarge: string
+}
+
+export interface DeepSource {
+  ids: string[]
+  acc: EnergyAcc
+  cap: number
+  requireAll?: boolean
+}
+
+export type DeepSources = Record<string, DeepSource>
+
+type TopologyInput = {
+  inverters?: Array<Partial<Inverter>>
+  battery?: Partial<BatteryConfig>
+  grid?: Partial<GridConfig>
+  consumption?: Partial<ConsumptionConfig>
+  energy?: Partial<EnergyConfig>
+  sun?: string
+  weather?: string
+  weatherTemp?: string
+  statusAttrsId?: string | null
+}
 
 // ── Perfil LEGACY: la instalación actual (scraper Solis + Solis/Fox + batería)
 const FOX_GLITCH_OFFSETS = {
@@ -30,7 +157,7 @@ const FOX_GLITCH_OFFSETS = {
   '2026-03-13': 4.71,
 }
 
-export const LEGACY_TOPOLOGY = {
+export const LEGACY_TOPOLOGY: Topology = {
   inverters: [
     {
       key: 'solis',
@@ -122,7 +249,7 @@ export const LEGACY_TOPOLOGY = {
 }
 
 // ── Perfil GENÉRICO: instalación nueva sin scraper. El admin lo completa.
-export const GENERIC_TOPOLOGY = {
+export const GENERIC_TOPOLOGY: Topology = {
   inverters: [
     {
       key: 'inv1',
@@ -179,25 +306,25 @@ export const GENERIC_TOPOLOGY = {
 }
 
 // ── Estado resuelto (módulo) ────────────────────────────────────────────────
-let current = LEGACY_TOPOLOGY
+let current: Topology = LEGACY_TOPOLOGY
 
 // Instala la topología resuelta y devuelve una copia congelada.
-export function resolveAndSet(db) {
+export function resolveAndSet(db: DB): Topology {
   current = resolveInstall(db)
   return current
 }
 
-export function getInstall() {
+export function getInstall(): Topology {
   return current
 }
 
 // --- Tests: inyectar una topología sin BD -----------------------------------
-export function _setForTests(topology) {
+export function _setForTests(topology: Topology): Topology {
   current = topology
   return current
 }
 
-export function resolveInstall(db) {
+export function resolveInstall(db: DB): Topology {
   const base = dailyEmpty(db) ? GENERIC_TOPOLOGY : LEGACY_TOPOLOGY
   const raw = kvGet(db, 'install_config')
   if (raw) {
@@ -214,19 +341,9 @@ export function resolveInstall(db) {
 // Normaliza una topología escrita por el admin: completa los huecos con el
 // perfil base (legacy/generic según la instalación). No lanza: una topología
 // inválida revierte al base.
-export function normalizeTopology(cfg, base = GENERIC_TOPOLOGY) {
-  const out = {
-    inverters: Array.isArray(cfg.inverters) && cfg.inverters.length > 0 ? cfg.inverters : base.inverters,
-    battery: { ...base.battery, ...(cfg.battery || {}) },
-    grid: { ...base.grid, ...(cfg.grid || {}) },
-    consumption: { ...base.consumption, ...(cfg.consumption || {}) },
-    energy: { ...base.energy, ...(cfg.energy || {}) },
-    sun: cfg.sun || base.sun,
-    weather: cfg.weather || base.weather,
-    weatherTemp: cfg.weatherTemp || base.weatherTemp,
-    statusAttrsId: cfg.statusAttrsId !== undefined ? cfg.statusAttrsId : base.statusAttrsId,
-  }
-  out.inverters = out.inverters.map((inv, i) => ({
+export function normalizeTopology(cfg: TopologyInput, base: Topology = GENERIC_TOPOLOGY): Topology {
+  const rawInverters = Array.isArray(cfg.inverters) && cfg.inverters.length > 0 ? cfg.inverters : base.inverters
+  const inverters = rawInverters.map((inv, i) => ({
     ...(base.inverters[i] || {}),
     ...inv,
     key: inv.key || `inv${i + 1}`,
@@ -241,20 +358,30 @@ export function normalizeTopology(cfg, base = GENERIC_TOPOLOGY) {
     deepIds: Array.isArray(inv.deepIds) ? inv.deepIds : [inv.energyId || ''].filter(Boolean),
     glitchOffsets: inv.glitchOffsets || {},
   }))
-  return out
+  return {
+    inverters,
+    battery: { ...base.battery, ...(cfg.battery || {}) },
+    grid: { ...base.grid, ...(cfg.grid || {}) },
+    consumption: { ...base.consumption, ...(cfg.consumption || {}) },
+    energy: { ...base.energy, ...(cfg.energy || {}) },
+    sun: cfg.sun || base.sun,
+    weather: cfg.weather || base.weather,
+    weatherTemp: cfg.weatherTemp || base.weatherTemp,
+    statusAttrsId: cfg.statusAttrsId !== undefined ? cfg.statusAttrsId : base.statusAttrsId,
+  }
 }
 
 // ── Vistas compatibles con el shape anterior (config.js/solar.js) ───────────
 
-export function getEntities() {
+export function getEntities(): EntitiesView {
   const t = getInstall()
-  const inv0 = t.inverters[0] || {}
-  const inv1 = t.inverters[1] || {}
+  const inv0 = t.inverters[0]
+  const inv1 = t.inverters[1]
   const c = t.consumption
   const b = t.battery
   return {
-    pvSolis: inv0.powerId || '',
-    pvFox: inv1.powerId || '',
+    pvSolis: inv0?.powerId || '',
+    pvFox: inv1?.powerId || '',
     consRespaldo: c.powerIds[0] || '',
     consNoRespaldada: c.powerIds[1] || '',
     consAlmacen: c.powerIds[2] || '',
@@ -269,8 +396,8 @@ export function getEntities() {
     sun: t.sun,
     weather: t.weather,
     weatherTemp: t.weatherTemp,
-    eSolis: inv0.energyId || '',
-    eFox: inv1.energyId || '',
+    eSolis: inv0?.energyId || '',
+    eFox: inv1?.energyId || '',
     eConsumption: t.energy.consumptionId,
     eGridImport: t.energy.gridImportId,
     eGridExport: t.energy.gridExportId,
@@ -280,10 +407,10 @@ export function getEntities() {
 }
 
 // IDs para subscribe_entities: todos los sensores de la topología activa.
-export function liveEntities() {
+export function liveEntities(): string[] {
   const t = getInstall()
   const e = getEntities()
-  const ids = new Set()
+  const ids = new Set<string>()
   for (const inv of t.inverters) {
     if (inv.powerId) ids.add(inv.powerId)
     if (inv.energyId) ids.add(inv.energyId)
@@ -316,13 +443,13 @@ export function liveEntities() {
   return [...ids]
 }
 
-export function getEnergyEntities() {
+export function getEnergyEntities(): EnergyEntities {
   const t = getInstall()
-  const inv0 = t.inverters[0] || {}
-  const inv1 = t.inverters[1] || {}
+  const inv0 = t.inverters[0]
+  const inv1 = t.inverters[1]
   return {
-    solis: inv0.energyId || '',
-    fox: inv1.energyId || '',
+    solis: inv0?.energyId || '',
+    fox: inv1?.energyId || '',
     consumption: t.energy.consumptionId,
     gridImport: t.energy.gridImportId,
     gridExport: t.energy.gridExportId,
@@ -332,9 +459,9 @@ export function getEnergyEntities() {
 }
 
 // DEEP_SOURCES para backfillHistory, derivado de la topología (N inversores).
-export function deepSources() {
+export function deepSources(): DeepSources {
   const t = getInstall()
-  const srcs = {}
+  const srcs: DeepSources = {}
   t.inverters.forEach((inv, i) => {
     srcs[`inv${i}`] = {
       ids: (inv.deepIds && inv.deepIds.length ? inv.deepIds : [inv.energyId]).filter(Boolean),
@@ -357,9 +484,9 @@ export function deepSources() {
 // Empareja deepSources() con la columna per-inversor de la tabla daily. Para
 // mantener compatibilidad con las columnas solis_kwh/fox_kwh existentes, los dos
 // primeros inversores se mapean a solis/fox y el resto a invN.
-export function deepSourceDailyKeys() {
+export function deepSourceDailyKeys(): { srcs: DeepSources; map: Record<string, string> } {
   const srcs = deepSources()
-  const map = {}
+  const map: Record<string, string> = {}
   const keys = Object.keys(srcs).filter((k) => k.startsWith('inv'))
   keys.forEach((k, i) => {
     map[k] = i === 0 ? 'solis' : i === 1 ? 'fox' : `inv${i + 1}`

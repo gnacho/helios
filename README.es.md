@@ -86,7 +86,7 @@ la batería y cuánto vale en euros cada kWh autoconsumido.
 | Decisión | Motivo |
 |---|---|
 | **Node 22 + Hono** | Es una app de negocio/vista, no un colector 24/7: la lógica valiosa es la de agregados y saneado de datos, ya validada durante 798 días. Reescribirla en Go era riesgo puro sin ganancia (decisión cerrada 1-Ago-2026: Go = colectores/infra, Node = negocio). Hono porque es pequeño, rápido y sin magia. |
-| **better-sqlite3 (ESM plano)** | Una BD embebida transaccional es todo lo que necesita una app doméstica: cero servicios extra, backup trivial, y los 798 días caben en 90 MB. JS plano en vez de TS en el server: menos build, menos fricción; los contratos se garantizan con **schemas zod compartidos** (`shared/schemas.js`). |
+| **better-sqlite3 (ESM plano)** | Una BD embebida transaccional es todo lo que necesita una app doméstica: cero servicios extra, backup trivial, y los 798 días caben en 90 MB. Todo el código es TypeScript: el server compila con `tsc` a `dist/`, y los contratos se garantizan con **schemas zod** (`server/src/schemas.ts`). |
 | **React 19 + Vite + Tailwind** | El mismo front de todas las apps de la casa (`webapp-shell` compartida): una sola forma de hacer shell, tema, ajustes y login. |
 | **HAOS como fuente del live** | HAOS ya mantiene las integraciones con Solis/Fox y sus reconexiones. Duplicar eso en Helios sería mantener dos drivers. Helios consume, no integra. |
 | **systemd + LXC, sin Docker** | Un binario de Node con `node_modules` y una unit hardenizada (`ProtectSystem`, `ReadWritePaths`) es más simple de razonar y de revertir que un contenedor, y la BD vive fuera del código en `/opt/helios/data`. |
@@ -145,7 +145,7 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 
 - `server/`: API Hono + auth multiusuario + agregados + saneado de datos.
 - `app/`: React 19 (vistas: Hoy, Inversores, Batería, Histórico, Ajustes).
-- `shared/schemas.js`: contrato zod server↔front.
+- `server/src/schemas.ts`: contrato zod server↔front.
 - Detalle completo en `ARCHITECTURE.md` y `STACK.md`.
 
 ## Instalación
@@ -170,7 +170,7 @@ la topología desde Ajustes. La BD vive en `server/data/` (o `DATA_DIR`) y el
 
 - Producción: un CT de Proxmox, servicio `helios.service`, puerto
   80 (solo LAN). La BD **no se toca** sin backup previo.
-- Desarrollo local: `PORT=8199 AUTH_PASS=… node server/src/index.js`
+- Desarrollo local: `npm run build` (tsc → `dist/`) y `PORT=8199 AUTH_PASS=… node dist/index.js`
   desde `server/` (la BD de `server/data/` es una copia de desarrollo).
 - Si la contraseña de admin se pierde: `curl -X POST
   http://127.0.0.1:<puerto>/api/auth/recover` **desde el propio host**

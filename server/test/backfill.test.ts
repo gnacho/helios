@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { HAClient } from '../src/ha.js'
+import type { Topology } from '../src/install.js'
 
 // ESM hoists imports: config.js se evalúa al importar solar.js. El env se
 // inyecta ANTES del import dinámico para que la validación zod no falle.
@@ -13,8 +15,8 @@ const { openDb } = await import('../src/db.js')
 const { backfillHistory, backfillDaySeries, todayStr, getDaySeries } = await import('../src/solar.js')
 const { _setForTests, LEGACY_TOPOLOGY } = await import('../src/install.js')
 
-function makeHa(stats) {
-  return { statisticsDuringPeriod: vi.fn(async () => stats) }
+function makeHa(stats: Record<string, unknown>): HAClient {
+  return { statisticsDuringPeriod: vi.fn(async () => stats) } as unknown as HAClient
 }
 
 describe('backfillHistory — huecos de datos (caza de bugs 6-Ago)', () => {
@@ -39,9 +41,9 @@ describe('backfillHistory — huecos de datos (caza de bugs 6-Ago)', () => {
     const n = await backfillHistory(ha, db)
     expect(n).toBeGreaterThan(0)
 
-    const day1 = db.prepare('SELECT fox_kwh FROM daily WHERE date = ?').get('2026-08-01')
-    const day2 = db.prepare('SELECT fox_kwh FROM daily WHERE date = ?').get('2026-08-02')
-    const day3 = db.prepare('SELECT fox_kwh FROM daily WHERE date = ?').get('2026-08-03')
+    const day1 = db.prepare('SELECT fox_kwh FROM daily WHERE date = ?').get('2026-08-01') as { fox_kwh: number | null }
+    const day2 = db.prepare('SELECT fox_kwh FROM daily WHERE date = ?').get('2026-08-02') as { fox_kwh: number | null }
+    const day3 = db.prepare('SELECT fox_kwh FROM daily WHERE date = ?').get('2026-08-03') as { fox_kwh: number | null }
     expect(day1.fox_kwh).toBe(10) // primer día: delta desde 0
     expect(day2.fox_kwh).toBe(10) // día del hueco: su parte
     expect(day3.fox_kwh).toBe(10) // día con fila: solo su parte, no 20
@@ -74,7 +76,7 @@ describe('backfillDaySeries — curvas persistidas en day_series (issue #114)', 
     const n = await backfillDaySeries(ha, db, backupFile)
     expect(n.rows).toBeGreaterThan(0)
 
-    const row = db.prepare('SELECT * FROM day_series WHERE date = ?').get('2026-07-20')
+    const row = db.prepare('SELECT * FROM day_series WHERE date = ?').get('2026-07-20') as { source: string; estimated: number; points_json: string }
     expect(row).toBeTruthy()
     expect(row.source).toBe('backup')
     expect(row.estimated).toBe(0)
@@ -99,7 +101,7 @@ describe('backfillDaySeries — curvas persistidas en day_series (issue #114)', 
        VALUES ('2026-07-20', ?, 0, 'backup', ?)`
     ).run(JSON.stringify(points), Date.now())
 
-    const ha = { statisticsDuringPeriod: vi.fn() } // no debe llamarse
+    const ha = { statisticsDuringPeriod: vi.fn() } as unknown as HAClient // no debe llamarse
     const res = await getDaySeries(ha, '2026-07-20', db)
     expect(res.points.length).toBe(1)
     expect(res.points[0].production).toBe(3)
@@ -121,7 +123,7 @@ describe('backup power source per inverter (issue #124)', () => {
     // LEGACY: fox.powerId = almacen_pinza_power_b (W), fox.backupPowerId =
     // foxess_solar_power (kW). El día tiene 2 tramos de 1 h: 07:00-08:00 SOLO
     // en el backup (hueco de la pinza) y 10:00-11:00 SOLO en la pinza.
-    const hourBuckets = (iso, mean) =>
+    const hourBuckets = (iso: string, mean: number) =>
       Array.from({ length: 12 }, (_, i) => ({
         start: new Date(new Date(iso).getTime() + i * 5 * 60000).toISOString(),
         mean,
@@ -133,7 +135,7 @@ describe('backup power source per inverter (issue #124)', () => {
     const ha = {
       statisticsDuringPeriod: vi.fn(async () => stats),
       getState: vi.fn(),
-    }
+    } as unknown as HAClient
     // Total real del Fox del día según la fuente profunda (pinza lifetime):
     // 2 kWh medidos + 1.7 kWh en el hueco (el backup crudo da 1.5, ~4% bajo).
     db.prepare(
@@ -146,14 +148,14 @@ describe('backup power source per inverter (issue #124)', () => {
     // El hueco (07:00Z local) usa el backup: fox = 1.5 kW escalado por
     // (3.7 - 2.0) / 1.5 = 1.133 → ~1.7 kW. La parte de la pinza (10:00Z) NO se
     // toca: fox = 2.0 kW. Los labels son hora LOCAL del runner.
-    const lab = (iso) => {
+    const lab = (iso: string) => {
       const d = new Date(iso)
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
     }
     const p07 = res.points.find((p) => p.label === lab('2026-07-20T07:00:00Z'))
     const p10 = res.points.find((p) => p.label === lab('2026-07-20T10:00:00Z'))
-    expect(p07.fox).toBeCloseTo(1.7, 1)
-    expect(p10.fox).toBeCloseTo(2.0, 1)
+    expect(p07!.fox).toBeCloseTo(1.7, 1)
+    expect(p10!.fox).toBeCloseTo(2.0, 1)
 
     // La curva integra el total daily real del Fox.
     const dtH = 5 / 60
@@ -167,7 +169,7 @@ describe('backup power source per inverter (issue #124)', () => {
   it('sin backupPowerId no inventa datos (comportamiento previo)', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'helios-bf-'))
     const db = openDb(dir)
-    const t = {
+    const t: Topology = {
       ...LEGACY_TOPOLOGY,
       inverters: LEGACY_TOPOLOGY.inverters.map((inv, i) =>
         i === 1 ? { ...inv, backupPowerId: '', backupPowerUnit: 'kW' } : inv
@@ -177,19 +179,19 @@ describe('backup power source per inverter (issue #124)', () => {
     const stats = {
       'sensor.almacen_pinza_power_b': [{ start: '2026-07-21T10:00:00Z', mean: 2000 }],
     }
-    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() }
+    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() } as unknown as HAClient
     db.prepare(
       "INSERT INTO daily (date, production_kwh, solis_kwh, fox_kwh) VALUES ('2026-07-21', 2.0, 0, 2.0)"
     ).run()
 
     const res = await getDaySeries(ha, '2026-07-21', db)
     expect(res.estimated).toBe(false)
-    const lab = (iso) => {
+    const lab = (iso: string) => {
       const d = new Date(iso)
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
     }
     const p10 = res.points.find((p) => p.label === lab('2026-07-21T10:00:00Z'))
-    expect(p10.fox).toBeCloseTo(2.0, 1)
+    expect(p10!.fox).toBeCloseTo(2.0, 1)
     // Solo existe el bucket de la pinza: sin hueco rellenado por backup.
     expect(res.points.some((p) => p.label === lab('2026-07-21T07:00:00Z'))).toBe(false)
 
@@ -205,13 +207,13 @@ describe('consumption gap filled from previous-day pattern (issue 125)', () => {
     const dir = mkdtempSync(join(tmpdir(), 'helios-bf-'))
     const db = openDb(dir)
 
-    const hourBuckets = (iso, mean) =>
+    const hourBuckets = (iso: string, mean: number) =>
       Array.from({ length: 12 }, (_, i) => ({
         start: new Date(new Date(iso).getTime() + i * 5 * 60000).toISOString(),
         mean,
       }))
     // Solis (inv0) produce 07-08 y 10-11 (los buckets existen).
-    const stats = {
+    const stats: Record<string, Array<{ start: string; mean: number }>> = {
       'sensor.solis_potencia_actual': [
         ...hourBuckets('2026-07-22T07:00:00Z', 1.5),
         ...hourBuckets('2026-07-22T10:00:00Z', 2.0),
@@ -221,7 +223,7 @@ describe('consumption gap filled from previous-day pattern (issue 125)', () => {
     for (const id of ['sensor.medidor_respaldo_power', 'sensor.vivienda_medidor_power', 'sensor.almacen_pinza_power_a']) {
       stats[id] = hourBuckets('2026-07-22T10:00:00Z', 1000)
     }
-    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() }
+    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() } as unknown as HAClient
 
     // Fila daily del día: consumo real total 3.5 kWh (3 medidos + 0.5 hueco).
     db.prepare(
@@ -255,7 +257,7 @@ describe('consumption gap filled from previous-day pattern (issue 125)', () => {
     const dir = mkdtempSync(join(tmpdir(), 'helios-bf-'))
     const db = openDb(dir)
 
-    const hourBuckets = (iso, mean) =>
+    const hourBuckets = (iso: string, mean: number) =>
       Array.from({ length: 12 }, (_, i) => ({
         start: new Date(new Date(iso).getTime() + i * 5 * 60000).toISOString(),
         mean,
@@ -264,7 +266,7 @@ describe('consumption gap filled from previous-day pattern (issue 125)', () => {
       'sensor.solis_potencia_actual': hourBuckets('2026-07-23T07:00:00Z', 1.5),
     }
     // Hueco: 07-08 sin NINGÚN medidor. Sin fila daily (caso HOY en vivo).
-    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() }
+    const ha = { statisticsDuringPeriod: vi.fn(async () => stats), getState: vi.fn() } as unknown as HAClient
 
     const prevPts = [
       ...hourBuckets('2026-07-22T07:00:00Z', 500).map((r) => {
@@ -280,7 +282,7 @@ describe('consumption gap filled from previous-day pattern (issue 125)', () => {
     const res = await getDaySeries(ha, '2026-07-23', db)
     expect(res.estimated).toBe(true)
     const p = res.points.find((x) => x.consumption > 0)
-    expect(p.consumption).toBeCloseTo(0.5, 1)
+    expect(p!.consumption).toBeCloseTo(0.5, 1)
 
     db.close()
     rmSync(dir, { recursive: true, force: true })

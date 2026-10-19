@@ -8,6 +8,10 @@ import { kvGet, kvSet } from '../src/db.js'
 import { configurePush, notifyUsers, flushNotificationQueue, _setSendFn, _resetForTests } from '../src/push.js'
 import { createAlertsEngine, enviarResumenDiario, proximoEnvioResumen, ejecutarResumenSiToca, RESUMEN_OFFSET_MIN, HORA_RESUMEN_DIARIO } from '../src/alerts.js'
 import { _setForTests, LEGACY_TOPOLOGY } from '../src/install.js'
+import type { HAClient } from '../src/ha.js'
+import type { PushSubscription, RequestOptions, SendResult } from 'web-push'
+
+type SendFn = (sub: PushSubscription, payload: string, opts: RequestOptions) => Promise<SendResult>
 
 // Par VAPID real (setVapidDetails valida formato; claves fake no pasan).
 const KEYS = webpush.generateVAPIDKeys()
@@ -16,7 +20,7 @@ function configura() {
   configurePush({ publicKey: KEYS.publicKey, privateKey: KEYS.privateKey, subject: 'mailto:test@example.com' })
 }
 
-let db
+let db: Database.Database
 beforeEach(() => {
   _resetForTests()
   _setForTests(LEGACY_TOPOLOGY)
@@ -27,7 +31,7 @@ afterEach(() => {
   _setForTests(LEGACY_TOPOLOGY)
 })
 
-function insertUser(username, language = 'es') {
+function insertUser(username: string, language = 'es') {
   const id = crypto.randomUUID()
   db.prepare("INSERT INTO users (id, username, password_hash, language, role, created_at) VALUES (?, ?, 'x', ?, 'user', ?)").run(
     id,
@@ -38,7 +42,7 @@ function insertUser(username, language = 'es') {
   return id
 }
 
-function insertSub(userId, endpoint = `https://push.example.com/${crypto.randomUUID()}`) {
+function insertSub(userId: string, endpoint = `https://push.example.com/${crypto.randomUUID()}`) {
   const now = Date.now()
   db.prepare(
     'INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -48,7 +52,7 @@ function insertSub(userId, endpoint = `https://push.example.com/${crypto.randomU
 
 describe('schema', () => {
   it('crea las tablas push sin tocar las existentes', () => {
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r) => r.name)
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{ name: string }>).map((r) => r.name)
     for (const t of ['push_subscriptions', 'notification_preferences', 'notification_quiet_hours', 'notification_queue']) {
       expect(tables).toContain(t)
     }
@@ -66,15 +70,15 @@ describe('motor notifyUsers', () => {
     insertSub(u2, 'https://push.example.com/bob')
     insertSub(u3, 'https://push.example.com/chen')
 
-    const enviados = []
-    _setSendFn(async (sub, payload) => {
+    const enviados: any[] = []
+    _setSendFn((async (sub: PushSubscription, payload: string) => {
       if (sub.endpoint.includes('bob')) {
-        const err = new Error('Gone')
+        const err: Error & { statusCode?: number } = new Error('Gone')
         err.statusCode = 410
         throw err
       }
       enviados.push({ sub, payload: JSON.parse(payload) })
-    })
+    }) as unknown as SendFn)
     configura()
 
     const res = await notifyUsers(db, [u1, u2, u3], 'inversor_offline', {}, { severity: 'critical' })
@@ -83,7 +87,7 @@ describe('motor notifyUsers', () => {
     const porIdioma = Object.fromEntries(enviados.map((e) => [e.sub.endpoint.split('/').pop(), e.payload.title]))
     expect(porIdioma.ana).toBe('Inversor offline')
     expect(porIdioma.chen).toBe('逆变器离线')
-    const restantes = db.prepare('SELECT endpoint FROM push_subscriptions').all()
+    const restantes = db.prepare('SELECT endpoint FROM push_subscriptions').all() as Array<{ endpoint: string }>
     expect(restantes).toHaveLength(2)
     expect(restantes.map((r) => r.endpoint).join()).not.toContain('bob')
   })
@@ -95,9 +99,9 @@ describe('motor notifyUsers', () => {
       'INSERT INTO notification_preferences (user_id, tipo, enabled, min_severity, updated_at) VALUES (?, ?, 0, ?, ?)'
     ).run(u1, 'resumen_diario', 'normal', Date.now())
     configura()
-    _setSendFn(async () => {
+    _setSendFn((async () => {
       throw new Error('no debería enviarse')
-    })
+    }) as unknown as SendFn)
     const res = await notifyUsers(db, [u1], 'resumen_diario', { produccion: 1, consumo: 2, autoconsumo: 50 })
     expect(res.omitidos).toBe(1)
     expect(res.enviados).toBe(0)
@@ -130,10 +134,10 @@ describe('motor notifyUsers', () => {
 
     // Cerramos la ventana y el flush consolida en UN resumen
     db.prepare('DELETE FROM notification_quiet_hours').run()
-    const enviados = []
-    _setSendFn(async (sub, payload) => {
+    const enviados: any[] = []
+    _setSendFn((async (_sub: PushSubscription, payload: string) => {
       enviados.push(JSON.parse(payload))
-    })
+    }) as unknown as SendFn)
     await flushNotificationQueue(db)
     expect(db.prepare('SELECT * FROM notification_queue').all()).toHaveLength(0)
     expect(enviados).toHaveLength(1)
@@ -152,10 +156,24 @@ describe('motor notifyUsers', () => {
 
 // --- Motor de alertas (flancos y anti-rebote) --------------------------------
 
-function mockHa({ inverterOnline = 1, gridPower = 0.5, lastUpdate = new Date().toISOString(), sunState = 'above_horizon', foxState = '123.4' } = {}) {
+function mockHa(
+  {
+    inverterOnline = 1,
+    gridPower = 0.5,
+    lastUpdate = new Date().toISOString(),
+    sunState = 'above_horizon',
+    foxState = '123.4',
+  }: {
+    inverterOnline?: number
+    gridPower?: number
+    lastUpdate?: string
+    sunState?: string
+    foxState?: string
+  } = {}
+): HAClient {
   return {
     connected: true,
-    getState: (id) => {
+    getState: (id: string) => {
       if (id.endsWith('scraper')) {
         return { state: 'ok', attributes: { inverterOnline, currentGridPower: gridPower, lastUpdate } }
       }
@@ -163,10 +181,14 @@ function mockHa({ inverterOnline = 1, gridPower = 0.5, lastUpdate = new Date().t
       if (id === 'sensor.almacen_pinza_power_b') return { state: foxState, attributes: {} }
       return null
     },
-  }
+  } as unknown as HAClient
 }
 
-function mockSolar(live = {}) {
+function mockSolar(live: Record<string, unknown> = {}): {
+  computeLive(): any
+  todayStr(): string
+  getKpis(): Promise<any>
+} {
   return {
     computeLive: () => ({ consumption: 0.5, production: 0, soc: 50, batteryPower: 0, ...live }),
     todayStr: () => '2026-08-02',
@@ -175,8 +197,8 @@ function mockSolar(live = {}) {
 }
 
 function capturaNotifs() {
-  const llamadas = []
-  return { llamadas, notifyFn: (db, tipo, datos, opciones) => llamadas.push({ tipo, datos, opciones }) }
+  const llamadas: any[] = []
+  return { llamadas, notifyFn: (db: any, tipo: any, datos: any, opciones: any) => { llamadas.push({ tipo, datos, opciones }) } }
 }
 
 // corte_red está desactivado por defecto (issue #19): los tests de la heurística
@@ -266,8 +288,8 @@ describe('motor de alertas', () => {
     })
     const u = insertUser('ana')
     insertSub(u)
-    const enviados = []
-    _setSendFn(async (sub, payload) => enviados.push({ sub, payload: JSON.parse(payload) }))
+    const enviados: any[] = []
+    _setSendFn((async (sub: PushSubscription, payload: string) => enviados.push({ sub, payload: JSON.parse(payload) })) as unknown as SendFn)
     configura()
     await notifyUsers(db, [u], 'fox_offline', { nombre: 'Secundario' }, { severity: 'high' })
     expect(enviados).toHaveLength(1)
@@ -553,7 +575,7 @@ describe('motor de alertas', () => {
 
   it('sin conexión HAOS no evalúa nada', () => {
     const { llamadas, notifyFn } = capturaNotifs()
-    const ha = { ...mockHa({ inverterOnline: 0 }), connected: false }
+    const ha = { ...mockHa({ inverterOnline: 0 }), connected: false } as unknown as HAClient
     const engine = createAlertsEngine({ db, ha, solar: mockSolar(), notifyFn })
     engine.tick()
     engine.tick()
@@ -562,8 +584,8 @@ describe('motor de alertas', () => {
   })
 
   it('resumen diario: compone con los KPI del día', async () => {
-    const llamadas = []
-    const notifyFn = async (db, tipo, datos, opciones) => llamadas.push({ tipo, datos, opciones })
+    const llamadas: any[] = []
+    const notifyFn = async (db: any, tipo: any, datos: any, opciones: any) => { llamadas.push({ tipo, datos, opciones }) }
     await enviarResumenDiario(db, mockHa(), mockSolar(), notifyFn)
     expect(llamadas).toHaveLength(1)
     expect(llamadas[0].tipo).toBe('resumen_diario')
@@ -574,13 +596,13 @@ describe('motor de alertas', () => {
 
 // --- Scheduler del resumen: anochecer vs fallback -----------------------------
 
-function haConSun(nextSetting) {
+function haConSun(nextSetting: string): HAClient {
   return {
     connected: true,
-    getState: (id) => (id === 'sun.sun' ? { state: 'above_horizon', attributes: { next_setting: nextSetting } } : null),
-  }
+    getState: (id: string) => (id === 'sun.sun' ? { state: 'above_horizon', attributes: { next_setting: nextSetting } } : null),
+  } as unknown as HAClient
 }
-const haSinSun = { connected: true, getState: () => null }
+const haSinSun = { connected: true, getState: () => null } as unknown as HAClient
 
 describe('proximoEnvioResumen (anochecer con fallback)', () => {
   it('con sunset HOY → sunset + offset', () => {
@@ -619,8 +641,8 @@ describe('proximoEnvioResumen (anochecer con fallback)', () => {
 
 describe('ejecutarResumenSiToca (guarda anti-doble-envío)', () => {
   it('envía una vez y la segunda llamada el mismo día se omite', async () => {
-    const llamadas = []
-    const notifyFn = async (db, tipo, datos, opciones) => llamadas.push({ tipo, datos, opciones })
+    const llamadas: any[] = []
+    const notifyFn = async (db: any, tipo: any, datos: any, opciones: any) => { llamadas.push({ tipo, datos, opciones }) }
     const r1 = await ejecutarResumenSiToca(db, mockHa(), mockSolar(), notifyFn)
     const r2 = await ejecutarResumenSiToca(db, mockHa(), mockSolar(), notifyFn)
     expect(r1).toBe(true)
