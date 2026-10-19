@@ -48,8 +48,8 @@ if ! git merge --no-edit "$REF"; then
   exit 3
 fi
 
-log "tests server"
-(cd server && npm install --no-audit --no-fund && npm test)
+log "build+tests server"
+(cd server && npm install --no-audit --no-fund && npm run typecheck && npm run build && npm test)
 
 log "build app"
 (cd app && npm install --no-audit --no-fund && npx tsc --noEmit && npm run build)
@@ -62,12 +62,11 @@ log "empaquetando v$VERSION ($BUNDLE)"
 STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 mkdir -p "$STAGING/server" "$STAGING/app"
-cp -a server/src "$STAGING/server/src"
+cp -a server/dist "$STAGING/server/dist"
 cp server/package.json "$STAGING/server/package.json"
 cp app/package.json "$STAGING/app/package.json"
-cp -a shared "$STAGING/shared"
 cp -a app/dist "$STAGING/public"
-tar -czf "$STAGING/helios-personal.tgz" -C "$STAGING" server app shared public
+tar -czf "$STAGING/helios-personal.tgz" -C "$STAGING" server app public
 
 cat > "$STAGING/remote.sh" <<'EOF'
 #!/bin/sh
@@ -75,18 +74,22 @@ set -eu
 VER="$1"
 TS="$(date +%Y%m%d-%H%M)"
 cd /opt/helios
-tar -czf "/tmp/src.bak-personal-$TS.tgz" server/src shared
+tar -czf "/tmp/dist.bak-personal-$TS.tgz" server/dist
 tar -czf "/tmp/public.bak-personal-$TS.tgz" public
 cp data/helios.db "/tmp/helios.db.bak-personal-$TS"
 rm -rf /tmp/helios-new
 mkdir -p /tmp/helios-new
 tar -xzf /tmp/helios-personal.tgz -C /tmp/helios-new
-cp -a /tmp/helios-new/server/src/. server/src/
+cp -a /tmp/helios-new/server/dist/. server/dist/
 cp /tmp/helios-new/server/package.json server/package.json
 cp /tmp/helios-new/app/package.json app/package.json
-cp -a /tmp/helios-new/shared/. shared/
 cp -a /tmp/helios-new/public/. public/
-chown -R helios:helios server/src server/package.json app/package.json shared public
+chown -R helios:helios server/dist server/package.json app/package.json public
+# El servidor corre desde dist/ (tsc) desde la migración a TypeScript
+if grep -q 'node src/index.js' /etc/systemd/system/helios.service; then
+  sed -i 's|node src/index.js|node dist/index.js|' /etc/systemd/system/helios.service
+  systemctl daemon-reload
+fi
 echo "$VER" > .release-id
 chown helios:helios .release-id
 systemctl restart helios
