@@ -5,6 +5,17 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.8.26] - 2026-10-19
+
+### Changed
+
+- **Todo el código pasa a TypeScript (#149).** El servidor ahora está escrito
+  en TypeScript estricto y se compila con `tsc` a `dist/` (la app sigue
+  arrancando igual, ahora desde el código compilado). Los tests del servidor,
+  la landing y el service worker también son TypeScript. Sin cambios
+  funcionales para el usuario: la app se ve y comporta igual, con un código
+  más robusto detrás.
+
 ## [0.8.25] - 2026-10-14
 
 ### Added
