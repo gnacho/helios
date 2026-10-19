@@ -1,8 +1,85 @@
 import WebSocket from 'ws'
 import { EventEmitter } from 'node:events'
 
+export interface HAEntityState {
+  state?: string
+  attributes?: Record<string, unknown>
+  lastUpdated?: string
+}
+
+export interface HAStatsRow {
+  start: string
+  end?: string
+  mean?: number | null
+  state?: number | null
+  sum?: number | null
+  min?: number | null
+  max?: number | null
+}
+
+export type HAStats = Record<string, HAStatsRow[]>
+
+export interface HAHistoryRow {
+  state: string
+  last_changed: string
+  attributes?: Record<string, unknown>
+}
+
+export interface HAStatisticsQuery {
+  startTime: string
+  endTime: string
+  statisticIds: string[]
+  period: string
+  types: string[]
+}
+
+export interface HAHistoryQuery {
+  startTime: string
+  endTime: string
+  entityId: string
+}
+
+interface HAPendingCall {
+  resolve: (value: unknown) => void
+  reject: (reason: Error) => void
+  timer: NodeJS.Timeout
+}
+
+interface HAEntityChange {
+  s?: string
+  a?: Record<string, unknown>
+  lu?: string
+}
+
+interface HAEntityEvent {
+  a?: Record<string, HAEntityChange>
+  c?: Record<string, { '+': HAEntityChange; '-': unknown }>
+}
+
+interface HAMessage {
+  type: string
+  id?: number
+  message?: string
+  success?: boolean
+  result?: unknown
+  error?: { code?: string; message?: string }
+  event?: HAEntityEvent
+}
+
 export class HAClient extends EventEmitter {
-  constructor(httpUrl, token) {
+  httpUrl: string
+  wsUrl: string
+  token: string
+  entities: Map<string, HAEntityState>
+  pending: Map<number, HAPendingCall>
+  msgId: number
+  ws: WebSocket | null
+  connected: boolean
+  stopped: boolean
+  retries: number
+  subscribedIds: string[]
+
+  constructor(httpUrl: string, token: string) {
     super()
     this.httpUrl = httpUrl
     this.wsUrl = httpUrl.replace(/^http/, 'ws') + '/api/websocket'
@@ -17,17 +94,17 @@ export class HAClient extends EventEmitter {
     this.subscribedIds = []
   }
 
-  start() {
+  start(): void {
     this.stopped = false
     this._connect()
   }
 
-  stop() {
+  stop(): void {
     this.stopped = true
     if (this.ws) this.ws.terminate()
   }
 
-  _connect() {
+  _connect(): void {
     if (this.stopped) return
     const ws = new WebSocket(this.wsUrl, { handshakeTimeout: 10000 })
     this.ws = ws
@@ -53,7 +130,7 @@ export class HAClient extends EventEmitter {
     })
   }
 
-  _onClose() {
+  _onClose(): void {
     const wasConnected = this.connected
     this.connected = false
     for (const { reject, timer } of this.pending.values()) {
@@ -69,9 +146,9 @@ export class HAClient extends EventEmitter {
     setTimeout(() => this._connect(), delay)
   }
 
-  _handle(msg) {
+  _handle(msg: HAMessage): void {
     if (msg.type === 'auth_required') {
-      this.ws.send(JSON.stringify({ type: 'auth', access_token: this.token }))
+      this.ws!.send(JSON.stringify({ type: 'auth', access_token: this.token }))
       return
     }
     if (msg.type === 'auth_ok') {
@@ -84,13 +161,13 @@ export class HAClient extends EventEmitter {
     if (msg.type === 'auth_invalid') {
       this.emit('fatal', `auth_invalid: ${msg.message || 'token rechazado'}`)
       this.stopped = true
-      this.ws.terminate()
+      this.ws!.terminate()
       return
     }
     if (msg.type === 'result') {
-      const p = this.pending.get(msg.id)
+      const p = this.pending.get(msg.id!)
       if (!p) return
-      this.pending.delete(msg.id)
+      this.pending.delete(msg.id!)
       clearTimeout(p.timer)
       if (msg.success) p.resolve(msg.result)
       else p.reject(new Error(msg.error?.message || `error ${msg.error?.code}`))
@@ -101,10 +178,10 @@ export class HAClient extends EventEmitter {
     }
   }
 
-  _applyEntityEvent(event) {
+  _applyEntityEvent(event: HAEntityEvent): void {
     if (event.a) {
       for (const [id, v] of Object.entries(event.a)) {
-        this.entities.set(id, { state: v.s, attributes: v.a || {}, lastUpdated: v.lu })
+        this.entities.set(id, { state: v.s, attributes: v.a ?? {}, lastUpdated: v.lu })
         this.emit('entity', id)
       }
     }
@@ -126,8 +203,9 @@ export class HAClient extends EventEmitter {
     }
   }
 
-  call(message) {
+  call(message: Record<string, unknown>): Promise<unknown> {
     if (!this.connected || !this.ws) return Promise.reject(new Error('no conectado'))
+    const ws = this.ws
     const id = ++this.msgId
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -135,55 +213,55 @@ export class HAClient extends EventEmitter {
         reject(new Error('timeout ws'))
       }, 60000)
       this.pending.set(id, { resolve, reject, timer })
-      this.ws.send(JSON.stringify({ id, ...message }))
+      ws.send(JSON.stringify({ id, ...message }))
     })
   }
 
-  subscribeEntities(ids) {
+  subscribeEntities(ids: string[]): Promise<unknown> {
     this.subscribedIds = ids
-    return this.call({ type: 'subscribe_entities', entity_ids: ids }).catch((err) => {
+    return this.call({ type: 'subscribe_entities', entity_ids: ids }).catch((err: Error) => {
       this.emit('wsError', `subscribe_entities: ${err.message}`)
     })
   }
 
   /** Llama a un servicio de HAOS por websocket (target/entity_id separado). */
-  callService(domain, service, serviceData) {
-    const msg = { type: 'call_service', domain, service }
+  callService(domain: string, service: string, serviceData?: Record<string, unknown>): Promise<unknown> {
+    const msg: Record<string, unknown> = { type: 'call_service', domain, service }
     const data = serviceData ?? {}
     if (data.entity_id) msg.target = { entity_id: data.entity_id }
-    const rest = { ...data }
+    const rest: Record<string, unknown> = { ...data }
     delete rest.entity_id
     if (Object.keys(rest).length > 0) msg.service_data = rest
     return this.call(msg)
   }
 
-  getState(id) {
+  getState(id: string): HAEntityState | undefined {
     return this.entities.get(id)
   }
 
-  statisticsDuringPeriod({ startTime, endTime, statisticIds, period, types }) {
+  statisticsDuringPeriod(query: HAStatisticsQuery): Promise<HAStats> {
     return this.call({
       type: 'recorder/statistics_during_period',
-      start_time: startTime,
-      end_time: endTime,
-      statistic_ids: statisticIds,
-      period,
-      types,
-    })
+      start_time: query.startTime,
+      end_time: query.endTime,
+      statistic_ids: query.statisticIds,
+      period: query.period,
+      types: query.types,
+    }) as Promise<HAStats>
   }
 
   // Historial de estados vía REST (no existe equivalente websocket para
   // /api/history/period). Lo usan las extensiones para sensores SIN
   // state_class (sin statistics): p.ej. el contador de energía del cargador.
   // Devuelve la lista de estados de UNA entidad: [{ state, last_changed }].
-  async historyDuringPeriod({ startTime, endTime, entityId }) {
+  async historyDuringPeriod(query: HAHistoryQuery): Promise<HAHistoryRow[]> {
     const url =
-      `${this.httpUrl}/api/history/period/${encodeURIComponent(startTime)}` +
-      `?filter_entity_id=${encodeURIComponent(entityId)}` +
-      `&end_time=${encodeURIComponent(endTime)}&minimal_response`
+      `${this.httpUrl}/api/history/period/${encodeURIComponent(query.startTime)}` +
+      `?filter_entity_id=${encodeURIComponent(query.entityId)}` +
+      `&end_time=${encodeURIComponent(query.endTime)}&minimal_response`
     const res = await fetch(url, { headers: { Authorization: `Bearer ${this.token}` } })
     if (!res.ok) throw new Error(`history HTTP ${res.status}`)
     const data = await res.json()
-    return Array.isArray(data) && Array.isArray(data[0]) ? data[0] : []
+    return Array.isArray(data) && Array.isArray(data[0]) ? (data[0] as HAHistoryRow[]) : []
   }
 }
