@@ -74,7 +74,7 @@ set -eu
 VER="$1"
 TS="$(date +%Y%m%d-%H%M)"
 cd /opt/helios
-tar -czf "/tmp/dist.bak-personal-$TS.tgz" server/dist
+[ -d server/dist ] && tar -czf "/tmp/dist.bak-personal-$TS.tgz" server/dist
 tar -czf "/tmp/public.bak-personal-$TS.tgz" public
 cp data/helios.db "/tmp/helios.db.bak-personal-$TS"
 rm -rf /tmp/helios-new
