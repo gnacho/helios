@@ -6,8 +6,9 @@ import { describe, it, expect, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { z } from 'zod'
 import { initSchema, kvSet, kvGet } from '../src/db.js'
-import { createSchemas } from '../../shared/schemas.js'
+import { createSchemas } from '../src/schemas.js'
 import { _setForTests as _setInstallForTests, LEGACY_TOPOLOGY } from '../src/install.js'
+import type { Topology } from '../src/install.js'
 import {
   resolveExtensions,
   normalizeExtensions,
@@ -30,6 +31,13 @@ import {
 } from '../src/extensions.js'
 
 const { extensionsSchema } = createSchemas(z)
+
+/** Forma estructural del cliente HA que consumen las extensiones (no exportado). */
+type HA = {
+  getState(id: string): any
+  statisticsDuringPeriod(opts: any): Promise<any>
+  historyDuringPeriod(opts: any): Promise<any>
+}
 
 afterEach(() => {
   _setForTests(GENERIC_EXTENSIONS)
@@ -113,11 +121,11 @@ function twoChargersCfg() {
   })
 }
 
-function mockHa(states) {
+function mockHa(states: Record<string, unknown>): HA {
   return {
     connected: true,
-    getState: (id) => states[id],
-  }
+    getState: (id: string) => states[id],
+  } as unknown as HA
 }
 
 /** Fecha local YYYY-MM-DD de hoy (como todayStr del server). */
@@ -127,7 +135,7 @@ function kvDate() {
 }
 
 /** Fecha local YYYY-MM-DD desplazada n días desde hoy. */
-function dayOffset(n) {
+function dayOffset(n: number) {
   const d = new Date()
   d.setDate(d.getDate() + n)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -380,7 +388,7 @@ describe('accumulateChargerDaily', () => {
     accumulateChargerDaily(mockHa({ 'sensor.chg_total': { state: '100' } }), db)
     accumulateChargerDaily(mockHa({ 'sensor.chg_total': { state: '999' } }), db) // glitch
     expect(chargerHistory(db, '2000-01-01', '2999-12-31', 'main')).toHaveLength(0)
-    expect(JSON.parse(kvGet(db, 'charger_counter:main')).total).toBe(999)
+    expect(JSON.parse(kvGet(db, 'charger_counter:main')!).total).toBe(999)
   })
 
   it('extensión inactiva → no toca nada', () => {
@@ -404,7 +412,7 @@ describe('accumulateChargerDaily', () => {
     const c2 = chargerHistory(db, '2000-01-01', '2999-12-31', 'c2')
     expect(main[0].kwh).toBe(3)
     expect(c2[0].kwh).toBe(3) // 300 centésimas
-    expect(db.prepare('SELECT COUNT(*) AS n FROM daily_charger').get().n).toBe(2)
+    expect((db.prepare('SELECT COUNT(*) AS n FROM daily_charger').get() as { n: number }).n).toBe(2)
   })
 
   it('contador unavailable → tick sin efecto', () => {
@@ -480,7 +488,7 @@ describe('backfillChargerHistory', () => {
     }
     _setForTests(chargerCfg())
     const ha = {
-      historyDuringPeriod: async ({ entityId }) => {
+      historyDuringPeriod: async ({ entityId }: { entityId: string }) => {
         expect(entityId).toBe('sensor.chg_total')
         return [
           { state: '10', last_changed: `${d2}T10:00:00` },
@@ -490,7 +498,7 @@ describe('backfillChargerHistory', () => {
         ]
       },
       statisticsDuringPeriod: async () => ({}),
-    }
+    } as unknown as HA
     const n = await backfillChargerHistory(ha, db)
     expect(n).toBe(3)
     const days = chargerHistory(db, d2, d0, 'main')
@@ -509,11 +517,11 @@ describe('backfillChargerHistory', () => {
         { state: '14', last_changed: `${today}T08:00:00` },
       ],
       statisticsDuringPeriod: async () => ({}),
-    }
+    } as unknown as HA
     const n = await backfillChargerHistory(ha, db)
     expect(n).toBe(0)
     expect(chargerHistory(db, today, today, 'main')).toHaveLength(0)
-    expect(JSON.parse(kvGet(db, 'charger_counter:main')).total).toBe(10)
+    expect(JSON.parse(kvGet(db, 'charger_counter:main')!).total).toBe(10)
   })
 
   it('backfill de dos cargadores: huecos independientes por key', async () => {
@@ -521,9 +529,9 @@ describe('backfillChargerHistory', () => {
     const d1 = dayOffset(-1)
     db.prepare('INSERT INTO daily (date) VALUES (?)').run(d1)
     _setForTests(twoChargersCfg())
-    const calls = []
+    const calls: string[] = []
     const ha = {
-      historyDuringPeriod: async ({ entityId }) => {
+      historyDuringPeriod: async ({ entityId }: { entityId: string }) => {
         calls.push(entityId)
         if (entityId === 'sensor.chg_total') {
           return [
@@ -534,7 +542,7 @@ describe('backfillChargerHistory', () => {
         return [{ state: '500', last_changed: `${d1}T09:00:00` }]
       },
       statisticsDuringPeriod: async () => ({}),
-    }
+    } as unknown as HA
     const n = await backfillChargerHistory(ha, db)
     expect(n).toBe(2)
     expect(chargerHistory(db, d1, d1, 'main')[0].kwh).toBe(3)
@@ -583,7 +591,7 @@ describe('atribución solar', () => {
   const TOPO = {
     inverters: [{ key: 'solis', powerId: 'sensor.pv', powerUnit: 'kW' }],
     consumption: { powerIds: ['sensor.house'], powerUnit: 'W' },
-  }
+  } as unknown as Topology
 
   afterEach(() => _setInstallForTests(LEGACY_TOPOLOGY))
 
@@ -656,7 +664,7 @@ describe('atribución solar', () => {
       historyDuringPeriod: async () => [
         { state: 'unavailable', last_changed: new Date().toISOString() },
       ],
-    }
+    } as unknown as HA
     const out = await chargerPvFromCurves(ha, new Date(Date.now() - 3600e3).toISOString(), new Date().toISOString(), ext.carCharger.chargers[0])
     expect(out.size).toBe(0)
   })
@@ -681,7 +689,7 @@ describe('atribución solar', () => {
         { state: '2', last_changed: new Date(base - BUCKET).toISOString() },
         { state: '4', last_changed: new Date(base).toISOString() },
       ],
-    }
+    } as unknown as HA
     const out = await chargerPvFromCurves(ha, new Date(base - BUCKET).toISOString(), new Date(base + 1).toISOString(), ext.carCharger.chargers[0])
     const total = [...out.values()].reduce((a, b) => a + b, 0)
     // bucket 1: carga 2 kW, resto de casa 1 kW, excedente 4 kW -> todo solar
@@ -708,8 +716,8 @@ describe('chargerDayCurve', () => {
   it('hoy: la curva termina en el minuto actual, no en medianoche', async () => {
     const nowMin = Math.floor((Date.now() - midnight.getTime()) / 60000)
     const res = await chargerDayCurve(
-      { historyDuringPeriod: async () => [{ state: '2', last_changed: new Date(midnight.getTime()).toISOString() }] },
-      undefined,
+      { historyDuringPeriod: async () => [{ state: '2', last_changed: new Date(midnight.getTime()).toISOString() }] } as unknown as HA,
+      undefined as unknown as string,
       chargerCfg(),
       chargerCfg().carCharger.chargers[0]
     )
@@ -719,7 +727,7 @@ describe('chargerDayCurve', () => {
 
   it('día pasado: curva completa de 24 h (288 buckets)', async () => {
     const res = await chargerDayCurve(
-      { historyDuringPeriod: async () => [{ state: '2', last_changed: '2026-08-01T00:00:00' }] },
+      { historyDuringPeriod: async () => [{ state: '2', last_changed: '2026-08-01T00:00:00' }] } as unknown as HA,
       '2026-08-01',
       chargerCfg(),
       chargerCfg().carCharger.chargers[0]
@@ -734,12 +742,12 @@ describe('chargerDayCurve', () => {
     const cMain = getChargerByKey(cfg, 'main')
     const c2 = getChargerByKey(cfg, 'c2')
     const ha = {
-      historyDuringPeriod: async ({ entityId }) => [
+      historyDuringPeriod: async ({ entityId }: { entityId: string }) => [
         { state: entityId === 'sensor.chg_power' ? '2' : '1380', last_changed: '2026-08-01T00:00:00' },
       ],
-    }
-    const r1 = await chargerDayCurve(ha, '2026-08-01', cfg, cMain)
-    const r2 = await chargerDayCurve(ha, '2026-08-01', cfg, c2)
+    } as unknown as HA
+    const r1 = await chargerDayCurve(ha, '2026-08-01', cfg, cMain!)
+    const r2 = await chargerDayCurve(ha, '2026-08-01', cfg, c2!)
     expect(r1.points[0].kw).toBe(2)
     expect(r2.points[0].kw).toBe(1.38) // W → kW
   })
@@ -754,7 +762,7 @@ describe('chargerDayCurve', () => {
 describe('getChargerByKey', () => {
   it('devuelve el cargador pedido y null si no existe', () => {
     const cfg = twoChargersCfg()
-    expect(getChargerByKey(cfg, 'c2').name).toBe('Portátil')
+    expect(getChargerByKey(cfg, 'c2')!.name).toBe('Portátil')
     expect(getChargerByKey(cfg, 'nope')).toBeNull()
   })
 })
