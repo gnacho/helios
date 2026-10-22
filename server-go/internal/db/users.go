@@ -83,6 +83,14 @@ func (d *DB) GetUserByUsernameByID(id string) (*UserRow, error) {
 	return &u, nil
 }
 
+func (d *DB) DailyEmpty() (bool, error) {
+	var n int
+	if err := d.db.QueryRow(`SELECT COUNT(*) FROM daily`).Scan(&n); err != nil {
+		return false, err
+	}
+	return n == 0, nil
+}
+
 func (d *DB) ListUsers() ([]UserView, error) {
 	rows, err := d.db.Query(
 		`SELECT id, username, display_name, email, phone, language, role, created_at FROM users ORDER BY created_at ASC`,
