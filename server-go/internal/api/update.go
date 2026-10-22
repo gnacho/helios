@@ -41,7 +41,7 @@ func (s *Server) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
 		// El frontend renderiza "Node <version>": mismo contrato que el server
 		// original (ahora reporta el runtime Go).
 		"node": map[string]any{
-			"version":  strings.TrimPrefix(runtime.Version(), "go"),
+			"version":  strings.Split(strings.TrimPrefix(runtime.Version(), "go"), "-")[0],
 			"platform": runtime.GOOS,
 			"arch":     runtime.GOARCH,
 		},
