@@ -156,11 +156,32 @@ func (c *Client) readLoop(ws *websocket.Conn) {
 		c.onClose()
 	}()
 
+	// Keep-alive: ping cada 30 s y deadline de lectura de 90 s. Sin esto HAOS
+	// cierra la conexión a los 60 s de inactividad (visto en producción
+	// 22-Oct-2026: desconexión exacta a los 60 s del arranque).
+	ws.SetReadDeadline(time.Now().Add(90 * time.Second))
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				_ = ws.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
+			}
+		}
+	}()
+
 	for {
 		_, raw, err := ws.ReadMessage()
 		if err != nil {
 			return
 		}
+		ws.SetReadDeadline(time.Now().Add(90 * time.Second))
 		var msg haMessage
 		if err := json.Unmarshal(raw, &msg); err != nil {
 			continue
@@ -335,7 +356,15 @@ func (c *Client) Call(message map[string]any) (json.RawMessage, error) {
 	}
 
 	res := <-p.ch
-	return res.result.(json.RawMessage), res.err
+	if res.err != nil {
+		// Timeout o ws cerrado: result es nil; nunca asertar sobre nil.
+		return nil, res.err
+	}
+	raw, ok := res.result.(json.RawMessage)
+	if !ok {
+		return nil, fmt.Errorf("respuesta inesperada del WS")
+	}
+	return raw, nil
 }
 
 func (c *Client) SubscribeEntities(ids []string) error {

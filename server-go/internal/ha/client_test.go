@@ -199,3 +199,49 @@ func TestEntityDiffApplication(t *testing.T) {
 }
 
 func strPtr(s string) *string { return &s }
+
+// TestCallReturnsErrorWhenWSCloses: una llamada pendiente cuando el WS muere
+// debe devolver error (NO paniquear). Regresión del panic de producción
+// (22-Oct-2026): res.result nil + type assertion sin comprobar err.
+func TestCallReturnsErrorWhenWSCloses(t *testing.T) {
+	// HA falso que cierra la conexión al recibir subscribe.
+	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		conn.WriteJSON(map[string]any{"type": "auth_required"})
+		var authMsg map[string]any
+		if err := conn.ReadJSON(&authMsg); err != nil {
+			return
+		}
+		conn.WriteJSON(map[string]any{"type": "auth_ok"})
+		// lee la suscripción y CIERRA sin responder.
+		var msg map[string]any
+		conn.ReadJSON(&msg)
+	}))
+
+	client := NewClient(srv.URL, "tok")
+	client.Start()
+	defer client.Stop()
+
+	if !waitFor(t, client.IsConnected, 3*time.Second) {
+		t.Fatal("no conectó")
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- client.SubscribeEntities([]string{"sensor.x"})
+	}()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("debería devolver error al cerrarse el WS")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Call colgado (no recibió el cierre)")
+	}
+}

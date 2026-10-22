@@ -38,6 +38,9 @@ func envFloat(key string, def float64) float64 {
 func Load() (*Config, error) {
 	dataDir := os.Getenv("HELIOS_DATA_DIR")
 	if dataDir == "" {
+		dataDir = os.Getenv("DATA_DIR") // compat con el .env del servidor Node
+	}
+	if dataDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return nil, err
