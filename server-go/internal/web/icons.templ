@@ -31,6 +31,123 @@ templ iconSun(class string) {
 	</svg>
 }
 
+templ iconSolarPanel(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M11 2h2"></path>
+		<path d="m14.28 14-4.56 8"></path>
+		<path d="m21 22-1.558-4H4.558"></path>
+		<path d="M3 10v2"></path>
+		<path d="M6.245 15.04A2 2 0 0 1 8 14h12a1 1 0 0 1 .864 1.505l-3.11 5.457A2 2 0 0 1 16 22H4a1 1 0 0 1-.863-1.506z"></path>
+		<path d="M7 2a4 4 0 0 1-4 4"></path>
+		<path d="m8.66 7.66 1.41 1.41"></path>
+	</svg>
+}
+
+templ iconHouse(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+		<path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+	</svg>
+}
+
+templ iconLeaf(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
+		<path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
+	</svg>
+}
+
+templ iconUtilityPole(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M12 2v20"></path>
+		<path d="M2 5h20"></path>
+		<path d="M3 3v2"></path>
+		<path d="M7 3v2"></path>
+		<path d="M17 3v2"></path>
+		<path d="M21 3v2"></path>
+		<path d="m19 5-7 7-7-7"></path>
+	</svg>
+}
+
+templ iconArrowUpFromLine(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="m18 9-6-6-6 6"></path>
+		<path d="M12 3v14"></path>
+		<path d="M5 21h14"></path>
+	</svg>
+}
+
+templ iconArrowDownToLine(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M12 17V3"></path>
+		<path d="m6 11 6 6 6-6"></path>
+		<path d="M19 21H5"></path>
+	</svg>
+}
+
+// batteryIcon mirrors batteryIcon() from app/src/lib/battery.ts: the charge
+// flow wins, then SOC thresholds (80/30/20). Static per render: the icon
+// refreshes on page navigation, texts update live via signals.
+templ iconBattery(class string, soc float64, charging bool) {
+	if charging {
+		@iconBatteryCharging(class)
+	} else if soc >= 80 {
+		@iconBatteryFull(class)
+	} else if soc > 30 {
+		@iconBatteryMedium(class)
+	} else if soc > 20 {
+		@iconBatteryLow(class)
+	} else {
+		@iconBatteryWarning(class)
+	}
+}
+
+templ iconBatteryCharging(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="m11 7-3 5h4l-3 5"></path>
+		<path d="M14.856 6H16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.935"></path>
+		<path d="M22 14v-4"></path>
+		<path d="M5.14 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.936"></path>
+	</svg>
+}
+
+templ iconBatteryFull(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M10 10v4"></path>
+		<path d="M14 10v4"></path>
+		<path d="M22 14v-4"></path>
+		<path d="M6 10v4"></path>
+		<rect x="2" y="6" width="16" height="12" rx="2"></rect>
+	</svg>
+}
+
+templ iconBatteryMedium(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M10 14v-4"></path>
+		<path d="M22 14v-4"></path>
+		<path d="M6 14v-4"></path>
+		<rect x="2" y="6" width="16" height="12" rx="2"></rect>
+	</svg>
+}
+
+templ iconBatteryLow(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M22 14v-4"></path>
+		<path d="M6 14v-4"></path>
+		<rect x="2" y="6" width="16" height="12" rx="2"></rect>
+	</svg>
+}
+
+templ iconBatteryWarning(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M10 17h.01"></path>
+		<path d="M10 7v6"></path>
+		<path d="M14 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"></path>
+		<path d="M22 14v-4"></path>
+		<path d="M6 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"></path>
+	</svg>
+}
+
 templ iconMoon(class string) {
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
 		<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path>

@@ -2,6 +2,7 @@ package web
 
 import (
 	"embed"
+	"encoding/json"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -11,6 +12,9 @@ import (
 
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
+	"helios-server/internal/install"
+	"helios-server/internal/solar"
+	"helios-server/internal/sse"
 	"helios-server/internal/version"
 )
 
@@ -50,19 +54,27 @@ type pageProps struct {
 type UI struct {
 	Auth      *auth.Auth
 	DB        *db.DB
+	Solar     *solar.Solar
+	HA        solar.HAReader
+	Install   *install.Store
+	Hub       *sse.Hub
 	RootFiles func(w http.ResponseWriter, r *http.Request) bool
 	assets    http.Handler
 }
 
-func New(a *auth.Auth, database *db.DB) *UI {
+func New(a *auth.Auth, database *db.DB, sol *solar.Solar, ha solar.HAReader, installStore *install.Store, hub *sse.Hub) *UI {
 	sub, err := fs.Sub(assetsEmbed, "assets")
 	if err != nil {
 		panic("web: assets subtree: " + err.Error())
 	}
 	return &UI{
-		Auth:   a,
-		DB:     database,
-		assets: http.StripPrefix("/assets/", http.FileServer(http.FS(sub))),
+		Auth:    a,
+		DB:      database,
+		Solar:   sol,
+		HA:      ha,
+		Install: installStore,
+		Hub:     hub,
+		assets:  http.StripPrefix("/assets/", http.FileServer(http.FS(sub))),
 	}
 }
 
@@ -78,10 +90,103 @@ func (u *UI) Mount(r chi.Router) {
 
 	r.Group(func(r chi.Router) {
 		r.Use(u.Auth.RequireAuthRedirect)
-		for _, item := range navItems {
+		r.Get("/", u.handleDashboard)
+		r.Get("/ui/stream", u.handleStream)
+		for _, item := range navItems[1:] {
 			r.Get(item.Path, u.stubHandler(item))
 		}
 	})
+}
+
+// handleDashboard renders the dashboard (chunk 1: live strip + KPI row).
+func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	userID, _ := auth.UserIDFrom(r.Context())
+	lang := u.userLang(userID)
+	p := u.baseProps(r, userID, "/", "")
+	p.Title = T(lang, "nav.dashboard")
+
+	pal := newPalette(p.Theme == "dark")
+	m := u.buildDashboard(pal)
+
+	signals, err := json.Marshal(dashboardSignals(lang, m))
+	if err != nil {
+		signals = []byte("{}")
+	}
+
+	d := dashboardView{
+		pageProps:      p,
+		Signals:        string(signals),
+		Palette:        pal,
+		AtText:         "--:--",
+		GridKwText:     "—",
+		GridStatus:     "—",
+		GridColor:      pal.RedCompra,
+		KProduction:    fmtEnergy(lang, m.Kpis.ProductionKwh),
+		KConsumption:   fmtEnergy(lang, m.Kpis.ConsumptionKwh),
+		KBatteryKwh:    fmtEnergy(lang, m.Kpis.Soc/100*5),
+		KSocSub:        socSub(lang, m),
+		KAutoconsumo:   fmtInt(lang, m.Kpis.AutoconsumoPct),
+		KGridBalance:   fmtEnergy(lang, m.Kpis.GridExportKwh),
+		KGridExport:    fmtEnergy(lang, m.Kpis.GridExportKwh),
+		KGridImport:    fmtEnergy(lang, m.Kpis.GridImportKwh),
+		AutoconsumoPct: m.Kpis.AutoconsumoPct,
+	}
+	if m.Live != nil {
+		exporting := m.Live.Grid != nil && *m.Live.Grid < -0.05
+		gridStatus := T(lang, "live.balanced")
+		if m.Live.Grid == nil {
+			gridStatus = "—"
+		} else if *m.Live.Grid > 0.05 {
+			gridStatus = T(lang, "live.buying")
+		} else if *m.Live.Grid < -0.05 {
+			gridStatus = T(lang, "live.exporting")
+		}
+		gridColor := pal.RedCompra
+		if exporting {
+			gridColor = pal.RedVertido
+		}
+		prodIconColor := pal.Solar
+		if m.Live.Production <= 0.1 {
+			prodIconColor = ""
+		}
+		d.AtText = fmtTime(m.Live.At)
+		d.Soc = m.Live.Soc
+		d.Charging = m.Live.BatteryPower > 0.05
+		d.ProdIconColor = prodIconColor
+		d.GridKwText = fmtKw(lang, absPtr(m.Live.Grid))
+		d.GridStatus = gridStatus
+		d.GridColor = gridColor
+		d.GridExporting = exporting
+		d.ProductionText = fmtKwVal(lang, m.Live.Production)
+		d.ConsumptionText = fmtKw(lang, m.Live.Consumption)
+		d.BatteryKwText = fmtKwVal(lang, abs(m.Live.BatteryPower))
+		d.BatteryStatus = T(lang, "common."+batteryState(m.Live.BatteryPower))
+	}
+
+	_ = DashboardPage(d).Render(r.Context(), w)
+}
+
+func socSub(lang string, m dashboardModel) string {
+	if m.Live == nil {
+		return ""
+	}
+	return fmtInt(lang, m.Live.Soc) + "% · " + T(lang, "common."+batteryState(m.Live.BatteryPower))
+}
+
+// userLang resolves the page language from the user profile.
+func (u *UI) userLang(userID string) string {
+	if userID != "" {
+		if usr, _ := u.DB.GetUserByID(userID); usr != nil && usr.Language != "" {
+			return usr.Language
+		}
+	}
+	return "es"
+}
+
+// signalLang is userLang for the stream handler (auth guaranteed).
+func (u *UI) signalLang(r *http.Request) string {
+	id, _ := auth.UserIDFrom(r.Context())
+	return u.userLang(id)
 }
 
 // NotFound is the router fallback in templ UI mode: root static files

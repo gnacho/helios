@@ -122,7 +122,7 @@ func main() {
 
 	// UI templ (HELIOS_UI=templ). Por defecto sigue la SPA React.
 	if getenv("HELIOS_UI", "react") == "templ" {
-		ui := web.New(a, database)
+		ui := web.New(a, database, sol, haReader, store, hub)
 		ui.RootFiles = srv.Static.ServeFileNoSPA
 		srv.UI = ui
 		log.Printf("[helios] UI templ activada (HELIOS_UI=templ)")
