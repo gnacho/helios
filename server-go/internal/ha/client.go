@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -77,6 +78,8 @@ type haMessage struct {
 }
 
 // Client is a Home Assistant websocket client with auto-reconnect.
+var debugHA = os.Getenv("HELIOS_HA_DEBUG") == "1"
+
 type Client struct {
 	httpURL string
 	wsURL   string
@@ -236,10 +239,13 @@ func (c *Client) handle(msg haMessage, ws *websocket.Conn) {
 		c.mu.Unlock()
 
 		if c.OnConnected != nil {
-			c.OnConnected()
+			// OnConnected corre en el readLoop: el callback no debe bloquear
+			// (un Call aquí produciría deadlock: el resultado lo procesa el
+			// propio readLoop). Se lanza en goroutine.
+			go c.OnConnected()
 		}
 		if len(ids) > 0 {
-			c.SubscribeEntities(ids)
+			go c.SubscribeEntities(ids)
 		}
 	case "auth_invalid":
 		msgText := "token rechazado"
@@ -251,6 +257,9 @@ func (c *Client) handle(msg haMessage, ws *websocket.Conn) {
 		}
 		c.Stop()
 	case "result":
+		if debugHA {
+			log.Printf("[ha:debug] <- result id=%d success=%v", msg.ID, msg.Success)
+		}
 		c.mu.Lock()
 		p, ok := c.pending[msg.ID]
 		if ok {
@@ -346,6 +355,9 @@ func (c *Client) Call(message map[string]any) (json.RawMessage, error) {
 	payload := map[string]any{"id": id}
 	for k, v := range message {
 		payload[k] = v
+	}
+	if debugHA {
+		log.Printf("[ha:debug] -> call id=%d type=%v", id, message["type"])
 	}
 	if err := ws.WriteJSON(payload); err != nil {
 		c.mu.Lock()

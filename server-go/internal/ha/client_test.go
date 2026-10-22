@@ -200,6 +200,38 @@ func TestEntityDiffApplication(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 
+// TestSubscribeFromOnConnectedNoDeadlock: suscribir dentro de OnConnected
+// (patrón de producción) no debe bloquear el readLoop. Regresión del deadlock
+// de producción (22-Oct-2026): Call desde el readLoop esperaba un resultado
+// que solo el readLoop procesa.
+func TestSubscribeFromOnConnectedNoDeadlock(t *testing.T) {
+	srv := fakeHA(t)
+	defer srv.Close()
+
+	client := NewClient(srv.URL, "good-token")
+	subscribed := make(chan struct{}, 1)
+	client.OnConnected = func() {
+		_ = client.SubscribeEntities([]string{"sensor.solis_power"})
+		subscribed <- struct{}{}
+	}
+	client.Start()
+	defer client.Stop()
+
+	select {
+	case <-subscribed:
+		// bien: el callback completó (recibió el result)
+	case <-time.After(5 * time.Second):
+		t.Fatal("deadlock: OnConnected nunca completó el subscribe")
+	}
+
+	if !waitFor(t, func() bool {
+		_, ok := client.GetState("sensor.solis_power")
+		return ok
+	}, 3*time.Second) {
+		t.Fatal("las entidades no llegaron tras el subscribe")
+	}
+}
+
 // TestCallReturnsErrorWhenWSCloses: una llamada pendiente cuando el WS muere
 // debe devolver error (NO paniquear). Regresión del panic de producción
 // (22-Oct-2026): res.result nil + type assertion sin comprobar err.
