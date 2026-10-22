@@ -1,0 +1,74 @@
+package web
+
+// head shared by every page. Fonts and tokens mirror app/index.html so the
+// templ UI renders with the same type and theme system as the React SPA.
+templ head(p pageProps) {
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<title>{ p.Title }</title>
+	<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+	<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+	<meta name="theme-color" content="#F4F6FA"/>
+	<link rel="preconnect" href="https://fonts.googleapis.com"/>
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"/>
+	<link rel="stylesheet" href="/assets/css/app.build.css"/>
+	<script type="module" src="/assets/js/datastar.js"></script>
+}
+
+// Layout is the page shell: html/head/body with the theme class applied
+// server-side from the helios_theme cookie (no flash of wrong theme).
+templ Layout(p pageProps) {
+	<!DOCTYPE html>
+	<html lang={ p.Lang } class={ templ.KV("dark", p.Theme == "dark") }>
+		@head(p)
+		<body class="flex min-h-dvh flex-col bg-app font-sans text-app antialiased">
+			{ children... }
+		</body>
+	</html>
+}
+
+// navBar is the phase 1 shell: brand, page links and the theme toggle
+// (form POST, no JS). The mobile bottom nav arrives with the real pages.
+templ navBar(p pageProps) {
+	<header class="border-b border-app bg-surface">
+		<div class="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-4">
+			<a href="/" class="flex shrink-0 items-center gap-2">
+				@brandLogo("helios-logo-nav", "h-7 w-7")
+				<span class="font-display text-sm font-semibold tracking-[-0.01em] text-app">Helios</span>
+			</a>
+			<nav class="flex min-w-0 items-center gap-1 overflow-x-auto text-sm no-scrollbar" aria-label={ T(p.Lang, "nav.main") }>
+				for _, item := range navItems {
+					@navLink(p, item)
+				}
+			</nav>
+			@themeToggle(p)
+		</div>
+	</header>
+}
+
+templ navLink(p pageProps, item navItem) {
+	if p.Path == item.Path {
+		<a href={ templ.URL(item.Path) } aria-current="page" class="rounded-full bg-brand-soft px-3 py-1.5 font-medium text-brand">{ T(p.Lang, item.Key) }</a>
+	} else {
+		<a href={ templ.URL(item.Path) } class="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-hover hover:text-app">{ T(p.Lang, item.Key) }</a>
+	}
+}
+
+templ themeToggle(p pageProps) {
+	<form method="post" action="/theme" class="shrink-0">
+		<input type="hidden" name="next" value={ p.Path }/>
+		<input type="hidden" name="theme" value={ themeOther(p.Theme) }/>
+		<button type="submit" aria-label={ themeToggleLabel(p.Lang, p.Theme) } class="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-app">
+			if p.Theme == "dark" {
+				@iconSun("h-4 w-4")
+			} else {
+				@iconMoon("h-4 w-4")
+			}
+		</button>
+	</form>
+}
+
+templ footerLine(p pageProps) {
+	<p class="mt-8 pb-6 text-center text-xs text-faint">{ T(p.Lang, "footer.line1", map[string]string{"version": p.Version}) }</p>
+}

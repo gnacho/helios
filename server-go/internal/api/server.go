@@ -15,6 +15,7 @@ import (
 	"helios-server/internal/install"
 	"helios-server/internal/push"
 	"helios-server/internal/solar"
+	"helios-server/internal/web"
 )
 
 type Server struct {
@@ -30,6 +31,7 @@ type Server struct {
 	Prices   solar.PriceConfig
 	Install  *install.Store
 	Static   *StaticFiles
+	UI       *web.UI
 	dataDir  string
 }
 
@@ -119,16 +121,28 @@ func (s *Server) Routes() chi.Router {
 		r.Put("/api/push/preferences", s.handlePutPushPreferences)
 	})
 
-	// Fallback SPA: rutas no-API sirven el frontend estático.
-	if s.Static != nil {
-		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" {
-				writeJSON(w, 404, map[string]any{"error": "ruta no encontrada"})
-				return
-			}
-			s.Static.ServeHTTP(w, r)
-		})
+	// UI templ (HELIOS_UI=templ): páginas HTML, assets propios y auth de página.
+	if s.UI != nil {
+		s.UI.Mount(r)
 	}
+
+	// Fallback: API 404 en JSON. Con UI templ, ficheros raíz + 404 HTML;
+	// sin ella, fallback SPA clásico sobre el directorio estático.
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" {
+			writeJSON(w, 404, map[string]any{"error": "ruta no encontrada"})
+			return
+		}
+		if s.UI != nil {
+			s.UI.NotFound(w, r)
+			return
+		}
+		if s.Static != nil {
+			s.Static.ServeHTTP(w, r)
+			return
+		}
+		http.NotFound(w, r)
+	})
 
 	return r
 }

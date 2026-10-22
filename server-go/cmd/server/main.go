@@ -19,6 +19,7 @@ import (
 	"helios-server/internal/push"
 	"helios-server/internal/solar"
 	"helios-server/internal/sse"
+	"helios-server/internal/web"
 )
 
 type livePayload struct {
@@ -118,6 +119,14 @@ func main() {
 	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices, store, staticDir)
 	srv.Push = pushSvc
 	srv.SSE = hub
+
+	// UI templ (HELIOS_UI=templ). Por defecto sigue la SPA React.
+	if getenv("HELIOS_UI", "react") == "templ" {
+		ui := web.New(a, database)
+		ui.RootFiles = srv.Static.ServeFileNoSPA
+		srv.UI = ui
+		log.Printf("[helios] UI templ activada (HELIOS_UI=templ)")
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	log.Printf("helios-server go listening on %s (db=%s)", addr, cfg.DBPath)
