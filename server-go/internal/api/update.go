@@ -6,14 +6,17 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"helios-server/internal/update"
 )
 
 var (
-	appVersion = "0.8.28"
-	appName    = "Helios"
+	appVersion   = "0.8.28"
+	appName      = "Helios"
+	reactVersion = "19.2.0"
+	processStart = time.Now()
 )
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
@@ -35,12 +38,15 @@ func (s *Server) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
 			"version": appVersion,
 			"name":    appName,
 		},
-		"go": map[string]any{
-			"version":  runtime.Version(),
+		// El frontend renderiza "Node <version>": mismo contrato que el server
+		// original (ahora reporta el runtime Go).
+		"node": map[string]any{
+			"version":  strings.TrimPrefix(runtime.Version(), "go"),
 			"platform": runtime.GOOS,
 			"arch":     runtime.GOARCH,
 		},
-		"uptime": 0,
+		"react":  reactVersion,
+		"uptime": int(time.Since(processStart).Seconds()),
 		"memory": map[string]any{
 			"rss":      mem.Sys / 1024 / 1024,
 			"heapUsed": mem.HeapAlloc / 1024 / 1024,

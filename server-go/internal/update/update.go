@@ -203,7 +203,7 @@ func GetStatus(database *db.DB, dataDir string) (*StatusResult, error) {
 
 	available := latest != "" && current != "" && compareSemver(latest, current) > 0
 
-	var updating any
+	var updating any = false
 	if p := ReadProgress(dataDir); p != nil {
 		updating = map[string]any{"step": p.Step, "progress": p.Pct}
 	}
