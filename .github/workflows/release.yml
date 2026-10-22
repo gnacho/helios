@@ -106,12 +106,14 @@ jobs:
         working-directory: dist
         run: |
           chmod +x helios_*_linux_* 2>/dev/null || true
-          sha256sum helios_* > checksums.txt
+          # "helios_*" no matchea los tarballs "helios-web_*": hay que listar ambos.
+          sha256sum helios_* helios-web_* > checksums.txt
           cat checksums.txt
 
       - name: Publica en la release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/helios_*
+            dist/helios_*_linux_*
+            dist/helios-web_*_linux_*
             dist/checksums.txt
