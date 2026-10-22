@@ -2,7 +2,9 @@ package solar
 
 import (
 	"encoding/json"
+	"log"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -76,6 +78,8 @@ type ConsumptionBaseline struct {
 	Date   string              `json:"date"`
 	Values map[string]*float64 `json:"values"`
 }
+
+var debugLive = os.Getenv("HELIOS_HA_DEBUG") == "1"
 
 // Solar agrupa la lógica de cálculo con su topología y BD.
 type Solar struct {
@@ -348,6 +352,13 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 	if t.StatusAttrsID != nil && *t.StatusAttrsID != "" {
 		if st, ok := haReader.GetState(*t.StatusAttrsID); ok {
 			statusAttrs = st.Attributes
+		}
+	}
+	if debugLive {
+		log.Printf("[live:debug] statusAttrsId=%v ok=%v attrs=%v", t.StatusAttrsID, statusAttrs != nil, statusAttrs)
+		if t.Grid.AttrsID != nil {
+			st, ok := haReader.GetState(*t.Grid.AttrsID)
+			log.Printf("[live:debug] gridAttrs=%v ok=%v state=%q attrs=%v", *t.Grid.AttrsID, ok, st.State, st.Attributes)
 		}
 	}
 	if t.StatusAttrsID != nil && statusAttrs != nil {

@@ -200,6 +200,55 @@ func TestEntityDiffApplication(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 
+// TestDiffAttributesMerge: un diff "c" con atributos PARCIALES no debe perder
+// el resto del mapa. Regresión del bug de producción 22-Oct-2026: el scraper
+// perdía gridDirection/stationName/inverterOnline y el grid caía al fallback.
+func TestDiffAttributesMerge(t *testing.T) {
+	c := NewClient("http://x", "t")
+	c.entities["sensor.solis_scraper"] = EntityState{
+		State: "Mandor 40",
+		Attributes: map[string]any{
+			"currentGridPower": float64(1.1),
+			"gridDirection":    "import",
+			"inverterOnline":   float64(1),
+			"stationName":      "Mandor 40",
+		},
+	}
+
+	// Diff parcial: solo cambia currentGridPower.
+	s := "Mandor 40"
+	lu := []byte("1792692300.5")
+	c.applyEntityEvent(entityEvent{
+		C: map[string]struct {
+			Plus  *entityChange `json:"+"`
+			Minus any           `json:"-"`
+		}{
+			"sensor.solis_scraper": {Plus: &entityChange{
+				S:  &s,
+				A:  map[string]any{"currentGridPower": float64(0.55)},
+				LU: lu,
+			}},
+		},
+	})
+
+	st, ok := c.GetState("sensor.solis_scraper")
+	if !ok {
+		t.Fatal("entidad perdida")
+	}
+	if got, _ := st.Attributes["currentGridPower"].(float64); got != 0.55 {
+		t.Fatalf("currentGridPower no actualizado: %v", st.Attributes["currentGridPower"])
+	}
+	if st.Attributes["gridDirection"] != "import" {
+		t.Fatalf("gridDirection perdido: %v", st.Attributes)
+	}
+	if st.Attributes["inverterOnline"] != float64(1) {
+		t.Fatalf("inverterOnline perdido: %v", st.Attributes)
+	}
+	if st.Attributes["stationName"] != "Mandor 40" {
+		t.Fatalf("stationName perdido: %v", st.Attributes)
+	}
+}
+
 // TestUnmarshalSnapshotWithNumericLU: HAOS envía lu como epoch numérico en el
 // snapshot y en los diffs "+". Regresión del bug de producción 22-Oct-2026:
 // el unmarshal fallaba (lu *string) y TODO el snapshot se descartaba → todos

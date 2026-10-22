@@ -352,6 +352,9 @@ func (c *Client) applyEntityEvent(ev entityEvent) {
 		log.Printf("[ha:debug] applyEntityEvent a=%d c=%d", len(ev.A), len(ev.C))
 	}
 	for id, v := range ev.A {
+		if debugHA && (strings.Contains(id, "scraper") || strings.Contains(id, "grid")) {
+			log.Printf("[ha:debug] snapshot entidad %s state=%v attrs=%v", id, *v.S, v.A)
+		}
 		st := EntityState{Attributes: v.A}
 		if v.S != nil {
 			st.State = *v.S
@@ -372,8 +375,19 @@ func (c *Client) applyEntityEvent(ev entityEvent) {
 			if diff.Plus.S != nil {
 				cur.State = *diff.Plus.S
 			}
+			// HAOS envía los atributos de un diff de forma PARCIAL (solo los que
+			// cambiaron). Reemplazar el mapa completo perdería el resto
+			// (gridDirection/stationName/inverterOnline del scraper, visto en
+			// producción 22-Oct-2026) → merge.
 			if diff.Plus.A != nil {
-				cur.Attributes = diff.Plus.A
+				merged := make(map[string]any, len(cur.Attributes)+len(diff.Plus.A))
+				for k, v := range cur.Attributes {
+					merged[k] = v
+				}
+				for k, v := range diff.Plus.A {
+					merged[k] = v
+				}
+				cur.Attributes = merged
 			}
 			cur.LastUpdated = luToString(diff.Plus.LU)
 			c.entities[id] = cur
