@@ -18,18 +18,18 @@ import (
 const CookieName = "helios_session"
 
 type Auth struct {
-	DB        *db.DB
-	SessionTTL time.Duration
+	DB            *db.DB
+	SessionTTL    time.Duration
 	SessionSecret string // if empty, read from kv
 }
 
 type PublicUser struct {
-	ID          string  `json:"id"`
-	Username    string  `json:"username"`
-	Email       *string `json:"email"`
-	Phone       *string `json:"phone"`
-	Language    string  `json:"language"`
-	Role        string  `json:"role"`
+	ID       string  `json:"id"`
+	Username string  `json:"username"`
+	Email    *string `json:"email"`
+	Phone    *string `json:"phone"`
+	Language string  `json:"language"`
+	Role     string  `json:"role"`
 }
 
 func (a *Auth) secret() (string, error) {

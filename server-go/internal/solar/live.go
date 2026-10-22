@@ -32,10 +32,10 @@ type LiveInverter struct {
 }
 
 type SunData struct {
-	State       string `json:"state"`
+	State       string  `json:"state"`
 	Elevation   float64 `json:"elevation"`
-	NextRising  any    `json:"nextRising"`
-	NextSetting any    `json:"nextSetting"`
+	NextRising  any     `json:"nextRising"`
+	NextSetting any     `json:"nextSetting"`
 }
 
 type LiveData struct {

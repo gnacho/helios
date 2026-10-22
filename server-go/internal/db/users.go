@@ -47,11 +47,11 @@ type SessionRow struct {
 }
 
 type AuditRow struct {
-	ID     int64  `json:"id"`
-	Ts     int64  `json:"ts"`
-	Actor  string `json:"actor"`
-	UserID string `json:"user_id"`
-	Action string `json:"action"`
+	ID     int64   `json:"id"`
+	Ts     int64   `json:"ts"`
+	Actor  string  `json:"actor"`
+	UserID string  `json:"user_id"`
+	Action string  `json:"action"`
 	Detail *string `json:"detail"`
 }
 

@@ -9,16 +9,23 @@ import (
 
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
+	"helios-server/internal/solar"
 )
 
 type Server struct {
 	Auth    *auth.Auth
 	DB      *db.DB
+	Solar   *solar.Solar
+	HA      solar.HAReader
+	Prices  solar.PriceConfig
 	dataDir string
 }
 
-func NewServer(a *auth.Auth, database *db.DB, dataDir string) *Server {
-	return &Server{Auth: a, DB: database, dataDir: dataDir}
+func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, prices solar.PriceConfig) *Server {
+	return &Server{
+		Auth: a, DB: database, dataDir: dataDir,
+		Solar: sol, HA: haReader, Prices: prices,
+	}
 }
 
 func (s *Server) Routes() chi.Router {
@@ -49,6 +56,15 @@ func (s *Server) Routes() chi.Router {
 	})
 
 	r.Get("/health", s.handleHealth)
+
+	r.Group(func(r chi.Router) {
+		r.Use(s.Auth.RequireAuth)
+		r.Get("/api/solar/live", s.handleSolarLive)
+		r.Get("/api/solar/day", s.handleSolarDay)
+		r.Get("/api/solar/kpis", s.handleSolarKpis)
+		r.Get("/api/solar/history", s.handleSolarHistory)
+	})
+
 	return r
 }
 
@@ -197,16 +213,24 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fields := []string{}
-	if body.DisplayName != nil { fields = append(fields, "display_name") }
-	if body.Email != nil { fields = append(fields, "email") }
-	if body.Phone != nil { fields = append(fields, "phone") }
-	if body.Language != nil { fields = append(fields, "language") }
+	if body.DisplayName != nil {
+		fields = append(fields, "display_name")
+	}
+	if body.Email != nil {
+		fields = append(fields, "email")
+	}
+	if body.Phone != nil {
+		fields = append(fields, "phone")
+	}
+	if body.Language != nil {
+		fields = append(fields, "language")
+	}
 	s.DB.Audit(updated.Username, updated.ID, "user.profile", map[string]any{"fields": fields})
 	writeJSON(w, 200, map[string]any{"ok": true, "user": updated})
 }
 
 type passwordRequest struct {
-	Current string `json:"current"`
+	Current  string `json:"current"`
 	Password string `json:"password"`
 }
 
@@ -219,17 +243,23 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	session := s.Auth.SessionIDFromCookie(r)
 	keepID := ""
-	if session != nil { keepID = session.ID }
+	if session != nil {
+		keepID = session.ID
+	}
 	ok, reason, err := s.Auth.ChangeOwnPassword(userID, body.Current, body.Password, keepID)
 	if err != nil || !ok {
 		msg := "no se pudo cambiar"
-		if reason == "wrong_current" { msg = "la contraseña actual no es correcta" }
+		if reason == "wrong_current" {
+			msg = "la contraseña actual no es correcta"
+		}
 		writeJSON(w, 400, map[string]any{"error": msg})
 		return
 	}
 	me, _ := s.DB.GetUserByID(userID)
 	actor := userID
-	if me != nil { actor = me.Username }
+	if me != nil {
+		actor = me.Username
+	}
 	s.DB.Audit(actor, userID, "user.password", nil)
 	writeJSON(w, 200, map[string]any{"ok": true})
 }

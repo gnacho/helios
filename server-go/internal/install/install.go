@@ -22,22 +22,22 @@ const (
 )
 
 type Inverter struct {
-	Key             string         `json:"key"`
-	Name            string         `json:"name"`
-	Model           string         `json:"model"`
-	Kwp             float64        `json:"kwp"`
-	Panels          string         `json:"panels"`
-	TempC           float64        `json:"tempC"`
-	HasBattery      bool           `json:"hasBattery"`
-	BatteryKwh      float64        `json:"batteryKwh,omitempty"`
-	PowerID         string         `json:"powerId"`
-	PowerUnit       PowerUnit      `json:"powerUnit"`
-	BackupPowerID   string         `json:"backupPowerId,omitempty"`
-	BackupPowerUnit PowerUnit      `json:"backupPowerUnit,omitempty"`
-	EnergyID        string         `json:"energyId"`
-	EnergyAcc       EnergyAcc      `json:"energyAcc"`
-	EnergyCap       float64        `json:"energyCap"`
-	DeepIDs         []string       `json:"deepIds"`
+	Key             string             `json:"key"`
+	Name            string             `json:"name"`
+	Model           string             `json:"model"`
+	Kwp             float64            `json:"kwp"`
+	Panels          string             `json:"panels"`
+	TempC           float64            `json:"tempC"`
+	HasBattery      bool               `json:"hasBattery"`
+	BatteryKwh      float64            `json:"batteryKwh,omitempty"`
+	PowerID         string             `json:"powerId"`
+	PowerUnit       PowerUnit          `json:"powerUnit"`
+	BackupPowerID   string             `json:"backupPowerId,omitempty"`
+	BackupPowerUnit PowerUnit          `json:"backupPowerUnit,omitempty"`
+	EnergyID        string             `json:"energyId"`
+	EnergyAcc       EnergyAcc          `json:"energyAcc"`
+	EnergyCap       float64            `json:"energyCap"`
+	DeepIDs         []string           `json:"deepIds"`
 	GlitchOffsets   map[string]float64 `json:"glitchOffsets"`
 }
 
@@ -52,27 +52,27 @@ type BatteryConfig struct {
 }
 
 type GridConfig struct {
-	Mode      string  `json:"mode"` // "attrs" | "sensor"
-	AttrsID   *string `json:"attrsId"`
-	SensorID  *string `json:"sensorId"`
-	ImportID  *string `json:"importId"`
-	ExportID  *string `json:"exportId"`
+	Mode     string  `json:"mode"` // "attrs" | "sensor"
+	AttrsID  *string `json:"attrsId"`
+	SensorID *string `json:"sensorId"`
+	ImportID *string `json:"importId"`
+	ExportID *string `json:"exportId"`
 }
 
 type ConsumptionConfig struct {
-	PowerIDs      []string  `json:"powerIds"`
-	PowerUnit     PowerUnit `json:"powerUnit"`
-	EnergyIDs     []string  `json:"energyIds"`
-	RespaldoID    *string   `json:"respaldoId"`
-	NoRespaldadaID *string  `json:"noRespaldadaId"`
+	PowerIDs       []string  `json:"powerIds"`
+	PowerUnit      PowerUnit `json:"powerUnit"`
+	EnergyIDs      []string  `json:"energyIds"`
+	RespaldoID     *string   `json:"respaldoId"`
+	NoRespaldadaID *string   `json:"noRespaldadaId"`
 }
 
 type EnergyConfig struct {
-	GridImportID  string `json:"gridImportId"`
-	GridExportID  string `json:"gridExportId"`
-	BatChargeID   string `json:"batChargeId"`
+	GridImportID   string `json:"gridImportId"`
+	GridExportID   string `json:"gridExportId"`
+	BatChargeID    string `json:"batChargeId"`
 	BatDischargeID string `json:"batDischargeId"`
-	ConsumptionID string `json:"consumptionId"`
+	ConsumptionID  string `json:"consumptionId"`
 }
 
 type Topology struct {
@@ -88,39 +88,39 @@ type Topology struct {
 }
 
 type EntitiesView struct {
-	PvSolis            string  `json:"pvSolis"`
-	PvFox              string  `json:"pvFox"`
-	ConsRespaldo       string  `json:"consRespaldo"`
-	ConsNoRespaldada   string  `json:"consNoRespaldada"`
-	ConsAlmacen        string  `json:"consAlmacen"`
-	ConsRespaldoEnergy string  `json:"consRespaldoEnergy"`
-	ConsNoRespaldadaEnergy string `json:"consNoRespaldadaEnergy"`
-	ConsAlmacenEnergy  string  `json:"consAlmacenEnergy"`
-	BatteryPower       string  `json:"batteryPower"`
-	BatteryState       string  `json:"batteryState"`
-	BatterySoc         string  `json:"batterySoc"`
-	Scraper            *string `json:"scraper"`
-	StatusAttrsID      *string `json:"statusAttrsId"`
-	Sun                string  `json:"sun"`
-	Weather            string  `json:"weather"`
-	WeatherTemp        string  `json:"weatherTemp"`
-	ESolis             string  `json:"eSolis"`
-	EFox               string  `json:"eFox"`
-	EConsumption       string  `json:"eConsumption"`
-	EGridImport        string  `json:"eGridImport"`
-	EGridExport        string  `json:"eGridExport"`
-	EBatCharge         string  `json:"eBatCharge"`
-	EBatDischarge      string  `json:"eBatDischarge"`
+	PvSolis                string  `json:"pvSolis"`
+	PvFox                  string  `json:"pvFox"`
+	ConsRespaldo           string  `json:"consRespaldo"`
+	ConsNoRespaldada       string  `json:"consNoRespaldada"`
+	ConsAlmacen            string  `json:"consAlmacen"`
+	ConsRespaldoEnergy     string  `json:"consRespaldoEnergy"`
+	ConsNoRespaldadaEnergy string  `json:"consNoRespaldadaEnergy"`
+	ConsAlmacenEnergy      string  `json:"consAlmacenEnergy"`
+	BatteryPower           string  `json:"batteryPower"`
+	BatteryState           string  `json:"batteryState"`
+	BatterySoc             string  `json:"batterySoc"`
+	Scraper                *string `json:"scraper"`
+	StatusAttrsID          *string `json:"statusAttrsId"`
+	Sun                    string  `json:"sun"`
+	Weather                string  `json:"weather"`
+	WeatherTemp            string  `json:"weatherTemp"`
+	ESolis                 string  `json:"eSolis"`
+	EFox                   string  `json:"eFox"`
+	EConsumption           string  `json:"eConsumption"`
+	EGridImport            string  `json:"eGridImport"`
+	EGridExport            string  `json:"eGridExport"`
+	EBatCharge             string  `json:"eBatCharge"`
+	EBatDischarge          string  `json:"eBatDischarge"`
 }
 
 type EnergyEntities struct {
-	Solis         string `json:"solis"`
-	Fox           string `json:"fox"`
-	Consumption   string `json:"consumption"`
-	GridImport    string `json:"gridImport"`
-	GridExport    string `json:"gridExport"`
-	BatCharge     string `json:"batCharge"`
-	BatDischarge  string `json:"batDischarge"`
+	Solis        string `json:"solis"`
+	Fox          string `json:"fox"`
+	Consumption  string `json:"consumption"`
+	GridImport   string `json:"gridImport"`
+	GridExport   string `json:"gridExport"`
+	BatCharge    string `json:"batCharge"`
+	BatDischarge string `json:"batDischarge"`
 }
 
 type DeepSource struct {
@@ -165,11 +165,11 @@ var LegacyTopology = Topology{
 		},
 	},
 	Battery: BatteryConfig{
-		Enabled: true,
-		PowerID: "sensor.solis_bateria_potencia",
-		StateID: "sensor.solis_bateria_estado",
-		SocID:   "sensor.solis_bateria_soc",
-		CapacityKwh: 5.12,
+		Enabled:           true,
+		PowerID:           "sensor.solis_bateria_potencia",
+		StateID:           "sensor.solis_bateria_estado",
+		SocID:             "sensor.solis_bateria_soc",
+		CapacityKwh:       5.12,
 		ChargingStates:    []string{"Cargando"},
 		DischargingStates: []string{"Descargando"},
 	},
@@ -194,11 +194,11 @@ var LegacyTopology = Topology{
 		NoRespaldadaID: sp("sensor.vivienda_medidor_power"),
 	},
 	Energy: EnergyConfig{
-		GridImportID:  "sensor.energia_red_importada_solis",
-		GridExportID:  "sensor.energia_red_exportada_solis",
-		BatChargeID:   "sensor.energia_bateria_carga_diaria",
+		GridImportID:   "sensor.energia_red_importada_solis",
+		GridExportID:   "sensor.energia_red_exportada_solis",
+		BatChargeID:    "sensor.energia_bateria_carga_diaria",
 		BatDischargeID: "sensor.energia_bateria_descarga_diaria",
-		ConsumptionID: "sensor.consumo_total_diario",
+		ConsumptionID:  "sensor.consumo_total_diario",
 	},
 	Sun:         "sun.sun",
 	Weather:     "weather.forecast_casa",
@@ -216,10 +216,10 @@ var GenericTopology = Topology{
 		},
 	},
 	Battery: BatteryConfig{
-		Enabled: false,
-		PowerID: "sensor.battery_power",
-		StateID: "sensor.battery_state",
-		SocID:   "sensor.battery_soc",
+		Enabled:           false,
+		PowerID:           "sensor.battery_power",
+		StateID:           "sensor.battery_state",
+		SocID:             "sensor.battery_soc",
 		ChargingStates:    []string{"charging", "Cargando"},
 		DischargingStates: []string{"discharging", "Descargando"},
 	},
@@ -235,11 +235,11 @@ var GenericTopology = Topology{
 		EnergyIDs: []string{"sensor.house_energy"},
 	},
 	Energy: EnergyConfig{
-		GridImportID:  "sensor.grid_import_energy",
-		GridExportID:  "sensor.grid_export_energy",
-		BatChargeID:   "sensor.battery_charge_energy",
+		GridImportID:   "sensor.grid_import_energy",
+		GridExportID:   "sensor.grid_export_energy",
+		BatChargeID:    "sensor.battery_charge_energy",
 		BatDischargeID: "sensor.battery_discharge_energy",
-		ConsumptionID: "sensor.house_energy_today",
+		ConsumptionID:  "sensor.house_energy_today",
 	},
 	Sun:         "sun.sun",
 	Weather:     "weather.forecast",
@@ -270,15 +270,15 @@ func (s *Store) Get() Topology {
 
 // TopologyInput mirrors the admin-editable JSON (all fields optional).
 type TopologyInput struct {
-	Inverters     []InverterInput      `json:"inverters"`
-	Battery       *BatteryConfig       `json:"battery"`
-	Grid          *GridConfig          `json:"grid"`
-	Consumption   *ConsumptionConfig   `json:"consumption"`
-	Energy        *EnergyConfig        `json:"energy"`
-	Sun           string               `json:"sun"`
-	Weather       string               `json:"weather"`
-	WeatherTemp   string               `json:"weatherTemp"`
-	StatusAttrsID *string              `json:"statusAttrsId"`
+	Inverters     []InverterInput    `json:"inverters"`
+	Battery       *BatteryConfig     `json:"battery"`
+	Grid          *GridConfig        `json:"grid"`
+	Consumption   *ConsumptionConfig `json:"consumption"`
+	Energy        *EnergyConfig      `json:"energy"`
+	Sun           string             `json:"sun"`
+	Weather       string             `json:"weather"`
+	WeatherTemp   string             `json:"weatherTemp"`
+	StatusAttrsID *string            `json:"statusAttrsId"`
 }
 
 type InverterInput struct {
@@ -603,21 +603,21 @@ func (s *Store) DeepSources() DeepSources {
 }
 
 // DeepSourceDailyKeys mapea fuentes a columnas de daily (solis/fox/invN).
+// IMPORTANTE: el mapeo se construye por ÍNDICE de inversor, no iterando el map
+// (en Go el orden de iteración no es determinista; en JS Object.keys sí lo era).
 func (s *Store) DeepSourceDailyKeys() (DeepSources, map[string]string) {
+	t := s.Get()
 	srcs := s.DeepSources()
 	mapping := map[string]string{}
-	i := 0
-	for k := range srcs {
-		if len(k) >= 3 && k[:3] == "inv" {
-			switch i {
-			case 0:
-				mapping[k] = "solis"
-			case 1:
-				mapping[k] = "fox"
-			default:
-				mapping[k] = "inv" + itoa(i+1)
-			}
-			i++
+	for i := 0; i < len(t.Inverters); i++ {
+		key := "inv" + itoa(i)
+		switch i {
+		case 0:
+			mapping[key] = "solis"
+		case 1:
+			mapping[key] = "fox"
+		default:
+			mapping[key] = "inv" + itoa(i+1)
 		}
 	}
 	return srcs, mapping

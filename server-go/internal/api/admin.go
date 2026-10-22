@@ -44,6 +44,7 @@ type avatarUploadRequest struct {
 }
 
 var avatarDataRe = regexp.MustCompile(`^data:image/(webp|png|jpeg);base64,(.+)$`)
+
 const avatarMax = 200 * 1024
 
 func (s *Server) handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +78,9 @@ func (s *Server) handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	me, _ := s.DB.GetUserByID(userID)
 	actor := userID
-	if me != nil { actor = me.Username }
+	if me != nil {
+		actor = me.Username
+	}
 	s.DB.Audit(actor, userID, "user.avatar", nil)
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
@@ -88,7 +91,9 @@ func (s *Server) handleDeleteAvatar(w http.ResponseWriter, r *http.Request) {
 	os.Remove(file)
 	me, _ := s.DB.GetUserByID(userID)
 	actor := userID
-	if me != nil { actor = me.Username }
+	if me != nil {
+		actor = me.Username
+	}
 	s.DB.Audit(actor, userID, "user.avatar.delete", nil)
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
@@ -114,7 +119,9 @@ func (s *Server) handleAdminSetPassword(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, 403, map[string]any{"error": "solo administradores"})
 		return
 	}
-	var body struct{ Password string `json:"password"` }
+	var body struct {
+		Password string `json:"password"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Password) < 6 {
 		writeJSON(w, 400, map[string]any{"error": "formato inválido"})
 		return
@@ -140,7 +147,9 @@ func (s *Server) handleAdminSetLanguage(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, 403, map[string]any{"error": "solo administradores"})
 		return
 	}
-	var body struct{ Language string `json:"language"` }
+	var body struct {
+		Language string `json:"language"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || !langRe.MatchString(body.Language) {
 		writeJSON(w, 400, map[string]any{"error": "formato inválido"})
 		return
@@ -161,7 +170,9 @@ func (s *Server) handleAdminSetRole(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 403, map[string]any{"error": "solo administradores"})
 		return
 	}
-	var body struct{ Role string `json:"role"` }
+	var body struct {
+		Role string `json:"role"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || (body.Role != "user" && body.Role != "admin") {
 		writeJSON(w, 400, map[string]any{"error": "formato inválido"})
 		return
@@ -198,8 +209,12 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))
-	if limit <= 0 || limit > 200 { limit = 50 }
-	if offset < 0 { offset = 0 }
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	entries, err := s.DB.AuditRange(limit, offset)
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": "error interno"})

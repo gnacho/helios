@@ -318,11 +318,11 @@ func TestConsumptionTodayFromCountersCounterReset(t *testing.T) {
 
 func TestNumParsesStrings(t *testing.T) {
 	cases := map[any]float64{
-		"12.5":   12.5,
-		" 3.0 ":  3.0,
-		"abc":    0,
-		nil:      0,
-		2.5:      2.5,
+		"12.5":  12.5,
+		" 3.0 ": 3.0,
+		"abc":   0,
+		nil:     0,
+		2.5:     2.5,
 	}
 	for in, want := range cases {
 		if got := Num(in); got != want {
