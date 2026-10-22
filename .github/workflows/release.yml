@@ -53,7 +53,10 @@ jobs:
 
       - name: Build frontend
         working-directory: app
-        run: npm ci --no-audit --no-fund && npm run typecheck && npm run build
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+          npm run build
 
       - name: Compila el binario (estático, sin CGO)
         working-directory: server-go
