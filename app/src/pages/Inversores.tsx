@@ -26,6 +26,7 @@ import {
 } from 'recharts';
 import { useEnergyData } from '@/data/EnergyDataProvider';
 import { useInstall } from '@/hooks/useInstall';
+import { useTabSwipe } from '@/hooks/useTabSwipe';
 import { STEP_MIN, seriesInvValue } from '@/data/types';
 import { useEnergyColors, inverterColor } from '@/lib/colors';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -540,6 +541,8 @@ export default function Inversores() {
   const tabParam = searchParams.get('tab');
   const tab: string = tabKeys.includes(tabParam ?? '') ? (tabParam as string) : tabKeys[0] ?? 'compare';
   const setTab = (t: string) => setSearchParams({ tab: t }, { replace: true });
+  // Deslizar el dedo cambia de inversor en móvil (mismo patrón que el cargador).
+  const swipeRef = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
 
   const live = getLivePower(nowMin, liveTick);
   const series = useMemo(() => getDaySeries(today), [getDaySeries, today]);
@@ -628,6 +631,7 @@ export default function Inversores() {
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
+            ref={swipeRef}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
