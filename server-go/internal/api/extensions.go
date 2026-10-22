@@ -31,6 +31,8 @@ func (s *Server) handleGetExtensions(w http.ResponseWriter, r *http.Request) {
 		"enabled":       cfg.Enabled,
 		"carCharger":    cfg.CarCharger,
 		"chargerActive": extensions.ChargerActive(cfg),
+		"byd":           cfg.Byd,
+		"bydActive":     extensions.BydActive(cfg),
 	})
 }
 
