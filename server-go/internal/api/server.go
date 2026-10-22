@@ -4,28 +4,39 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
+	"helios-server/internal/extensions"
 	"helios-server/internal/solar"
 )
 
 type Server struct {
-	Auth    *auth.Auth
-	DB      *db.DB
-	Solar   *solar.Solar
-	HA      solar.HAReader
-	Prices  solar.PriceConfig
-	dataDir string
+	Auth     *auth.Auth
+	DB       *db.DB
+	Solar    *solar.Solar
+	HA       solar.HAReader
+	Ext      *extensions.Ext
+	ExtStore *extensions.Store
+	ExtHA    extensions.HA
+	Prices   solar.PriceConfig
+	dataDir  string
 }
 
-func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, prices solar.PriceConfig) *Server {
+func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, ext *extensions.Ext, extStore *extensions.Store, extHA extensions.HA, prices solar.PriceConfig) *Server {
 	return &Server{
 		Auth: a, DB: database, dataDir: dataDir,
-		Solar: sol, HA: haReader, Prices: prices,
+		Solar: sol, HA: haReader,
+		Ext: ext, ExtStore: extStore, ExtHA: extHA,
+		Prices: prices,
 	}
+}
+
+func parseDay(s string) (time.Time, error) {
+	return time.ParseInLocation("2006-01-02", s, time.Local)
 }
 
 func (s *Server) Routes() chi.Router {
@@ -63,6 +74,15 @@ func (s *Server) Routes() chi.Router {
 		r.Get("/api/solar/day", s.handleSolarDay)
 		r.Get("/api/solar/kpis", s.handleSolarKpis)
 		r.Get("/api/solar/history", s.handleSolarHistory)
+
+		r.Get("/api/extensions", s.handleGetExtensions)
+		r.Put("/api/extensions", s.handlePutExtensions)
+		r.Get("/api/charger/day", s.handleChargerDay)
+		r.Get("/api/charger/history", s.handleChargerHistory)
+		r.Post("/api/charger/action", s.handleChargerAction)
+		r.Get("/api/charger/image/{key}", s.handleGetChargerImage)
+		r.Put("/api/charger/image/{key}", s.handlePutChargerImage)
+		r.Delete("/api/charger/image/{key}", s.handleDeleteChargerImage)
 	})
 
 	return r

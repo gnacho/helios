@@ -10,6 +10,7 @@ import (
 	"helios-server/internal/auth"
 	"helios-server/internal/config"
 	"helios-server/internal/db"
+	"helios-server/internal/extensions"
 	"helios-server/internal/ha"
 	"helios-server/internal/install"
 	"helios-server/internal/solar"
@@ -43,13 +44,20 @@ func main() {
 
 	sol := solar.New(store, database)
 
+	// Extensiones (cargadores): config resuelta + acumulador.
+	extStore := extensions.NewStore()
+	extStore.Set(extensions.ResolveConfig(database))
+	ext := extensions.New(extStore, database, store)
+
 	// Cliente HAOS (opcional: sin token la API solar responde 503).
 	var haReader solar.HAReader
+	var extHA extensions.HA
 	if cfg.HAOSToken != "" {
 		client := ha.NewClient(cfg.HAOSURL, cfg.HAOSToken)
 		client.OnConnected = func() {
 			log.Printf("[ha] conectado a %s", cfg.HAOSURL)
-			if err := client.SubscribeEntities(store.LiveEntities()); err != nil {
+			ids := append(store.LiveEntities(), extensions.ChargerEntities(extStore.Get())...)
+			if err := client.SubscribeEntities(ids); err != nil {
 				log.Printf("[ha] subscribe: %v", err)
 			}
 		}
@@ -59,6 +67,7 @@ func main() {
 		client.Start()
 		defer client.Stop()
 		haReader = client
+		extHA = client
 	} else {
 		log.Printf("[ha] HAOS_TOKEN no definido: API solar deshabilitada")
 	}
@@ -69,7 +78,7 @@ func main() {
 		Co2PerKwh:   cfg.Co2PerKwh,
 	}
 
-	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, prices)
+	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	log.Printf("helios-server go listening on %s (db=%s)", addr, cfg.DBPath)
