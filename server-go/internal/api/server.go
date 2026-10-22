@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -26,15 +27,17 @@ type Server struct {
 	Push     *push.Service
 	SSE      http.Handler
 	Prices   solar.PriceConfig
+	Static   *StaticFiles
 	dataDir  string
 }
 
-func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, ext *extensions.Ext, extStore *extensions.Store, extHA extensions.HA, prices solar.PriceConfig) *Server {
+func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, ext *extensions.Ext, extStore *extensions.Store, extHA extensions.HA, prices solar.PriceConfig, staticDir string) *Server {
 	return &Server{
 		Auth: a, DB: database, dataDir: dataDir,
 		Solar: sol, HA: haReader,
 		Ext: ext, ExtStore: extStore, ExtHA: extHA,
 		Prices: prices,
+		Static: NewStaticFiles(staticDir),
 	}
 }
 
@@ -104,6 +107,17 @@ func (s *Server) Routes() chi.Router {
 		r.Get("/api/push/preferences", s.handleGetPushPreferences)
 		r.Put("/api/push/preferences", s.handlePutPushPreferences)
 	})
+
+	// Fallback SPA: rutas no-API sirven el frontend estático.
+	if s.Static != nil {
+		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" {
+				writeJSON(w, 404, map[string]any{"error": "ruta no encontrada"})
+				return
+			}
+			s.Static.ServeHTTP(w, r)
+		})
+	}
 
 	return r
 }

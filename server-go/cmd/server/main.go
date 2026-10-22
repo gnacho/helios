@@ -111,7 +111,8 @@ func main() {
 		extHA = client
 	}
 
-	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices)
+	staticDir := getenv("STATIC_DIR", cfg.DataDir+"/public")
+	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices, staticDir)
 	srv.Push = pushSvc
 	srv.SSE = hub
 
@@ -221,6 +222,13 @@ func startBackgroundLoops(database *db.DB, client *ha.Client, store *install.Sto
 	}()
 
 	engine.ScheduleResumenDiario(kpisFn)
+}
+
+func getenv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }
 
 func ensureBootstrapAdmin(database *db.DB, a *auth.Auth) error {
