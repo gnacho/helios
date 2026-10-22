@@ -54,7 +54,7 @@ async function deslizar(cdp: CDPSession, de: number, a: number, y: number) {
 test.describe('swipe entre pestanas en movil', () => {
   test.use({ viewport: VIEWPORT, hasTouch: true, isMobile: true });
 
-  test('inversores: mientras se arrastra se previsualiza la pestana vecina', async ({ request, page }) => {
+  test('inversores: mientras se arrastra, la pestana vecina va al lado', async ({ request, page }) => {
     await sesion(request, page);
     await request.put('/api/config', { data: TOPOLOGIA });
     await page.goto('/inversores');
@@ -64,17 +64,27 @@ test.describe('swipe entre pestanas en movil', () => {
     const peek = page.locator('[data-peek="1"]');
     await expect(peek).toHaveCount(0);
 
-    // Arrastre a medias (sin soltar): el vecino asoma
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 320, y: 500 }] });
+    // Arrastre a medias (sin soltar): la vecina se monta AL LADO y el track se mueve
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 330, y: 500 }] });
     for (let p = 1; p <= 8; p++) {
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 320 - p * 12, y: 500 }] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 330 - p * 18, y: 500 }] });
     }
     await expect(peek).toHaveCount(1);
-    const opacidad = await peek.evaluate((el) => {
-      const inner = el.firstElementChild as HTMLElement;
-      return Number(getComputedStyle(inner).opacity);
+
+    const estado = await peek.evaluate((el) => {
+      const track = el.parentElement as HTMLElement;
+      const activa = track.children[0] as HTMLElement;
+      const vecina = el as HTMLElement;
+      return {
+        transform: track.style.transform,
+        // La vecina arranca justo donde acaba la activa: van pegadas, no superpuestas.
+        gap: Math.round(vecina.getBoundingClientRect().left - activa.getBoundingClientRect().right),
+        anchoActiva: Math.round(activa.getBoundingClientRect().width),
+      };
     });
-    expect(opacidad).toBeGreaterThan(0);
+    expect(estado.anchoActiva).toBeGreaterThan(300);
+    expect(Math.abs(estado.gap)).toBeLessThanOrEqual(1);
+    expect(estado.transform).toMatch(/translate3d\(-\d+px/);
     // Aun no ha cambiado de pestana: solo se esta previsualizando
     await expect(page).toHaveURL(/\/inversores$/);
 
