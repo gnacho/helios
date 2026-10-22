@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -133,6 +133,7 @@ interface InverterViewProps {
   dayKwh: number;
   share: number;
   color: string;
+  /** Vista de previsualización: no interactiva, solo ilustrativa del vecino. */
 }
 
 function InverterView({ meta, nowKw, dayKwh, share, color }: InverterViewProps) {
@@ -542,7 +543,27 @@ export default function Inversores() {
   const tab: string = tabKeys.includes(tabParam ?? '') ? (tabParam as string) : tabKeys[0] ?? 'compare';
   const setTab = (t: string) => setSearchParams({ tab: t }, { replace: true });
   // Deslizar el dedo cambia de inversor en móvil (mismo patrón que el cargador).
-  const swipeRef = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
+  const { contentRef, peekRef } = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
+
+  // Previsualización del vecino: mientras se arrastra, la pestaña contigua se
+  // deja ver difuminada al otro lado. Solo se atiende al vecino en la dirección
+  // del gesto; las vistas laterales no se renderizan hasta que hace falta.
+  const [peek, setPeek] = useState<{ dir: -1 | 0 | 1; x: number }>({ dir: 0, x: 0 });
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const v = peekRef.current;
+      setPeek((prev) => (prev.dir === v.dir && Math.abs(prev.x - v.x) < 0.5 ? prev : { dir: v.dir, x: v.x }));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [peekRef]);
+
+  const tabIdx = tabKeys.indexOf(tab);
+  const dir = peek.dir;
+  const neighborKey = dir === 0 ? null : tabKeys[tabIdx + dir];
+  const progress = Math.min(1, Math.abs(peek.x) / (window.innerWidth || 1));
 
   const live = getLivePower(nowMin, liveTick);
   const series = useMemo(() => getDaySeries(today), [getDaySeries, today]);
@@ -573,7 +594,24 @@ export default function Inversores() {
     return { dayKwhs: kWhs, peakKws: peaks };
   }, [series, invMetas]);
 
-  const isCompare = tab === 'compare';
+  /** Contenido de una pestaña por su clave (reutilizado por el carrusel). */
+  const renderTab = (key: string) => {
+    if (key === 'compare') {
+      return <CompareView inverters={compareInverters} metas={invMetas} liveKws={liveKws} dayKwhs={dayKwhs} peakKws={peakKws} />;
+    }
+    const idx = invMetas.findIndex((m) => m.key === key);
+    const meta = invMetas[idx];
+    if (!meta) return null;
+    return (
+      <InverterView
+        meta={meta}
+        nowKw={liveKws[idx] ?? 0}
+        dayKwh={dayKwhs[idx] ?? 0}
+        share={totalShare(dayKwhs, idx)}
+        color={colorOf(key, idx)}
+      />
+    );
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -598,6 +636,13 @@ export default function Inversores() {
                   key={key}
                   role="tab"
                   aria-selected={active}
+                  data-neighbor={
+                    peek.dir !== 0 && tabKeys.indexOf(tab) + peek.dir === tabKeys.indexOf(key)
+                      ? peek.dir > 0
+                        ? 'next'
+                        : 'prev'
+                      : undefined
+                  }
                   onClick={() => setTab(key)}
                   className={cn(
                     'relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none',
@@ -627,29 +672,45 @@ export default function Inversores() {
         </motion.div>
         )}
 
-        {/* ── Contenido por pestaña (crossfade + y 8px) ─────────── */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            ref={swipeRef}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-          >
-            {isCompare ? (
-              <CompareView inverters={compareInverters} metas={invMetas} liveKws={liveKws} dayKwhs={dayKwhs} peakKws={peakKws} />
-            ) : (
-              <InverterView
-                meta={invMetas[invMetas.findIndex((m) => m.key === tab)]}
-                nowKw={liveKws[invMetas.findIndex((m) => m.key === tab)] ?? 0}
-                dayKwh={dayKwhs[invMetas.findIndex((m) => m.key === tab)] ?? 0}
-                share={totalShare(dayKwhs, invMetas.findIndex((m) => m.key === tab))}
-                color={colorOf(tab, invMetas.findIndex((m) => m.key === tab))}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {/* ── Contenido por pestaña: paginador en móvil ───────────
+            Solo se monta la pestaña activa (las vistas son pesadas). Mientras se
+            arrastra, la vecina en la dirección del gesto entra al otro lado con
+            opacidad y desenfoque progresivos: se previsualiza el siguiente
+            elemento antes de cargarlo de verdad. */}
+        <div className="relative overflow-hidden lg:overflow-visible">
+          <div ref={contentRef} className="relative bg-app lg:bg-transparent">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+              >
+                {renderTab(tab)}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {peek.dir !== 0 && neighborKey && (
+            <div
+              aria-hidden
+              data-peek="1"
+              className="pointer-events-none absolute inset-0 overflow-hidden lg:hidden"
+            >
+              <div
+                className="h-full w-full origin-center"
+                style={{
+                  transform: `translate3d(${peek.dir > 0 ? 1 - progress : progress - 1}00%, 0, 0)`,
+                  opacity: progress,
+                  filter: `blur(${(1 - progress) * 6}px)`,
+                }}
+              >
+                {renderTab(neighborKey)}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Nota de actividad (mock) */}
         <p className="flex items-center gap-1.5 text-xs text-faint">

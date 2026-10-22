@@ -617,7 +617,7 @@ export default function Cargador() {
   const tab = tabKeys.includes(tabParam ?? '') ? (tabParam as string) : (tabKeys[0] ?? 'main');
   const setTab = (k: string) => setSearchParams({ tab: k }, { replace: true });
   // Deslizar el dedo cambia de cargador en móvil.
-  const swipeRef = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
+  const { contentRef } = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
 
   const charger = cfg?.chargers.find((c) => c.key === tab) ?? cfg?.chargers[0];
   const liveOfTab = live?.find((c) => c.key === tab) ?? live?.[0];
@@ -677,7 +677,7 @@ export default function Cargador() {
         </motion.div>
       )}
 
-      <div ref={swipeRef}>
+      <div ref={contentRef}>
         <ChargerView charger={charger} live={liveOfTab} />
       </div>
     </div>

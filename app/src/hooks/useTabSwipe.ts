@@ -16,12 +16,22 @@ interface Options {
   onChange: (key: string) => void;
   /** Desactiva el gesto (p. ej. con una sola pestaña). */
   enabled?: boolean;
+  /**
+   * Desfase (px) que se pide al navegador para la vista vecina mientras se
+   * arrastra. El padre coloca las vistas pegadas y aplica este desplazamiento
+   * al track para que el vecino asome. Por defecto, un 12 % del ancho.
+   */
+  peek?: number;
 }
 
 /**
  * Deslizar horizontalmente para cambiar de pestaña en móvil, como un paginador
  * nativo: el contenido se desplaza con el dedo y al soltar encaja en la
  * pestaña vecina. Deslizar a la izquierda avanza, a la derecha retrocede.
+ *
+ * Durante el arrastre avisa por `peekRef` de cuánto hay que enseñar de la vista
+ * vecina (de -1 a 1), que es lo que da la previsualización del siguiente
+ * elemento sin montarlo antes de tiempo.
  *
  * En los extremos hay resistencia elástica: el contenido se mueve amortiguado
  * pero no hay cambio de pestaña.
@@ -31,14 +41,21 @@ interface Options {
  * horizontal. Los gestos verticales se ignoran (los maneja el navegador), así
  * que el scroll y el pull-to-refresh siguen funcionando. En escritorio no hace
  * nada.
- *
- * Devuelve la ref que hay que poner en el contenedor del contenido.
  */
-export function useTabSwipe({ tab, keys, onChange, enabled = true }: Options) {
+export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx }: Options) {
   const keysRef = useRef(keys);
   const tabRef = useRef(tab);
   const onChangeRef = useRef(onChange);
   const enabledRef = useRef(enabled);
+
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Ref compartida con el padre: 0 cuando no hay arrastre; desplazamiento en px
+   * pedido para asomar la vista vecina (negativo = vecina anterior) y su signo.
+   */
+  const peekRef = useRef({ x: 0, dir: 0 as -1 | 0 | 1 });
+  const peekPxRef = useRef<number | undefined>(peekPx);
 
   // Las refs se sincronizan en un efecto, nunca durante el render.
   useEffect(() => {
@@ -46,18 +63,17 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true }: Options) {
     tabRef.current = tab;
     onChangeRef.current = onChange;
     enabledRef.current = enabled;
-  }, [keys, tab, onChange, enabled]);
-
-  const contentRef = useRef<HTMLDivElement | null>(null);
+    peekPxRef.current = peekPx;
+  }, [keys, tab, onChange, enabled, peekPx]);
 
   const restore = useCallback((animated: boolean) => {
     const el = contentRef.current;
     if (!el) return;
     el.style.transition = animated
-      ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out'
+      ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
       : 'none';
     el.style.transform = '';
-    el.style.opacity = '';
+    peekRef.current = { x: 0, dir: 0 };
   }, []);
 
   // Al cambiar de pestaña, por la vía que sea (swipe, toque, enlace), el
@@ -109,12 +125,18 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true }: Options) {
       if (!el) return;
       if (e.cancelable) e.preventDefault();
       const i = keysRef.current.indexOf(tabRef.current);
-      const atStart = i <= 0 && dx > 0;
-      const atEnd = i >= keysRef.current.length - 1 && dx < 0;
-      const offset = atStart || atEnd ? dx * EDGE_DAMPING : dx;
+      const hasPrev = i > 0;
+      const hasNext = i >= 0 && i < keysRef.current.length - 1;
+      // En los extremos no hay vecino: solo resistencia elástica, sin asomar.
+      const beyond = (dx > 0 && !hasPrev) || (dx < 0 && !hasNext);
+      const offset = beyond ? dx * EDGE_DAMPING : dx;
       el.style.transition = 'none';
       el.style.transform = `translate3d(${offset}px, 0, 0)`;
-      el.style.opacity = String(Math.max(0.6, 1 - Math.abs(offset) / (window.innerWidth * 1.5)));
+      const dir: -1 | 0 | 1 = beyond || offset === 0 ? 0 : offset > 0 ? -1 : 1;
+      peekRef.current = {
+        x: dir === 0 ? 0 : Math.min(peekPxRef.current ?? Math.abs(offset) * 0.4, Math.abs(offset)) * dir,
+        dir,
+      };
     };
 
     const onEnd = () => {
@@ -165,5 +187,5 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true }: Options) {
     };
   }, [restore]);
 
-  return contentRef;
+  return { contentRef, peekRef };
 }
