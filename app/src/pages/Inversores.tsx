@@ -566,6 +566,10 @@ export default function Inversores() {
 
   const tabIdx = tabKeys.indexOf(tab);
   const dir = peek.dir;
+  // OJO: si el gesto cruza a la pestana vecina, la URL ya apunta a la nueva
+  // pero `dir` aun refleja el gesto anterior. La vecina para previsualizar se
+  // resuelve SOLO con el dir actual; cuando el gesto se resuelve y la nueva
+  // pestana toma el control, dir se resetea y apunta bien a la nueva vecina.
   const neighborKey = dir === 0 ? null : tabKeys[tabIdx + dir];
 
   const live = getLivePower(nowMin, liveTick);
