@@ -112,7 +112,7 @@ func main() {
 	}
 
 	staticDir := getenv("STATIC_DIR", cfg.DataDir+"/public")
-	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices, staticDir)
+	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices, store, staticDir)
 	srv.Push = pushSvc
 	srv.SSE = hub
 

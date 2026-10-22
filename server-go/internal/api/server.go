@@ -12,6 +12,7 @@ import (
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
 	"helios-server/internal/extensions"
+	"helios-server/internal/install"
 	"helios-server/internal/push"
 	"helios-server/internal/solar"
 )
@@ -27,17 +28,19 @@ type Server struct {
 	Push     *push.Service
 	SSE      http.Handler
 	Prices   solar.PriceConfig
+	Install  *install.Store
 	Static   *StaticFiles
 	dataDir  string
 }
 
-func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, ext *extensions.Ext, extStore *extensions.Store, extHA extensions.HA, prices solar.PriceConfig, staticDir string) *Server {
+func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, ext *extensions.Ext, extStore *extensions.Store, extHA extensions.HA, prices solar.PriceConfig, installStore *install.Store, staticDir string) *Server {
 	return &Server{
 		Auth: a, DB: database, dataDir: dataDir,
 		Solar: sol, HA: haReader,
 		Ext: ext, ExtStore: extStore, ExtHA: extHA,
-		Prices: prices,
-		Static: NewStaticFiles(staticDir),
+		Prices:  prices,
+		Install: installStore,
+		Static:  NewStaticFiles(staticDir),
 	}
 }
 
@@ -93,11 +96,16 @@ func (s *Server) Routes() chi.Router {
 		r.Get("/api/solar/kpis", s.handleSolarKpis)
 		r.Get("/api/solar/history", s.handleSolarHistory)
 
+		r.Get("/api/install", s.handleGetInstall)
+		r.Get("/api/config", s.handleGetConfig)
+		r.Put("/api/config", s.handlePutConfig)
+
 		r.Get("/api/extensions", s.handleGetExtensions)
 		r.Put("/api/extensions", s.handlePutExtensions)
 		r.Get("/api/charger/day", s.handleChargerDay)
 		r.Get("/api/charger/history", s.handleChargerHistory)
 		r.Post("/api/charger/action", s.handleChargerAction)
+		r.Get("/api/solar/stream", s.SSE.ServeHTTP)
 		r.Get("/api/charger/stream", s.SSE.ServeHTTP)
 		r.Get("/api/charger/image/{key}", s.handleGetChargerImage)
 		r.Put("/api/charger/image/{key}", s.handlePutChargerImage)
