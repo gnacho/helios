@@ -32,7 +32,7 @@
 Helios is a solar monitor for a home installation: two inverters (Solis
 4.4 kWp + Fox 2.7 kWp), a 5 kWh battery, 798+ days of history, live data
 from Home Assistant, and savings in euros computed against the real
-electricity tariff. One Node + SQLite service running in an LXC at home.
+electricity tariff. One Go + SQLite service running in an LXC at home.
 No cloud.
 
 > **Try the live demo**
@@ -84,11 +84,11 @@ battery is doing, and what every self-consumed kWh is worth in euros.
 
 | Decision | Reason |
 |---|---|
-| **Node 22 + Hono** | This is a business/view app, not a 24/7 collector: the valuable logic is aggregation and data sanitation, already validated over 798 days. Rewriting it in Go was pure risk with no gain (decision closed 1-Aug-2026: Go for collectors/infra, Node for business). Hono because it's small, fast, and magic-free. |
-| **better-sqlite3 (plain ESM)** | An embedded transactional DB is all a home app needs: zero extra services, trivial backups, and 798 days fit in 90 MB. The whole codebase is TypeScript: the server compiles with `tsc` to `dist/`, and contracts are enforced with **zod schemas** (`server/src/schemas.ts`). |
+| **Go 1.25 + net/http (since v1.0.0)** | The backend was rewritten from Node/Hono to Go in v1.0.0: a single static ~12 MB binary, no runtime, no `node_modules`, and one language for the server. The aggregation and data-sanitation logic was ported with the same API contract, verified field by field against Home Assistant (SOC, production, grid, charger energy) before switching over. The old Node server stays in `server/` as a rollback path. |
+| **SQLite via modernc.org/sqlite (pure Go)** | An embedded transactional DB is all a home app needs: zero extra services, trivial backups, 798 days fit in 90 MB, and WAL. Pure-Go driver so the binary is 100% static (no CGO, no libc) and cross-compiles for amd64/arm64 from CI. |
 | **React 19 + Vite + Tailwind** | The same front as every app in the house (shared `webapp-shell`): one way of doing shell, theme, settings and login. |
 | **HAOS as the live source** | HAOS already maintains the Solis/Fox integrations and their reconnections. Duplicating that in Helios means maintaining two drivers. Helios consumes, it doesn't integrate. |
-| **systemd + LXC, no Docker** | A Node binary with `node_modules` and a hardened unit (`ProtectSystem`, `ReadWritePaths`) is simpler to reason about and to roll back than a container, and the DB lives outside the code in `/opt/helios/data`. |
+| **systemd + LXC, no Docker** | One static binary and a hardened unit (`ProtectSystem`, `ProtectHome`) is simpler to reason about and to roll back than a container, and the DB lives outside the code in `/opt/helios/data`. |
 | **Litestream → SFTP** | Continuous SQLite replication with point-in-time recovery: the DB is the only irreplaceable part of the system. |
 
 ## What it covers (real requirements)
@@ -133,8 +133,8 @@ data explains better what each view is for.
 ## Architecture in 30 seconds
 
 ```
-Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ Helios server (Hono)
-                                            ▲                    │ better-sqlite3
+Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ Helios server (Go)
+                                            ▲                    │ SQLite (pure Go)
                                   Solis Cloud scraper             ▼
                                     (separate LXC)             SQLite (798+ days)
                                                                    │ Litestream
@@ -142,7 +142,8 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
                                                     SFTP to a disk (backup host)
 ```
 
-- `server/`: Hono API + multi-user auth + aggregation + data sanitation.
+- `server-go/`: Go API + multi-user auth + aggregation + data sanitation (the live backend since v1.0.0).
+- `server/`: previous Node/Hono backend, kept as a rollback path.
 - `app/`: React 19 (views: Today, Inverters, Battery, History, Settings).
 - `server/src/schemas.ts`: zod contract server↔front (shared types are exported from the server sources).
 - Full detail in `ARCHITECTURE.md` and `STACK.md`.

@@ -5,6 +5,51 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.0.0] - 2026-10-22
+
+### Changed
+
+- **El backend está reescrito en Go.** Helios deja de correr sobre Node: ahora
+  es un único binario estático de ~12 MB, sin runtime ni `node_modules`, que
+  sirve la misma API REST y el mismo SSE. El frontend React no cambia ni una
+  línea; el contrato de la API se mantuvo y se verificó campo a campo contra
+  Home Assistant antes del corte (SOC de batería, producción por inversor, red,
+  energía del cargador, curva del día e histórico).
+- **SQLite con driver en Go puro** (`modernc.org/sqlite`), para que el binario
+  sea 100% estático y compile para amd64 y arm64 desde CI.
+- **Actualizaciones por binario**: `deploy/helios-update.sh` descarga el binario
+  y el frontend del release, verifica el sha256 de ambos, sustituye de forma
+  atómica y hace *rollback* automático si el servicio no responde tras el
+  reinicio.
+- El backend Node anterior queda en `server/` como vía de rollback, sin uso en
+  producción.
+
+### Added
+
+- Módulo **BYD** portado al backend Go (estado del coche, neumáticos, ubicación,
+  programación de carga y acciones: arrancar/parar carga, cierre de ventanas,
+  bloqueo, climatización, forzar consulta), con el mismo panel de Ajustes.
+- **Caché con single-flight** de las series del día y de las curvas del
+  cargador: varias peticiones simultáneas de la misma fecha hacen una sola
+  consulta a Home Assistant, y se respeta el TTL del servidor anterior.
+
+### Fixed
+
+- Los estados de las entidades llegaban vacíos cuando Home Assistant enviaba
+  `last_updated` como marca de tiempo numérica: el mensaje entero se descartaba
+  y el panel mostraba 0 en producción, batería y red.
+- Los cambios incrementales de entidades traen solo los atributos que han
+  cambiado; al reemplazar el mapa completo se perdían `gridDirection`,
+  `stationName` e `inverterOnline`, y el balance de red caía al valor de
+  consumo. Ahora se combinan.
+- Escrituras concurrentes al WebSocket de Home Assistant: el cliente Go podía
+  paniquear y tumbar el proceso cuando coincidían dos consultas. Ahora se
+  serializan, con test de regresión.
+- El cliente se desconectaba al minuto por falta de *keep-alive*; ahora envía
+  pings periódicos y reconecta con backoff.
+- `/api/system/info` conserva el contrato que lee la pantalla de Ajustes
+  (`node`, `react`, `uptime`, memoria).
+
 ## [0.8.28] - 2026-10-22
 
 ### Added

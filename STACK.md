@@ -1,11 +1,15 @@
 # Stack tecnológico Helios — referencia para otras apps
 
 ## Arquitectura
-Single-page app React (Vite) servida por un backend Node.js ligero en el mismo contenedor,
+Single-page app React (Vite) servida por un backend Go ligero en el mismo contenedor,
 sin Docker. Backend lee Home Assistant en local (WebSocket), expone API REST + SSE al
 frontend por el mismo puerto, y NPM (Nginx Proxy Manager) pone SSL delante.
 
-## Backend — Node 24, TypeScript (strict, tsc → dist/), sin framework pesado
+## Backend — Go 1.25 (desde v1.0.0), `net/http` + `chi`, binario estático
+
+> **Nota v1.0.0**: el backend se reescribió en Go manteniendo el mismo contrato de API.
+> Lo que sigue describe el backend vigente (`server-go/`). El antiguo backend Node
+> sigue en `server/` solo como vía de rollback.
 - **Servidor HTTP**: Hono + `@hono/node-server` (≈ Express pero más ligero y con tipado)
 - **WebSocket HAOS**: `ws` + protocolo nativo de Home Assistant (`subscribe_entities`, `recorder/statistics_during_period`). Cliente propio en `ha.ts` con reconexión automática y RPC por id
 - **SQLite**: `better-sqlite3` (síncrono, rapidísimo, prebuilt por plataforma). Sin ORM: queries directas + WAL + migraciones `ALTER TABLE` tolerantes. Retiene el histórico propio para no depender de la purga de HA

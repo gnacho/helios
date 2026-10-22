@@ -1,6 +1,6 @@
 # Arquitectura Helios — referencia para replicar
 
-Patrón completo "app web local sobre Home Assistant": backend Node + Hono + SQLite,
+Patrón completo "app web local sobre Home Assistant": backend Go + SQLite (Node/Hono hasta v0.8.x),
 frontend React con provider de datos en vivo. Pensado para ser reproducido tal cual
 en otras apps del entorno.
 
