@@ -616,11 +616,38 @@ export default function Cargador() {
   const tabParam = searchParams.get('tab');
   const tab = tabKeys.includes(tabParam ?? '') ? (tabParam as string) : (tabKeys[0] ?? 'main');
   const setTab = (k: string) => setSearchParams({ tab: k }, { replace: true });
-  // Deslizar el dedo cambia de cargador en móvil.
-  const { contentRef } = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
+  // Deslizar el dedo cambia de cargador en móvil (mismo patrón que Inversores:
+  // vista activa y vecina lado a lado en un track).
+  const { trackRef, peekRef } = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
+
+  const [peek, setPeek] = useState<{ dir: -1 | 0 | 1; x: number; ratio: number }>({ dir: 0, x: 0, ratio: 0 });
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const v = peekRef.current;
+      setPeek((prev) =>
+        prev.dir === v.dir && Math.abs(prev.x - v.x) < 0.5 && Math.abs(prev.ratio - v.ratio) < 0.005
+          ? prev
+          : { dir: v.dir, x: v.x, ratio: v.ratio },
+      );
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [peekRef]);
+
+  const tabIdx = tabKeys.indexOf(tab);
+  const dir = peek.dir;
+  const neighborKey = dir === 0 ? null : tabKeys[tabIdx + dir];
 
   const charger = cfg?.chargers.find((c) => c.key === tab) ?? cfg?.chargers[0];
   const liveOfTab = live?.find((c) => c.key === tab) ?? live?.[0];
+
+  const chargerViewFor = (key: string) => {
+    const ch = cfg?.chargers.find((c) => c.key === key) ?? cfg?.chargers[0];
+    const lv = live?.find((c) => c.key === key) ?? live?.[0];
+    return ch ? <ChargerView charger={ch} live={lv} /> : null;
+  };
 
   // Mientras la config de extensiones carga (null) NO redirigimos (race de
   // deep-link: un F5 en /cargador debe caer aquí, no en el dashboard).
@@ -677,7 +704,37 @@ export default function Cargador() {
         </motion.div>
       )}
 
-      <div ref={contentRef}>
+      {/* Contenido en móvil: track de dos columnas (activa + vecina). En
+       *  escritorio solo la activa, con el fundido de siempre. */}
+      <div className="overflow-hidden lg:hidden">
+        <div
+          ref={(el) => {
+            if (el) {
+              const base = peek.dir < 0 ? -el.clientWidth : 0;
+              if (el.dataset.base !== String(base)) {
+                el.dataset.base = String(base);
+                el.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
+                el.style.transform = base ? `translate3d(${base}px, 0, 0)` : '';
+              }
+            }
+            trackRef(el);
+          }}
+          className="flex items-start will-change-transform"
+        >
+          {peek.dir < 0 && neighborKey && (
+            <div aria-hidden data-peek="1" className="w-full shrink-0 pointer-events-none select-none">
+              {chargerViewFor(neighborKey)}
+            </div>
+          )}
+          <div className="w-full shrink-0">{chargerViewFor(tab)}</div>
+          {peek.dir > 0 && neighborKey && (
+            <div aria-hidden data-peek="1" className="w-full shrink-0 pointer-events-none select-none">
+              {chargerViewFor(neighborKey)}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="hidden lg:block">
         <ChargerView charger={charger} live={liveOfTab} />
       </div>
     </div>

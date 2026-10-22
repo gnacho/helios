@@ -51,6 +51,14 @@ async function deslizar(cdp: CDPSession, de: number, a: number, y: number) {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
+/** Inicia un arrastre y lo deja a mitad (sin soltar) para medir la previsualizacion. */
+async function deslizarAMitad(cdp: CDPSession, de: number, a: number, y: number, pasos = 8) {
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: de, y }] });
+  for (let p = 1; p <= pasos; p++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: de + ((a - de) * p) / 10, y }] });
+  }
+}
+
 test.describe('swipe entre pestanas en movil', () => {
   test.use({ viewport: VIEWPORT, hasTouch: true, isMobile: true });
 
@@ -65,10 +73,7 @@ test.describe('swipe entre pestanas en movil', () => {
     await expect(peek).toHaveCount(0);
 
     // Arrastre a medias (sin soltar): la vecina se monta AL LADO y el track se mueve
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 330, y: 500 }] });
-    for (let p = 1; p <= 8; p++) {
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 330 - p * 18, y: 500 }] });
-    }
+    await deslizarAMitad(cdp, 330, 60, 500);
     await expect(peek).toHaveCount(1);
 
     const estado = await peek.evaluate((el) => {
@@ -137,7 +142,7 @@ test.describe('swipe entre pestanas en movil', () => {
     await expect(page).toHaveURL(/tab=inv1/);
   });
 
-  test('cargador: deslizar cambia de cargador', async ({ request, page }) => {
+  test('cargador: deslizar cambia de cargador y la vuelta muestra la vecina', async ({ request, page }) => {
     await sesion(request, page);
     const put = await request.put('/api/extensions', { data: CARGA_DOS });
     expect(put.ok()).toBeTruthy();
@@ -146,12 +151,36 @@ test.describe('swipe entre pestanas en movil', () => {
     await expect(page.getByRole('tab', { name: 'Pared' })).toBeVisible({ timeout: 15000 });
 
     const cdp = await page.context().newCDPSession(page);
-    await deslizar(cdp, 320, 60, 700);
+    const peek = page.locator('[data-peek="1"]');
+
+    // Ida: main -> c2
+    await deslizar(cdp, 330, 60, 500);
     await expect(page).toHaveURL(/tab=c2/, { timeout: 5000 });
     await expect(page.getByRole('tab', { name: 'Portatil' })).toHaveAttribute('aria-selected', 'true');
 
-    await deslizar(cdp, 60, 320, 700);
+    // Vuelta: c2 -> main. A MITAD del gesto debe verse Pared (vecino izquierdo).
+    await deslizarAMitad(cdp, 60, 330, 500);
+    await expect(peek).toHaveCount(1);
+    const estado = await peek.evaluate((el) => {
+      const track = el.parentElement as HTMLElement;
+      const vecina = el as HTMLElement;
+      const hermanos = Array.from(track.children) as HTMLElement[];
+      const activa = hermanos.find((h) => h !== vecina) as HTMLElement;
+      // La vecina entra por la izquierda (gesto a la derecha): su derecha debe
+      // tocar la izquierda de la activa.
+      return {
+        transform: track.style.transform,
+        gap: Math.round(vecina.getBoundingClientRect().right - activa.getBoundingClientRect().left),
+      };
+    });
+    expect(estado.transform).toMatch(/translate3d\(-\d+px/);
+    expect(Math.abs(estado.gap)).toBeLessThanOrEqual(1);
+    // La pestana no ha cambiado aun: solo se previsualiza
+    await expect(page).toHaveURL(/tab=c2/);
+
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await expect(page).toHaveURL(/tab=main/, { timeout: 5000 });
+    await expect(peek).toHaveCount(0);
   });
 
   test('cargador: el gesto vertical sigue haciendo scroll', async ({ request, page }) => {
