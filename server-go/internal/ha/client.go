@@ -137,7 +137,10 @@ type Client struct {
 	wsURL   string
 	token   string
 
-	mu         sync.RWMutex
+	mu sync.RWMutex
+	// writeMu serializa TODAS las escrituras al socket: gorilla/websocket solo
+	// admite un escritor concurrente (panic "concurrent write" si no).
+	writeMu    sync.Mutex
 	entities   map[string]EntityState
 	pending    map[int]*pendingCall
 	msgID      int
@@ -226,7 +229,9 @@ func (c *Client) readLoop(ws *websocket.Conn) {
 			case <-done:
 				return
 			case <-ticker.C:
+				c.writeMu.Lock()
 				_ = ws.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
+				c.writeMu.Unlock()
 			}
 		}
 	}()
@@ -259,7 +264,9 @@ func (c *Client) onClose() {
 	pending := c.pending
 	c.pending = make(map[int]*pendingCall)
 	for _, p := range pending {
-		p.timer.Stop()
+		if p.timer != nil {
+			p.timer.Stop()
+		}
 		p.ch <- callResult{err: errors.New("ws closed")}
 	}
 	c.mu.Unlock()
@@ -288,7 +295,9 @@ func (c *Client) scheduleReconnect() {
 func (c *Client) handle(msg haMessage, ws *websocket.Conn) {
 	switch msg.Type {
 	case "auth_required":
-		ws.WriteJSON(map[string]any{"type": "auth", "access_token": c.token})
+		c.writeMu.Lock()
+		_ = ws.WriteJSON(map[string]any{"type": "auth", "access_token": c.token})
+		c.writeMu.Unlock()
 	case "auth_ok":
 		c.mu.Lock()
 		c.connected = true
@@ -327,7 +336,9 @@ func (c *Client) handle(msg haMessage, ws *websocket.Conn) {
 		if !ok || p == nil {
 			return
 		}
-		p.timer.Stop()
+		if p.timer != nil {
+			p.timer.Stop()
+		}
 		if msg.Success {
 			p.ch <- callResult{result: msg.Result}
 		} else {
@@ -410,9 +421,8 @@ func (c *Client) Call(message map[string]any) (json.RawMessage, error) {
 	c.msgID++
 	id := c.msgID
 	p := &pendingCall{ch: make(chan callResult, 1)}
-	c.pending[id] = p
-	c.mu.Unlock()
-
+	// El timer se crea DENTRO del lock: si el resultado llega inmediatamente,
+	// handle() hace p.timer.Stop() y no debe encontrarlo nil.
 	p.timer = time.AfterFunc(60*time.Second, func() {
 		c.mu.Lock()
 		delete(c.pending, id)
@@ -422,6 +432,8 @@ func (c *Client) Call(message map[string]any) (json.RawMessage, error) {
 		default:
 		}
 	})
+	c.pending[id] = p
+	c.mu.Unlock()
 
 	payload := map[string]any{"id": id}
 	for k, v := range message {
@@ -430,7 +442,10 @@ func (c *Client) Call(message map[string]any) (json.RawMessage, error) {
 	if debugHA {
 		log.Printf("[ha:debug] -> call id=%d type=%v", id, message["type"])
 	}
-	if err := ws.WriteJSON(payload); err != nil {
+	c.writeMu.Lock()
+	err := ws.WriteJSON(payload)
+	c.writeMu.Unlock()
+	if err != nil {
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()

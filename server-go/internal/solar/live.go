@@ -85,10 +85,11 @@ var debugLive = os.Getenv("HELIOS_HA_DEBUG") == "1"
 type Solar struct {
 	Store *install.Store
 	DB    *db.DB
+	cache *seriesCache
 }
 
 func New(store *install.Store, database *db.DB) *Solar {
-	return &Solar{Store: store, DB: database}
+	return &Solar{Store: store, DB: database, cache: newSeriesCache()}
 }
 
 func Num(v any) float64 {

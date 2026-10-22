@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -130,9 +129,6 @@ func (s *Server) handleUpdateStream(w http.ResponseWriter, r *http.Request) {
 	defer stopWatch()
 
 	ctx := r.Context()
-	scanner := bufio.NewScanner(nil)
-	_ = scanner
-
 	for {
 		select {
 		case <-ctx.Done():

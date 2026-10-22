@@ -69,7 +69,17 @@ func (s *Solar) GetDaySeries(haReader HAReader, dateStr string) (DaySeries, erro
 		}
 	}
 
-	result, err := s.getDaySeriesUncached(haReader, dateStr)
+	// Caché + single-flight (mismo contrato que el cachedCollector del Node):
+	// hoy TTL 60 s, días pasados 6 h.
+	var result DaySeries
+	var err error
+	if s.cache != nil {
+		result, err = s.cache.do(key, ttlFor(key), func() (DaySeries, error) {
+			return s.getDaySeriesUncached(haReader, dateStr)
+		})
+	} else {
+		result, err = s.getDaySeriesUncached(haReader, dateStr)
+	}
 	if err != nil {
 		return DaySeries{}, err
 	}
