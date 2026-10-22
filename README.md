@@ -84,7 +84,7 @@ battery is doing, and what every self-consumed kWh is worth in euros.
 
 | Decision | Reason |
 |---|---|
-| **Go 1.25 + net/http (since v1.0.0)** | The backend was rewritten from Node/Hono to Go in v1.0.0: a single static ~12 MB binary, no runtime, no `node_modules`, and one language for the server. The aggregation and data-sanitation logic was ported with the same API contract, verified field by field against Home Assistant (SOC, production, grid, charger energy) before switching over. The old Node server stays in `server/` as a rollback path. |
+| **Go 1.25 + net/http (since v1.0.0)** | The backend was rewritten from Node/Hono to Go in v1.0.0: a single static ~12 MB binary, no runtime, no `node_modules`, and one language for the server. The aggregation and data-sanitation logic was ported with the same API contract, verified field by field against Home Assistant (SOC, production, grid, charger energy) before switching over. The old Node server is removed from the tree (recoverable from git history; the deployed Node binary on the host remains as the immediate rollback). |
 | **SQLite via modernc.org/sqlite (pure Go)** | An embedded transactional DB is all a home app needs: zero extra services, trivial backups, 798 days fit in 90 MB, and WAL. Pure-Go driver so the binary is 100% static (no CGO, no libc) and cross-compiles for amd64/arm64 from CI. |
 | **React 19 + Vite + Tailwind** | The same front as every app in the house (shared `webapp-shell`): one way of doing shell, theme, settings and login. |
 | **HAOS as the live source** | HAOS already maintains the Solis/Fox integrations and their reconnections. Duplicating that in Helios means maintaining two drivers. Helios consumes, it doesn't integrate. |
@@ -145,7 +145,7 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 - `server-go/`: Go API + multi-user auth + aggregation + data sanitation (the live backend since v1.0.0).
 - `server/`: previous Node/Hono backend, kept as a rollback path.
 - `app/`: React 19 (views: Today, Inverters, Battery, History, Settings).
-- `server/src/schemas.ts`: zod contract server↔front (shared types are exported from the server sources).
+- `shared/` + `app/src/data/types.ts`: typed contract server↔front (in Go the API returns the same shapes).
 - Full detail in `ARCHITECTURE.md` and `STACK.md`.
 
 ## Installation

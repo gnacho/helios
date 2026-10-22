@@ -1,6 +1,7 @@
 package extensions
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"testing"
 	"time"
@@ -538,3 +539,32 @@ func TestSaveChargerImageRejectsBadFormat(t *testing.T) {
 }
 
 func floatPtr(f float64) *float64 { return &f }
+
+// TestLiveChargerOmitsUndefined: el server Node omitía las claves undefined y
+// el front distingue "sin dato" (undefined) de null (regresión 22-Oct-2026:
+// switchOn null habilitaba el botón power).
+func TestLiveChargerOmitsUndefined(t *testing.T) {
+	f := newFake()
+	ch := Charger{Key: "main", PowerID: "sensor.pot", PowerUnit: UnitKW, StateID: "sensor.e"}
+
+	f.set("sensor.pot", "3.5")
+	f.set("sensor.e", "unavailable")
+
+	live := ComputeOneChargerLive(f, ch)
+	raw, err := json.Marshal(live)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []string{"state", "sessionKwh", "totalKwh", "tempC", "switchOn", "amps", "ampOptions"} {
+		if _, ok := m[k]; ok {
+			t.Fatalf("la clave %q debería omitirse (undefined en el original), payload: %s", k, raw)
+		}
+	}
+	if !live.Charging {
+		t.Fatal("potencia > 0.05 debería marcar charging")
+	}
+}

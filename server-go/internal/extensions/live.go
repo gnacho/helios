@@ -17,19 +17,21 @@ type HA interface {
 	CallService(domain, service string, data map[string]any) error
 }
 
+// Los campos opcionales van con omitempty: el server Node omitía las claves
+// undefined y el front distingue "sin dato" (undefined) de null.
 type LiveCharger struct {
 	Key        string    `json:"key"`
 	Name       string    `json:"name"`
 	Charging   bool      `json:"charging"`
 	Connected  bool      `json:"connected"`
-	State      *string   `json:"state"`
+	State      *string   `json:"state,omitempty"`
 	PowerKw    float64   `json:"powerKw"`
-	SessionKwh *float64  `json:"sessionKwh"`
-	TotalKwh   *float64  `json:"totalKwh"`
-	TempC      *float64  `json:"tempC"`
-	SwitchOn   *bool     `json:"switchOn"`
-	Amps       *float64  `json:"amps"`
-	AmpOptions []float64 `json:"ampOptions"`
+	SessionKwh *float64  `json:"sessionKwh,omitempty"`
+	TotalKwh   *float64  `json:"totalKwh,omitempty"`
+	TempC      *float64  `json:"tempC,omitempty"`
+	SwitchOn   *bool     `json:"switchOn,omitempty"`
+	Amps       *float64  `json:"amps,omitempty"`
+	AmpOptions []float64 `json:"ampOptions,omitempty"`
 }
 
 func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
