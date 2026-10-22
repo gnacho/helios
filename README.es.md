@@ -85,7 +85,7 @@ la batería y cuánto vale en euros cada kWh autoconsumido.
 
 | Decisión | Motivo |
 |---|---|
-| **Go 1.25 + net/http (desde v1.0.0)** | El backend se reescribió de Node/Hono a Go en v1.0.0: un binario estático de ~12 MB, sin runtime, sin `node_modules` y un solo lenguaje en el servidor. La lógica de agregados y saneado se portó con el mismo contrato de API, verificada campo a campo contra Home Assistant (SOC, producción, red, energía del cargador) antes del corte. El back server Node queda en `server/` como vía de rollback. |
+| **Go 1.25 + net/http (desde v1.0.0)** | El backend se reescribió de Node/Hono a Go en v1.0.0: un binario estático de ~12 MB, sin runtime, sin `node_modules` y un solo lenguaje en el servidor. La lógica de agregados y saneado se portó con el mismo contrato de API, verificada campo a campo contra Home Assistant (SOC, producción, red, energía del cargador) antes del corte. El backend Node se eliminó del árbol (recuperable del historial de git; el binario Node desplegado en el host sigue siendo el rollback inmediato). |
 | **SQLite via modernc.org/sqlite (Go puro)** | Una BD embebida transaccional es todo lo que necesita una app doméstica: cero servicios extra, backup trivial, los 798 días caben en 90 MB, y WAL. Driver en Go puro para que el binario sea 100% estático (sin CGO ni libc) y compile para amd64/arm64 en CI. |
 | **React 19 + Vite + Tailwind** | El mismo front de todas las apps de la casa (`webapp-shell` compartida): una sola forma de hacer shell, tema, ajustes y login. |
 | **HAOS como fuente del live** | HAOS ya mantiene las integraciones con Solis/Fox y sus reconexiones. Duplicar eso en Helios sería mantener dos drivers. Helios consume, no integra. |
@@ -145,7 +145,7 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 
 - `server/`: API Hono + auth multiusuario + agregados + saneado de datos.
 - `app/`: React 19 (vistas: Hoy, Inversores, Batería, Histórico, Ajustes).
-- `server/src/schemas.ts`: contrato zod server↔front.
+- `shared/` + `app/src/data/types.ts`: contrato tipado server↔front (en Go la API devuelve las mismas formas).
 - Detalle completo en `ARCHITECTURE.md` y `STACK.md`.
 
 ## Instalación

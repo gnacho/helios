@@ -1,8 +1,11 @@
 package api
 
 import (
+	cryptorand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -223,9 +226,40 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"entries": entries})
 }
 
+// handleRecover: emergency kit de contraseñas. SOLO conexión directa desde
+// localhost (rechaza si hay cabeceras de proxy): resetea la contraseña de
+// todos los admins a una temporal y la devuelve. Documentado en el README.
 func (s *Server) handleRecover(w http.ResponseWriter, r *http.Request) {
-	// Placeholder: implementar según la lógica de recover actual (si existe)
-	writeJSON(w, 501, map[string]any{"error": "not implemented"})
+	if r.Header.Get("X-Forwarded-For") != "" || r.Header.Get("X-Real-IP") != "" {
+		writeJSON(w, 403, map[string]any{"error": "solo desde localhost"})
+		return
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if host != "127.0.0.1" && host != "::1" {
+		writeJSON(w, 403, map[string]any{"error": "solo desde localhost"})
+		return
+	}
+
+	raw := make([]byte, 9)
+	if _, err := cryptorand.Read(raw); err != nil {
+		writeJSON(w, 500, map[string]any{"error": "error interno"})
+		return
+	}
+	temp := base64.RawURLEncoding.EncodeToString(raw)
+	hash, err := bcrypt.GenerateFromPassword([]byte(temp), 10)
+	if err != nil {
+		writeJSON(w, 500, map[string]any{"error": "error interno"})
+		return
+	}
+	if _, err := s.DB.Exec(`UPDATE users SET password_hash = ? WHERE role = ?`, string(hash), "admin"); err != nil {
+		writeJSON(w, 500, map[string]any{"error": "error interno"})
+		return
+	}
+	log.Printf("[helios] recovery: contraseña de admins reseteada (temporal)")
+	writeJSON(w, 200, map[string]any{"ok": true, "tempPassword": temp})
 }
 
 var _ = db.UserView{}
