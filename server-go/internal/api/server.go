@@ -75,9 +75,11 @@ func (s *Server) Routes() chi.Router {
 	r.Get("/health", s.handleHealth)
 	r.Get("/api/version", s.handleVersion)
 
+	// Público en el original (registrado antes de guarded).
+	r.Get("/api/system/info", s.handleSystemInfo)
+
 	r.Group(func(r chi.Router) {
 		r.Use(s.Auth.RequireAuth)
-		r.Get("/api/system/info", s.handleSystemInfo)
 		r.Get("/api/update/status", s.handleUpdateStatus)
 		r.Get("/api/update/progress", s.handleUpdateProgress)
 		r.Get("/api/update/stream", s.handleUpdateStream)
