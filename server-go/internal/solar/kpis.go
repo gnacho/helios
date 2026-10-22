@@ -306,11 +306,7 @@ func sliceStatsByDay(stats ha.Stats, key string) ha.Stats {
 	for sid, rows := range stats {
 		var inDay []ha.StatsRow
 		for _, r := range rows {
-			t, err := time.Parse(time.RFC3339, r.Start)
-			if err != nil {
-				continue
-			}
-			lt := t.Local()
+			lt := r.Start.Local()
 			if !lt.Before(dayStart) && lt.Before(dayEnd) {
 				inDay = append(inDay, r)
 			}

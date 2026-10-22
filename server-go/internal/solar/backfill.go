@@ -91,14 +91,14 @@ func (s *Solar) BackfillHistory(haReader HAReader) (int, error) {
 				}
 			}
 			// Orden cronológico (el original no ordenaba; HA ya entrega ordenado).
-			sort.SliceStable(rows, func(i, j int) bool { return rows[i].Start < rows[j].Start })
+			sort.SliceStable(rows, func(i, j int) bool { return rows[i].Start.Before(rows[j].Start.Time) })
 
 			daily := map[string]float64{}
 			prev := 0.0
 			prevKey := ""
 
 			for _, r := range rows {
-				key := rowDayKey(r.Start)
+				key := rowDayKey(r.Start.Time)
 				var raw float64
 				if src.Acc == install.AccSum {
 					if r.Sum != nil {
@@ -367,12 +367,8 @@ func (s *Solar) BackfillDaySeries(haReader HAReader, backup ha.Stats) (ran bool,
 }
 
 // rowDayKey extrae la fecha (local) del start de una fila de statistics.
-func rowDayKey(start string) string {
-	t, err := time.Parse(time.RFC3339, start)
-	if err != nil {
-		if t2, err2 := time.Parse("2006-01-02T15:04:05", start); err2 == nil {
-			return dateKey(t2)
-		}
+func rowDayKey(t time.Time) string {
+	if t.IsZero() {
 		return ""
 	}
 	return dateKey(t)

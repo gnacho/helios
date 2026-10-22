@@ -78,13 +78,13 @@ func TestGetKpisPastDayWithoutDailyRow(t *testing.T) {
 
 	f := newCounting()
 	f.stats = ha.Stats{
-		"sensor.solis_energia_hoy":               {{Start: "2026-10-19T00:00:00Z", State: floatPtr(4.0)}},
-		"sensor.energia_fox_diaria":              {{Start: "2026-10-19T00:00:00Z", State: floatPtr(2.0)}},
-		"sensor.consumo_total_diario":            {{Start: "2026-10-19T00:00:00Z", State: floatPtr(5.0)}},
-		"sensor.energia_red_importada_solis":     {{Start: "2026-10-19T00:00:00Z", State: floatPtr(1.0)}},
-		"sensor.energia_red_exportada_solis":     {{Start: "2026-10-19T00:00:00Z", State: floatPtr(2.0)}},
-		"sensor.energia_bateria_carga_diaria":    {{Start: "2026-10-19T00:00:00Z", State: floatPtr(0.5)}},
-		"sensor.energia_bateria_descarga_diaria": {{Start: "2026-10-19T00:00:00Z", State: floatPtr(0.25)}},
+		"sensor.solis_energia_hoy":               {{Start: ft("2026-10-19T00:00:00Z"), State: floatPtr(4.0)}},
+		"sensor.energia_fox_diaria":              {{Start: ft("2026-10-19T00:00:00Z"), State: floatPtr(2.0)}},
+		"sensor.consumo_total_diario":            {{Start: ft("2026-10-19T00:00:00Z"), State: floatPtr(5.0)}},
+		"sensor.energia_red_importada_solis":     {{Start: ft("2026-10-19T00:00:00Z"), State: floatPtr(1.0)}},
+		"sensor.energia_red_exportada_solis":     {{Start: ft("2026-10-19T00:00:00Z"), State: floatPtr(2.0)}},
+		"sensor.energia_bateria_carga_diaria":    {{Start: ft("2026-10-19T00:00:00Z"), State: floatPtr(0.5)}},
+		"sensor.energia_bateria_descarga_diaria": {{Start: ft("2026-10-19T00:00:00Z"), State: floatPtr(0.25)}},
 	}
 
 	k, err := s.GetKpis(f, "2026-10-19", PriceConfig{PriceImport: 0.15, PriceExport: 0.08, Co2PerKwh: 0.25})
@@ -155,13 +155,13 @@ func TestGetDaySeriesPersistsAndCaches(t *testing.T) {
 	// Stats vacíos: la serie sale sin puntos, pero el test de caché usa un día
 	// con datos para forzar cómputo.
 	f.stats = ha.Stats{
-		"sensor.solis_potencia_actual":  {{Start: "2026-10-18T12:00:00Z", Mean: floatPtr(2.0)}},
-		"sensor.almacen_pinza_power_b":  {{Start: "2026-10-18T12:00:00Z", Mean: floatPtr(0)}},
-		"sensor.medidor_respaldo_power": {{Start: "2026-10-18T12:00:00Z", Mean: floatPtr(0)}},
-		"sensor.vivienda_medidor_power": {{Start: "2026-10-18T12:00:00Z", Mean: floatPtr(0)}},
-		"sensor.almacen_pinza_power_a":  {{Start: "2026-10-18T12:00:00Z", Mean: floatPtr(0)}},
-		"sensor.solis_bateria_potencia": {{Start: "2026-10-18T12:00:00Z", Mean: floatPtr(0)}},
-		"sensor.solis_bateria_soc":      {{Start: "2026-10-18T12:00:00Z", Mean: floatPtr(50)}},
+		"sensor.solis_potencia_actual":  {{Start: ft("2026-10-18T12:00:00Z"), Mean: floatPtr(2.0)}},
+		"sensor.almacen_pinza_power_b":  {{Start: ft("2026-10-18T12:00:00Z"), Mean: floatPtr(0)}},
+		"sensor.medidor_respaldo_power": {{Start: ft("2026-10-18T12:00:00Z"), Mean: floatPtr(0)}},
+		"sensor.vivienda_medidor_power": {{Start: ft("2026-10-18T12:00:00Z"), Mean: floatPtr(0)}},
+		"sensor.almacen_pinza_power_a":  {{Start: ft("2026-10-18T12:00:00Z"), Mean: floatPtr(0)}},
+		"sensor.solis_bateria_potencia": {{Start: ft("2026-10-18T12:00:00Z"), Mean: floatPtr(0)}},
+		"sensor.solis_bateria_soc":      {{Start: ft("2026-10-18T12:00:00Z"), Mean: floatPtr(50)}},
 	}
 
 	first, err := s.GetDaySeries(f, "2026-10-18")
@@ -201,13 +201,13 @@ func TestEachDayKey(t *testing.T) {
 }
 
 func TestSliceStatsByDay(t *testing.T) {
-	local := func(day, hour int) string {
-		return time.Date(2026, 10, day, hour, 0, 0, 0, time.Local).Format(time.RFC3339)
+	local := func(day, hour int) time.Time {
+		return time.Date(2026, 10, day, hour, 0, 0, 0, time.Local)
 	}
 	stats := ha.Stats{
 		"sensor.x": {
-			{Start: local(20, 10), Mean: floatPtr(1)},
-			{Start: local(21, 10), Mean: floatPtr(2)},
+			{Start: ha.FlexTime{Time: local(20, 10)}, Mean: floatPtr(1)},
+			{Start: ha.FlexTime{Time: local(21, 10)}, Mean: floatPtr(2)},
 		},
 	}
 	out := sliceStatsByDay(stats, "2026-10-21")
@@ -217,4 +217,9 @@ func TestSliceStatsByDay(t *testing.T) {
 	if *out["sensor.x"][0].Mean != 2 {
 		t.Fatalf("mean = %v", *out["sensor.x"][0].Mean)
 	}
+}
+
+func ft(s string) ha.FlexTime {
+	t, _ := time.Parse(time.RFC3339, s)
+	return ha.FlexTime{Time: t}
 }

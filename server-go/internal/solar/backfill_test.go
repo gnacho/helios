@@ -3,6 +3,7 @@ package solar
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"helios-server/internal/db"
 	"helios-server/internal/ha"
@@ -16,7 +17,8 @@ func dbRow(date string) db.DailyRow {
 func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) }
 
 func dayRow(start string, sum, state *float64) ha.StatsRow {
-	return ha.StatsRow{Start: start, Sum: sum, State: state}
+	t, _ := time.Parse(time.RFC3339, start)
+	return ha.StatsRow{Start: ha.FlexTime{Time: t}, Sum: sum, State: state}
 }
 
 func TestBackfillHistoryBasic(t *testing.T) {

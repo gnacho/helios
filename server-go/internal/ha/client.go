@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,13 +24,41 @@ type EntityState struct {
 }
 
 type StatsRow struct {
-	Start string   `json:"start"`
-	End   string   `json:"end,omitempty"`
+	Start FlexTime `json:"start"`
+	End   FlexTime `json:"end,omitempty"`
 	Mean  *float64 `json:"mean,omitempty"`
 	State *float64 `json:"state,omitempty"`
 	Sum   *float64 `json:"sum,omitempty"`
 	Min   *float64 `json:"min,omitempty"`
 	Max   *float64 `json:"max,omitempty"`
+}
+
+// FlexTime acepta "start" como string ISO o como epoch (HAOS devuelve ambos
+// formatos según la versión/consulta; el original usaba new Date(row.start)).
+type FlexTime struct {
+	time.Time
+}
+
+func (f *FlexTime) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), `"`)
+	if s == "null" || s == "" {
+		return nil
+	}
+	if ts, err := strconv.ParseInt(s, 10, 64); err == nil {
+		if ts > 1e12 {
+			f.Time = time.UnixMilli(ts)
+		} else {
+			f.Time = time.Unix(ts, 0)
+		}
+		return nil
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04:05"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			f.Time = t
+			return nil
+		}
+	}
+	return fmt.Errorf("fecha no parseable: %s", s)
 }
 
 type Stats map[string][]StatsRow

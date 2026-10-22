@@ -114,7 +114,9 @@ func (e *Ext) ChargerPVFromCurves(h HA, startTime, endTime string, c Charger) ma
 			if r.Mean == nil {
 				continue
 			}
-			ts, err := time.Parse(time.RFC3339, r.Start)
+			ts := r.Start.Time
+			err := error(nil)
+			_ = err
 			if err != nil {
 				continue
 			}

@@ -25,7 +25,7 @@ func statsRow(minute int, mean float64) ha.StatsRow {
 	// Bucket en hora local para que bucketMinute devuelva el minuto esperado.
 	base := time.Date(2026, 10, 22, minute/60, minute%60, 0, 0, time.Local)
 	m := mean
-	return ha.StatsRow{Start: base.Format(time.RFC3339), Mean: &m}
+	return ha.StatsRow{Start: ha.FlexTime{Time: base}, Mean: &m}
 }
 
 func mkStats(m map[string][]ha.StatsRow) ha.Stats { return ha.Stats(m) }
@@ -260,15 +260,15 @@ func TestBuildDaySeriesBatterySign(t *testing.T) {
 
 func TestBucketMinuteParsesLocal(t *testing.T) {
 	base := time.Date(2026, 10, 22, 14, 35, 0, 0, time.Local)
-	min, ok := bucketMinute(base.Format(time.RFC3339))
+	min, ok := bucketMinute(base)
 	if !ok {
 		t.Fatal("no parseó")
 	}
 	if min != 14*60+35 {
 		t.Fatalf("minuto = %d (esperado 875)", min)
 	}
-	if _, ok := bucketMinute("no-es-fecha"); ok {
-		t.Fatal("no debería parsear basura")
+	if _, ok := bucketMinute(time.Time{}); ok {
+		t.Fatal("zero time no debería ser válido")
 	}
 }
 

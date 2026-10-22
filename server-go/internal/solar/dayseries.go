@@ -63,7 +63,7 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 			if row.Mean == nil {
 				continue
 			}
-			min, ok := bucketMinute(row.Start)
+			min, ok := bucketMinute(row.Start.Time)
 			if !ok {
 				continue
 			}
@@ -444,15 +444,9 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 
 // bucketMinute convierte el inicio del bucket a minuto del día en hora LOCAL
 // (equivalente a Date.getHours()/getMinutes() en el original).
-func bucketMinute(start string) (int, bool) {
-	t, err := time.Parse(time.RFC3339, start)
-	if err != nil {
-		// HA a veces omite la zona; probamos sin ella.
-		t, err = time.Parse("2006-01-02T15:04:05", start)
-		if err != nil {
-			return 0, false
-		}
-		return t.Hour()*60 + t.Minute(), true
+func bucketMinute(t time.Time) (int, bool) {
+	if t.IsZero() {
+		return 0, false
 	}
 	local := t.Local()
 	return local.Hour()*60 + local.Minute(), true
