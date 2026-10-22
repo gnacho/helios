@@ -20,6 +20,10 @@ type Config struct {
 	Co2PerKwh   float64
 
 	SessionTTL time.Duration
+
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDSubject    string
 }
 
 func envFloat(key string, def float64) float64 {
@@ -70,5 +74,9 @@ func Load() (*Config, error) {
 		Co2PerKwh:   envFloat("CO2_KG_PER_KWH", 0.25),
 
 		SessionTTL: 30 * 24 * time.Hour,
+
+		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
+		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
+		VAPIDSubject:    os.Getenv("VAPID_SUBJECT"),
 	}, nil
 }

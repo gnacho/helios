@@ -8,4 +8,8 @@ require (
 	golang.org/x/crypto v0.58.0
 )
 
-require github.com/gorilla/websocket v1.5.3 // indirect
+require (
+	github.com/SherClockHolmes/webpush-go v1.4.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
+)

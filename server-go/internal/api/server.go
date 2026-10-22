@@ -11,6 +11,7 @@ import (
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
 	"helios-server/internal/extensions"
+	"helios-server/internal/push"
 	"helios-server/internal/solar"
 )
 
@@ -22,6 +23,8 @@ type Server struct {
 	Ext      *extensions.Ext
 	ExtStore *extensions.Store
 	ExtHA    extensions.HA
+	Push     *push.Service
+	SSE      http.Handler
 	Prices   solar.PriceConfig
 	dataDir  string
 }
@@ -80,9 +83,16 @@ func (s *Server) Routes() chi.Router {
 		r.Get("/api/charger/day", s.handleChargerDay)
 		r.Get("/api/charger/history", s.handleChargerHistory)
 		r.Post("/api/charger/action", s.handleChargerAction)
+		r.Get("/api/charger/stream", s.SSE.ServeHTTP)
 		r.Get("/api/charger/image/{key}", s.handleGetChargerImage)
 		r.Put("/api/charger/image/{key}", s.handlePutChargerImage)
 		r.Delete("/api/charger/image/{key}", s.handleDeleteChargerImage)
+
+		r.Get("/api/push/vapid-public-key", s.handleVapidPublicKey)
+		r.Post("/api/push/subscribe", s.handlePushSubscribe)
+		r.Delete("/api/push/unsubscribe", s.handlePushUnsubscribe)
+		r.Get("/api/push/preferences", s.handleGetPushPreferences)
+		r.Put("/api/push/preferences", s.handlePutPushPreferences)
 	})
 
 	return r
