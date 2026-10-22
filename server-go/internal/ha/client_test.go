@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -171,7 +172,7 @@ func TestClientRejectsBadToken(t *testing.T) {
 
 func TestEntityDiffApplication(t *testing.T) {
 	c := NewClient("http://localhost:8123", "t")
-	plus := &entityChange{S: strPtr("5.0")}
+	plus := &entityChange{S: []byte(`"5.0"`)}
 
 	ev := entityEvent{
 		C: map[string]struct {
@@ -198,7 +199,36 @@ func TestEntityDiffApplication(t *testing.T) {
 	}
 }
 
-func strPtr(s string) *string { return &s }
+// TestUnmarshalNumericState: el mock de la demo manda "s" como número.
+// Regresión 22-Oct-2026 (demo): el unmarshal fallaba y el snapshot entero se
+// descartaba → panel a cero.
+func TestUnmarshalNumericState(t *testing.T) {
+	raw := []byte(`{"id":1,"type":"event","event":{"a":{` +
+		`"sensor.almacen_pinza_energy_produced_b":{"s":23004.56,"a":{"unit_of_measurement":"kWh"},"lu":1792692300.36},` +
+		`"sensor.solis_potencia_actual":{"s":1.26,"lu":"2026-10-22T20:00:01.374Z"}` +
+		`}}}`)
+
+	var msg haMessage
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if msg.Event == nil {
+		t.Fatal("event no parseado")
+	}
+
+	c := NewClient("http://x", "t")
+	c.applyEntityEvent(*msg.Event)
+
+	energyState, energyOK := c.GetState("sensor.almacen_pinza_energy_produced_b")
+	if !energyOK || energyState.State != "23004.56" {
+		t.Fatalf("energía: %+v ok=%v", energyState, energyOK)
+	}
+
+	// el flujo del resto del código parsea el string numérico
+	if f, err := strconv.ParseFloat(energyState.State, 64); err != nil || f != 23004.56 {
+		t.Fatalf("ParseFloat = %v err %v", f, err)
+	}
+}
 
 // TestDiffAttributesMerge: un diff "c" con atributos PARCIALES no debe perder
 // el resto del mapa. Regresión del bug de producción 22-Oct-2026: el scraper
@@ -216,17 +246,15 @@ func TestDiffAttributesMerge(t *testing.T) {
 	}
 
 	// Diff parcial: solo cambia currentGridPower.
-	s := "Mandor 40"
-	lu := []byte("1792692300.5")
 	c.applyEntityEvent(entityEvent{
 		C: map[string]struct {
 			Plus  *entityChange `json:"+"`
 			Minus any           `json:"-"`
 		}{
 			"sensor.solis_scraper": {Plus: &entityChange{
-				S:  &s,
+				S:  []byte(`"Mandor 40"`),
 				A:  map[string]any{"currentGridPower": float64(0.55)},
-				LU: lu,
+				LU: []byte(`"2026-10-22T10:00:00Z"`),
 			}},
 		},
 	})

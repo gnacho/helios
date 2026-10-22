@@ -80,11 +80,25 @@ type callResult struct {
 }
 
 type entityChange struct {
-	S *string        `json:"s,omitempty"`
-	A map[string]any `json:"a,omitempty"`
+	// s llega como string en HAOS real y como NÚMERO en el mock de la demo
+	// (visto 22-Oct-2026: "s":1.26). RawMessage tolera ambos.
+	S json.RawMessage `json:"s,omitempty"`
+	A map[string]any  `json:"a,omitempty"`
 	// lu llega como string ISO o como epoch numérico (visto en producción
 	// 22-Oct-2026: 1792692300.3598962). RawMessage tolera ambos.
 	LU json.RawMessage `json:"lu,omitempty"`
+}
+
+// rawToString normaliza un campo JSON tolerante (s / lu) a su forma string.
+func rawToString(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	s := strings.Trim(string(raw), `"`)
+	if s == "null" {
+		return ""
+	}
+	return s
 }
 
 // luToString normaliza el campo lu a string ISO (o vacío si no parsea).
@@ -364,12 +378,10 @@ func (c *Client) applyEntityEvent(ev entityEvent) {
 	}
 	for id, v := range ev.A {
 		if debugHA && (strings.Contains(id, "scraper") || strings.Contains(id, "grid")) {
-			log.Printf("[ha:debug] snapshot entidad %s state=%v attrs=%v", id, *v.S, v.A)
+			log.Printf("[ha:debug] snapshot entidad %s state=%v attrs=%v", id, rawToString(v.S), v.A)
 		}
 		st := EntityState{Attributes: v.A}
-		if v.S != nil {
-			st.State = *v.S
-		}
+		st.State = rawToString(v.S)
 		st.LastUpdated = luToString(v.LU)
 		c.entities[id] = st
 		if c.OnEntity != nil {
@@ -383,9 +395,7 @@ func (c *Client) applyEntityEvent(ev entityEvent) {
 			if !exists {
 				cur = EntityState{Attributes: map[string]any{}}
 			}
-			if diff.Plus.S != nil {
-				cur.State = *diff.Plus.S
-			}
+			cur.State = rawToString(diff.Plus.S)
 			// HAOS envía los atributos de un diff de forma PARCIAL (solo los que
 			// cambiaron). Reemplazar el mapa completo perdería el resto
 			// (gridDirection/stationName/inverterOnline del scraper, visto en
