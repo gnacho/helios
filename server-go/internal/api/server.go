@@ -105,6 +105,7 @@ func (s *Server) Routes() chi.Router {
 		r.Get("/api/charger/day", s.handleChargerDay)
 		r.Get("/api/charger/history", s.handleChargerHistory)
 		r.Post("/api/charger/action", s.handleChargerAction)
+		r.Post("/api/byd/action", s.handleBydAction)
 		r.Get("/api/solar/stream", s.SSE.ServeHTTP)
 		r.Get("/api/charger/stream", s.SSE.ServeHTTP)
 		r.Get("/api/charger/image/{key}", s.handleGetChargerImage)

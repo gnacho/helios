@@ -24,6 +24,7 @@ import (
 type livePayload struct {
 	solar.LiveData
 	Chargers []extensions.LiveCharger `json:"chargers"`
+	Byd      *extensions.BydLive      `json:"byd"`
 }
 
 func main() {
@@ -69,6 +70,7 @@ func main() {
 			payload := livePayload{
 				LiveData: sol.ComputeLive(client),
 				Chargers: extensions.ComputeChargerLive(client, extStore.Get()),
+				Byd:      extensions.ComputeBydLive(client, extStore.Get()),
 			}
 			raw, err := json.Marshal(map[string]any{"type": "live", "data": payload})
 			if err != nil {
@@ -80,6 +82,7 @@ func main() {
 		client.OnConnected = func() {
 			log.Printf("[ha] conectado a %s", cfg.HAOSURL)
 			ids := append(store.LiveEntities(), extensions.ChargerEntities(extStore.Get())...)
+			ids = append(ids, extensions.BydEntities(extStore.Get())...)
 			if err := client.SubscribeEntities(ids); err != nil {
 				log.Printf("[ha] subscribe: %v", err)
 			}

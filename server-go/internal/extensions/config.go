@@ -41,6 +41,7 @@ type CarChargerConfig struct {
 type Config struct {
 	Enabled    bool             `json:"enabled"`
 	CarCharger CarChargerConfig `json:"carCharger"`
+	Byd        BydConfig        `json:"byd"`
 }
 
 var GenericCharger = Charger{
@@ -58,6 +59,7 @@ var GenericCharger = Charger{
 
 var LegacyExtensions = Config{
 	Enabled: false,
+	Byd:     LegacyByd,
 	CarCharger: CarChargerConfig{
 		Enabled: false,
 		Chargers: []Charger{
@@ -83,6 +85,7 @@ var LegacyExtensions = Config{
 
 var GenericExtensions = Config{
 	Enabled: false,
+	Byd:     GenericByd,
 	CarCharger: CarChargerConfig{
 		Enabled:  false,
 		Chargers: []Charger{withKey(GenericCharger, "main")},
@@ -216,12 +219,17 @@ func intFromAny(v any) (int, bool) {
 // NormalizeConfig replica normalizeExtensions(): acepta forma antigua (campos
 // sueltos en carCharger) y la migra a chargers[0].
 func NormalizeConfig(raw map[string]any, base Config) Config {
-	out := Config{CarCharger: CarChargerConfig{Chargers: []Charger{}}}
+	out := Config{CarCharger: CarChargerConfig{Chargers: []Charger{}}, Byd: base.Byd}
 
 	if b, ok := raw["enabled"].(bool); ok {
 		out.Enabled = b
 	} else {
 		out.Enabled = base.Enabled
+	}
+
+	// BYD: spread {...base.byd, ...raw.byd} como el original.
+	if rawByd, ok := raw["byd"].(map[string]any); ok {
+		out.Byd = NormalizeByd(rawByd, base.Byd)
 	}
 
 	inC, _ := raw["carCharger"].(map[string]any)

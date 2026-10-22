@@ -200,6 +200,51 @@ func TestEntityDiffApplication(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 
+// TestUnmarshalSnapshotWithNumericLU: HAOS envía lu como epoch numérico en el
+// snapshot y en los diffs "+". Regresión del bug de producción 22-Oct-2026:
+// el unmarshal fallaba (lu *string) y TODO el snapshot se descartaba → todos
+// los datos a 0.
+func TestUnmarshalSnapshotWithNumericLU(t *testing.T) {
+	raw := []byte(`{"id":1,"type":"event","event":{"a":{` +
+		`"input_select.feyree_amperaje":{"s":"16","a":{"options":["8","16"]},"lu":1792692300.3598962},` +
+		`"sensor.solis_bateria_soc":{"s":"20","a":{},"lu":1792692300}` +
+		`},"c":{"sensor.solis_scraper":{"+":{"lu":1792692300.3598962,"c":"01M5","a":{"inverterOnline":1}}}}}}`)
+
+	var msg haMessage
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if msg.Event == nil {
+		t.Fatal("event no parseado")
+	}
+
+	c := NewClient("http://x", "t")
+	c.applyEntityEvent(*msg.Event)
+
+	if st, ok := c.GetState("sensor.solis_bateria_soc"); !ok || st.State != "20" {
+		t.Fatalf("soc no en cache: %+v ok=%v", st, ok)
+	}
+	if st, ok := c.GetState("input_select.feyree_amperaje"); !ok || st.State != "16" {
+		t.Fatalf("amperaje no en cache: %+v ok=%v", st, ok)
+	}
+	if st, ok := c.GetState("sensor.solis_scraper"); !ok {
+		t.Fatal("scraper no en cache tras diff +")
+	} else if len(st.Attributes) == 0 || st.Attributes["inverterOnline"] != float64(1) {
+		t.Fatalf("attrs scraper = %v", st.Attributes)
+	}
+
+	// luToString normaliza epoch (s) y epoch (ms)
+	if got := luToString(json.RawMessage(`1792692300`)); !strings.Contains(got, "T") {
+		t.Fatalf("lu epoch s -> %q", got)
+	}
+	if got := luToString(json.RawMessage(`1792692300359`)); !strings.Contains(got, "T") {
+		t.Fatalf("lu epoch ms -> %q", got)
+	}
+	if got := luToString(json.RawMessage(`"2026-10-22T10:00:00Z"`)); got != "2026-10-22T10:00:00Z" {
+		t.Fatalf("lu ISO -> %q", got)
+	}
+}
+
 // TestSubscribeFromOnConnectedNoDeadlock: suscribir dentro de OnConnected
 // (patrón de producción) no debe bloquear el readLoop. Regresión del deadlock
 // de producción (22-Oct-2026): Call desde el readLoop esperaba un resultado

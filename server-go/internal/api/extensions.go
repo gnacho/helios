@@ -225,6 +225,41 @@ func (s *Server) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleBydAction(w http.ResponseWriter, r *http.Request) {
+	username, userID, isAdmin := s.currentUser(r)
+	if !isAdmin {
+		writeJSON(w, 403, map[string]any{"error": "solo admin"})
+		return
+	}
+	if s.ExtHA == nil {
+		writeJSON(w, 503, map[string]any{"error": "HAOS no conectado"})
+		return
+	}
+	var body struct {
+		Action string `json:"action"`
+		Value  any    `json:"value"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, 400, map[string]any{"error": "body inválido"})
+		return
+	}
+	s.DB.Audit(username, userID, "byd.action", map[string]any{"action": body.Action, "value": body.Value})
+	if err := extensions.BydAction(s.ExtHA, s.ExtStore.Get(), body.Action, body.Value); err != nil {
+		msg := err.Error()
+		if msg == "unknown_action" {
+			writeJSON(w, 400, map[string]any{"error": "acción no soportada"})
+			return
+		}
+		if msg == "byd_disabled" {
+			writeJSON(w, 400, map[string]any{"error": "BYD desactivado"})
+			return
+		}
+		writeJSON(w, 502, map[string]any{"error": msg})
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true})
+}
+
 func (s *Server) handleGetChargerImage(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 	if !extensions.SanitizeImageKey(key) {

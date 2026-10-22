@@ -80,9 +80,32 @@ type callResult struct {
 }
 
 type entityChange struct {
-	S  *string        `json:"s,omitempty"`
-	A  map[string]any `json:"a,omitempty"`
-	LU *string        `json:"lu,omitempty"`
+	S *string        `json:"s,omitempty"`
+	A map[string]any `json:"a,omitempty"`
+	// lu llega como string ISO o como epoch numérico (visto en producción
+	// 22-Oct-2026: 1792692300.3598962). RawMessage tolera ambos.
+	LU json.RawMessage `json:"lu,omitempty"`
+}
+
+// luToString normaliza el campo lu a string ISO (o vacío si no parsea).
+func luToString(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	s := strings.Trim(string(raw), `"`)
+	if s == "null" {
+		return ""
+	}
+	if ts, err := strconv.ParseFloat(s, 64); err == nil {
+		ms := int64(ts)
+		if ts > 1e12 {
+			ms = int64(ts)
+		} else if ts < 1e11 {
+			ms = int64(ts * 1000)
+		}
+		return time.UnixMilli(ms).UTC().Format(time.RFC3339)
+	}
+	return s
 }
 
 type entityEvent struct {
@@ -216,7 +239,13 @@ func (c *Client) readLoop(ws *websocket.Conn) {
 		ws.SetReadDeadline(time.Now().Add(90 * time.Second))
 		var msg haMessage
 		if err := json.Unmarshal(raw, &msg); err != nil {
+			if debugHA {
+				log.Printf("[ha:debug] unmarshal error: %v (raw %.120s)", err, raw)
+			}
 			continue
+		}
+		if debugHA {
+			log.Printf("[ha:debug] <- msg type=%s id=%d event=%v rawlen=%d", msg.Type, msg.ID, msg.Event != nil, len(raw))
 		}
 		c.handle(msg, ws)
 	}
@@ -319,14 +348,15 @@ func (c *Client) applyEntityEvent(ev entityEvent) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if debugHA {
+		log.Printf("[ha:debug] applyEntityEvent a=%d c=%d", len(ev.A), len(ev.C))
+	}
 	for id, v := range ev.A {
 		st := EntityState{Attributes: v.A}
 		if v.S != nil {
 			st.State = *v.S
 		}
-		if v.LU != nil {
-			st.LastUpdated = *v.LU
-		}
+		st.LastUpdated = luToString(v.LU)
 		c.entities[id] = st
 		if c.OnEntity != nil {
 			go c.OnEntity(id)
@@ -345,9 +375,7 @@ func (c *Client) applyEntityEvent(ev entityEvent) {
 			if diff.Plus.A != nil {
 				cur.Attributes = diff.Plus.A
 			}
-			if diff.Plus.LU != nil {
-				cur.LastUpdated = *diff.Plus.LU
-			}
+			cur.LastUpdated = luToString(diff.Plus.LU)
 			c.entities[id] = cur
 			if c.OnEntity != nil {
 				go c.OnEntity(id)
