@@ -1,18 +1,21 @@
 name: release
 
-# Release estable por tag v*: empaqueta la webapp completa (frontend build +
-# server + node_modules de producción PRE-BUILT por arch). El checksums.txt se
-# genera en un job `release` SEPARADO (needs: build) que combina AMBOS arch —
-# si cada job de la matriz generara el suyo y lo subiera, el último en subir
-# pisaría al otro y la release quedaría con un solo arch (bug real, port de
-# deltos #36).
-# El 'Comprobar actualizaciones' del front y el ribbon semanal consumen estas
-# releases (releases/latest, semver).
+# Release estable por tag v* (desde v1.0.0 el runtime es Go).
+#
+# Publica, por arquitectura:
+#   - el BINARIO del backend Go (`helios_<ver>_linux_<arch>`), estático
+#   - el tarball del frontend ya construido (`helios-web_<ver>_linux_<arch>.tar.gz`)
+# El checksums.txt se genera en un job `release` SEPARADO (needs: build) que
+# combina AMBAS arquitecturas: si cada job de la matriz subiera el suyo, el
+# último pisaría al otro (bug real ya visto en el port de deltos #36).
+#
+# El 'Comprobar actualizaciones' del front consume releases/latest (semver) y
+# deploy/helios-update.sh descarga el binario + la web del tag publicado.
 
 on:
   push:
     tags: ['v*']
-  workflow_dispatch: # sin tag = empaqueta y sube como artifact de prueba
+  workflow_dispatch: # sin tag = compila y sube como artifact de prueba
 
 permissions:
   contents: write
@@ -31,44 +34,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server-go/go.mod
+          cache-dependency-path: server-go/go.sum
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: |
-            app/package-lock.json
-            server/package-lock.json
+          cache-dependency-path: app/package-lock.json
 
-      - name: Tests del server (vitest)
-        working-directory: server
-        run: npm ci --no-audit --no-fund && npm run typecheck && npm run build && npm test
+      - name: Tests del backend Go
+        working-directory: server-go
+        run: |
+          go vet ./...
+          go test -race ./...
 
       - name: Build frontend
         working-directory: app
-        run: npm ci --no-audit --no-fund && npm run build
+        run: npm ci --no-audit --no-fund && npm run typecheck && npm run build
 
-      - name: node_modules de producción (sin dev, compila prebuilds del arch)
-        working-directory: server
-        run: rm -rf node_modules && npm ci --omit=dev --no-audit --no-fund
-
-      - name: Empaqueta release
+      - name: Compila el binario (estático, sin CGO)
+        working-directory: server-go
         env:
-          REF: ${{ github.ref_name }}
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
         run: |
+          REF="${{ github.ref_name }}"
           VERSION="${REF#v}"
           [ "${{ github.ref_type }}" = "tag" ] || VERSION="0.0.0-SNAPSHOT-${GITHUB_SHA::7}"
-          mkdir -p stage/server
-          cp -r app/dist stage/dist
-          cp -r server/dist stage/server/dist
-          cp -r server/package.json stage/server/
-          cp -r server/node_modules stage/server/node_modules
-          tar -czf "helios_${VERSION}_linux_${{ matrix.arch }}.tar.gz" -C stage .
+          go build -trimpath -ldflags="-s -w -X main.appVersion=${VERSION}" \
+            -o "../helios_${VERSION}_linux_${{ matrix.arch }}" ./cmd/server
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Sube artifact (tarball por arch; sin checksums aquí)
+      - name: Empaqueta el frontend
+        run: |
+          mkdir -p stage
+          cp -r app/dist stage/dist
+          tar -czf "helios-web_${VERSION}_linux_${{ matrix.arch }}.tar.gz" -C stage .
+          ls -la helios_*
+
+      - name: Sube artifacts (binario + web por arch)
         uses: actions/upload-artifact@v4
         with:
-          name: helios-tarball-${{ matrix.arch }}
-          path: helios_*.tar.gz
+          name: helios-${{ matrix.arch }}
+          path: |
+            helios_${VERSION}_linux_${{ matrix.arch }}
+            helios-web_${VERSION}_linux_${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 7
 
@@ -77,22 +91,23 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
     steps:
-      - name: Descarga ambos tarballs
+      - name: Descarga artifacts de ambas arquitecturas
         uses: actions/download-artifact@v4
         with:
-          pattern: helios-tarball-*
+          pattern: helios-*
           merge-multiple: true
           path: dist
 
       - name: Genera checksums.txt combinado
         working-directory: dist
         run: |
-          sha256sum helios_*.tar.gz > checksums.txt
+          chmod +x helios_*_linux_* 2>/dev/null || true
+          sha256sum helios_* > checksums.txt
           cat checksums.txt
 
       - name: Publica en la release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/helios_*.tar.gz
+            dist/helios_*
             dist/checksums.txt

@@ -32,7 +32,7 @@
 Helios es el monitor solar de una instalación doméstica: dos inversores
 (Solis 4,4 kWp + Fox 2,7 kWp), una batería de 5 kWh, más de 798 días de
 histórico, datos en vivo desde Home Assistant y el ahorro en euros
-calculado contra la tarifa eléctrica real. Un único servicio Node +
+calculado contra la tarifa eléctrica real. Un único servicio Go +
 SQLite corriendo en un LXC en casa. Sin nube.
 
 > **Prueba la demo en vivo**
@@ -85,11 +85,11 @@ la batería y cuánto vale en euros cada kWh autoconsumido.
 
 | Decisión | Motivo |
 |---|---|
-| **Node 22 + Hono** | Es una app de negocio/vista, no un colector 24/7: la lógica valiosa es la de agregados y saneado de datos, ya validada durante 798 días. Reescribirla en Go era riesgo puro sin ganancia (decisión cerrada 1-Ago-2026: Go = colectores/infra, Node = negocio). Hono porque es pequeño, rápido y sin magia. |
-| **better-sqlite3 (ESM plano)** | Una BD embebida transaccional es todo lo que necesita una app doméstica: cero servicios extra, backup trivial, y los 798 días caben en 90 MB. Todo el código es TypeScript: el server compila con `tsc` a `dist/`, y los contratos se garantizan con **schemas zod** (`server/src/schemas.ts`). |
+| **Go 1.25 + net/http (desde v1.0.0)** | El backend se reescribió de Node/Hono a Go en v1.0.0: un binario estático de ~12 MB, sin runtime, sin `node_modules` y un solo lenguaje en el servidor. La lógica de agregados y saneado se portó con el mismo contrato de API, verificada campo a campo contra Home Assistant (SOC, producción, red, energía del cargador) antes del corte. El back server Node queda en `server/` como vía de rollback. |
+| **SQLite via modernc.org/sqlite (Go puro)** | Una BD embebida transaccional es todo lo que necesita una app doméstica: cero servicios extra, backup trivial, los 798 días caben en 90 MB, y WAL. Driver en Go puro para que el binario sea 100% estático (sin CGO ni libc) y compile para amd64/arm64 en CI. |
 | **React 19 + Vite + Tailwind** | El mismo front de todas las apps de la casa (`webapp-shell` compartida): una sola forma de hacer shell, tema, ajustes y login. |
 | **HAOS como fuente del live** | HAOS ya mantiene las integraciones con Solis/Fox y sus reconexiones. Duplicar eso en Helios sería mantener dos drivers. Helios consume, no integra. |
-| **systemd + LXC, sin Docker** | Un binario de Node con `node_modules` y una unit hardenizada (`ProtectSystem`, `ReadWritePaths`) es más simple de razonar y de revertir que un contenedor, y la BD vive fuera del código en `/opt/helios/data`. |
+| **systemd + LXC, sin Docker** | Un binario estático y una unit hardenizada (`ProtectSystem`, `ProtectHome`) es más simple de razonar y de revertir que un contenedor, y la BD vive fuera del código en `/opt/helios/data`. |
 | **Litestream → SFTP** | Réplica continua de la SQLite con point-in-time-recovery: la BD es lo único insustituible del sistema. |
 
 ## Qué cubre (requisitos de verdad)
@@ -134,8 +134,8 @@ aparte: los datos de verdad cuentan mejor para qué sirve cada vista.
 ## Arquitectura en 30 segundos
 
 ```
-Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──▶ Helios server (Hono)
-                                            ▲                    │ better-sqlite3
+Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──▶ Helios server (Go)
+                                            ▲                    │ SQLite (Go puro)
                                   scraper Solis Cloud             ▼
                                     (LXC aparte)            SQLite (798+ días)
                                                                    │ Litestream

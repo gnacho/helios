@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"helios-server/internal/update"
+	"helios-server/internal/version"
 )
 
 var (
-	appVersion   = "0.8.28"
+	// appVersion la inyecta el linker en el paquete version (ver CI).
+	appVersion   = version.Version
 	appName      = "Helios"
 	reactVersion = "19.2.0"
 	processStart = time.Now()
