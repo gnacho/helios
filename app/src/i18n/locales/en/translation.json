@@ -624,7 +624,8 @@
     "password": "Password",
     "submit": "Sign in",
     "loading": "Signing in…",
-    "error": "Incorrect username or password"
+    "error": "Incorrect username or password",
+    "rateLimited": "Too many attempts, wait 5 minutes"
   },
   "admin": {
     "users": {

@@ -621,7 +621,8 @@
     "password": "密码",
     "submit": "登录",
     "loading": "登录中…",
-    "error": "用户名或密码错误"
+    "error": "用户名或密码错误",
+    "rateLimited": "尝试次数过多，请等待5分钟"
   },
   "admin": {
     "users": {

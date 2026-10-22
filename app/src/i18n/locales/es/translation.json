@@ -624,7 +624,8 @@
     "password": "Contraseña",
     "submit": "Entrar",
     "loading": "Entrando…",
-    "error": "Usuario o contraseña incorrectos"
+    "error": "Usuario o contraseña incorrectos",
+    "rateLimited": "Demasiados intentos, espera 5 minutos"
   },
   "admin": {
     "users": {
