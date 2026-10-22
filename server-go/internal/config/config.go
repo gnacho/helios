@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 type Config struct {
@@ -28,8 +29,9 @@ func Load() (*Config, error) {
 
 	port := 8080
 	if p := os.Getenv("PORT"); p != "" {
-		// parse in main; keep simple here
-		port = 8080
+		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
+			port = parsed
+		}
 	}
 
 	return &Config{
