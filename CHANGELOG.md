@@ -5,6 +5,25 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.8.28] - 2026-10-22
+
+### Added
+
+- **Desliza entre pestañas en el móvil (#154).** En Inversores y en Cargador
+  ya no hace falta acertar en la píldora de arriba: arrastra el dedo a los
+  lados y el contenido se desliza con él, con la pestaña siguiente entrando de
+  lado mientras arrastras. Al soltar, si has pasado de un cuarto de pantalla se
+  cambia; si no, vuelve a su sitio. En los extremos la barra hace tope, así que
+  no se sale de rango. El scroll vertical y el gesto de recargar siguen
+  funcionando igual.
+
+### Fixed
+
+- **Al volver a la pestaña anterior se ve la tarjeta que viene (#154).** Antes,
+  al deslizar de vuelta al primer cargador o inversor, la vista anterior no
+  aparecía hasta un segundo gesto; ahora entra de lado junto con el dedo, como
+  la ida.
+
 ## [0.8.26] - 2026-10-19
 
 ### Changed
