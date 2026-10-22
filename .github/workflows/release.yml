@@ -83,9 +83,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: helios-${{ matrix.arch }}
+          # Globs: upload-artifact no expande variables de shell en `path`.
           path: |
-            helios_${VERSION}_linux_${{ matrix.arch }}
-            helios-web_${VERSION}_linux_${{ matrix.arch }}.tar.gz
+            helios_*_linux_${{ matrix.arch }}
+            helios-web_*_linux_${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 7
 
