@@ -543,17 +543,21 @@ export default function Inversores() {
   const tab: string = tabKeys.includes(tabParam ?? '') ? (tabParam as string) : tabKeys[0] ?? 'compare';
   const setTab = (t: string) => setSearchParams({ tab: t }, { replace: true });
   // Deslizar el dedo cambia de inversor en móvil (mismo patrón que el cargador).
-  const { contentRef, peekRef } = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
+  const { trackRef, peekRef } = useTabSwipe({ tab, keys: tabKeys, onChange: setTab });
 
   // Previsualización del vecino: mientras se arrastra, la pestaña contigua se
   // deja ver difuminada al otro lado. Solo se atiende al vecino en la dirección
   // del gesto; las vistas laterales no se renderizan hasta que hace falta.
-  const [peek, setPeek] = useState<{ dir: -1 | 0 | 1; x: number }>({ dir: 0, x: 0 });
+  const [peek, setPeek] = useState<{ dir: -1 | 0 | 1; x: number; ratio: number }>({ dir: 0, x: 0, ratio: 0 });
   useEffect(() => {
     let raf = 0;
     const tick = () => {
       const v = peekRef.current;
-      setPeek((prev) => (prev.dir === v.dir && Math.abs(prev.x - v.x) < 0.5 ? prev : { dir: v.dir, x: v.x }));
+      setPeek((prev) =>
+        prev.dir === v.dir && Math.abs(prev.x - v.x) < 0.5 && Math.abs(prev.ratio - v.ratio) < 0.005
+          ? prev
+          : { dir: v.dir, x: v.x, ratio: v.ratio },
+      );
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -563,7 +567,6 @@ export default function Inversores() {
   const tabIdx = tabKeys.indexOf(tab);
   const dir = peek.dir;
   const neighborKey = dir === 0 ? null : tabKeys[tabIdx + dir];
-  const progress = Math.min(1, Math.abs(peek.x) / (window.innerWidth || 1));
 
   const live = getLivePower(nowMin, liveTick);
   const series = useMemo(() => getDaySeries(today), [getDaySeries, today]);
@@ -672,44 +675,52 @@ export default function Inversores() {
         </motion.div>
         )}
 
-        {/* ── Contenido por pestaña: paginador en móvil ───────────
-            Solo se monta la pestaña activa (las vistas son pesadas). Mientras se
-            arrastra, la vecina en la dirección del gesto entra al otro lado con
-            opacidad y desenfoque progresivos: se previsualiza el siguiente
-            elemento antes de cargarlo de verdad. */}
-        <div className="relative overflow-hidden lg:overflow-visible">
-          <div ref={contentRef} className="relative bg-app lg:bg-transparent">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={tab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-              >
-                {renderTab(tab)}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {peek.dir !== 0 && neighborKey && (
-            <div
-              aria-hidden
-              data-peek="1"
-              className="pointer-events-none absolute inset-0 overflow-hidden lg:hidden"
-            >
-              <div
-                className="h-full w-full origin-center"
-                style={{
-                  transform: `translate3d(${peek.dir > 0 ? 1 - progress : progress - 1}00%, 0, 0)`,
-                  opacity: progress,
-                  filter: `blur(${(1 - progress) * 6}px)`,
-                }}
-              >
+        {/* ── Contenido por pestaña en móvil: track de dos columnas ────────
+            Las vistas van LADO A LADO y se desplazan juntas con el dedo; la
+            vecina se ve entera, no aparece por encima. Solo se montan la activa
+            y la vecina en la dirección del gesto, que es lo único visible. */}
+        <div className="overflow-hidden lg:hidden">
+          <div
+            ref={(el) => {
+              if (el) {
+                const base = peek.dir < 0 ? -el.clientWidth : 0;
+                if (el.dataset.base !== String(base)) {
+                  el.dataset.base = String(base);
+                  el.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
+                  el.style.transform = base ? `translate3d(${base}px, 0, 0)` : '';
+                }
+              }
+              trackRef(el);
+            }}
+            className="flex items-start will-change-transform"
+          >
+            {peek.dir < 0 && neighborKey && (
+              <div aria-hidden data-peek="1" className="w-full shrink-0 pointer-events-none select-none">
                 {renderTab(neighborKey)}
               </div>
-            </div>
-          )}
+            )}
+            <div className="w-full shrink-0">{renderTab(tab)}</div>
+            {peek.dir > 0 && neighborKey && (
+              <div aria-hidden data-peek="1" className="w-full shrink-0 pointer-events-none select-none">
+                {renderTab(neighborKey)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Escritorio: misma vista, montada de una en una con el fundido de siempre */}
+        <div className="hidden lg:block">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              {renderTab(tab)}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Nota de actividad (mock) */}

@@ -7,6 +7,17 @@ const SNAP_FRACTION = 0.22;
 /** Resistencia en los extremos de la barra (0 = no se mueve, 1 = sigue al dedo). */
 const EDGE_DAMPING = 0.35;
 
+/**
+ * Ancho de UNA vista del track. El track puede medir varias columnas (la activa
+ * y la vecina lado a lado), asi que `getBoundingClientRect()` no sirve como
+ * referencia: se usa el primer hijo o, si no hay, el viewport.
+ */
+function pageWidth(track: HTMLElement): number {
+  const first = track.firstElementChild as HTMLElement | null;
+  const w = first?.getBoundingClientRect().width ?? 0;
+  return w > 0 ? w : window.innerWidth;
+}
+
 interface Options {
   /** Clave de la pestaña activa. */
   tab: string;
@@ -16,12 +27,6 @@ interface Options {
   onChange: (key: string) => void;
   /** Desactiva el gesto (p. ej. con una sola pestaña). */
   enabled?: boolean;
-  /**
-   * Desfase (px) que se pide al navegador para la vista vecina mientras se
-   * arrastra. El padre coloca las vistas pegadas y aplica este desplazamiento
-   * al track para que el vecino asome. Por defecto, un 12 % del ancho.
-   */
-  peek?: number;
 }
 
 /**
@@ -42,7 +47,7 @@ interface Options {
  * que el scroll y el pull-to-refresh siguen funcionando. En escritorio no hace
  * nada.
  */
-export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx }: Options) {
+export function useTabSwipe({ tab, keys, onChange, enabled = true }: Options) {
   const keysRef = useRef(keys);
   const tabRef = useRef(tab);
   const onChangeRef = useRef(onChange);
@@ -54,8 +59,10 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
    * Ref compartida con el padre: 0 cuando no hay arrastre; desplazamiento en px
    * pedido para asomar la vista vecina (negativo = vecina anterior) y su signo.
    */
-  const peekRef = useRef({ x: 0, dir: 0 as -1 | 0 | 1 });
-  const peekPxRef = useRef<number | undefined>(peekPx);
+  const peekRef = useRef({ x: 0, dir: 0 as -1 | 0 | 1, ratio: 0, base: 0 });
+
+  /** true mientras dura un arrastre horizontal (evita que el render lo pise). */
+  const gestureRef = useRef(false);
 
   // Las refs se sincronizan en un efecto, nunca durante el render.
   useEffect(() => {
@@ -63,8 +70,7 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
     tabRef.current = tab;
     onChangeRef.current = onChange;
     enabledRef.current = enabled;
-    peekPxRef.current = peekPx;
-  }, [keys, tab, onChange, enabled, peekPx]);
+  }, [keys, tab, onChange, enabled]);
 
   const restore = useCallback((animated: boolean) => {
     const el = contentRef.current;
@@ -72,8 +78,24 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
     el.style.transition = animated
       ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
       : 'none';
-    el.style.transform = '';
-    peekRef.current = { x: 0, dir: 0 };
+    const base = parseFloat(el.dataset.base ?? '0') || 0;
+    el.style.transform = base ? `translate3d(${base}px, 0, 0)` : '';
+    peekRef.current = { x: 0, dir: 0, ratio: 0, base };
+  }, []);
+
+  /**
+   * Ref callback para el track: guarda la ref y lo deja alineado. El track
+   * puede llevar la vista activa en la segunda columna (cuando la vecina esta a
+   * su izquierda), de ahi el desplazamiento base.
+   */
+  const trackRef = useCallback((el: HTMLDivElement | null) => {
+    contentRef.current = el;
+    if (!el) return;
+    // El ref callback se reejecuta en cada render: durante un arrastre manda el
+    // transform que escribe el propio gesto, no lo pisamos.
+    if (gestureRef.current) return;
+    const base = parseFloat(el.dataset.base ?? '0') || 0;
+    el.style.transform = base ? `translate3d(${base}px, 0, 0)` : '';
   }, []);
 
   // Al cambiar de pestaña, por la vía que sea (swipe, toque, enlace), el
@@ -120,6 +142,7 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
           return;
         }
         horizontal = true;
+        gestureRef.current = true;
       }
       const el = contentRef.current;
       if (!el) return;
@@ -130,16 +153,25 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
       // En los extremos no hay vecino: solo resistencia elástica, sin asomar.
       const beyond = (dx > 0 && !hasPrev) || (dx < 0 && !hasNext);
       const offset = beyond ? dx * EDGE_DAMPING : dx;
-      el.style.transition = 'none';
-      el.style.transform = `translate3d(${offset}px, 0, 0)`;
+      // El track puede llevar la vista activa en la 2a columna (cuando la
+      // vecina esta a su izquierda): hay que compensar ese ancho para que el
+      // desplazamiento sea siempre relativo a la vista visible.
+      const columnW = pageWidth(el);
       const dir: -1 | 0 | 1 = beyond || offset === 0 ? 0 : offset > 0 ? -1 : 1;
-      peekRef.current = {
-        x: dir === 0 ? 0 : Math.min(peekPxRef.current ?? Math.abs(offset) * 0.4, Math.abs(offset)) * dir,
-        dir,
-      };
+      // La activa ocupa la 1a columna salvo cuando el vecino visible es el
+      // anterior: entonces el padre la coloca detras de el y hay que compensar.
+      const base = dir < 0 ? -columnW : 0;
+      el.dataset.base = String(base);
+      el.style.transition = 'none';
+      el.style.transform = `translate3d(${base + offset}px, 0, 0)`;
+      const width = columnW;
+      // Progreso continuo del gesto (0 a 1): lo usa el padre para deslizar las
+      // vistas en paralelo, sin que aparezcan superpuestas.
+      peekRef.current = { x: offset, dir, ratio: Math.min(1, Math.abs(offset) / width), base };
     };
 
     const onEnd = () => {
+      gestureRef.current = false;
       if (!active || !tracking || !horizontal) {
         tracking = false;
         horizontal = false;
@@ -148,9 +180,12 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
       tracking = false;
       horizontal = false;
       const el = contentRef.current;
-      const width = el?.getBoundingClientRect().width || window.innerWidth;
+      const width = el ? pageWidth(el) : window.innerWidth;
       const match = el ? /translate3d\((-?[\d.]+)px/.exec(el.style.transform) : null;
-      const dx = match ? parseFloat(match[1]) : 0;
+      // Solo cuenta el desplazamiento relativo: el track lleva ademas el base
+      // que alinea la vista activa cuando la vecina entra por la izquierda.
+      const base = parseFloat(el?.dataset.base ?? '0') || 0;
+      const dx = (match ? parseFloat(match[1]) : 0) - base;
       const i = keysRef.current.indexOf(tabRef.current);
       const next = keysRef.current[i + 1];
       const prev = keysRef.current[i - 1];
@@ -170,6 +205,7 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
     };
 
     const onCancel = () => {
+      gestureRef.current = false;
       if (active && tracking && horizontal) restore(true);
       tracking = false;
       horizontal = false;
@@ -187,5 +223,5 @@ export function useTabSwipe({ tab, keys, onChange, enabled = true, peek: peekPx 
     };
   }, [restore]);
 
-  return { contentRef, peekRef };
+  return { contentRef, trackRef, peekRef };
 }
