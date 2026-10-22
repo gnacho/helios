@@ -70,6 +70,16 @@ func (s *Server) Routes() chi.Router {
 	})
 
 	r.Get("/health", s.handleHealth)
+	r.Get("/api/version", s.handleVersion)
+
+	r.Group(func(r chi.Router) {
+		r.Use(s.Auth.RequireAuth)
+		r.Get("/api/system/info", s.handleSystemInfo)
+		r.Get("/api/update/status", s.handleUpdateStatus)
+		r.Get("/api/update/progress", s.handleUpdateProgress)
+		r.Get("/api/update/stream", s.handleUpdateStream)
+		r.Post("/api/update/apply", s.handleUpdateApply)
+	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(s.Auth.RequireAuth)
