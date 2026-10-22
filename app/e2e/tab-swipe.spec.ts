@@ -54,6 +54,36 @@ async function deslizar(cdp: CDPSession, de: number, a: number, y: number) {
 test.describe('swipe entre pestanas en movil', () => {
   test.use({ viewport: VIEWPORT, hasTouch: true, isMobile: true });
 
+  test('inversores: mientras se arrastra se previsualiza la pestana vecina', async ({ request, page }) => {
+    await sesion(request, page);
+    await request.put('/api/config', { data: TOPOLOGIA });
+    await page.goto('/inversores');
+    await expect(page.getByRole('tab', { name: /Solis/ })).toBeVisible({ timeout: 15000 });
+
+    const cdp = await page.context().newCDPSession(page);
+    const peek = page.locator('[data-peek="1"]');
+    await expect(peek).toHaveCount(0);
+
+    // Arrastre a medias (sin soltar): el vecino asoma
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 320, y: 500 }] });
+    for (let p = 1; p <= 8; p++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 320 - p * 12, y: 500 }] });
+    }
+    await expect(peek).toHaveCount(1);
+    const opacidad = await peek.evaluate((el) => {
+      const inner = el.firstElementChild as HTMLElement;
+      return Number(getComputedStyle(inner).opacity);
+    });
+    expect(opacidad).toBeGreaterThan(0);
+    // Aun no ha cambiado de pestana: solo se esta previsualizando
+    await expect(page).toHaveURL(/\/inversores$/);
+
+    // Se suelta: el vecino desaparece y la pestana cambia
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(page).toHaveURL(/tab=inv1/, { timeout: 5000 });
+    await expect(peek).toHaveCount(0);
+  });
+
   test('inversores: deslizar cambia de pestana en ambos sentidos', async ({ request, page }) => {
     await sesion(request, page);
     const put = await request.put('/api/config', { data: TOPOLOGIA });
