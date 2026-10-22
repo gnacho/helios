@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"math"
+	"sync"
 	"time"
 
 	"helios-server/internal/db"
@@ -17,6 +18,9 @@ type Ext struct {
 	Store *Store
 	DB    *db.DB
 	Inst  *install.Store
+
+	curveMu    sync.Mutex
+	curveCache map[string]curveEntry
 }
 
 func New(store *Store, database *db.DB, inst *install.Store) *Ext {

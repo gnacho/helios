@@ -16,6 +16,13 @@ type ChargerCurve struct {
 	Points []CurvePoint `json:"points"`
 }
 
+// caché de curvas: hoy 60 s, días pasados 6 h (mismo TTL que el original).
+type curveEntry struct {
+	curve ChargerCurve
+	at    time.Time
+	ttl   time.Duration
+}
+
 const stepMin = 5
 
 // ChargerDayCurve construye la curva del día (kW cada 5 min) por interpolación
@@ -29,6 +36,34 @@ func (e *Ext) ChargerDayCurve(h HA, dateStr string, c *Charger) ChargerCurve {
 	if key == "" {
 		key = todayStr()
 	}
+
+	// Caché por cargador+fecha: sin ella, cada carga de la pestaña Cargador
+	// lanzaba una consulta de historial completa a HAOS (auditoría 22-Oct-2026).
+	cacheKey := "charger:" + c.Key + ":" + key
+	e.curveMu.Lock()
+	if ent, ok := e.curveCache[cacheKey]; ok && time.Since(ent.at) < ent.ttl {
+		curve := ent.curve
+		e.curveMu.Unlock()
+		return curve
+	}
+	e.curveMu.Unlock()
+
+	curve := e.chargerDayCurveUncached(h, key, c)
+
+	ttl := 6 * time.Hour
+	if key == todayStr() {
+		ttl = 60 * time.Second
+	}
+	e.curveMu.Lock()
+	if e.curveCache == nil {
+		e.curveCache = map[string]curveEntry{}
+	}
+	e.curveCache[cacheKey] = curveEntry{curve: curve, at: time.Now(), ttl: ttl}
+	e.curveMu.Unlock()
+	return curve
+}
+
+func (e *Ext) chargerDayCurveUncached(h HA, key string, c *Charger) ChargerCurve {
 
 	start, err := time.ParseInLocation("2006-01-02", key, time.Local)
 	if err != nil {
