@@ -118,7 +118,7 @@ templ shellLayout(p pageProps) {
 // sidebar: 232px expanded or 64px collapsed rail (≥lg only).
 templ sidebar(p pageProps, collapsed bool) {
 	if collapsed {
-		<aside class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 lg:flex">
+		<aside data-nav="side-rail" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 lg:flex">
 			@logo(p, true)
 			<nav class="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={ T(p.Lang, "nav.dashboard") }>
 				for _, item := range navEntriesFor(p.ChargerOn) {
@@ -131,7 +131,7 @@ templ sidebar(p pageProps, collapsed bool) {
 			</div>
 		</aside>
 	} else {
-		<aside class="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-app bg-surface lg:flex">
+		<aside data-nav="side" class="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-app bg-surface lg:flex">
 			@logo(p, false)
 			<nav class="flex-1 space-y-1 overflow-y-auto p-3" aria-label={ T(p.Lang, "nav.dashboard") }>
 				for _, item := range navEntriesFor(p.ChargerOn) {
@@ -157,7 +157,7 @@ templ navSideLink(p pageProps, item navEntry) {
 		@iconForNav(item.IconKey, "h-[18px] w-[18px] shrink-0")
 		<span class="flex-1">{ label }</span>
 		if navIsActive(p.Path, item.Path) {
-			<span class="bg-brand-gradient absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full"></span>
+			<span class="vt-accent bg-brand-gradient absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full" style={ navShiftStyle(p) }></span>
 		}
 	</a>
 }
@@ -194,7 +194,7 @@ templ sidebarToggle(p pageProps, collapsed bool) {
 
 // rail: 64px icon-only sidebar for md (tablet).
 templ rail(p pageProps) {
-	<aside class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
+	<aside data-nav="rail" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
 		@logo(p, true)
 		<nav class="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={ T(p.Lang, "nav.dashboard") }>
 			for _, item := range navEntriesFor(p.ChargerOn) {
@@ -237,7 +237,7 @@ templ headerMobile(p pageProps) {
 
 // bottomNav: scrollable icon row (<md).
 templ bottomNav(p pageProps) {
-	<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden [view-transition-name:helios-nav]" aria-label={ T(p.Lang, "nav.dashboard") }>
+	<nav data-nav="bottom" class="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden [view-transition-name:helios-nav]" aria-label={ T(p.Lang, "nav.dashboard") }>
 		<div class="flex h-16 overflow-x-auto no-scrollbar">
 			for _, item := range navEntriesFor(p.ChargerOn) {
 				@bottomNavItem(p, item)
@@ -275,7 +275,7 @@ templ bottomNavItemInner(item navEntry, active bool, label string) {
 	</span>
 	<span class={ "text-[10px] font-medium", templ.KV("text-brand", active), templ.KV("text-faint", !active) }>{ label }</span>
 	if active {
-		<span class="absolute bottom-1.5 h-1 w-1 rounded-full bg-brand"></span>
+		<span class="vt-accent-dot absolute bottom-1.5 h-1 w-1 rounded-full bg-brand"></span>
 	}
 }
 

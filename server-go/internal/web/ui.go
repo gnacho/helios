@@ -65,6 +65,7 @@ type pageProps struct {
 	InvCount  []string
 	BatKwh    float64 // installed battery capacity (0 = no battery)
 	NavDir    string  // "up" | "down": where the selected item comes from
+	NavShift  int     // px between the previous and current menu item (accent slide)
 
 	// Per-device appearance prefs (cookies, like the React localStorage).
 	AccentName   string // naranja|verde|azul|violeta
@@ -545,20 +546,20 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 		p.ChargerOn = cfg.Enabled && cfg.CarCharger.Enabled
 	}
 	p.DateText = weekdayDate(p.Lang, time.Now())
-	p.NavDir = navDirFrom(p, r)
+	p.NavDir, p.NavShift = navDirFrom(p, r)
 	return p
 }
 
 // navDirFrom compares the previous page (Referer) with the current one in the
 // nav order, so the active pill can slide in from the right side.
-func navDirFrom(p pageProps, r *http.Request) string {
+func navDirFrom(p pageProps, r *http.Request) (dir string, shift int) {
 	ref := r.Referer()
 	if ref == "" {
-		return ""
+		return "", 0
 	}
 	u, err := url.Parse(ref)
 	if err != nil || u.Host != r.Host {
-		return ""
+		return "", 0
 	}
 	idx := func(path string) int {
 		for i, item := range navEntriesFor(p.ChargerOn) {
@@ -569,13 +570,24 @@ func navDirFrom(p pageProps, r *http.Request) string {
 		return -1
 	}
 	prev, cur := idx(u.Path), idx(p.Path)
-	switch {
-	case prev < 0 || cur < 0 || prev == cur:
-		return ""
-	case prev > cur:
-		return "up"
+	if prev < 0 || cur < 0 || prev == cur {
+		return "", 0
 	}
-	return "down"
+	// 44 px = alto del item (h-10) + separación del menú.
+	shift = (prev - cur) * 44
+	if prev > cur {
+		return "up", shift
+	}
+	return "down", shift
+}
+
+// navShiftStyle feeds the accent bar animation: it slides in from where the
+// previously selected item was.
+func navShiftStyle(p pageProps) string {
+	if p.NavShift == 0 {
+		return ""
+	}
+	return "--nav-shift: " + strconv.Itoa(p.NavShift) + "px"
 }
 
 // weekdayDate mirrors fmtWeekdayDate in the front (capitalized, localized).

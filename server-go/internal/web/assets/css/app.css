@@ -446,8 +446,43 @@ html.reduce-motion::view-transition-new(*) {
 
 /* El item activo del menú / pestaña seleccionada desliza desde su posición
  * anterior: mismo view-transition-name en el activo de cada página. */
-.vt-slide {
-  view-transition-name: nav-active;
+/* Un solo elemento con cada name por viewport: si hay dos capturados, la
+ * transición se cancela. */
+@media (min-width: 1024px) {
+  [data-nav="side"] .vt-slide {
+    view-transition-name: nav-active;
+  }
+  [data-nav="side"] .vt-accent {
+    view-transition-name: nav-accent;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  [data-nav="rail"] .vt-slide {
+    view-transition-name: nav-active;
+  }
+}
+@media (max-width: 767.98px) {
+  [data-nav="bottom"] .vt-slide {
+    view-transition-name: nav-active;
+  }
+  [data-nav="bottom"] .vt-accent-dot {
+    view-transition-name: nav-accent;
+  }
+}
+/* Fallback sin view transitions: la barra de acento se desliza desde la
+ * posición del menú anterior (--nav-shift lo pone el servidor). */
+.vt-accent {
+  animation: accent-slide 0.3s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+@keyframes accent-slide {
+  from {
+    transform: translateY(calc(-50% + var(--nav-shift, 0px)));
+    opacity: 0.2;
+  }
+  to {
+    transform: translateY(-50%);
+    opacity: 1;
+  }
 }
 .vt-slide-tab {
   view-transition-name: tab-active;
@@ -456,6 +491,7 @@ html.reduce-motion::view-transition-new(*) {
   view-transition-name: period-active;
 }
 ::view-transition-group(nav-active),
+::view-transition-group(nav-accent),
 ::view-transition-group(tab-active),
 ::view-transition-group(period-active) {
   animation-duration: 0.3s;
