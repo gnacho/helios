@@ -382,6 +382,7 @@ func (u *UI) handleBateria(w http.ResponseWriter, r *http.Request) {
 
 	signals := map[string]any{
 		"live": map[string]any{
+			"soc":           liveSoc(m.Live),
 			"socText":       fmtInt(lang, liveSoc(m.Live)),
 			"batteryKwText": fmtKwVal(lang, 0),
 			"batteryStatus": T(lang, "common.idle"),
@@ -389,6 +390,7 @@ func (u *UI) handleBateria(w http.ResponseWriter, r *http.Request) {
 	}
 	if m.Live != nil {
 		signals["live"] = map[string]any{
+			"soc":           m.Live.Soc,
 			"socText":       fmtInt(lang, m.Live.Soc),
 			"batteryKwText": fmtKwVal(lang, abs(m.Live.BatteryPower)),
 			"batteryStatus": T(lang, "common."+batteryState(m.Live.BatteryPower)),

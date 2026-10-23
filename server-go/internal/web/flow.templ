@@ -201,11 +201,11 @@ templ inverterCard(d dashboardView, inv invCardModel, index int) {
 		<div class="mt-4 flex items-end justify-between gap-4">
 			<div>
 				<p class="font-display text-2xl font-semibold tracking-[-0.01em]" style={ "color: " + inv.Color } aria-live="off">
-					<span data-text={ "$inv." + inv.Key + ".nowText" }>{ inv.NowText }</span>
+					@animNumLive("inv"+inv.Key+"Now", inv.NowKw, 2, d.Lang, "$inv."+inv.Key+".nowKw")
 					<span class="ml-1 text-[0.6em] font-medium text-faint">kW</span>
 				</p>
 				<p class="mt-0.5 text-sm text-muted">
-					{ T(d.Lang, "inverter.today") } <span class="font-semibold text-app"><span data-text={ "$inv." + inv.Key + ".kwhText" }>{ inv.KwhText }</span> kWh</span>
+					{ T(d.Lang, "inverter.today") } <span class="font-semibold text-app">@animNumLive("inv"+inv.Key+"Kwh", inv.Kwh, 1, d.Lang, "$inv."+inv.Key+".kwh") kWh</span>
 				</p>
 			</div>
 			<div class="w-[140px] shrink-0">

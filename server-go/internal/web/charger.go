@@ -83,7 +83,10 @@ type chgChip struct {
 
 // chgLiveStat is one stat of the day-curve card header.
 type chgLiveStat struct {
-	IconKey string // zap | clock | gauge
+	AnimID  string  // count-up tween id ("" = plain data-text)
+	Num     float64 // initial numeric value
+	Suffix  string  // constant unit text after the number
+	IconKey string  // zap | clock | gauge
 	Label   string
 	Value   string
 	Signal  string // data-text binding, empty when static
@@ -185,10 +188,13 @@ func chgSignalOf(lang string, l extensions.LiveCharger) map[string]any {
 		amps = *l.Amps
 	}
 	sessionText, totalText, tempText := "—", "—", "—"
+	powerKw, sessionKwh, totalKwh := l.PowerKw, 0.0, 0.0
 	if l.SessionKwh != nil {
+		sessionKwh = *l.SessionKwh
 		sessionText = fmtEnergy(lang, *l.SessionKwh) + " kWh"
 	}
 	if l.TotalKwh != nil {
+		totalKwh = *l.TotalKwh
 		totalText = fmtEnergy(lang, *l.TotalKwh) + " kWh"
 	}
 	if l.TempC != nil {
@@ -203,6 +209,10 @@ func chgSignalOf(lang string, l extensions.LiveCharger) map[string]any {
 		"tempText":    tempText,
 		"switchOn":    switchOn,
 		"amps":        amps,
+		// Numeric twins for the count-up tween.
+		"powerKw":    powerKw,
+		"sessionKwh": sessionKwh,
+		"totalKwh":   totalKwh,
 	}
 }
 
@@ -568,20 +578,27 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	}
 
 	powerText, sessionText, totalText := "…", "—", "—"
+	animPow, animSes, animTot := 0.0, 0.0, 0.0
 	if hasLive {
+		animPow = live.PowerKw
 		powerText = fmtKwVal(lang, live.PowerKw) + " kW"
 		if live.SessionKwh != nil {
+			animSes = *live.SessionKwh
 			sessionText = fmtEnergy(lang, *live.SessionKwh) + " kWh"
 		}
 		if live.TotalKwh != nil {
+			animTot = *live.TotalKwh
 			totalText = fmtEnergy(lang, *live.TotalKwh) + " kWh"
 		}
 	}
 	k := charger.Key
 	sv.Stats = []chgLiveStat{
-		{IconKey: "zap", Label: T(lang, "cargador.currentPower"), Value: powerText, Signal: "$chg." + k + ".powerText"},
-		{IconKey: "clock", Label: T(lang, "cargador.session"), Value: sessionText, Signal: "$chg." + k + ".sessionText"},
-		{IconKey: "gauge", Label: T(lang, "cargador.lifetime"), Value: totalText, Signal: "$chg." + k + ".totalText"},
+		{IconKey: "zap", Label: T(lang, "cargador.currentPower"), Value: powerText, Signal: "$chg." + k + ".powerKw",
+			AnimID: "chg" + k + "Pow", Num: animPow, Suffix: " kW"},
+		{IconKey: "clock", Label: T(lang, "cargador.session"), Value: sessionText, Signal: "$chg." + k + ".sessionKwh",
+			AnimID: "chg" + k + "Ses", Num: animSes, Suffix: " kWh"},
+		{IconKey: "gauge", Label: T(lang, "cargador.lifetime"), Value: totalText, Signal: "$chg." + k + ".totalKwh",
+			AnimID: "chg" + k + "Tot", Num: animTot, Suffix: " kWh"},
 	}
 
 	// Curva del día (servicio en proceso, con caché propia).

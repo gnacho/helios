@@ -248,6 +248,7 @@ func buildArc(lang string, live *solar.LiveData, k DayKpis) arcModel {
 type invCardModel struct {
 	Key, Name, Model, Color     string
 	NowText, KwhText, ShareText string
+	NowKw, Kwh                  float64 // numeric twins for the count-up tween
 	SharePct                    float64
 	SparkPath                   string
 }
@@ -297,6 +298,7 @@ func buildInvCards(lang string, m dashboardModel, series []solar.DayPoint, pal P
 		}
 		cards = append(cards, invCardModel{
 			Key: k, Name: name, Model: modelTxt, Color: c,
+			NowKw: nowKw, Kwh: kwhs[k],
 			NowText:   fmtKwVal(lang, nowKw),
 			KwhText:   fmtEnergy(lang, kwhs[k]),
 			ShareText: fmtInt(lang, share),

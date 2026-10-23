@@ -67,7 +67,13 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 						@iconForChgStat(st.IconKey, "h-[13px] w-[13px] shrink-0 text-faint")
 						{ st.Label }
 						if st.Signal != "" {
+							if st.AnimID != "" {
+							<span class="font-semibold tabular-nums text-app">
+								@animNumLiveS(st.AnimID, st.Num, 1, v.Lang, st.Signal, st.Suffix)
+							</span>
+						} else {
 							<span class="font-semibold tabular-nums text-app" data-text={ st.Signal }>{ st.Value }</span>
+						}
 						} else {
 							<span class="font-semibold tabular-nums text-app">{ st.Value }</span>
 						}

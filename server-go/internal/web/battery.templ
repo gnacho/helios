@@ -10,7 +10,7 @@ templ BateriaPage(v bateriaView) {
 				<section class="helios-card col-span-12 p-5 shadow-card dark:shadow-card-dark sm:p-6" aria-label={ T(v.Lang, "bateria.gaugeAria", map[string]string{"pct": v.Gauge.SocText}) }>
 					<div class="flex flex-col items-center gap-6 lg:flex-row lg:items-stretch">
 						<div class="flex shrink-0 flex-col items-center justify-center gap-3 lg:w-[38%]">
-							@socGaugeSVG(v.Gauge)
+							@socGaugeSVG(v, v.Gauge)
 							<span class={ "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold", v.Chip.Cls }>{ v.Chip.Text }</span>
 						</div>
 						<div class="flex min-w-0 flex-1 items-center lg:border-l lg:border-app lg:pl-6">
@@ -86,19 +86,19 @@ templ BateriaPage(v bateriaView) {
 }
 
 // socGaugeSVG ports SocHeroGauge (static arc; the GSAP sweep is not ported).
-templ socGaugeSVG(g socGaugeModel) {
+templ socGaugeSVG(v bateriaView, g socGaugeModel) {
 	<div class="flex justify-center" role="img" aria-label={ g.Aria }>
 		<svg width="230" height="212" viewBox="0 0 260 240" fill="none">
 			<path d={ g.TrackPath } stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"></path>
 			if g.ValuePath != "" {
-				<path d={ g.ValuePath } stroke={ g.Color } stroke-width="16" stroke-linecap="round"></path>
+				<path d={ g.ValuePath } pathLength="1" class="gauge-sweep" stroke={ g.Color } stroke-width="16" stroke-linecap="round"></path>
 			}
 			<g>
 				<line x1={ r2(g.TickX1) } y1={ r2(g.TickY1) } x2={ r2(g.TickX2) } y2={ r2(g.TickY2) } stroke={ g.BuyColor } stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round"></line>
 				<text x={ r2(g.LabelX) } y={ r2(g.LabelY + 3) } text-anchor="middle" style={ "fill: " + g.BuyColor + "; font-size: 10px; font-weight: 600; font-family: Inter" }>{ g.ReserveLbl }</text>
 			</g>
 			<text x="130" y="136" text-anchor="middle" class="font-display" style={ "fill: " + g.Color + "; font-size: 56px; font-weight: 600; letter-spacing: -0.02em" }>
-				<tspan data-text="$live.socText">{ g.SocText }</tspan>
+				@animNumLiveT("socGauge", g.Soc, 0, v.Lang, "$live.soc", "")
 				<tspan style="font-size: 26px; fill: var(--text-faint); font-weight: 500">%</tspan>
 			</text>
 			<text x="130" y="164" text-anchor="middle" style="fill: var(--text-muted); font-size: 14px; font-weight: 500; font-family: Inter">{ g.KwhText }</text>
@@ -257,7 +257,7 @@ templ energySourceCard(v bateriaView) {
 		<div class="lg:w-1/2">
 			<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.donutTitle") }</h2>
 			<div class="relative mt-2">
-				<svg viewBox="0 0 200 200" class="mx-auto w-full max-w-[240px]" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
+				<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full max-w-[240px]" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
 					for _, s := range v.Donut.Slices {
 						<path d={ s.Path } fill={ s.Color }></path>
 					}

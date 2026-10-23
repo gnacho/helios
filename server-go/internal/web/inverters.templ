@@ -432,7 +432,7 @@ templ invShareCard(v inversoresView, c *invCompareView) {
 		</div>
 		<div class="mt-4 flex min-h-[200px] flex-1 flex-col justify-center">
 			<div data-show="$share.mode == 'donut'" class="relative">
-				<svg viewBox="0 0 200 200" class="mx-auto w-full max-w-[220px]" role="img" aria-label={ T(v.Lang, "inversores.shareAria") }>
+				<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full max-w-[220px]" role="img" aria-label={ T(v.Lang, "inversores.shareAria") }>
 					for _, s := range c.Share.Slices {
 						<path d={ s.Path } fill={ s.Color }></path>
 					}

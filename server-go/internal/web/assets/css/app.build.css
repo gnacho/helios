@@ -2281,6 +2281,7 @@
 }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
   animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
   transition-duration: 0.01ms !important;
 }
 html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-new(*) {
@@ -2324,16 +2325,33 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
     animation-delay: 0.28s;
   }
   svg.anim-draw {
-    animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
   }
   svg.anim-bars rect {
     transform-box: fill-box;
     transform-origin: 50% 100%;
-    animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
+  }
+  svg.anim-pie {
+    transform-origin: center;
+    animation: pie-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
+  }
+  .gauge-sweep {
+    stroke-dasharray: 1;
+    animation: gauge-sweep 1s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
   }
   .sun-g {
     animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
   }
+}
+@property --sun-travel {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+.sun-g {
+  offset-path: path("M 42 128 A 108 108 0 0 1 258 128");
+  offset-distance: var(--sun-travel);
 }
 @keyframes chart-reveal {
   from {
@@ -2351,22 +2369,29 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
     transform: scaleY(1);
   }
 }
+@keyframes pie-in {
+  from {
+    transform: scale(0.55) rotate(-30deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+@keyframes gauge-sweep {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 @keyframes sun-travel {
   from {
     offset-distance: 0%;
   }
   to {
-    offset-distance: var(--sun-travel);
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  @property --sun-travel {
-    syntax: "<percentage>";
-    inherits: false;
-    initial-value: 0%;
-  }
-  .sun-g {
-    offset-path: path("M 42 128 A 108 108 0 0 1 258 128");
     offset-distance: var(--sun-travel);
   }
 }
@@ -2727,6 +2752,7 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
       --tw-exit-scale: 1;
       --tw-exit-translate-x: 0;
       --tw-exit-translate-y: 0;
+      --sun-travel: 0%;
     }
   }
 }

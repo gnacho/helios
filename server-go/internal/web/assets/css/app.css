@@ -401,6 +401,7 @@ html.reduce-motion *,
 html.reduce-motion *::before,
 html.reduce-motion *::after {
   animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
   transition-duration: 0.01ms !important;
 }
 html.reduce-motion::view-transition-old(*),
@@ -450,22 +451,43 @@ html.reduce-motion::view-transition-new(*) {
 /* ── Animaciones de dibujo de gráficas (CSS puro, sin JS) ────────────────
  * anim-draw: la gráfica se pinta de izquierda a derecha (clip-path).
  * anim-bars: las barras crecen desde su base (scaleY, fill-box).
- * El sol recorre el arco con offset-distance (keyframes, no transición:
- * el valor llega ya final desde el server).
+ * anim-pie:  los quesitos crecen desde el centro con un pequeño barrido.
+ * gauge-sweep: el arco del SOC se dibuja (pathLength normalizado).
+ * El sol recorre el arco con offset-distance (keyframes; --sun-travel la fija
+ * el server por render).
  * Todo vive bajo prefers-reduced-motion: no-preference y la clase
- * html.reduce-motion lo anula globalmente. */
+ * html.reduce-motion lo anula globalmente. El delay de 0.35s deja pasar el
+ * view transition para que el dibujo no quede congelado en su primer frame.
+ */
 @media (prefers-reduced-motion: no-preference) {
   svg.anim-draw {
-    animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
   }
   svg.anim-bars rect {
     transform-box: fill-box;
     transform-origin: 50% 100%;
-    animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
+  }
+  svg.anim-pie {
+    transform-origin: center;
+    animation: pie-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
+  }
+  .gauge-sweep {
+    stroke-dasharray: 1;
+    animation: gauge-sweep 1s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
   }
   .sun-g {
     animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
   }
+}
+@property --sun-travel {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+.sun-g {
+  offset-path: path("M 42 128 A 108 108 0 0 1 258 128");
+  offset-distance: var(--sun-travel);
 }
 @keyframes chart-reveal {
   from { clip-path: inset(0 100% 0 0); }
@@ -475,21 +497,15 @@ html.reduce-motion::view-transition-new(*) {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }
 }
+@keyframes pie-in {
+  from { transform: scale(0.55) rotate(-30deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes gauge-sweep {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
 @keyframes sun-travel {
   from { offset-distance: 0%; }
   to { offset-distance: var(--sun-travel); }
-}
-
-/* El sol recorre el arco al entrar (offset-path sobre el propio arco;
- * --sun-frac lo fija el server por render). */
-@media (prefers-reduced-motion: no-preference) {
-  @property --sun-travel {
-    syntax: "<percentage>";
-    inherits: false;
-    initial-value: 0%;
-  }
-  .sun-g {
-    offset-path: path("M 42 128 A 108 108 0 0 1 258 128");
-    offset-distance: var(--sun-travel);
-  }
 }

@@ -57,6 +57,14 @@ func untilMin(m dashboardModel) int {
 	return n.Hour()*60 + n.Minute()
 }
 
+// derefKw dereferences an optional kW reading (0 when nil).
+func derefKw(v *float64) float64 {
+	if v == nil {
+		return 0
+	}
+	return abs(*v)
+}
+
 func abs(v float64) float64 {
 	if v < 0 {
 		return -v
@@ -95,6 +103,12 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 		"gridText":        "—",
 		"atText":          "--:--",
 		"online":          m.Online,
+		// Numeric twins for the count-up tween (animNumLive).
+		"productionKw":  0.0,
+		"batteryKw":     0.0,
+		"gridKw":        0.0,
+		"consumptionKw": 0.0,
+		"soc":           0,
 	}
 	if m.Live != nil {
 		p := &m.Palette
@@ -130,6 +144,11 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 			"gridText":        gridFlowText(lang, m.Live),
 			"atText":          fmtTime(l.At),
 			"online":          m.Online,
+			"productionKw":    l.Production,
+			"batteryKw":       abs(l.BatteryPower),
+			"gridKw":          absPtr(l.Grid),
+			"consumptionKw":   l.Consumption,
+			"soc":             l.Soc,
 		}
 	}
 	signals["live"] = live
@@ -144,6 +163,13 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 		"gridBalanceText": fmtEnergy(lang, m.Kpis.GridExportKwh),
 		"gridExportText":  fmtEnergy(lang, m.Kpis.GridExportKwh),
 		"gridImportText":  fmtEnergy(lang, m.Kpis.GridImportKwh),
+		// Numeric twins for the count-up tween.
+		"productionKwh":  m.Kpis.ProductionKwh,
+		"consumptionKwh": m.Kpis.ConsumptionKwh,
+		"batteryKwh":     m.Kpis.Soc / 100 * 5,
+		"gridExportKwh":  m.Kpis.GridExportKwh,
+		"gridImportKwh":  m.Kpis.GridImportKwh,
+		"gridBalanceKwh": m.Kpis.GridExportKwh,
 	}
 	if m.Live != nil {
 		kpis["socSubText"] = fmtInt(lang, m.Live.Soc) + "% · " + T(lang, "common."+batteryState(m.Live.BatteryPower))
@@ -172,6 +198,8 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 			"shareText": fmtInt(lang, share),
 			"sharePct":  share,
 			"nowPct":    nowPct(in.Kwp, nowKw),
+			"nowKw":     nowKw,
+			"kwh":       kwhs[in.Key],
 		}
 	}
 	signals["inv"] = inv

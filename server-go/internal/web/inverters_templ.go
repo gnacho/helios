@@ -2726,14 +2726,14 @@ func invShareCard(v inversoresView, c *invCompareView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 221, "</button> <button data-on:click=\"$share.mode = 'donut'\" data-class=\"{ 'border-brand bg-brand/10 text-brand': $share.mode == 'donut' }\" class=\"inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted\">Donut</button></div><div class=\"mt-4 flex min-h-[200px] flex-1 flex-col justify-center\"><div data-show=\"$share.mode == 'donut'\" class=\"relative\"><svg viewBox=\"0 0 200 200\" class=\"mx-auto w-full max-w-[220px]\" role=\"img\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 221, "</button> <button data-on:click=\"$share.mode = 'donut'\" data-class=\"{ 'border-brand bg-brand/10 text-brand': $share.mode == 'donut' }\" class=\"inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted\">Donut</button></div><div class=\"mt-4 flex min-h-[200px] flex-1 flex-col justify-center\"><div data-show=\"$share.mode == 'donut'\" class=\"relative\"><svg viewBox=\"0 0 200 200\" class=\"anim-pie mx-auto w-full max-w-[220px]\" role=\"img\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var156 string
 		templ_7745c5c3_Var156, templ_7745c5c3_Err = templ.ResolveAttributeValue(T(v.Lang, "inversores.shareAria"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 435, Col: 125}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 435, Col: 134}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var156)
 		if templ_7745c5c3_Err != nil {

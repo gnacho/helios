@@ -177,28 +177,40 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	_ = sunrise
 	_ = sunset
 	d := dashboardView{
-		pageProps:      p,
-		Signals:        string(signals),
-		Palette:        pal,
-		Chart:          BuildDayChart(lang, m.Series.Points, untilMin(m), invKeys, invNames),
-		AtText:         "--:--",
-		GridKwText:     "—",
-		GridStatus:     "—",
-		GridColor:      pal.RedCompra,
-		KProduction:    fmtEnergy(lang, m.Kpis.ProductionKwh),
-		KConsumption:   fmtEnergy(lang, m.Kpis.ConsumptionKwh),
-		KBatteryKwh:    fmtEnergy(lang, m.Kpis.Soc/100*5),
-		KSocSub:        socSub(lang, m),
-		KAutoconsumo:   fmtInt(lang, m.Kpis.AutoconsumoPct),
-		KGridBalance:   fmtEnergy(lang, m.Kpis.GridExportKwh),
-		KGridExport:    fmtEnergy(lang, m.Kpis.GridExportKwh),
-		KGridImport:    fmtEnergy(lang, m.Kpis.GridImportKwh),
-		AutoconsumoPct: m.Kpis.AutoconsumoPct,
-		Flow:           flow,
-		Arc:            buildArc(lang, m.Live, m.Kpis),
-		Invs:           buildInvCards(lang, m, m.Series.Points, pal),
+		pageProps:       p,
+		Signals:         string(signals),
+		Palette:         pal,
+		Chart:           BuildDayChart(lang, m.Series.Points, untilMin(m), invKeys, invNames),
+		AtText:          "--:--",
+		GridKwText:      "—",
+		GridStatus:      "—",
+		GridColor:       pal.RedCompra,
+		KProduction:     fmtEnergy(lang, m.Kpis.ProductionKwh),
+		KConsumption:    fmtEnergy(lang, m.Kpis.ConsumptionKwh),
+		KBatteryKwh:     fmtEnergy(lang, m.Kpis.Soc/100*5),
+		KSocSub:         socSub(lang, m),
+		KAutoconsumo:    fmtInt(lang, m.Kpis.AutoconsumoPct),
+		KGridBalance:    fmtEnergy(lang, m.Kpis.GridExportKwh),
+		KGridExport:     fmtEnergy(lang, m.Kpis.GridExportKwh),
+		KGridImport:     fmtEnergy(lang, m.Kpis.GridImportKwh),
+		AutoconsumoPct:  m.Kpis.AutoconsumoPct,
+		KProdKwh:        m.Kpis.ProductionKwh,
+		KConsKwh:        m.Kpis.ConsumptionKwh,
+		KBatKwh:         m.Kpis.Soc / 100 * 5,
+		KGridBalanceKwh: m.Kpis.GridExportKwh,
+		KGridExportKwh:  m.Kpis.GridExportKwh,
+		KGridImportKwh:  m.Kpis.GridImportKwh,
+		Flow:            flow,
+		Arc:             buildArc(lang, m.Live, m.Kpis),
+		Invs:            buildInvCards(lang, m, m.Series.Points, pal),
 	}
 	if m.Live != nil {
+		d.LiveProdKw = m.Live.Production
+		d.LiveConsKw = derefKw(m.Live.Consumption)
+		d.LiveBatKw = abs(m.Live.BatteryPower)
+		if m.Live.Grid != nil {
+			d.GridKw = abs(*m.Live.Grid)
+		}
 		exporting := m.Live.Grid != nil && *m.Live.Grid < -0.05
 		gridStatus := T(lang, "live.balanced")
 		if m.Live.Grid == nil {
