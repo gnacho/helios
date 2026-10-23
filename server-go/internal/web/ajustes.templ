@@ -60,6 +60,7 @@ func ajustesSignals(v ajustesView) string {
 		"connected":  false,
 		"station":    "",
 		"bydBusy":    false,
+		"chgSel":     v.ChargerSel,
 	}
 	if raw, err := json.Marshal(sig); err == nil {
 		return string(raw)
@@ -97,7 +98,7 @@ func ajustesSavedText(lang, flag string) string {
 		return T(lang, "admin.users.createdToast", map[string]string{"username": ""})
 	case "pushpref":
 		return T(lang, "ajustes.profile.saved")
-	case "prices":
+	case "prices", "install":
 		return T(lang, "ajustes.profile.saved")
 	}
 	return flag
@@ -169,6 +170,32 @@ templ ajustesInstall(v ajustesView) {
 				@ajustesInvCard(v, c)
 			}
 		</div>
+		<form method="post" action="/ajustes/install" class="mt-4 flex flex-col gap-3 border-t border-app pt-4">
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div>
+					<label for="install-name" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.name") }</label>
+					<div class="relative">
+						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconHouse("h-[15px] w-[15px]")</span>
+						<input id="install-name" type="text" name="install_name" value={ v.InstallName } class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
+					</div>
+				</div>
+				<div>
+					<label for="install-location" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.location") }</label>
+					<div class="relative">
+						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconMapPin("h-[15px] w-[15px]")</span>
+						<input id="install-location" type="text" name="install_location" value={ v.InstallLocation } placeholder={ T(v.Lang, "ajustes.install.locationPlaceholder") } class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
+					</div>
+				</div>
+			</div>
+			<div class="flex flex-wrap items-center gap-3">
+				<button type="submit" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+					{ T(v.Lang, "common.save") }
+				</button>
+				if v.SunNote != "" {
+					<p class="text-xs text-faint">{ v.SunNote }</p>
+				}
+			</div>
+		</form>
 	}
 }
 
@@ -608,7 +635,8 @@ templ ajCheckbox(name string, checked bool, label string) {
 templ ajustesExtensions(v ajustesView) {
 	@ajustesSection("extensiones", T(v.Lang, "ajustes.sections.extensiones")) {
 		<form method="post" action="/ajustes/extensions" class="group flex flex-col gap-4">
-			<input id="chg-config" type="checkbox" class="sr-only"/>
+			<input id="chg-config" type="checkbox" class="sr-only" checked?={ v.Saved == "extensions" }/>
+			<input id="byd-config" type="checkbox" class="sr-only" checked?={ v.Saved == "extensions" }/>
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-3">
 				<div class="flex items-center gap-2.5">
 					@iconPuzzle("h-[18px] w-[18px] shrink-0 text-brand")
@@ -627,6 +655,13 @@ templ ajustesExtensions(v ajustesView) {
 							</label>
 						}
 					</div>
+					<div class="flex items-center gap-2.5">
+						<span class="text-sm font-semibold text-app">BYD</span>
+						@ajCheckbox("byd.enabled", v.BydEnabled, "")
+						<label for="byd-config" title={ T(v.Lang, "ajustes.extensions.configure") } aria-controls="byd-config-panel" class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#byd-config:checked]:border-brand group-has-[#byd-config:checked]:bg-brand/10 group-has-[#byd-config:checked]:text-brand">
+							@iconSettings2("h-[15px] w-[15px]")
+						</label>
+					</div>
 				}
 			</div>
 			if !v.ExtEnabled {
@@ -636,24 +671,39 @@ templ ajustesExtensions(v ajustesView) {
 			} else {
 				<p class="text-sm text-muted">{ T(v.Lang, "ajustes.extensions.carChargerDesc") }</p>
 				<div id="ext-charger-config" class="hidden flex-col gap-3 group-has-[#chg-config:checked]:flex">
+					<div class="flex flex-wrap items-center gap-2" role="tablist" aria-label={ T(v.Lang, "ajustes.extensions.chargerSelect") }>
+						for _, c := range v.Chargers {
+							<button type="button" role="tab" aria-selected={ pickStr(c.Idx == v.ChargerSel, "true", "false") } data-on:click={ chgTabClick(c.Idx) } data-class={ "{ 'border-brand bg-brand/10 text-brand': $chgSel == " + strconv.Itoa(c.Idx) + " }" } class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted transition-colors hover:text-app">
+								{ c.Name }
+							</button>
+						}
+						<form method="post" action="/ajustes/extensions">
+							<input type="hidden" name="action" value="add-charger"/>
+							<button type="submit" aria-label={ T(v.Lang, "ajustes.extensions.chargerAdd") } title={ T(v.Lang, "ajustes.extensions.chargerAdd") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
+								@iconPlus("h-3.5 w-3.5")
+							</button>
+						</form>
+						if len(v.Chargers) > 1 {
+							for _, c := range v.Chargers {
+								<form method="post" action="/ajustes/extensions" id={ "ext-remove-" + strconv.Itoa(c.Idx) }>
+									<input type="hidden" name="action" value="remove-charger"/>
+									<input type="hidden" name="remove" value={ strconv.Itoa(c.Idx) }/>
+								</form>
+								<button type="submit" form={ "ext-remove-" + strconv.Itoa(c.Idx) } title={ T(v.Lang, "ajustes.extensions.chargerRemove") } aria-label={ T(v.Lang, "ajustes.extensions.chargerRemove") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-rose-500">
+									@iconTrash2("h-3.5 w-3.5")
+								</button>
+							}
+						}
+					</div>
 					for _, c := range v.Chargers {
-						@ajChargerFields(v, c)
+						<div data-show={ "$chgSel == " + strconv.Itoa(c.Idx) }>
+							@ajChargerFields(v, c)
+						</div>
 					}
 				</div>
 				<input type="hidden" name="chg.count" value={ strconv.Itoa(len(v.Chargers)) }/>
 			}
-			<!-- BYD: como el cargador, plegado tras su engranaje. -->
-			<input id="byd-config" type="checkbox" class="sr-only"/>
-			<div class="flex flex-wrap items-center gap-2.5">
-				<span class="flex items-center gap-2">
-					@iconCarFront("h-4 w-4 text-brand")
-					<span class="text-[13px] font-semibold text-app">BYD</span>
-					@ajCheckbox("byd.enabled", v.BydEnabled, "")
-				</span>
-				<label for="byd-config" title={ T(v.Lang, "ajustes.extensions.configure") } aria-controls="byd-config-panel" class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#byd-config:checked]:border-brand group-has-[#byd-config:checked]:bg-brand/10 group-has-[#byd-config:checked]:text-brand">
-					@iconSettings2("h-[15px] w-[15px]")
-				</label>
-			</div>
+			<!-- Panel BYD (su cabecera vive arriba, junto al cargador). -->
 			<div id="byd-config-panel" class="hidden flex-col gap-3 group-has-[#byd-config:checked]:flex">
 				<div class="rounded-xl border border-app bg-surface p-3">
 					<div class="grid gap-3 sm:grid-cols-3">
@@ -670,54 +720,35 @@ templ ajustesExtensions(v ajustesView) {
 				<p class="text-xs text-faint">{ T(v.Lang, "ajustes.extensions.entitiesHint") }</p>
 			</div>
 		</form>
-		if v.ChargerEnabled && v.ExtEnabled {
-			<div class="flex flex-wrap items-center gap-2">
-				<form method="post" action="/ajustes/extensions">
-					<input type="hidden" name="action" value="add-charger"/>
-					<button type="submit" aria-label={ T(v.Lang, "ajustes.extensions.chargerAdd") } title={ T(v.Lang, "ajustes.extensions.chargerAdd") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
-						@iconPlus("h-3.5 w-3.5")
+		if len(v.BydActions) > 0 {
+			<div class="flex flex-wrap items-center gap-2" role="group" aria-label="BYD">
+				<span class="text-xs font-medium text-faint">Acciones BYD</span>
+				for _, a := range v.BydActions {
+					<button
+						type="button"
+						data-on:click={ a.ClickExpr }
+						data-indicator="$bydBusy"
+						data-attr-disabled="$bydBusy"
+						class="inline-flex h-8 items-center rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
+					>
+						{ a.Label }
 					</button>
-				</form>
-				if len(v.Chargers) > 1 {
-					for _, c := range v.Chargers {
-						<form method="post" action="/ajustes/extensions" id={ "ext-remove-" + strconv.Itoa(c.Idx) }>
-							<input type="hidden" name="action" value="remove-charger"/>
-							<input type="hidden" name="remove" value={ strconv.Itoa(c.Idx) }/>
-						</form>
-						<button type="submit" form={ "ext-remove-" + strconv.Itoa(c.Idx) } title={ T(v.Lang, "ajustes.extensions.chargerRemove") } aria-label={ T(v.Lang, "ajustes.extensions.chargerRemove") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-rose-500">
-							@iconTrash2("h-3.5 w-3.5")
-						</button>
-					}
 				}
 			</div>
-			if len(v.BydActions) > 0 {
-				<div class="flex flex-wrap items-center gap-2" role="group" aria-label="BYD">
-					<span class="text-xs font-medium text-faint">Acciones BYD</span>
-					for _, a := range v.BydActions {
-						<button
-							type="button"
-							data-on:click={ a.ClickExpr }
-							data-indicator="$bydBusy"
-							data-attr-disabled="$bydBusy"
-							class="inline-flex h-8 items-center rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
-						>
-							{ a.Label }
-						</button>
-					}
-				</div>
-			}
 		}
 	}
 }
 
+// chgTabClick selects a charger tab and keeps aria-selected in sync.
+func chgTabClick(idx int) string {
+	i := strconv.Itoa(idx)
+	return "$chgSel = " + i + "; document.querySelectorAll('#ext-charger-config [role=tab]').forEach((b, n) => b.setAttribute('aria-selected', n === " + i + " ? 'true' : 'false'))"
+}
+
 // ajChargerFields is the collapsible per-charger fieldset.
 templ ajChargerFields(v ajustesView, c chargerFormView) {
-	<details open?={ c.Idx == 0 } class="rounded-xl border border-app bg-surface p-3">
-		<summary class="cursor-pointer text-[13px] font-semibold text-muted">
-			{ c.Name }
-			<span class="ml-1 font-mono text-xs text-faint">({ c.Key })</span>
-		</summary>
-		<div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+	<div class="rounded-xl border border-app bg-surface p-3">
+		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 			@ajField(T(v.Lang, "ajustes.extensions.f.name"), "chg."+strconv.Itoa(c.Idx)+".name", c.Name, "")
 			@ajSelect(T(v.Lang, "ajustes.extensions.f.powerUnit"), "chg."+strconv.Itoa(c.Idx)+".powerUnit", c.PowerUnit, rawOptions("kW", "W"))
 			@ajField(T(v.Lang, "ajustes.extensions.f.chargingStates"), "chg."+strconv.Itoa(c.Idx)+".chargingStates", c.ChargingStates, "charging")
@@ -739,7 +770,7 @@ templ ajChargerFields(v ajustesView, c chargerFormView) {
 			@ajField(T(v.Lang, "ajustes.extensions.f.connectedStates"), "chg."+strconv.Itoa(c.Idx)+".connectedStates", c.ConnectedStates, "connected")
 			<input type="hidden" name={ "chg." + strconv.Itoa(c.Idx) + ".key" } value={ c.Key }/>
 		</div>
-	</details>
+	</div>
 }
 
 // ── 5. Perfil ───────────────────────────────────────────────────────────────
@@ -754,16 +785,23 @@ templ ajustesProfile(v ajustesView) {
 				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
 					@iconUser("h-5 w-5")
 				</div>
-				<div class="min-w-0">
-					<p class="truncate text-[15px] font-semibold leading-tight text-app">{ firstNonEmpty(v.DisplayName, v.Username) }</p>
-					if v.IsAdmin {
-						<p class="text-[12px] leading-tight text-faint">{ T(v.Lang, "ajustes.role.admin") }</p>
-					}
-				</div>
 				<form method="post" action="/ajustes/profile" class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-					<input type="text" name="display_name" value={ v.DisplayName } placeholder={ v.Username } aria-label={ T(v.Lang, "ajustes.profile.displayName") } class="h-9 min-w-[120px] flex-1 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
-					<input type="email" name="email" value={ v.Email } placeholder={ T(v.Lang, "ajustes.profile.emailPlaceholder") } aria-label={ T(v.Lang, "ajustes.profile.email") } class="h-9 min-w-[140px] flex-1 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
-					<select name="language" aria-label={ T(v.Lang, "ajustes.sections.idioma") } class="h-9 w-[112px] shrink-0 rounded-xl border border-app bg-surface-2 px-2 text-sm text-app outline-none focus:border-brand">
+					<div class="group/name relative min-w-0">
+						<input type="text" name="display_name" value={ v.DisplayName } placeholder={ v.Username } aria-label={ T(v.Lang, "ajustes.profile.displayName") } class="w-[150px] truncate rounded-lg border border-transparent bg-transparent py-0.5 pl-1 pr-5 text-[15px] font-semibold leading-tight text-app outline-none transition-colors hover:border-app focus:border-brand focus:bg-surface-2"/>
+						<span class="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-faint opacity-0 transition-opacity group-hover/name:opacity-100" aria-hidden="true">@iconPencil("h-3 w-3")</span>
+						if v.IsAdmin {
+							<p class="px-1 text-[12px] leading-tight text-faint">{ T(v.Lang, "ajustes.role.admin") }</p>
+						}
+					</div>
+					<details class="relative">
+						<summary title={ T(v.Lang, "ajustes.profile.email") } aria-label={ T(v.Lang, "ajustes.profile.email") } class="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
+							@iconMail("h-4 w-4")
+						</summary>
+						<div class="absolute right-0 z-30 mt-2 flex w-64 items-center gap-2 rounded-xl border border-app bg-surface p-2 shadow-lg">
+							<input type="email" name="email" value={ v.Email } placeholder={ T(v.Lang, "ajustes.profile.emailPlaceholder") } aria-label={ T(v.Lang, "ajustes.profile.email") } class="h-9 w-full rounded-lg border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+						</div>
+					</details>
+					<select name="language" aria-label={ T(v.Lang, "ajustes.sections.idioma") } class="h-9 w-[122px] shrink-0 rounded-xl border border-app bg-surface-2 px-2 text-sm text-app outline-none focus:border-brand">
 						for _, l := range v.Languages {
 							if l.Code == v.ProfileLang {
 								<option value={ l.Code } selected>{ l.Flag } { l.Name }</option>
@@ -772,20 +810,23 @@ templ ajustesProfile(v ajustesView) {
 							}
 						}
 					</select>
-					<button type="submit" title={ T(v.Lang, "common.save") } aria-label={ T(v.Lang, "common.save") } class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-white transition-opacity hover:opacity-90">
-						@iconCheck("h-4 w-4")
+					<button type="submit" class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand-gradient px-3 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+						{ T(v.Lang, "common.save") }
 					</button>
 				</form>
-				<label for="perfil-pwd" title={ T(v.Lang, "ajustes.security.change") } class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-pwd:checked]:border-brand group-has-[#perfil-pwd:checked]:bg-brand/10 group-has-[#perfil-pwd:checked]:text-brand">
+				<label for="perfil-pwd" title={ T(v.Lang, "ajustes.security.change") } class="flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app bg-surface px-2.5 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-pwd:checked]:border-brand group-has-[#perfil-pwd:checked]:bg-brand/10 group-has-[#perfil-pwd:checked]:text-brand">
 					@iconKeyRound("h-4 w-4")
+					<span class="hidden xl:inline">{ T(v.Lang, "common.password") }</span>
 				</label>
-				<label for="perfil-notif" title={ T(v.Lang, "ajustes.sections.notificaciones") } class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-notif:checked]:border-brand group-has-[#perfil-notif:checked]:bg-brand/10 group-has-[#perfil-notif:checked]:text-brand">
+				<label for="perfil-notif" title={ T(v.Lang, "ajustes.sections.notificaciones") } class="flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app bg-surface px-2.5 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-notif:checked]:border-brand group-has-[#perfil-notif:checked]:bg-brand/10 group-has-[#perfil-notif:checked]:text-brand">
 					@iconBell("h-4 w-4")
+					<span class="hidden xl:inline">{ T(v.Lang, "ajustes.sections.notificaciones") }</span>
 				</label>
 				<form method="post" action="/logout" class="shrink-0">
 					<input type="hidden" name="next" value="/login"/>
-					<button type="submit" title={ T(v.Lang, "common.logout") } aria-label={ T(v.Lang, "common.logout") } class="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 transition-colors hover:bg-rose-500/15 dark:text-rose-400">
+					<button type="submit" title={ T(v.Lang, "common.logout") } aria-label={ T(v.Lang, "common.logout") } class="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 text-[13px] font-medium text-rose-600 transition-colors hover:bg-rose-500/15 dark:text-rose-400">
 						@iconLogOut("h-4 w-4")
+						<span class="hidden xl:inline">{ T(v.Lang, "common.logout") }</span>
 					</button>
 				</form>
 			</div>

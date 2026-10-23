@@ -169,6 +169,7 @@ type ajustesView struct {
 	ChargerEnabled bool
 	BydEnabled     bool
 	Chargers       []chargerFormView
+	ChargerSel     int // pestaña activa del panel del cargador
 	BydActions     []bydActionView
 	BydValues      map[string]string
 
@@ -193,6 +194,11 @@ type ajustesView struct {
 	UpdateStep    string
 	UpdatePct     int
 	UpdateSteps   []updateStepView
+
+	// Instalación (nombre y ubicación del dispositivo; viven en KV).
+	InstallName     string
+	InstallLocation string
+	SunNote         string
 
 	// Precios (energía).
 	PriceImport string
@@ -383,7 +389,12 @@ func buildInstallCards(lang string, t install.Topology) []invCardView {
 		}
 		if inv.HasBattery {
 			c.HasBattery = true
-			c.BatteryText = T(lang, "ajustes.install.battery", map[string]string{"name": T(lang, "common.battery"), "kwh": formatNumber(lang, inv.BatteryKwh, 1)})
+			// El perfil de instalación no trae marca de batería: "Batería · 5,0 kWh"
+			// (antes salía "Batería Batería").
+			c.BatteryText = T(lang, "ajustes.install.batterySize", map[string]string{
+				"label": T(lang, "common.battery"),
+				"kwh":   formatNumber(lang, inv.BatteryKwh, 1),
+			})
 		}
 		cards = append(cards, c)
 	}
@@ -639,6 +650,24 @@ func (u *UI) buildAjustes(r *http.Request, userID string) ajustesView {
 	// Acerca de: versión + runtime (mismo contenido que GET /api/system/info,
 	// computado en proceso; el endpoint JSON no cambia).
 	// Precios en formato decimal castellano (el parse acepta coma o punto).
+	if u.DB != nil {
+		v.InstallName, _ = u.DB.KVGet("installName")
+		v.InstallLocation, _ = u.DB.KVGet("installLocation")
+	}
+	if u.Solar != nil && u.HA != nil {
+		sr, ss := u.sunTimesCached()
+		v.SunNote = T(v.Lang, "ajustes.install.sunTodayHa", map[string]string{
+			"sunrise": fmtTime(sr),
+			"sunset":  fmtTime(ss),
+		})
+		if v.InstallLocation != "" {
+			v.SunNote = T(v.Lang, "ajustes.install.sunTodayAt", map[string]string{
+				"location": v.InstallLocation,
+				"sunrise":  fmtTime(sr),
+				"sunset":   fmtTime(ss),
+			})
+		}
+	}
 	v.PriceImport = strings.Replace(strconv.FormatFloat(u.Prices.PriceImport, 'f', -1, 64), ".", ",", 1)
 	v.PriceExport = strings.Replace(strconv.FormatFloat(u.Prices.PriceExport, 'f', -1, 64), ".", ",", 1)
 	v.Co2Factor = strings.Replace(strconv.FormatFloat(u.Prices.Co2PerKwh, 'f', -1, 64), ".", ",", 1)
@@ -1213,4 +1242,24 @@ func (u *UI) handleAjustesPrices(w http.ResponseWriter, r *http.Request) {
 	u.Prices.PriceExport = exp
 	u.Prices.Co2PerKwh = co2
 	ajustesRedirectFlag(w, r, "saved", "prices")
+}
+
+
+// handleAjustesInstall stores the installation name and location (KV). They
+// were per-device settings in the React app; server-rendered they describe the
+// installation.
+func (u *UI) handleAjustesInstall(w http.ResponseWriter, r *http.Request) {
+	username, userID, isAdmin := u.currentUserActor(r)
+	if !isAdmin {
+		ajustesRedirectFlag(w, r, "err", "forbidden")
+		return
+	}
+	name := strings.TrimSpace(r.PostFormValue("install_name"))
+	location := strings.TrimSpace(r.PostFormValue("install_location"))
+	if u.DB != nil {
+		u.DB.KVSet("installName", name)
+		u.DB.KVSet("installLocation", location)
+		u.DB.Audit(username, userID, "install.update", map[string]string{"name": name, "location": location})
+	}
+	ajustesRedirectFlag(w, r, "saved", "install")
 }

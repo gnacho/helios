@@ -148,6 +148,7 @@ func (u *UI) Mount(r chi.Router) {
 		// proceso que los endpoints JSON (ver ajustes.go).
 		r.Post("/ajustes/topology", u.handleAjustesTopology)
 		r.Post("/ajustes/prices", u.handleAjustesPrices)
+		r.Post("/ajustes/install", u.handleAjustesInstall)
 		r.Post("/ajustes/extensions", u.handleAjustesExtensions)
 		r.Post("/ajustes/push-pref", u.handleAjustesPushPref)
 		r.Post("/ajustes/profile", u.handleAjustesProfile)
@@ -563,6 +564,16 @@ var alertsCache struct {
 	at     time.Time
 	alerts []solar.LiveAlert
 	level  string
+	sunrise, sunset int
+}
+
+// sunTimesCached returns the sunrise/sunset minutes from the same cached live
+// snapshot the alerts use (15 s).
+func (u *UI) sunTimesCached() (int, int) {
+	u.alertsSnapshot()
+	alertsCache.mu.Lock()
+	defer alertsCache.mu.Unlock()
+	return alertsCache.sunrise, alertsCache.sunset
 }
 
 func (u *UI) alertsSnapshot() ([]solar.LiveAlert, string) {
@@ -578,6 +589,7 @@ func (u *UI) alertsSnapshot() ([]solar.LiveAlert, string) {
 	alertsCache.mu.Unlock()
 
 	live := u.Solar.ComputeLive(u.HA)
+	sunrise, sunset := sunMinutes(&live)
 	level := ""
 	for _, a := range live.Alerts {
 		switch a.Severity {
@@ -595,6 +607,7 @@ func (u *UI) alertsSnapshot() ([]solar.LiveAlert, string) {
 	}
 	alertsCache.mu.Lock()
 	alertsCache.at, alertsCache.alerts, alertsCache.level = time.Now(), live.Alerts, level
+	alertsCache.sunrise, alertsCache.sunset = sunrise, sunset
 	alertsCache.mu.Unlock()
 	return live.Alerts, level
 }

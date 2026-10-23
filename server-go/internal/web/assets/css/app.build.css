@@ -624,6 +624,9 @@
   .w-36 {
     width: calc(var(--spacing) * 36);
   }
+  .w-64 {
+    width: calc(var(--spacing) * 64);
+  }
   .w-72 {
     width: calc(var(--spacing) * 72);
   }
@@ -666,11 +669,14 @@
   .w-\[72px\] {
     width: 72px;
   }
-  .w-\[112px\] {
-    width: 112px;
+  .w-\[122px\] {
+    width: 122px;
   }
   .w-\[140px\] {
     width: 140px;
+  }
+  .w-\[150px\] {
+    width: 150px;
   }
   .w-\[232px\] {
     width: 232px;
@@ -728,12 +734,6 @@
   }
   .min-w-\[92px\] {
     min-width: 92px;
-  }
-  .min-w-\[120px\] {
-    min-width: 120px;
-  }
-  .min-w-\[140px\] {
-    min-width: 140px;
   }
   .min-w-\[320px\] {
     min-width: 320px;
@@ -1004,6 +1004,9 @@
       border-color: color-mix(in oklab, var(--color-rose-500) 40%, transparent);
     }
   }
+  .border-transparent {
+    border-color: transparent;
+  }
   .border-l-brand {
     border-left-color: var(--color-brand);
   }
@@ -1136,6 +1139,9 @@
   .bg-sky-500 {
     background-color: var(--color-sky-500);
   }
+  .bg-transparent {
+    background-color: transparent;
+  }
   .bg-white {
     background-color: var(--color-white);
   }
@@ -1235,6 +1241,9 @@
   .pr-4 {
     padding-right: calc(var(--spacing) * 4);
   }
+  .pr-5 {
+    padding-right: calc(var(--spacing) * 5);
+  }
   .pb-1 {
     padding-bottom: var(--spacing);
   }
@@ -1252,6 +1261,9 @@
   }
   .pb-24 {
     padding-bottom: calc(var(--spacing) * 24);
+  }
+  .pl-1 {
+    padding-left: var(--spacing);
   }
   .pl-9 {
     padding-left: calc(var(--spacing) * 9);
@@ -1471,6 +1483,9 @@
   .accent-\[var\(--brand\)\] {
     accent-color: var(--brand);
   }
+  .opacity-0 {
+    opacity: 0%;
+  }
   .opacity-40 {
     opacity: 40%;
   }
@@ -1592,6 +1607,9 @@
   @media (hover: hover) {
     .group-hover\:block:is(:where(.group):hover *) {
       display: block;
+    }
+    .group-hover\/name\:opacity-100:is(:where(.group\/name):hover *) {
+      opacity: 100%;
     }
   }
   .group-has-\[\#byd-config\:checked\]\:flex:is(:where(.group):has(:is(#byd-config:checked)) *) {
@@ -2050,6 +2068,9 @@
     }
     .xl\:col-span-9 {
       grid-column: span 9 / span 9;
+    }
+    .xl\:inline {
+      display: inline;
     }
     .xl\:grid-cols-4 {
       grid-template-columns: repeat(4, minmax(0, 1fr));

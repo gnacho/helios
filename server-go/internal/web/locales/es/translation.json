@@ -433,7 +433,8 @@
       "inverters": "inversores",
       "battery": "Batería {{name}} · {{kwh}} kWh",
       "theoretical": "Capacidad teórica",
-      "totalLabel": "Total"
+      "totalLabel": "Total",
+      "batterySize": "{{label}} · {{kwh}} kWh"
     },
     "prices": {
       "buy": "Precio de compra",

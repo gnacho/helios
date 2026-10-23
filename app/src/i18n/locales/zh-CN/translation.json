@@ -430,7 +430,8 @@
       "inverters": "逆变器",
       "battery": "电池 {{name}} · {{kwh}} kWh",
       "theoretical": "理论容量",
-      "totalLabel": "总计"
+      "totalLabel": "总计",
+      "batterySize": "{{label}} · {{kwh}} kWh"
     },
     "prices": {
       "buy": "购电价格",
