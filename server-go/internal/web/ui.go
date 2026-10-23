@@ -344,15 +344,17 @@ func (u *UI) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UI) handleTheme(w http.ResponseWriter, r *http.Request) {
-	theme := themeOther(themeFrom(r))
-	if v := r.PostFormValue("theme"); v == "light" || v == "dark" {
-		theme = v
+	theme := r.PostFormValue("theme")
+	if theme != "light" && theme != "dark" && theme != "auto" {
+		theme = "auto"
 	}
 	next := safeNext(r.PostFormValue("next"))
-	http.SetCookie(w, &http.Cookie{
-		Name: themeCookie, Value: theme, Path: "/",
-		MaxAge: 31536000, SameSite: http.SameSiteLaxMode,
-	})
+	if theme == "auto" {
+		// Sin override: borrar la cookie para volver a la preferencia del SO.
+		http.SetCookie(w, &http.Cookie{Name: themeCookie, Value: "", Path: "/", MaxAge: -1, SameSite: http.SameSiteLaxMode})
+	} else {
+		http.SetCookie(w, &http.Cookie{Name: themeCookie, Value: theme, Path: "/", MaxAge: 31536000, SameSite: http.SameSiteLaxMode})
+	}
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
@@ -443,24 +445,32 @@ func safeNext(next string) string {
 	return next
 }
 
+// themeFrom returns "dark"/"light" when the cookie pins an explicit choice,
+// or "" for auto (no cookie: the CSS media variant follows the OS).
 func themeFrom(r *http.Request) string {
 	if c, err := r.Cookie(themeCookie); err == nil && (c.Value == "dark" || c.Value == "light") {
 		return c.Value
 	}
+	return ""
+}
+
+// themeNext is the toggle cycle: auto -> light -> dark -> auto.
+func themeNext(theme string) string {
+	switch theme {
+	case "light":
+		return "dark"
+	case "dark":
+		return "auto"
+	}
 	return "light"
 }
 
-func themeOther(theme string) string {
-	if theme == "dark" {
+func themeStateName(theme string) string {
+	switch theme {
+	case "light":
 		return "light"
+	case "dark":
+		return "dark"
 	}
-	return "dark"
-}
-
-// themeToggleLabel is the aria-label of the theme toggle button.
-func themeToggleLabel(lang, theme string) string {
-	if theme == "dark" {
-		return T(lang, "theme.toLight")
-	}
-	return T(lang, "theme.toDark")
+	return "auto"
 }

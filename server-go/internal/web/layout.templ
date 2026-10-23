@@ -10,12 +10,24 @@ templ head(p pageProps) {
 	<title>{ p.Title }</title>
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
-	<meta name="theme-color" content="#F4F6FA"/>
+	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F6FA"/>
+	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#080D1A"/>
 	<link rel="preconnect" href="https://fonts.googleapis.com"/>
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"/>
 	<link rel="stylesheet" href="/assets/css/app.build.css"/>
 	<script src="/assets/js/gestures.js" defer></script>
+	<script>
+		// Theme init (Tailwind's documented 3-way pattern): the server renders
+		// the class for pinned themes; this only resolves "auto" (no cookie).
+		(function () {
+			var m = document.cookie.match(/(?:^|; )helios_theme=(light|dark)/);
+			var dark = m ? m[1] === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+			var el = document.documentElement;
+			el.classList.toggle("dark", dark);
+			el.classList.toggle("light", !!m && !dark);
+		})();
+	</script>
 	<script type="module" src="/assets/js/datastar.js"></script>
 }
 
@@ -23,7 +35,7 @@ templ head(p pageProps) {
 // server-side from the helios_theme cookie (no flash of wrong theme).
 templ Layout(p pageProps) {
 	<!DOCTYPE html>
-	<html lang={ p.Lang } class={ templ.KV("dark", p.Theme == "dark") }>
+	<html lang={ p.Lang } class={ templ.KV("dark", p.Theme == "dark"), templ.KV("light", p.Theme == "light") }>
 		@head(p)
 		<body class="flex min-h-dvh flex-col bg-app font-sans text-app antialiased">
 			{ children... }
@@ -321,16 +333,19 @@ templ footerLine(p pageProps) {
 	<p class="mt-8 pb-6 text-center text-xs text-faint">{ T(p.Lang, "footer.line1", map[string]string{"version": p.Version}) }</p>
 }
 
-// themeToggle posts to /theme: server-side theme switch without JS.
+// themeToggle cycles auto -> light -> dark -> auto (server-side cookie).
+// "auto" (no cookie) follows the OS preference via the CSS media variant.
 templ themeToggle(p pageProps) {
 	<form method="post" action="/theme" class="shrink-0">
 		<input type="hidden" name="next" value={ p.Path }/>
-		<input type="hidden" name="theme" value={ themeOther(p.Theme) }/>
-		<button type="submit" aria-label={ themeToggleLabel(p.Lang, p.Theme) } class="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-app">
+		<input type="hidden" name="theme" value={ themeNext(p.Theme) }/>
+		<button type="submit" aria-label={ T(p.Lang, "theme."+themeStateName(p.Theme)) } title={ T(p.Lang, "theme."+themeStateName(p.Theme)) } class="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-app">
 			if p.Theme == "dark" {
 				@iconSun("h-4 w-4")
-			} else {
+			} else if p.Theme == "light" {
 				@iconMoon("h-4 w-4")
+			} else {
+				@iconSunMoon("h-4 w-4")
 			}
 		</button>
 	</form>
