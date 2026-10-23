@@ -118,6 +118,32 @@ func ajustesErrText(lang, flag string) string {
 }
 
 // ajustesSection ports the React Section card (title + optional badge).
+// ajustesSectionHealth is Section + HealthBadge (Conexión y datos).
+templ ajustesSectionHealth(id string, title string, ok bool, lang string) {
+	<section id={ id } class="helios-card scroll-mt-20 p-5 shadow-card dark:shadow-card-dark lg:scroll-mt-6">
+		<div class="mb-4 flex items-center gap-2.5">
+			<h2 class="text-[15px] font-semibold text-app">{ title }</h2>
+			<span
+				role="status"
+				aria-label={ pickStr(ok, T(lang, "ajustes.health.alive"), T(lang, "ajustes.health.down")) }
+				title={ pickStr(ok, T(lang, "ajustes.health.alive"), T(lang, "ajustes.health.down")) }
+				class={ "ml-auto flex h-6 w-6 items-center justify-center rounded-full", templ.KV("bg-emerald-500/15 text-emerald-500", ok), templ.KV("bg-amber-500/15 text-amber-500", !ok) }
+			>
+				@iconHeartPulse("h-3.5 w-3.5")
+			</span>
+		</div>
+		{ children... }
+	</section>
+}
+
+// pickStr is a tiny ternary for strings.
+func pickStr(cond bool, a, b string) string {
+	if cond {
+		return a
+	}
+	return b
+}
+
 templ ajustesSection(id string, title string) {
 	<section id={ id } class="helios-card scroll-mt-20 p-5 shadow-card dark:shadow-card-dark lg:scroll-mt-6">
 		<div class="mb-4 flex items-center gap-2.5">
@@ -178,8 +204,8 @@ templ ajustesInvCard(v ajustesView, c invCardView) {
 // them in localStorage); all of them render server-side, no custom JS.
 templ ajustesAppearance(v ajustesView) {
 	@ajustesSection("apariencia", T(v.Lang, "ajustes.sections.apariencia")) {
-		<div class="flex flex-col gap-4 sm:flex-row sm:gap-6">
-			<div role="radiogroup" aria-label={ T(v.Lang, "theme.label") } class="grid grid-cols-3 gap-2 sm:w-1/2 sm:flex-shrink-0">
+		<div class="flex max-w-3xl flex-col gap-4 sm:flex-row sm:gap-5">
+			<div role="radiogroup" aria-label={ T(v.Lang, "theme.label") } class="grid grid-cols-3 gap-2 sm:w-[46%] sm:flex-shrink-0">
 				@ajustesThemeOption(v, "dark")
 				@ajustesThemeOption(v, "light")
 				@ajustesThemeOption(v, "auto")
@@ -277,7 +303,7 @@ templ ajustesThemeOption(v ajustesView, theme string) {
 
 templ ajustesThemePreview(theme string) {
 	if theme == "dark" {
-		<div class="flex h-[72px] w-full flex-col rounded-lg border border-app bg-[#0E1524] p-1.5">
+		<div class="flex h-[64px] w-full flex-col rounded-lg border border-app bg-[#0E1524] p-1.5">
 			<div class="mb-1 h-1.5 w-full rounded bg-[#1B2537]"></div>
 			<div class="flex flex-1 gap-1">
 				<div class="w-1/4 rounded bg-[#1B2537]"></div>
@@ -288,7 +314,7 @@ templ ajustesThemePreview(theme string) {
 			</div>
 		</div>
 	} else if theme == "auto" {
-		<div class="flex h-[72px] w-full overflow-hidden rounded-lg border border-app">
+		<div class="flex h-[64px] w-full overflow-hidden rounded-lg border border-app">
 			<div class="flex w-1/2 flex-col bg-[#F4F6FA] p-1.5">
 				<div class="mb-1 h-1.5 w-full rounded bg-[#E3E8F0]"></div>
 				<div class="flex flex-1 gap-1">
@@ -311,7 +337,7 @@ templ ajustesThemePreview(theme string) {
 			</div>
 		</div>
 	} else {
-		<div class="flex h-[72px] w-full flex-col rounded-lg border border-app bg-[#F4F6FA] p-1.5">
+		<div class="flex h-[64px] w-full flex-col rounded-lg border border-app bg-[#F4F6FA] p-1.5">
 			<div class="mb-1 h-1.5 w-full rounded bg-[#E3E8F0]"></div>
 			<div class="flex flex-1 gap-1">
 				<div class="w-1/4 rounded bg-[#E3E8F0]"></div>
@@ -326,7 +352,7 @@ templ ajustesThemePreview(theme string) {
 
 // ── 3. Conexión + TopologyEditor ────────────────────────────────────────────
 templ ajustesConnection(v ajustesView) {
-	@ajustesSection("conexion", T(v.Lang, "ajustes.sections.conexionDatos")) {
+	@ajustesSectionHealth("conexion", T(v.Lang, "ajustes.sections.conexionDatos"), v.HAOk, v.Lang) {
 		<div class="group flex flex-col gap-4">
 			<input id="topo-edit" type="checkbox" class="sr-only"/>
 			<p class="text-sm leading-snug text-muted">{ T(v.Lang, "ajustes.connection.desc") }</p>
@@ -589,7 +615,7 @@ templ ajustesExtensions(v ajustesView) {
 						@ajCheckbox("chg.enabled", v.ChargerEnabled, "")
 						if v.ChargerEnabled {
 							<label for="chg-config" title={ T(v.Lang, "ajustes.extensions.configure") } aria-controls="ext-charger-config" class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#chg-config:checked]:border-brand group-has-[#chg-config:checked]:bg-brand/10 group-has-[#chg-config:checked]:text-brand">
-								@iconSettings("h-[15px] w-[15px]")
+								@iconSettings2("h-[15px] w-[15px]")
 							</label>
 						}
 					</div>
@@ -608,22 +634,27 @@ templ ajustesExtensions(v ajustesView) {
 				</div>
 				<input type="hidden" name="chg.count" value={ strconv.Itoa(len(v.Chargers)) }/>
 			}
-			<fieldset class="flex flex-col gap-3">
-				<legend class="flex items-center gap-2 text-[13px] font-semibold text-app">
+			<!-- BYD: como el cargador, plegado tras su engranaje. -->
+			<input id="byd-config" type="checkbox" class="sr-only"/>
+			<div class="flex flex-wrap items-center gap-2.5">
+				<span class="flex items-center gap-2">
 					@iconCarFront("h-4 w-4 text-brand")
-					BYD
-				</legend>
+					<span class="text-[13px] font-semibold text-app">BYD</span>
+					@ajCheckbox("byd.enabled", v.BydEnabled, "")
+				</span>
+				<label for="byd-config" title={ T(v.Lang, "ajustes.extensions.configure") } aria-controls="byd-config-panel" class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#byd-config:checked]:border-brand group-has-[#byd-config:checked]:bg-brand/10 group-has-[#byd-config:checked]:text-brand">
+					@iconSettings2("h-[15px] w-[15px]")
+				</label>
+			</div>
+			<div id="byd-config-panel" class="hidden flex-col gap-3 group-has-[#byd-config:checked]:flex">
 				<div class="rounded-xl border border-app bg-surface p-3">
 					<div class="grid gap-3 sm:grid-cols-3">
-						<div class="flex items-center gap-2 sm:col-span-3">
-							@ajCheckbox("byd.enabled", v.BydEnabled, T(v.Lang, "ajustes.topology.enabled"))
-						</div>
 						for _, f := range bydConfigFields {
 							@ajField(bydFieldLabels[f], "byd."+f, v.BydValues[f], "")
 						}
 					</div>
 				</div>
-			</fieldset>
+			</div>
 			<div class="flex items-center gap-3">
 				<button type="submit" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
 					{ T(v.Lang, "ajustes.extensions.save") }
@@ -635,9 +666,8 @@ templ ajustesExtensions(v ajustesView) {
 			<div class="flex flex-wrap items-center gap-2">
 				<form method="post" action="/ajustes/extensions">
 					<input type="hidden" name="action" value="add-charger"/>
-					<button type="submit" class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app">
+					<button type="submit" aria-label={ T(v.Lang, "ajustes.extensions.chargerAdd") } title={ T(v.Lang, "ajustes.extensions.chargerAdd") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
 						@iconPlus("h-3.5 w-3.5")
-						{ T(v.Lang, "ajustes.extensions.chargerAdd") }
 					</button>
 				</form>
 				if len(v.Chargers) > 1 {
@@ -646,9 +676,8 @@ templ ajustesExtensions(v ajustesView) {
 							<input type="hidden" name="action" value="remove-charger"/>
 							<input type="hidden" name="remove" value={ strconv.Itoa(c.Idx) }/>
 						</form>
-						<button type="submit" form={ "ext-remove-" + strconv.Itoa(c.Idx) } title={ T(v.Lang, "ajustes.extensions.chargerRemove") } class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-rose-500">
+						<button type="submit" form={ "ext-remove-" + strconv.Itoa(c.Idx) } title={ T(v.Lang, "ajustes.extensions.chargerRemove") } aria-label={ T(v.Lang, "ajustes.extensions.chargerRemove") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-rose-500">
 							@iconTrash2("h-3.5 w-3.5")
-							{ T(v.Lang, "ajustes.extensions.chargerRemove") } { strconv.Itoa(c.Idx + 1) }
 						</button>
 					}
 				}
@@ -708,69 +737,52 @@ templ ajChargerFields(v ajustesView, c chargerFormView) {
 // ── 5. Perfil ───────────────────────────────────────────────────────────────
 templ ajustesProfile(v ajustesView) {
 	<section id="perfil" class="helios-card rounded-2xl p-5 shadow-card dark:shadow-card-dark">
-		<div class="mb-4 flex items-center gap-2.5">
-			<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "ajustes.sections.perfil") }</h2>
-		</div>
-		<!-- Cabecera: avatar + nombre + rol + email + cerrar sesión (React parity) -->
-		<div class="flex flex-wrap items-center gap-3 sm:gap-4">
-			<div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
-				@iconUser("h-5 w-5")
-			</div>
-			<div class="min-w-0 flex-1">
-				<p class="truncate text-base font-semibold leading-tight text-app">{ firstNonEmpty(v.DisplayName, v.Username) }</p>
-				if v.IsAdmin {
-					<p class="mt-0.5 text-[13px] leading-tight text-faint">{ T(v.Lang, "ajustes.role.admin") }</p>
-				}
-				<span class="mt-1 inline-flex items-center gap-1.5 text-[13px] leading-tight text-faint">
-					@iconMail("h-3.5 w-3.5")
-					if v.Email != "" {
-						{ v.Email }
-					} else {
-						{ T(v.Lang, "ajustes.profile.emailPlaceholder") }
+		<div class="group flex flex-col gap-4">
+			<!-- Un solo renglón como el ProfileSection del React: avatar, nombre,
+			     campos, idioma, acciones y salir. -->
+			<input id="perfil-pwd" type="checkbox" class="peer/pwd sr-only"/>
+			<input id="perfil-notif" type="checkbox" class="peer/notif sr-only"/>
+			<div class="flex flex-wrap items-center gap-2.5">
+				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
+					@iconUser("h-5 w-5")
+				</div>
+				<div class="min-w-0">
+					<p class="truncate text-[15px] font-semibold leading-tight text-app">{ firstNonEmpty(v.DisplayName, v.Username) }</p>
+					if v.IsAdmin {
+						<p class="text-[12px] leading-tight text-faint">{ T(v.Lang, "ajustes.role.admin") }</p>
 					}
-				</span>
-			</div>
-			<form method="post" action="/logout" class="ml-auto">
-				<input type="hidden" name="next" value="/login"/>
-				<button type="submit" class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 text-[13px] font-medium text-rose-600 transition-colors hover:bg-rose-500/15 sm:px-3 dark:text-rose-400">
-					@iconLogOut("h-4 w-4")
-					<span class="hidden sm:inline">{ T(v.Lang, "common.logout") }</span>
-					<span class="sr-only sm:hidden">{ T(v.Lang, "common.logout") }</span>
-				</button>
-			</form>
-		</div>
-		<form method="post" action="/ajustes/profile" class="mt-4 flex flex-wrap items-end gap-3 border-t border-app pt-4">
-			<div class="flex min-w-[180px] flex-1 flex-col gap-1.5">
-				<label for="profile-name" class="text-xs font-medium text-muted">{ T(v.Lang, "ajustes.profile.displayName") }</label>
-				<input id="profile-name" type="text" name="display_name" value={ v.DisplayName } placeholder={ v.Username } class="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
-			</div>
-			<div class="flex min-w-[200px] flex-1 flex-col gap-1.5">
-				<label for="profile-email" class="text-xs font-medium text-muted">{ T(v.Lang, "ajustes.profile.email") }</label>
-				<input id="profile-email" type="email" name="email" value={ v.Email } placeholder={ T(v.Lang, "ajustes.profile.emailPlaceholder") } class="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
-			</div>
-			<div class="flex min-w-[140px] flex-col gap-1.5">
-				<label for="profile-lang" class="text-xs font-medium text-muted">{ T(v.Lang, "ajustes.sections.idioma") }</label>
-				<select id="profile-lang" name="language" class="h-9 rounded-xl border border-app bg-surface-2 px-2 text-sm text-app outline-none focus:border-brand">
-					for _, l := range v.Languages {
-						if l.Code == v.ProfileLang {
-							<option value={ l.Code } selected>{ l.Flag } { l.Name }</option>
-						} else {
-							<option value={ l.Code }>{ l.Flag } { l.Name }</option>
+				</div>
+				<form method="post" action="/ajustes/profile" class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+					<input type="text" name="display_name" value={ v.DisplayName } placeholder={ v.Username } aria-label={ T(v.Lang, "ajustes.profile.displayName") } class="h-9 min-w-[120px] flex-1 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+					<input type="email" name="email" value={ v.Email } placeholder={ T(v.Lang, "ajustes.profile.emailPlaceholder") } aria-label={ T(v.Lang, "ajustes.profile.email") } class="h-9 min-w-[140px] flex-1 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+					<select name="language" aria-label={ T(v.Lang, "ajustes.sections.idioma") } class="h-9 w-[112px] shrink-0 rounded-xl border border-app bg-surface-2 px-2 text-sm text-app outline-none focus:border-brand">
+						for _, l := range v.Languages {
+							if l.Code == v.ProfileLang {
+								<option value={ l.Code } selected>{ l.Flag } { l.Name }</option>
+							} else {
+								<option value={ l.Code }>{ l.Flag } { l.Name }</option>
+							}
 						}
-					}
-				</select>
-			</div>
-			<button type="submit" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
-				{ T(v.Lang, "common.save") }
-			</button>
-		</form>
-		<div class="mt-4 flex flex-col gap-4">
-			<details class="border-t border-app pt-4">
-				<summary class="flex cursor-pointer items-center gap-2 text-[13px] font-medium text-muted">
+					</select>
+					<button type="submit" title={ T(v.Lang, "common.save") } aria-label={ T(v.Lang, "common.save") } class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-gradient text-white transition-opacity hover:opacity-90">
+						@iconCheck("h-4 w-4")
+					</button>
+				</form>
+				<label for="perfil-pwd" title={ T(v.Lang, "ajustes.security.change") } class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-pwd:checked]:border-brand group-has-[#perfil-pwd:checked]:bg-brand/10 group-has-[#perfil-pwd:checked]:text-brand">
 					@iconKeyRound("h-4 w-4")
-					{ T(v.Lang, "ajustes.security.change") }
-				</summary>
-				<form method="post" action="/ajustes/password" class="mt-3 flex flex-col gap-2">
+				</label>
+				<label for="perfil-notif" title={ T(v.Lang, "ajustes.sections.notificaciones") } class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-notif:checked]:border-brand group-has-[#perfil-notif:checked]:bg-brand/10 group-has-[#perfil-notif:checked]:text-brand">
+					@iconBell("h-4 w-4")
+				</label>
+				<form method="post" action="/logout" class="shrink-0">
+					<input type="hidden" name="next" value="/login"/>
+					<button type="submit" title={ T(v.Lang, "common.logout") } aria-label={ T(v.Lang, "common.logout") } class="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 transition-colors hover:bg-rose-500/15 dark:text-rose-400">
+						@iconLogOut("h-4 w-4")
+					</button>
+				</form>
+			</div>
+			<div class="hidden border-t border-app pt-4 peer-checked/pwd:block">
+				<form method="post" action="/ajustes/password" class="flex flex-col gap-2">
 					<input type="password" name="current" autoComplete="current-password" placeholder={ T(v.Lang, "ajustes.security.current") } class="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
 					<div class="grid gap-2 sm:grid-cols-2">
 						<input type="password" name="password" autoComplete="new-password" placeholder={ T(v.Lang, "ajustes.security.new") } class="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
@@ -780,10 +792,9 @@ templ ajustesProfile(v ajustesView) {
 						{ T(v.Lang, "ajustes.security.submit") }
 					</button>
 				</form>
-			</details>
-			<details class="border-t border-app pt-4">
-				<summary class="cursor-pointer text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.sections.notificaciones") }</summary>
-				<div class="mt-3 flex flex-col gap-1.5">
+			</div>
+			<div class="hidden border-t border-app pt-4 peer-checked/notif:block">
+<div class="mt-3 flex flex-col gap-1.5">
 					if !v.PushConfigured {
 						<p class="rounded-lg bg-surface-2 px-3 py-2 text-xs text-faint">{ T(v.Lang, "ajustes.notif.noConfigurado") }</p>
 					}
@@ -809,7 +820,7 @@ templ ajustesProfile(v ajustesView) {
 						</form>
 					}
 				</div>
-			</details>
+			</div>
 		</div>
 	</section>
 }
@@ -817,21 +828,52 @@ templ ajustesProfile(v ajustesView) {
 // ── 6. Admin: update + usuarios + auditoría ────────────────────────────────
 templ ajustesAdmin(v ajustesView) {
 	<section id="admin" class="helios-card scroll-mt-20 border-l-4 border-l-brand bg-brand/[0.03] p-5 shadow-card dark:shadow-card-dark">
-		<div class="mb-4 flex items-center gap-2">
-			@iconShieldCheck("h-[18px] w-[18px] text-brand")
-			<h2 class="font-display text-[15px] font-semibold text-app">{ T(v.Lang, "ajustes.sections.administracion") }</h2>
-		</div>
-		<div class="flex flex-col gap-4">
-			@ajustesUpdateBox(v)
-			<details class="border-t border-app pt-4">
-				<summary class="cursor-pointer text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.sections.usuarios") }</summary>
-				@ajustesUsers(v)
+		<!-- Barra horizontal como el AdminZone del React: update + dos paneles. -->
+		<div class="flex flex-wrap items-start gap-3">
+			<div class="flex h-9 shrink-0 items-center gap-2">
+				@iconShieldCheck("h-[18px] w-[18px] text-brand")
+				<h2 class="font-display text-[15px] font-semibold text-app">{ T(v.Lang, "ajustes.sections.administracion") }</h2>
+			</div>
+			<div class="hidden h-6 w-px bg-app sm:block"></div>
+			<div class="flex flex-col gap-1">
+				<button
+					type="button"
+					data-on:click="$checked = true; @get('/api/update/status')"
+					data-indicator="$bydBusy"
+					data-attr-disabled="$bydBusy"
+					class="inline-flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-60"
+				>
+					@iconRefreshCw("h-3.5 w-3.5")
+					<span class="hidden sm:inline">{ T(v.Lang, "ajustes.about.checkUpdates") }</span>
+				</button>
+				<span data-show="$checked && !$available && !$running" class="text-[10px] font-medium text-emerald-500">{ T(v.Lang, "ajustes.about.upToDate", map[string]string{"version": v.RepoVersion}) }</span>
+				<button type="button" data-show="$available && !$running" data-on:click="$confirm = true" class="inline-flex h-7 w-fit items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20">
+					{ T(v.Lang, "ajustes.about.updateNow") }
+				</button>
+			</div>
+			<details class="group">
+				<summary class="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app group-open:border-brand group-open:bg-brand/10 group-open:text-brand">
+					@iconUserPlus("h-4 w-4")
+					<span class="hidden sm:inline">{ T(v.Lang, "ajustes.sections.usuarios") }</span>
+					@iconChevronDown("h-3.5 w-3.5 transition-transform group-open:rotate-180")
+				</summary>
+				<div class="mt-4 border-t border-app pt-4">
+					@ajustesUsers(v)
+				</div>
 			</details>
-			<details class="border-t border-app pt-4">
-				<summary class="cursor-pointer text-[13px] font-medium text-muted">{ T(v.Lang, "audit.title") }</summary>
-				@ajustesAudit(v)
+			<details class="group">
+				<summary class="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app group-open:border-brand group-open:bg-brand/10 group-open:text-brand">
+					@iconFileText("h-4 w-4")
+					<span class="hidden sm:inline">{ T(v.Lang, "audit.title") }</span>
+					@iconChevronDown("h-3.5 w-3.5 transition-transform group-open:rotate-180")
+				</summary>
+				<div class="mt-4 border-t border-app pt-4">
+					@ajustesAudit(v)
+				</div>
 			</details>
 		</div>
+		@ajustesUpdateConfirm(v)
+		@ajustesUpdateProgress(v)
 	</section>
 }
 

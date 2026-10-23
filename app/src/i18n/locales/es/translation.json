@@ -463,7 +463,7 @@
     },
     "health": {
       "alive": "Activo",
-      "down": "Sin datos"
+      "down": "Sin conexión"
     },
     "security": {
       "desc": "Cambia tu contraseña. Al hacerlo se cerrarán tus demás sesiones.",

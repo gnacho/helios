@@ -463,7 +463,7 @@
     },
     "health": {
       "alive": "Alive",
-      "down": "No data"
+      "down": "Offline"
     },
     "security": {
       "desc": "Change your password. Your other sessions will be signed out.",
