@@ -125,6 +125,10 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	invKeys, invNames := chartInvKeys(m)
+	flow := buildFlow(lang, m.Live)
+	sunrise, sunset := sunMinutes(m.Live)
+	_ = sunrise
+	_ = sunset
 	d := dashboardView{
 		pageProps:      p,
 		Signals:        string(signals),
@@ -143,6 +147,9 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		KGridExport:    fmtEnergy(lang, m.Kpis.GridExportKwh),
 		KGridImport:    fmtEnergy(lang, m.Kpis.GridImportKwh),
 		AutoconsumoPct: m.Kpis.AutoconsumoPct,
+		Flow:           flow,
+		Arc:            buildArc(lang, m.Live, m.Kpis),
+		Invs:           buildInvCards(lang, m, m.Series.Points, pal),
 	}
 	if m.Live != nil {
 		exporting := m.Live.Grid != nil && *m.Live.Grid < -0.05

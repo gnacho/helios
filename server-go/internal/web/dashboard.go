@@ -91,6 +91,8 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 		"gridStatus":      "—",
 		"gridExporting":   false,
 		"gridColor":       defaults.RedCompra,
+		"batteryText":     T(lang, "common.idle"),
+		"gridText":        "—",
 		"atText":          "--:--",
 		"online":          m.Online,
 	}
@@ -124,6 +126,8 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 			"gridStatus":      gridStatus,
 			"gridExporting":   exporting,
 			"gridColor":       gridColor,
+			"batteryText":     batteryFlowText(lang, m.Live),
+			"gridText":        gridFlowText(lang, m.Live),
 			"atText":          fmtTime(l.At),
 			"online":          m.Online,
 		}
@@ -293,4 +297,28 @@ func decodeLivePayload(payload []byte) (*solar.LiveData, error) {
 		return nil, err
 	}
 	return &wrapper.Data, nil
+}
+
+// batteryFlowText / gridFlowText are the flow-node value texts.
+func batteryFlowText(lang string, l *solar.LiveData) string {
+	switch {
+	case l.BatteryPower > 0.05:
+		return fmtKwVal(lang, l.BatteryPower) + " kW"
+	case l.BatteryPower < -0.05:
+		return fmtKwVal(lang, -l.BatteryPower) + " kW"
+	}
+	return T(lang, "common.idle")
+}
+
+func gridFlowText(lang string, l *solar.LiveData) string {
+	if l.Grid == nil {
+		return "—"
+	}
+	if *l.Grid < -0.05 {
+		return fmtKwVal(lang, -*l.Grid) + " kW ↑"
+	}
+	if *l.Grid > 0.05 {
+		return fmtKwVal(lang, *l.Grid) + " kW ↓"
+	}
+	return "0 W"
 }

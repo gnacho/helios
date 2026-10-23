@@ -10,6 +10,9 @@ type dashboardView struct {
 	Signals string
 	Palette Palette
 	Chart   DayChartModel
+	Flow    flowModel
+	Arc     arcModel
+	Invs    []invCardModel
 
 	AtText         string
 	Soc            float64
@@ -42,7 +45,15 @@ templ DashboardPage(d dashboardView) {
 			data-on-load={ "@get('/ui/stream')" }
 			class="mx-auto w-full max-w-6xl"
 		>
-			@livePowerStrip(d)
+			<div class="grid grid-cols-12 gap-4 lg:gap-5">
+				<div class="order-1 col-span-12">
+					@livePowerStrip(d)
+				</div>
+				@flowCard(d, d.Flow)
+				<div class="order-3 col-span-12 lg:order-2 lg:col-span-8 xl:col-span-9">
+					@dayChartSection(d, d.Chart)
+				</div>
+			</div>
 			<div class="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5" aria-label={ T(d.Lang, "dashboard.kpisLabel") }>
 				@kpiCard(d, T(d.Lang, "dashboard.productionToday"), d.Palette.Solar, "", true,
 					iconSolarPanel("h-[17px] w-[17px]"),
@@ -54,9 +65,16 @@ templ DashboardPage(d dashboardView) {
 				@kpiAutoconsumo(d)
 				@kpiGrid(d)
 			</div>
-			<div class="mt-4">
-				@dayChartSection(d, d.Chart)
-			</div>
+			<section class="mt-4 lg:mt-5">
+				<div class="mb-3 flex items-center justify-between">
+					<h2 class="font-display text-lg font-semibold tracking-[-0.01em] text-app">{ T(d.Lang, "dashboard.yourInverters") }</h2>
+					<a href="/inversores" class="text-xs font-semibold text-amber-500 hover:underline">{ T(d.Lang, "dashboard.viewCompare") }</a>
+				</div>
+				<div class="grid gap-4 lg:grid-cols-3 lg:gap-5">
+					@solarArcCard(d, d.Arc)
+					@inverterCardsRow(d)
+				</div>
+			</section>
 		</div>
 	}
 }
