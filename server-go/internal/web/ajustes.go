@@ -1244,7 +1244,6 @@ func (u *UI) handleAjustesPrices(w http.ResponseWriter, r *http.Request) {
 	ajustesRedirectFlag(w, r, "saved", "prices")
 }
 
-
 // handleAjustesInstall stores the installation name and location (KV). They
 // were per-device settings in the React app; server-rendered they describe the
 // installation.

@@ -560,10 +560,10 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 // alertsSnapshot returns the live alerts (same list the React bell shows) with
 // a short cache so every page render does not hit HA again.
 var alertsCache struct {
-	mu     sync.Mutex
-	at     time.Time
-	alerts []solar.LiveAlert
-	level  string
+	mu              sync.Mutex
+	at              time.Time
+	alerts          []solar.LiveAlert
+	level           string
 	sunrise, sunset int
 }
 
