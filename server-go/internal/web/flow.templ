@@ -7,7 +7,7 @@ import "fmt"
 
 // flowCard ports the EnergyFlowDiagram card (nodes + SMIL animated dots).
 templ flowCard(d dashboardView, f flowModel) {
-	<section class="helios-card order-2 col-span-12 flex flex-col p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3" aria-label={ T(d.Lang, "flow.aria") }>
+	<section class="anim-in helios-card order-2 col-span-12 flex flex-col p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3" aria-label={ T(d.Lang, "flow.aria") }>
 		<div class="mb-2 flex items-center justify-between">
 			<h2 class="text-[15px] font-semibold text-app">{ T(d.Lang, "dashboard.flowTitle") }</h2>
 			<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-600 dark:text-emerald-400">
@@ -142,7 +142,7 @@ templ solarArcCard(d dashboardView, a arcModel) {
 		<svg viewBox="0 0 300 140" class="mx-auto w-full max-w-[320px]" role="img" aria-label={ T(d.Lang, "solar.aria") }>
 			<path d="M 42 128 A 108 108 0 0 1 258 128" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="3 5"></path>
 			<line x1="20" y1="128" x2="280" y2="128" stroke="var(--line)" stroke-width="2" stroke-linecap="round"></line>
-			<g style={ fmt.Sprintf("transform: translate(%.2fpx, %.2fpx)", a.SunX, a.SunY) }>
+			<g class="sun-g" style={ fmt.Sprintf("--sun-travel: %.2f%%", a.SunFrac*100) }>
 				<circle r="13" fill="var(--c-solar)" opacity="0.25">
 					<animate attributeName="r" values="13;17;13" dur="5s" repeatCount="indefinite"></animate>
 				</circle>

@@ -192,6 +192,7 @@ func sparklinePath(values []float64, w, h float64) string {
 
 // arcModel is the solar arc view (SolarArc.tsx).
 type arcModel struct {
+	SunFrac       float64
 	SunX, SunY   float64
 	Sunrise      int
 	Sunset       int
@@ -218,6 +219,7 @@ func buildArc(lang string, live *solar.LiveData, k DayKpis) arcModel {
 	}
 	angle := math.Pi * (1 - frac)
 	a := arcModel{
+		SunFrac:  frac,
 		SunX:     150 + 108*math.Cos(angle),
 		SunY:     128 - 108*math.Sin(angle),
 		Sunrise:  sunrise,

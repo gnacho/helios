@@ -419,3 +419,45 @@ html.reduce-motion::view-transition-new(*) {
     animation: none !important;
   }
 }
+
+/* ══ Templ UI additions (motion pass, fase 5.5) ═══════════════════════ */
+
+/* Transiciones entre páginas (cross-document view transitions).
+ * Degradación elegante: sin soporte, navegación normal. */
+@view-transition {
+  navigation: auto;
+}
+
+/* Entradas escalonadas (equivalente framer-motion). */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes anim-in {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+  }
+  .anim-in {
+    animation: anim-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+  /* Escalado por posición dentro de una fila (0.07s como el React). */
+  .anim-row > *:nth-child(1) { animation-delay: 0s; }
+  .anim-row > *:nth-child(2) { animation-delay: 0.07s; }
+  .anim-row > *:nth-child(3) { animation-delay: 0.14s; }
+  .anim-row > *:nth-child(4) { animation-delay: 0.21s; }
+  .anim-row > *:nth-child(5) { animation-delay: 0.28s; }
+}
+
+/* El sol recorre el arco al entrar (offset-path sobre el propio arco;
+ * --sun-frac lo fija el server por render). */
+@media (prefers-reduced-motion: no-preference) {
+  @property --sun-travel {
+    syntax: "<percentage>";
+    inherits: false;
+    initial-value: 0%;
+  }
+  .sun-g {
+    offset-path: path("M 42 128 A 108 108 0 0 1 258 128");
+    offset-distance: var(--sun-travel);
+    transition: --sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}

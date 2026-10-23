@@ -46,7 +46,7 @@ templ DashboardPage(d dashboardView) {
 			class="w-full"
 		>
 			<div class="grid grid-cols-12 gap-4 lg:gap-5">
-				<div class="order-1 col-span-12">
+				<div class="anim-in order-1 col-span-12">
 					@livePowerStrip(d)
 				</div>
 				@flowCard(d, d.Flow)
@@ -54,7 +54,7 @@ templ DashboardPage(d dashboardView) {
 					@dayChartSection(d, d.Chart)
 				</div>
 			</div>
-			<div class="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5" aria-label={ T(d.Lang, "dashboard.kpisLabel") }>
+			<div class="anim-row mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5" aria-label={ T(d.Lang, "dashboard.kpisLabel") }>
 				@kpiCard(d, T(d.Lang, "dashboard.productionToday"), d.Palette.Solar, "", true,
 					iconSolarPanel("h-[17px] w-[17px]"),
 					`$kpis.productionText`, d.KProduction, "kWh")
@@ -70,7 +70,7 @@ templ DashboardPage(d dashboardView) {
 					<h2 class="font-display text-lg font-semibold tracking-[-0.01em] text-app">{ T(d.Lang, "dashboard.yourInverters") }</h2>
 					<a href="/inversores" class="text-xs font-semibold text-amber-500 hover:underline">{ T(d.Lang, "dashboard.viewCompare") }</a>
 				</div>
-				<div class="grid gap-4 lg:grid-cols-3 lg:gap-5">
+				<div class="anim-row grid gap-4 lg:grid-cols-3 lg:gap-5">
 					@solarArcCard(d, d.Arc)
 					@inverterCardsRow(d)
 				</div>

@@ -35,14 +35,14 @@ func flowCard(d dashboardView, f flowModel) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"helios-card order-2 col-span-12 flex flex-col p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"anim-in helios-card order-2 col-span-12 flex flex-col p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(T(d.Lang, "flow.aria"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 10, Col: 176}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 10, Col: 184}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
@@ -1008,14 +1008,14 @@ func solarArcCard(d dashboardView, a arcModel) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, "\"><path d=\"M 42 128 A 108 108 0 0 1 258 128\" fill=\"none\" stroke=\"var(--line)\" stroke-width=\"2\" stroke-dasharray=\"3 5\"></path> <line x1=\"20\" y1=\"128\" x2=\"280\" y2=\"128\" stroke=\"var(--line)\" stroke-width=\"2\" stroke-linecap=\"round\"></line> <g style=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, "\"><path d=\"M 42 128 A 108 108 0 0 1 258 128\" fill=\"none\" stroke=\"var(--line)\" stroke-width=\"2\" stroke-dasharray=\"3 5\"></path> <line x1=\"20\" y1=\"128\" x2=\"280\" y2=\"128\" stroke=\"var(--line)\" stroke-width=\"2\" stroke-linecap=\"round\"></line> <g class=\"sun-g\" style=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var60 string
-		templ_7745c5c3_Var60, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("transform: translate(%.2fpx, %.2fpx)", a.SunX, a.SunY))
+		templ_7745c5c3_Var60, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("--sun-travel: %.2f%%", a.SunFrac*100))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 145, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 145, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 		if templ_7745c5c3_Err != nil {

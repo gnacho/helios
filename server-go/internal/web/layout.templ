@@ -15,6 +15,7 @@ templ head(p pageProps) {
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"/>
 	<link rel="stylesheet" href="/assets/css/app.build.css"/>
+	<script src="/assets/js/gestures.js" defer></script>
 	<script type="module" src="/assets/js/datastar.js"></script>
 }
 
@@ -207,7 +208,7 @@ templ topbarDesktop(p pageProps) {
 
 // headerMobile: logo + actions (<md).
 templ headerMobile(p pageProps) {
-	<header class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden">
+	<header class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden [view-transition-name:helios-header]">
 		<a href="/" aria-label={ T(p.Lang, "nav.dashboard") } class="flex items-center gap-2">
 			@brandLogo("helios-logo-header", "h-8 w-8")
 			<span class="font-display text-base font-semibold text-app">Helios</span>
@@ -221,7 +222,7 @@ templ headerMobile(p pageProps) {
 
 // bottomNav: scrollable icon row (<md).
 templ bottomNav(p pageProps) {
-	<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden" aria-label={ T(p.Lang, "nav.dashboard") }>
+	<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden [view-transition-name:helios-nav]" aria-label={ T(p.Lang, "nav.dashboard") }>
 		<div class="flex h-16 overflow-x-auto no-scrollbar">
 			for _, item := range navEntriesFor(p.ChargerOn) {
 				@bottomNavItem(p, item)
