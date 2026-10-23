@@ -293,7 +293,7 @@ func periodSelector(s periodSelectorView) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if tb.Active {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<span class=\"absolute inset-0 rounded-full bg-surface-2 shadow-inner\"></span> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<span class=\"vt-slide-period absolute inset-0 rounded-full bg-surface-2 shadow-inner\"></span> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

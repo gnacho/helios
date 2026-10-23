@@ -2299,6 +2299,19 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
 @view-transition {
   navigation: auto;
 }
+.vt-slide {
+  view-transition-name: nav-active;
+}
+.vt-slide-tab {
+  view-transition-name: tab-active;
+}
+.vt-slide-period {
+  view-transition-name: period-active;
+}
+::view-transition-group(nav-active), ::view-transition-group(tab-active), ::view-transition-group(period-active) {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
 @media (prefers-reduced-motion: no-preference) {
   @keyframes anim-in {
     from {

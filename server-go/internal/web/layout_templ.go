@@ -494,7 +494,7 @@ func navSideLink(p pageProps, item navEntry) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		label := navLabel(p, item.Key)
-		var templ_7745c5c3_Var19 = []any{"group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path))}
+		var templ_7745c5c3_Var19 = []any{"group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path))}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var19...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -599,7 +599,7 @@ func iconNavLink(p pageProps, item navEntry) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		label := navLabel(p, item.Key)
-		var templ_7745c5c3_Var25 = []any{"group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path))}
+		var templ_7745c5c3_Var25 = []any{"group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path))}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var25...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -1131,7 +1131,7 @@ func bottomNavItem(p pageProps, item navEntry) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "\" class=\"relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "\" class=\"vt-slide relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
