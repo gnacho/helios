@@ -114,15 +114,16 @@ type pushPrefView struct {
 type langOption struct {
 	Code string
 	Name string
+	Flag string
 }
 
 // profileLanguages mirrors the React selector (no "auto": the server resolves
 // the language from the profile).
 func profileLanguages() []langOption {
 	return []langOption{
-		{"es", "Español"},
-		{"en", "English"},
-		{"zh-CN", "简体中文"},
+		{"es", "Español", "🇪🇸"},
+		{"en", "English", "🇬🇧"},
+		{"zh-CN", "简体中文", "🇨🇳"},
 	}
 }
 
@@ -1132,4 +1133,29 @@ func validLangCode(l string) bool {
 		}
 	}
 	return false
+}
+
+// firstNonEmpty returns a if set, else b (profile header falls back to the
+// login name when no display name was saved).
+func firstNonEmpty(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
+}
+
+// accentOption is one entry of the appearance accent picker. Hex is only the
+// swatch colour; RGB feeds --accent-rgb through the accent cookie.
+type accentOption struct {
+	ID    string
+	Hex   string
+	Label string
+}
+
+// accentOptions mirrors ACCENTS in app/src/pages/Ajustes.tsx.
+var accentOptions = []accentOption{
+	{"naranja", "#F59E0B", "ajustes.accent.naranja"},
+	{"verde", "#22C55E", "ajustes.accent.verde"},
+	{"azul", "#3B82F6", "ajustes.accent.azul"},
+	{"violeta", "#8B5CF6", "ajustes.accent.violeta"},
 }

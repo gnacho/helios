@@ -32,7 +32,7 @@ templ chartChip(showExpr string, label string, colorVar string) {
 
 templ dayChartSVG(c DayChartModel) {
 	<div id="day-chart" class="overflow-x-auto px-1 pb-1">
-		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 			<defs>
 				<linearGradient id="grad-prod" x1="0" y1="0" x2="0" y2="1">
 					<stop offset="0%" stop-color="var(--c-solar)" stop-opacity="0.25"></stop>
@@ -55,7 +55,7 @@ templ dayChartSVG(c DayChartModel) {
 			}
 			for i, t := range c.TicksX {
 				if i == len(c.TicksX)-1 {
-					<text x={ r2(chartW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+					<text x={ r2(c.W) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				} else {
 					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				}
@@ -74,8 +74,8 @@ templ dayChartSVG(c DayChartModel) {
 					<path d={ inv.Path } fill="none" stroke={ inv.Var } stroke-width="1.5"></path>
 				</g>
 			}
-			<line x1={ r2(chartX(float64(c.Now))) } x2={ r2(chartX(float64(c.Now))) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-now)" stroke-width="2"></line>
-			<text x={ r2(chartX(float64(c.Now)) + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
+			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-now)" stroke-width="2"></line>
+			<text x={ r2(c.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
 		</svg>
 	</div>
 }

@@ -300,7 +300,7 @@ templ chgPeriodNav(v chargerView, s *chgSingleView) {
 // chgCurveSVG is the day charging curve (area, palette.consumo).
 templ chgCurveSVG(c chgCurveModel) {
 	<div class="overflow-x-auto px-1 pb-2">
-		<svg viewBox="0 0 1100 220" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		<svg viewBox="0 0 1160 220" class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 			<defs>
 				<linearGradient id="chg-curve" x1="0" y1="0" x2="0" y2="1">
 					<stop offset="0%" stop-color={ c.Color } stop-opacity="0.35"></stop>
@@ -329,7 +329,7 @@ templ chgCurveSVG(c chgCurveModel) {
 
 // chgHistSVG is the stacked day/month/year history (pv solar + grid rest).
 templ chgHistSVG(m chgHistModel) {
-	<svg viewBox="0 0 1100 220" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+	<svg viewBox="0 0 757 220" class="anim-bars h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 		for _, t := range m.TicksY[1:] {
 			<line x1={ r2(34) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
 		}

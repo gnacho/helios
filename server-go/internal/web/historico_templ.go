@@ -1059,7 +1059,7 @@ func histDaySVG(c histDayChartModel) templ.Component {
 			templ_7745c5c3_Var52 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<svg viewBox=\"0 0 1100 320\" class=\"h-auto w-full min-w-[640px]\" role=\"img\" aria-hidden=\"true\"><defs><linearGradient id=\"hist-grad-prod\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<svg viewBox=\"0 0 767 320\" class=\"anim-draw h-auto w-full min-w-[420px]\" role=\"img\" aria-hidden=\"true\"><defs><linearGradient id=\"hist-grad-prod\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1491,7 +1491,7 @@ func histBarsSVG(m histBarsModel) templ.Component {
 			templ_7745c5c3_Var81 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 125, "<svg viewBox=\"0 0 1100 320\" class=\"h-auto w-full min-w-[640px]\" role=\"img\" aria-hidden=\"true\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 125, "<svg viewBox=\"0 0 767 320\" class=\"anim-bars h-auto w-full min-w-[420px]\" role=\"img\" aria-hidden=\"true\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

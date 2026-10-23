@@ -160,7 +160,7 @@ func TestBuildInverterDayChart(t *testing.T) {
 func TestBuildCompareChart(t *testing.T) {
 	colors := []string{"#0EA5E9", "#8B5CF6"}
 	m := BuildCompareChart("es", testSeries(), 720, []string{"solis", "fox"},
-		map[string]string{"solis": "Solis", "fox": "Fox"}, colors)
+		map[string]string{"solis": "Solis", "fox": "Fox"}, colors, nil, false)
 	if len(m.InvPaths) != 2 {
 		t.Fatalf("paths = %d", len(m.InvPaths))
 	}
@@ -299,5 +299,22 @@ func TestInvSignalsOf(t *testing.T) {
 	f := inv["fox"].(map[string]any)
 	if f["shareText"] != "38" {
 		t.Fatalf("shareText fox = %v (esperado 38)", f["shareText"])
+	}
+}
+
+func TestBuildCompareChartNormalized(t *testing.T) {
+	colors := []string{"#0EA5E9", "#8B5CF6"}
+	kwps := []float64{4.4, 2.7}
+	m := BuildCompareChart("es", testSeries(), 720, []string{"solis", "fox"},
+		map[string]string{"solis": "Solis", "fox": "Fox"}, colors, kwps, true)
+	if m.YMax != 1 {
+		t.Fatalf("yMax normalizado = %d (esperado 1)", m.YMax)
+	}
+	// Ticks decimales 0..1 (recharts toFixed(1)).
+	if len(m.TicksY) != 5 || m.TicksY[2].Label != "0.5" || m.TicksY[4].Label != "1.0" {
+		t.Fatalf("ticks normalizados = %+v", m.TicksY)
+	}
+	if m.W != geomCompare.W || m.H != geomCompare.H {
+		t.Fatalf("viewBox = %v x %v", m.W, m.H)
 	}
 }

@@ -447,6 +447,39 @@ html.reduce-motion::view-transition-new(*) {
   .anim-row > *:nth-child(5) { animation-delay: 0.28s; }
 }
 
+/* ── Animaciones de dibujo de gráficas (CSS puro, sin JS) ────────────────
+ * anim-draw: la gráfica se pinta de izquierda a derecha (clip-path).
+ * anim-bars: las barras crecen desde su base (scaleY, fill-box).
+ * El sol recorre el arco con offset-distance (keyframes, no transición:
+ * el valor llega ya final desde el server).
+ * Todo vive bajo prefers-reduced-motion: no-preference y la clase
+ * html.reduce-motion lo anula globalmente. */
+@media (prefers-reduced-motion: no-preference) {
+  svg.anim-draw {
+    animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+  svg.anim-bars rect {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+  .sun-g {
+    animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
+  }
+}
+@keyframes chart-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes sun-travel {
+  from { offset-distance: 0%; }
+  to { offset-distance: var(--sun-travel); }
+}
+
 /* El sol recorre el arco al entrar (offset-path sobre el propio arco;
  * --sun-frac lo fija el server por render). */
 @media (prefers-reduced-motion: no-preference) {
@@ -458,6 +491,5 @@ html.reduce-motion::view-transition-new(*) {
   .sun-g {
     offset-path: path("M 42 128 A 108 108 0 0 1 258 128");
     offset-distance: var(--sun-travel);
-    transition: --sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1);
   }
 }

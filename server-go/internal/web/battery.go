@@ -93,6 +93,7 @@ type socEventDot struct {
 }
 
 type socDayChartModel struct {
+	W, H        float64 // viewBox
 	Lang        string
 	PastPath    string
 	FuturePath  string
@@ -112,20 +113,23 @@ type socDayChartModel struct {
 // reserve zone below 20 %, dashed projection after "now" and the three event
 // annotations (charge start, full, discharge start).
 func buildSocDayChart(lang string, points []solar.DayPoint, nowMin int, pal Palette) socDayChartModel {
+	g := geomBatSoc
 	m := socDayChartModel{
+		W:           g.W,
+		H:           g.H,
 		Lang:        lang,
 		ColorBat:    pal.Bateria,
 		ColorBuy:    pal.RedCompra,
 		ReserveLbl:  T(lang, "bateria.reserve"),
-		NowX:        chartX(float64(roundStep(nowMin))),
-		TicksX:      dayTicksX(),
-		PlotRightX:  chartW - plotRight,
-		PlotBottomY: chartH - plotBottomPad,
+		NowX:        g.x(float64(roundStep(nowMin))),
+		TicksX:      dayTicksX(g),
+		PlotRightX:  g.rightX(),
+		PlotBottomY: g.bottomY(),
 	}
 	for _, v := range []int{0, 20, 40, 60, 80, 100} {
-		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: chartY(float64(v), 100) + 4, Label: fmt.Sprintf("%d", v)})
+		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: g.y(float64(v), 100) + 4, Label: fmt.Sprintf("%d", v)})
 	}
-	m.ReserveY = chartY(BatteryReservePct, 100)
+	m.ReserveY = g.y(BatteryReservePct, 100)
 
 	nowIdx := roundStep(nowMin) / stepMin
 	if nowIdx > len(points) {
@@ -134,8 +138,8 @@ func buildSocDayChart(lang string, points []solar.DayPoint, nowMin int, pal Pale
 	past := make([]cpoint, 0, len(points))
 	future := make([]cpoint, 0, len(points))
 	for i, p := range points {
-		x := chartX(float64(p.T))
-		y := chartY(p.Soc, 100)
+		x := g.x(float64(p.T))
+		y := g.y(p.Soc, 100)
 		if i <= nowIdx {
 			past = append(past, cpoint{x, y})
 		}
@@ -143,14 +147,14 @@ func buildSocDayChart(lang string, points []solar.DayPoint, nowMin int, pal Pale
 			future = append(future, cpoint{x, y})
 		}
 	}
-	baseline := chartY(0, 100)
+	baseline := g.y(0, 100)
 	m.PastPath = areaPath(past, baseline)
 	m.FuturePath = monotonePath(future)
 
 	addEvent := func(p solar.DayPoint, key string) {
 		m.Events = append(m.Events, socEventDot{
-			X:     chartX(float64(p.T)),
-			Y:     chartY(p.Soc, 100),
+			X:     g.x(float64(p.T)),
+			Y:     g.y(p.Soc, 100),
 			Label: T(lang, key, map[string]string{"time": p.Label}),
 			Past:  p.T <= nowMin,
 		})
@@ -179,8 +183,8 @@ func buildSocDayChart(lang string, points []solar.DayPoint, nowMin int, pal Pale
 // ── Battery power bars (BatteryPowerChart.tsx) ──────────────────────────
 
 const (
-	batW         = 1100.0
-	batH         = 300.0
+	batW         = 570.0 // geomBatPower.W (card is lg:col-span-6)
+	batH         = 260.0 // geomBatPower.H
 	batTop       = 10.0
 	batSideL     = 34.0
 	batSideR     = 12.0
@@ -268,8 +272,8 @@ func batX(t float64) float64 {
 // ── Week balance (Esta semana) ──────────────────────────────────────────
 
 const (
-	weekW      = 1100.0
-	weekH      = 280.0
+	weekW      = 767.0 // card is lg:col-span-8
+	weekH      = 240.0
 	weekTop    = 10.0
 	weekSideL  = 30.0
 	weekSideR  = 12.0

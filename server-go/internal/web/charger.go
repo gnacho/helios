@@ -23,7 +23,8 @@ import (
 // AMP_STEPS are the preset currents (IEC 61851 min 6 A).
 var AMP_STEPS = []int{6, 8, 10, 13, 16, 20, 25, 32}
 
-const chgCurveW = 1100.0
+const chgCurveW = 1160.0 // charger day curve card is full width
+const chgHistW = 757.0   // charger history card is lg:col-span-8
 const chgCurveH = 220.0
 
 // chargerHistoryFromDays is the history window the React page loads (covers
@@ -63,6 +64,7 @@ type chgHistRow struct {
 }
 
 type chgHistModel struct {
+	W           float64
 	Lang        string
 	YMax        int
 	TicksY      []chartTick
@@ -228,7 +230,7 @@ func chgDayCurveChart(lang string, points []extensions.CurvePoint, color string)
 	m := chgCurveModel{
 		Lang:        lang,
 		Color:       color,
-		TicksX:      dayTicksX(),
+		TicksX:      chgTicksX(),
 		PlotRightX:  chgCurveW - 12,
 		PlotBottomY: chgCurveH - 14,
 	}
@@ -250,11 +252,23 @@ func chgDayCurveChart(lang string, points []extensions.CurvePoint, color string)
 	}
 	var pts []cpoint
 	for _, p := range points {
-		pts = append(pts, cpoint{chartX(float64(p.T)), chgCurveY(p.Kw, float64(m.YMax))})
+		pts = append(pts, cpoint{chartXin(float64(p.T), chgCurveW), chgCurveY(p.Kw, float64(m.YMax))})
 	}
 	m.AreaPath = areaPath(pts, chgCurveY(0, float64(m.YMax)))
 	return m
 }
+
+// chgTicksX is the 3-hour X axis for the charger curve box.
+func chgTicksX() []chartTick {
+	var ticks []chartTick
+	for _, t := range axisTicksX {
+		ticks = append(ticks, chartTick{X: chartXin(float64(t), chgCurveW), Y: chgCurveH - 6, Label: fmtTime(t)})
+	}
+	return ticks
+}
+
+// chartXin maps minutes to x inside a box whose left pad is 34 and right 12.
+func chartXin(t, w float64) float64 { return (chartGeom{w, 0}).x(t) }
 
 func chgCurveY(v, yMax float64) float64 {
 	top, bottom := 10.0, chgCurveH-14.0
@@ -265,8 +279,9 @@ func chgCurveY(v, yMax float64) float64 {
 // (semana anclada a HOY, mes/año como el Histórico) and the bars.
 func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []extensions.ChargerHistoryRow, solarRows []db.DailyRow, pal Palette) (chgHistModel, bool) {
 	m := chgHistModel{
+		W:           chgHistW,
 		Lang:        lang,
-		PlotRightX:  chgCurveW - 12,
+		PlotRightX:  chgHistW - 12,
 		PlotBottomY: chgCurveH - 14,
 		ColorSolar:  pal.Bateria,
 		ColorGrid:   pal.Consumo,
@@ -342,14 +357,15 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 		})
 	}
 
-	plotW := chgCurveW - 34 - 12
+	plotW := chgHistW - 34 - 12
 	slot := plotW / float64(len(out))
-	barW := slot * 0.6
+	// React uses a fixed barSize: 22 (semana/ano) or 10 (mes), stacked.
+	barW := 22.0
 	if p == PeriodMes {
-		barW = slot * 0.5
+		barW = 10.0
 	}
-	if barW > 24 {
-		barW = 24
+	if barW > slot {
+		barW = slot
 	}
 	for i := range out {
 		out[i].X = 34 + float64(i)*slot + (slot-barW)/2

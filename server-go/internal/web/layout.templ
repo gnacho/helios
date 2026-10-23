@@ -35,7 +35,7 @@ templ head(p pageProps) {
 // server-side from the helios_theme cookie (no flash of wrong theme).
 templ Layout(p pageProps) {
 	<!DOCTYPE html>
-	<html lang={ p.Lang } class={ templ.KV("dark", p.Theme == "dark"), templ.KV("light", p.Theme == "light") }>
+	<html lang={ p.Lang } class={ templ.KV("dark", p.Theme == "dark"), templ.KV("light", p.Theme == "light"), templ.KV("reduce-motion", p.ReduceMotion) } style={ rootStyle(p) }>
 		@head(p)
 		<body class="flex min-h-dvh flex-col bg-app font-sans text-app antialiased">
 			{ children... }
@@ -102,7 +102,7 @@ templ shellLayout(p pageProps) {
 		@rail(p)
 		@topbarDesktop(p)
 		@headerMobile(p)
-		<main class={ "mx-auto max-w-[1440px] px-4 pb-24 pt-4 md:ml-16 md:px-6 md:pb-6 md:pt-6", templ.KV("lg:ml-16", p.Collapsed), templ.KV("lg:ml-[232px]", !p.Collapsed) }>
+		<main class={ "w-auto max-w-[1440px] px-4 pb-24 pt-4 md:ml-16 md:px-6 md:pb-6 md:pt-6", templ.KV("lg:ml-16", p.Collapsed), templ.KV("lg:ml-[232px]", !p.Collapsed) }>
 			{ children... }
 			<div class="hidden lg:block">
 				@footerLine(p)

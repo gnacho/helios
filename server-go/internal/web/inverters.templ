@@ -201,7 +201,7 @@ templ invDayChart(v inversoresView, c invDayChartModel) {
 
 templ invDaySVG(c invDayChartModel) {
 	<div class="overflow-x-auto px-1 pb-2">
-		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 			<defs>
 				<linearGradient id={ "grad-inv-" + c.Key } x1="0" y1="0" x2="0" y2="1">
 					<stop offset="0%" stop-color={ c.Color } stop-opacity="0.25"></stop>
@@ -220,15 +220,15 @@ templ invDaySVG(c invDayChartModel) {
 			}
 			for i, t := range c.TicksX {
 				if i == len(c.TicksX)-1 {
-					<text x={ r2(chartW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+					<text x={ r2(c.W) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				} else {
 					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				}
 			}
 			<path d={ c.PastPath } fill={ "url(#grad-inv-" + c.Key + ")" } stroke={ c.Color } stroke-width="2.5"></path>
 			<path d={ c.FuturePath } fill="none" stroke={ c.Color } stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.5"></path>
-			<line x1={ r2(chartX(float64(c.Now))) } x2={ r2(chartX(float64(c.Now))) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke={ "url(#grad-inv-now-" + c.Key + ")" } stroke-width="2"></line>
-			<text x={ r2(chartX(float64(c.Now)) + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
+			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke={ "url(#grad-inv-now-" + c.Key + ")" } stroke-width="2"></line>
+			<text x={ r2(c.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
 		</svg>
 	</div>
 }
@@ -241,7 +241,7 @@ templ last14Card(v inversoresView, m last14Model) {
 			<p class="text-xs text-faint">{ T(v.Lang, "inversores.last14sub") }</p>
 		</div>
 		<div class="px-1 pb-2">
-			<svg viewBox="0 0 1100 240" class="h-auto w-full" role="img" aria-hidden="true">
+			<svg viewBox={ "0 0 " + r2s(m.W) + " " + r2s(m.H) } class="anim-bars h-auto w-full" role="img" aria-hidden="true">
 				for _, b := range m.Bars {
 					if b.IsLast {
 						<path d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } stroke={ m.Color } stroke-width="1.5"></path>
@@ -301,7 +301,11 @@ templ invCompareChart(v inversoresView, c *invCompareView) {
 		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
 			<div class="mr-auto">
 				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "inversores.curvesTitle") }</h2>
-				<p class="text-xs text-faint">{ T(v.Lang, "inversores.instantPower") }</p>
+				if c.Norm {
+					<p class="text-xs text-faint">{ T(v.Lang, "inversores.specificYield") }</p>
+				} else {
+					<p class="text-xs text-faint">{ T(v.Lang, "inversores.instantPower") }</p>
+				}
 			</div>
 			for _, inv := range c.Chart.InvPaths {
 				<span class="inline-flex items-center gap-1.5 text-xs text-muted">
@@ -309,14 +313,30 @@ templ invCompareChart(v inversoresView, c *invCompareView) {
 					{ inv.Name }
 				</span>
 			}
+			// Normalizar por kWp: enlace GET (?norm=1), igual que el resto de tabs.
+			if c.Norm {
+				<a href="/inversores?inv=compare" aria-pressed="true" class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app bg-surface-2 px-2.5 text-xs font-semibold text-app transition-colors hover:text-app">
+					{ T(v.Lang, "inversores.normalize") }
+				</a>
+			} else {
+				<a href="/inversores?inv=compare&norm=1" aria-pressed="false" class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted">
+					{ T(v.Lang, "inversores.normalize") }
+				</a>
+			}
 		</div>
+		if c.Norm && len(c.Chart.InvPaths) == 2 {
+			<p class="mx-4 mb-1 mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-600 sm:mx-5 dark:text-emerald-400">
+				@iconTrendingUp("h-[13px] w-[13px]")
+				{ T(v.Lang, "inversores.foxBetter") }
+			</p>
+		}
 		@invCompareSVG(v, c.Chart)
 	</section>
 }
 
 templ invCompareSVG(v inversoresView, c DayChartModel) {
 	<div class="overflow-x-auto px-1 pb-2">
-		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 			<defs>
 				for _, inv := range c.InvPaths {
 					<linearGradient id={ "grad-cmp-" + inv.Key } x1="0" y1="0" x2="0" y2="1">
@@ -337,7 +357,7 @@ templ invCompareSVG(v inversoresView, c DayChartModel) {
 			}
 			for i, t := range c.TicksX {
 				if i == len(c.TicksX)-1 {
-					<text x={ r2(chartW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+					<text x={ r2(c.W) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				} else {
 					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				}
@@ -345,8 +365,8 @@ templ invCompareSVG(v inversoresView, c DayChartModel) {
 			for _, inv := range c.InvPaths {
 				<path d={ inv.Path } fill={ "url(#grad-cmp-" + inv.Key + ")" } stroke={ inv.Var } stroke-width="2"></path>
 			}
-			<line x1={ r2(chartX(float64(c.Now))) } x2={ r2(chartX(float64(c.Now))) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-cmp-now)" stroke-width="2"></line>
-			<text x={ r2(chartX(float64(c.Now)) + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(v.Lang, "chart.now") }</text>
+			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-cmp-now)" stroke-width="2"></line>
+			<text x={ r2(c.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(v.Lang, "chart.now") }</text>
 		</svg>
 	</div>
 }
@@ -401,10 +421,10 @@ templ invShareCard(v inversoresView, c *invCompareView) {
 	<section class="helios-card flex flex-col p-4 shadow-card dark:shadow-card-dark sm:p-5 lg:col-span-5" aria-label={ T(v.Lang, "inversores.shareAria") }>
 		<div class="flex items-center gap-2">
 			<h2 class="mr-auto text-[15px] font-semibold text-app">{ T(v.Lang, "inversores.shareTitle") }</h2>
-			<button data-on:click="$share.mode = 'barra'" class="inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium capitalize text-faint transition-colors hover:text-muted">
+			<button data-on:click="$share.mode = 'barra'" data-class="{ 'border-brand bg-brand/10 text-brand': $share.mode == 'barra' }" class="inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium capitalize text-faint transition-colors hover:text-muted">
 				{ T(v.Lang, "inversores.bars") }
 			</button>
-			<button data-on:click="$share.mode = 'donut'" class="inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted">
+			<button data-on:click="$share.mode = 'donut'" data-class="{ 'border-brand bg-brand/10 text-brand': $share.mode == 'donut' }" class="inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted">
 				Donut
 			</button>
 		</div>

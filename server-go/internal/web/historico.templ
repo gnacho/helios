@@ -216,7 +216,7 @@ templ historicoChartCard(v historicoView) {
 }
 
 templ histDaySVG(c histDayChartModel) {
-	<svg viewBox="0 0 1100 320" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+	<svg viewBox="0 0 767 320" class="anim-draw h-auto w-full min-w-[420px]" role="img" aria-hidden="true">
 		<defs>
 			<linearGradient id="hist-grad-prod" x1="0" y1="0" x2="0" y2="1">
 				<stop offset="0%" stop-color={ c.ColorProd } stop-opacity="0.25"></stop>
@@ -254,7 +254,7 @@ templ histDaySVG(c histDayChartModel) {
 }
 
 templ histBarsSVG(m histBarsModel) {
-	<svg viewBox="0 0 1100 320" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+	<svg viewBox="0 0 767 320" class="anim-bars h-auto w-full min-w-[420px]" role="img" aria-hidden="true">
 		for _, t := range m.TicksYLeft[1:] {
 			<line x1={ r2(histSideL) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
 		}

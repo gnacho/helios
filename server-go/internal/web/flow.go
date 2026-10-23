@@ -192,7 +192,7 @@ func sparklinePath(values []float64, w, h float64) string {
 
 // arcModel is the solar arc view (SolarArc.tsx).
 type arcModel struct {
-	SunFrac       float64
+	SunFrac      float64
 	SunX, SunY   float64
 	Sunrise      int
 	Sunset       int

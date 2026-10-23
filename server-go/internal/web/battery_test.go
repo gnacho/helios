@@ -69,7 +69,7 @@ func TestBuildSocDayChart(t *testing.T) {
 		t.Fatalf("ticksY = %+v", m.TicksY)
 	}
 	// Zona de reserva hasta el 20 %.
-	wantReserve := chartY(20, 100)
+	wantReserve := geomBatSoc.y(20, 100)
 	if math.Abs(m.ReserveY-wantReserve) > 0.01 {
 		t.Fatalf("reserveY = %v", m.ReserveY)
 	}

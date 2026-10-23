@@ -19,7 +19,7 @@ import (
 // animations are not ported.
 
 const (
-	histW       = 1100.0
+	histW       = 767.0 // HistoryChart card is lg:col-span-8
 	histH       = 320.0
 	histTop     = 12.0
 	histSideL   = 34.0
@@ -35,6 +35,15 @@ const (
 	heatCols   = 53
 	heatDays   = 365 // heatmap window: last 365 days ending today
 )
+
+// histTicksX is the 3-hour X axis using the history box (its own side pads).
+func histTicksX() []chartTick {
+	var ticks []chartTick
+	for _, t := range axisTicksX {
+		ticks = append(ticks, chartTick{X: histX(float64(t)), Y: histH - 6, Label: fmtTime(t)})
+	}
+	return ticks
+}
 
 func histX(t float64) float64 {
 	return histSideL + t/1440*(histW-histSideL-histSideR)
@@ -65,7 +74,7 @@ type histDayChartModel struct {
 func buildHistoryDayChart(lang string, points []solar.DayPoint, nowMin int, hasNow bool, pal Palette) histDayChartModel {
 	m := histDayChartModel{
 		Lang:        lang,
-		TicksX:      dayTicksX(),
+		TicksX:      histTicksX(),
 		PlotRightX:  histW - histSideR,
 		PlotBottomY: histH - histBottom,
 		HasNow:      hasNow,
@@ -247,7 +256,7 @@ func buildHistoryBars(lang string, p Period, today time.Time, days []db.DailyRow
 		m.Rows = append(m.Rows, row)
 	}
 	if len(autoPts) > 1 {
-		m.AutoPath = monotonePath(autoPts)
+		m.AutoPath = monotoneLine(autoPts)
 		m.HasAuto = true
 	}
 	return m
@@ -683,11 +692,11 @@ func (u *UI) handleHistorico(w http.ResponseWriter, r *http.Request) {
 
 	pal := newPalette(p.Theme == "dark")
 	today := startOfDay(time.Now())
-	anchor := initialAnchor(PeriodSemana, today)
 	period := PeriodSemana
 	if ps, ok := periodOf(r.URL.Query().Get("period")); ok {
 		period = ps
 	}
+	anchor := initialAnchor(period, today)
 	if a, err := time.ParseInLocation("2006-01-02", r.URL.Query().Get("anchor"), time.Local); err == nil {
 		anchor = startOfDay(a)
 	}

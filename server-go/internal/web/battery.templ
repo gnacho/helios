@@ -108,7 +108,7 @@ templ socGaugeSVG(g socGaugeModel) {
 
 // batPowerCard ports BatteryPowerChart (divergent 15-min bars).
 templ batPowerCard(v bateriaView) {
-	<section class="helios-card shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "bateria.powerAria") }>
+	<section class="helios-card h-full shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "bateria.powerAria") }>
 		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
 			<div class="mr-auto">
 				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "bateria.powerTitle") }</h2>
@@ -129,7 +129,7 @@ templ batPowerCard(v bateriaView) {
 
 templ batPowerSVG(m batPowerChartModel) {
 	<div class="overflow-x-auto px-1 pb-2">
-		<svg viewBox="0 0 1100 300" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		<svg viewBox="0 0 570 260" class="anim-bars h-auto w-full min-w-[320px]" role="img" aria-hidden="true">
 			for _, t := range m.TicksY[1:] {
 				<line x1={ r2(batSideL) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
 			}
@@ -158,7 +158,7 @@ templ batPowerSVG(m batPowerChartModel) {
 
 // socDayCard ports SocDayChart (reserve zone + projection + events).
 templ socDayCard(v bateriaView) {
-	<section class="helios-card shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "bateria.socAria") }>
+	<section class="helios-card h-full shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "bateria.socAria") }>
 		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
 			<div class="mr-auto">
 				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "bateria.socTitle") }</h2>
@@ -186,7 +186,7 @@ templ socDayCard(v bateriaView) {
 
 templ socDaySVG(m socDayChartModel) {
 	<div class="overflow-x-auto px-1 pb-2">
-		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		<svg viewBox="0 0 570 280" class="anim-draw h-auto w-full min-w-[320px]" role="img" aria-hidden="true">
 			<defs>
 				<linearGradient id="grad-soc-day" x1="0" y1="0" x2="0" y2="1">
 					<stop offset="0%" stop-color={ m.ColorBat } stop-opacity="0.25"></stop>
@@ -202,7 +202,7 @@ templ socDaySVG(m socDayChartModel) {
 			}
 			for i, t := range m.TicksX {
 				if i == len(m.TicksX)-1 {
-					<text x={ r2(chartW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+					<text x={ r2(m.W) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				} else {
 					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 				}
@@ -231,7 +231,7 @@ templ socDaySVG(m socDayChartModel) {
 
 templ weekBarsSVG(m weekBalanceModel) {
 	<div class="overflow-x-auto px-1">
-		<svg viewBox="0 0 1100 280" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		<svg viewBox="0 0 767 240" class="anim-bars h-auto w-full min-w-[420px]" role="img" aria-hidden="true">
 			for _, t := range m.TicksY[1:] {
 				<line x1={ r2(weekSideL) } x2={ r2(weekW - weekSideR) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
 			}

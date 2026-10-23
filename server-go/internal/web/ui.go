@@ -25,7 +25,12 @@ import (
 //go:embed assets
 var assetsEmbed embed.FS
 
-const themeCookie = "helios_theme"
+const (
+	themeCookie   = "helios_theme"
+	accentCookie  = "helios_accent"
+	densityCookie = "helios_density"
+	motionCookie  = "helios_motion"
+)
 
 type navItem struct {
 	Path string
@@ -57,6 +62,12 @@ type pageProps struct {
 	ChargerOn bool
 	DateText  string
 	InvCount  []string
+
+	// Per-device appearance prefs (cookies, like the React localStorage).
+	AccentName   string // naranja|verde|azul|violeta
+	AccentRGB    string // "" = brand orange
+	Density      string // "comfortable" | "compact"
+	ReduceMotion bool
 }
 
 // UI serves the templ pages. RootFiles lets the host serve favicon-like
@@ -110,6 +121,7 @@ func (u *UI) Mount(r chi.Router) {
 	r.Post("/login", u.handleLoginSubmit)
 	r.Post("/logout", u.handleLogout)
 	r.Post("/theme", u.handleTheme)
+	r.Post("/appearance", u.handleAppearance)
 	r.Post("/sidebar", u.handleSidebarToggle)
 
 	r.Group(func(r chi.Router) {
@@ -358,6 +370,75 @@ func (u *UI) handleTheme(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
+// accentRGB maps the accent cookie to the --accent-rgb triplet ("" keeps the
+// default brand orange, exactly like the React ACCENTS list).
+func accentRGB(name string) string {
+	switch name {
+	case "verde":
+		return "34 197 94"
+	case "azul":
+		return "59 130 246"
+	case "violeta":
+		return "139 92 246"
+	}
+	return ""
+}
+
+// appearanceFrom reads the per-device appearance cookies (React stored the
+// same knobs in localStorage).
+func appearanceFrom(r *http.Request) (name, rgb, density string, reduceMotion bool) {
+	name, density = "naranja", "comfortable"
+	if c, err := r.Cookie(accentCookie); err == nil {
+		if v := accentRGB(c.Value); v != "" || c.Value == "naranja" {
+			name, rgb = c.Value, v
+		}
+	}
+	if c, err := r.Cookie(densityCookie); err == nil && c.Value == "compact" {
+		density = "compact"
+	}
+	if c, err := r.Cookie(motionCookie); err == nil && c.Value == "off" {
+		reduceMotion = true
+	}
+	return name, rgb, density, reduceMotion
+}
+
+// handleAppearance persists the appearance knobs as cookies (per device).
+func (u *UI) handleAppearance(w http.ResponseWriter, r *http.Request) {
+	next := safeNext(r.PostFormValue("next"))
+	set := func(name, value string) {
+		http.SetCookie(w, &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: 31536000, SameSite: http.SameSiteLaxMode})
+	}
+	switch r.PostFormValue("accent") {
+	case "naranja":
+		set(accentCookie, "naranja")
+	case "verde", "azul", "violeta":
+		set(accentCookie, r.PostFormValue("accent"))
+	}
+	switch r.PostFormValue("density") {
+	case "comfortable", "compact":
+		set(densityCookie, r.PostFormValue("density"))
+	}
+	switch r.PostFormValue("motion") {
+	case "on":
+		set(motionCookie, "on")
+	case "off":
+		set(motionCookie, "off")
+	}
+	http.Redirect(w, r, next, http.StatusSeeOther)
+}
+
+// rootStyle renders the html style attr for density + accent overrides.
+func rootStyle(p pageProps) string {
+	var b strings.Builder
+	if p.Density == "compact" {
+		b.WriteString("font-size:13.5px;")
+	}
+	if p.AccentRGB != "" {
+		b.WriteString("--accent-rgb:" + p.AccentRGB + ";")
+	}
+	return b.String()
+}
+
 // baseProps builds the common props: lang from the user profile, theme from
 // the cookie, sidebar state from its cookie, user chip data and the date.
 func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
@@ -367,6 +448,7 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 		Version: version.Version,
 		Path:    path,
 	}
+	p.AccentName, p.AccentRGB, p.Density, p.ReduceMotion = appearanceFrom(r)
 	if c, err := r.Cookie("helios_sidebar"); err == nil && c.Value == "1" {
 		p.Collapsed = true
 	}

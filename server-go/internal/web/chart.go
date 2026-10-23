@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	"helios-server/internal/solar"
@@ -14,13 +15,45 @@ import (
 // server re-render.
 
 const (
-	chartW        = 1100.0
-	chartH        = 380.0
 	plotLeft      = 34.0
 	plotRight     = 12.0
 	plotTop       = 10.0
 	plotBottomPad = 24.0 // x-axis labels
 )
+
+// chartGeom is the coordinate box of one SVG chart. Recharts draws the chart
+// at the real container size with a fixed pixel height; server-side we cannot
+// measure the container, so each chart uses the desktop card width as the
+// viewBox width and the React height as the viewBox height. Scaling the SVG
+// (w-full h-auto) then lands on the React height at desktop widths without
+// distorting text.
+type chartGeom struct{ W, H float64 }
+
+// Per-chart boxes: width = card content width at a 1440px viewport (1440px
+// sidebar + 1160px content), height = the React chart height prop.
+var (
+	geomDashboard = chartGeom{855, 380}  // Dashboard DayChart (col-span-8 card, height 380)
+	geomInvDay    = chartGeom{757, 300}  // InverterDayChart in its col-span-8 card
+	geomCompare   = chartGeom{1160, 340} // CompareChart (height 340)
+	geomLast14    = chartGeom{1160, 240} // Last14 bars card
+	geomHist      = chartGeom{767, 320}  // HistoryChart in its col-span-8 card
+	geomBatPower  = chartGeom{570, 260}  // BatteryPowerChart (height 260)
+	geomBatSoc    = chartGeom{570, 280}  // SocDayChart (height 280)
+	geomBatWeek   = chartGeom{767, 240}  // battery weekly bars (height 240)
+	geomCharger   = chartGeom{1160, 220} // charger history chart (height 220)
+)
+
+func (g chartGeom) x(t float64) float64 {
+	return plotLeft + t/1440*(g.W-plotLeft-plotRight)
+}
+
+func (g chartGeom) y(v, yMax float64) float64 {
+	top, bottom := plotTop, g.H-plotBottomPad
+	return top + (1-v/yMax)*(bottom-top)
+}
+
+func (g chartGeom) rightX() float64  { return g.W - plotRight }
+func (g chartGeom) bottomY() float64 { return g.H - plotBottomPad }
 
 var axisTicksX = [9]int{0, 180, 360, 540, 720, 900, 1080, 1260, 1440}
 
@@ -28,7 +61,9 @@ var axisTicksX = [9]int{0, 180, 360, 540, 720, 900, 1080, 1260, 1440}
 type DayChartModel struct {
 	Lang string
 	YMax int
-	Now  int // minutes, rounds to STEP_MIN
+	Now  int     // minutes, rounds to STEP_MIN
+	W, H float64 // viewBox
+	NowX float64 // x of the "now" marker
 
 	ProdPastPath   string // area (filled) up to now
 	ProdFuturePath string // dashed line from now on
@@ -53,16 +88,10 @@ type chartTick struct {
 	Label string
 }
 
-func chartX(t float64) float64 { return plotLeft + t/1440*(chartW-plotLeft-plotRight) }
-
-func chartY(v, yMax float64) float64 {
-	top, bottom := plotTop, chartH-plotBottomPad
-	return top + (1-v/yMax)*(bottom-top)
-}
-
 // BuildDayChart computes the SVG geometry for the day series.
 func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []string, invNames map[string]string) DayChartModel {
-	m := DayChartModel{Lang: lang, Now: roundStep(nowMin)}
+	g := geomDashboard
+	m := DayChartModel{Lang: lang, Now: roundStep(nowMin), W: g.W, H: g.H}
 
 	// yMax replica: max de producción/consumo/inversores visibles +0.3, ceil, min 1.
 	maxV := 0.5
@@ -94,20 +123,20 @@ func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []s
 		invPts[k] = make([]cpoint, 0, len(points))
 	}
 	for i, p := range points {
-		x := chartX(float64(p.T))
+		x := g.x(float64(p.T))
 		if i <= nowIdx {
-			past = append(past, cpoint{x, chartY(p.Production, float64(m.YMax))})
+			past = append(past, cpoint{x, g.y(p.Production, float64(m.YMax))})
 		}
 		if i >= nowIdx {
-			future = append(future, cpoint{x, chartY(p.Production, float64(m.YMax))})
+			future = append(future, cpoint{x, g.y(p.Production, float64(m.YMax))})
 		}
-		cons = append(cons, cpoint{x, chartY(p.Consumption, float64(m.YMax))})
+		cons = append(cons, cpoint{x, g.y(p.Consumption, float64(m.YMax))})
 		for _, k := range invKeys {
-			invPts[k] = append(invPts[k], cpoint{x, chartY(seriesInvValue(p, k), float64(m.YMax))})
+			invPts[k] = append(invPts[k], cpoint{x, g.y(seriesInvValue(p, k), float64(m.YMax))})
 		}
 	}
 
-	baseline := chartY(0, float64(m.YMax))
+	baseline := g.y(0, float64(m.YMax))
 	m.ProdPastPath = areaPath(past, baseline)
 	m.ProdFuturePath = monotonePath(future)
 	m.ConsPath = areaPath(cons, baseline)
@@ -123,13 +152,14 @@ func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []s
 	}
 
 	for _, t := range axisTicksX {
-		m.TicksX = append(m.TicksX, chartTick{X: chartX(float64(t)), Y: chartH - 6, Label: fmtTime(t)})
+		m.TicksX = append(m.TicksX, chartTick{X: g.x(float64(t)), Y: g.H - 6, Label: fmtTime(t)})
 	}
 	for v := 0; v <= m.YMax; v++ {
-		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: chartY(float64(v), float64(m.YMax)) + 4, Label: fmt.Sprintf("%d", v)})
+		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: g.y(float64(v), float64(m.YMax)) + 4, Label: fmt.Sprintf("%d", v)})
 	}
-	m.PlotRightX = chartW - plotRight
-	m.PlotBottomY = chartH - plotBottomPad
+	m.NowX = g.x(float64(m.Now))
+	m.PlotRightX = g.rightX()
+	m.PlotBottomY = g.bottomY()
 	return m
 }
 
@@ -187,6 +217,22 @@ func monotonePath(pts []cpoint) string {
 	return b.String()
 }
 
+// monotoneLine connects every point with one continuous curve. monotonePath
+// splits on x gaps larger than a data step (missing 5-min points); history
+// series have one point per bar group, far apart, and must stay connected.
+func monotoneLine(pts []cpoint) string {
+	if len(pts) == 0 {
+		return ""
+	}
+	if len(pts) == 1 {
+		return fmt.Sprintf("M %.2f %.2f", pts[0].x, pts[0].y)
+	}
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("M %.2f %.2f", pts[0].x, pts[0].y))
+	writeMonotoneRun(&b, pts)
+	return b.String()
+}
+
 func writeMonotoneRun(b *strings.Builder, pts []cpoint) {
 	n := len(pts)
 	if n < 2 {
@@ -218,3 +264,6 @@ func writeMonotoneRun(b *strings.Builder, pts []cpoint) {
 		b.WriteString(fmt.Sprintf(" C %.2f %.2f %.2f %.2f %.2f %.2f", c1x, c1y, c2x, c2y, pts[i+1].x, pts[i+1].y))
 	}
 }
+
+// r2s formats a coordinate for the viewBox attribute (no trailing zeros).
+func r2s(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) }

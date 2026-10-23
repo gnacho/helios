@@ -28,16 +28,17 @@ func TestBuildDayChartGeometry(t *testing.T) {
 	if m.YMax != 4 {
 		t.Fatalf("yMax = %d (esperado 4)", m.YMax)
 	}
-	// Picos en los extremos del eje X.
-	if x := chartX(0); x != plotLeft {
-		t.Fatalf("chartX(0) = %v (esperado %v)", x, plotLeft)
+	// Picos en los extremos del eje X (geometría propia de la gráfica).
+	g := geomDashboard
+	if x := g.x(0); x != plotLeft {
+		t.Fatalf("x(0) = %v (esperado %v)", x, plotLeft)
 	}
-	if x := chartX(1440); math.Abs(x-(chartW-plotRight)) > 0.01 {
-		t.Fatalf("chartX(1440) = %v (esperado %v)", x, chartW-plotRight)
+	if x := g.x(1440); math.Abs(x-(g.W-plotRight)) > 0.01 {
+		t.Fatalf("x(1440) = %v (esperado %v)", x, g.W-plotRight)
 	}
 	// El máximo de la curva toca el techo del plot.
-	if y := chartY(4, 4); math.Abs(y-plotTop) > 0.01 {
-		t.Fatalf("chartY(yMax) = %v (esperado %v)", y, plotTop)
+	if y := g.y(4, 4); math.Abs(y-plotTop) > 0.01 {
+		t.Fatalf("y(yMax) = %v (esperado %v)", y, plotTop)
 	}
 	// Ahora redondeado a paso de 5.
 	if m.Now != 720 {
@@ -75,7 +76,7 @@ func TestDayChartPaths(t *testing.T) {
 		t.Fatal("el área del pasado no se cierra en la baseline")
 	}
 	// Futuro: comienza en t=10 (nowIdx=2).
-	wantX := fmt.Sprintf("%.2f", chartX(10))
+	wantX := fmt.Sprintf("%.2f", geomDashboard.x(10))
 	if !strings.Contains(m.ProdFuturePath, wantX) {
 		t.Fatalf("el futuro no empieza en x=%s: %q", wantX, m.ProdFuturePath[:60])
 	}
@@ -108,9 +109,9 @@ func TestDayChartDeterministic(t *testing.T) {
 
 func TestMonotonePathSplitsGaps(t *testing.T) {
 	pts := []cpoint{
-		{chartX(0), 10}, {chartX(5), 12}, {chartX(10), 15},
+		{geomDashboard.x(0), 10}, {geomDashboard.x(5), 12}, {geomDashboard.x(10), 15},
 		// hueco de 15 min (3 buckets sin datos)
-		{chartX(25), 20}, {chartX(30), 22},
+		{geomDashboard.x(25), 20}, {geomDashboard.x(30), 22},
 	}
 	p := monotonePath(pts)
 	// Dos runs: 1 M inicial + 1 M tras el hueco.

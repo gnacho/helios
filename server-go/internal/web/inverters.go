@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"helios-server/internal/auth"
@@ -237,7 +238,8 @@ func (u *UI) handleInversores(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if active == "compare" && len(metas) >= 2 {
-		v.Compare = buildCompareView(lang, pal, m, metas, keys, names)
+		norm := r.URL.Query().Get("norm") == "1"
+		v.Compare = buildCompareView(lang, pal, m, metas, keys, names, norm)
 	} else if active != "compare" {
 		v.Single = buildSingleView(lang, pal, m, metas, keys, active, hist)
 	}
@@ -323,7 +325,7 @@ func totalShareOf(kwhs []float64, idx int) float64 {
 
 // buildCompareView builds the compare tab: hero, superposed chart, metrics
 // table and share (donut + bar list).
-func buildCompareView(lang string, pal Palette, m dashboardModel, metas []invMetaView, keys []string, names map[string]string) *invCompareView {
+func buildCompareView(lang string, pal Palette, m dashboardModel, metas []invMetaView, keys []string, names map[string]string, norm bool) *invCompareView {
 	colors := make([]string, len(metas))
 	for i := range metas {
 		colors[i] = InverterColor(metas[i].Key, pal, i)
@@ -349,6 +351,7 @@ func buildCompareView(lang string, pal Palette, m dashboardModel, metas []invMet
 	}
 
 	v := &invCompareView{
+		Norm:         norm,
 		BestAria:     T(lang, "inversores.bestMetric"),
 		ShareInsight: T(lang, "inversores.shareInsight"),
 	}
@@ -371,7 +374,11 @@ func buildCompareView(lang string, pal Palette, m dashboardModel, metas []invMet
 		v.HeadColors = append(v.HeadColors, colors[i])
 	}
 
-	v.Chart = BuildCompareChart(lang, m.Series.Points, untilMin(m), keys, names, colors)
+	kwps := make([]float64, len(metas))
+	for i := range metas {
+		kwps[i] = metas[i].Kwp
+	}
+	v.Chart = BuildCompareChart(lang, m.Series.Points, untilMin(m), keys, names, colors, kwps, norm)
 
 	// Tabla de métricas (7 filas, con chip de "mejor" cuando aplica).
 	perf := make([]float64, len(metas))
@@ -408,13 +415,14 @@ func buildCompareView(lang string, pal Palette, m dashboardModel, metas []invMet
 	powBest, energyBest, peakBest := bestIdx(nowKws), bestIdx(kwhs), bestIdx(peakVals(peaks))
 	perfBest := bestIdx(perf)
 	shareBest := bestIdx(shares)
+	sharePct := integerShares(shares)
 	for i := range metas {
 		powCells[i] = cell(fmtKwVal(lang, nowKws[i])+" kW", i, powBest)
 		energyCells[i] = cell(fmtEnergy(lang, kwhs[i])+" kWh", i, energyBest)
 		peakCells[i] = cell(fmtKwVal(lang, peaks[i].V)+" kW · "+fmtTime(peaks[i].T), i, peakBest)
 		perfCells[i] = cell(perfTxt[i], i, perfBest)
 		tempCells[i] = cell(fmtInt(lang, float64(metas[i].TempC))+" °C", i, tempBest)
-		shareCells[i] = cell(fmtInt(lang, shares[i])+" %", i, shareBest)
+		shareCells[i] = cell(strconv.Itoa(sharePct[i])+" %", i, shareBest)
 		statusCells[i] = invTableCell{Color: colors[i], Chip: true}
 	}
 	v.Rows = []invTableRow{
@@ -438,8 +446,8 @@ func buildCompareView(lang string, pal Palette, m dashboardModel, metas []invMet
 		v.ShareBars = append(v.ShareBars, invShareBar{
 			Name:      metas[i].Name,
 			Color:     colors[i],
-			WidthText: formatNumber(lang, shares[i], 2) + "%",
-			LabelText: metas[i].Name + " " + fmtInt(lang, shares[i]) + " %",
+			WidthText: strconv.Itoa(sharePct[i]) + "%",
+			LabelText: metas[i].Name + " " + strconv.Itoa(sharePct[i]) + " %",
 		})
 	}
 	return v

@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"math"
+	"sort"
 
 	"helios-server/internal/db"
 	"helios-server/internal/solar"
@@ -76,6 +77,31 @@ func donutArcPath(cx, cy, rOut, rIn, a0, a1 float64) string {
 		rIn, rIn, large, xi0, yi0)
 }
 
+// integerShares turns exact percentages into integers that sum to exactly 100
+// (largest remainder method). Donut legends and the stacked bar must add up to
+// 100 or the labels contradict the drawing (99 % / 101 %).
+func integerShares(pcts []float64) []int {
+	out := make([]int, len(pcts))
+	type rem struct {
+		i int
+		r float64
+	}
+	rems := make([]rem, len(pcts))
+	sum := 0
+	for i, p := range pcts {
+		f := math.Floor(p)
+		out[i] = int(f)
+		sum += out[i]
+		rems[i] = rem{i, p - f}
+	}
+	sort.SliceStable(rems, func(a, b int) bool { return rems[a].r > rems[b].r })
+	for k := 0; sum < 100 && k < len(rems); k++ {
+		out[rems[k].i]++
+		sum++
+	}
+	return out
+}
+
 // buildDonut computes the slice geometry. padDeg is the padding angle between
 // slices (recharts paddingAngle); slices at or below 0.005 kWh drop out like
 // the React filter. recharts renders startAngle=90 (its own convention, 12
@@ -94,23 +120,32 @@ func buildDonut(lang string, in []donutSliceIn, padDeg float64) donutModel {
 	}
 	const start = 0.0
 	angle := start
+	// Percentages are rounded afterwards with the largest remainder so the
+	// legend always adds up to 100.
+	var pcts []float64
+	var kept []donutSliceIn
 	for _, s := range in {
 		if s.Value <= 0.005 {
 			continue
 		}
+		pcts = append(pcts, s.Value/total*100)
+		kept = append(kept, s)
+	}
+	pctInt := integerShares(pcts)
+	for si, s := range kept {
 		span := s.Value / total * 360
 		a0 := angle + padDeg/2
 		a1 := angle + span - padDeg/2
 		if a1 < a0 {
 			a1 = a0 // slice smaller than the padding: zero-width arc
 		}
-		pct := s.Value / total * 100
+		pct := pcts[si]
 		m.Slices = append(m.Slices, donutSliceView{
 			Label:     s.Label,
 			Color:     s.Color,
 			Path:      donutArcPath(donutCX, donutCY, donutROut, donutRIn, a0, a1),
 			Pct:       pct,
-			PctText:   fmtInt(lang, pct),
+			PctText:   fmt.Sprint(pctInt[si]),
 			ValueText: fmtEnergy(lang, s.Value),
 		})
 		angle += span
@@ -172,6 +207,8 @@ type invKpiView struct {
 // past area + dashed forecast + AHORA line). Same frame as the dashboard
 // chart; the "compare with yesterday" toggle is not ported (mock series).
 type invDayChartModel struct {
+	W, H        float64 // viewBox
+	NowX        float64 // x of the "now" marker
 	Lang        string
 	Key         string
 	Color       string
@@ -188,7 +225,8 @@ type invDayChartModel struct {
 // BuildInverterDayChart ports the InverterDayChart series geometry (domain
 // dataMax + 0.4, ceil, min 1).
 func BuildInverterDayChart(lang string, points []solar.DayPoint, key, color string, nowMin int) invDayChartModel {
-	m := invDayChartModel{Lang: lang, Key: key, Color: color, Now: roundStep(nowMin)}
+	g := geomInvDay
+	m := invDayChartModel{W: g.W, H: g.H, Lang: lang, Key: key, Color: color, Now: roundStep(nowMin)}
 
 	maxV := 0.5
 	for _, p := range points {
@@ -205,8 +243,8 @@ func BuildInverterDayChart(lang string, points []solar.DayPoint, key, color stri
 	past := make([]cpoint, 0, len(points))
 	future := make([]cpoint, 0, len(points))
 	for i, p := range points {
-		x := chartX(float64(p.T))
-		y := chartY(seriesInvValue(p, key), float64(m.YMax))
+		x := g.x(float64(p.T))
+		y := g.y(seriesInvValue(p, key), float64(m.YMax))
 		if i <= nowIdx {
 			past = append(past, cpoint{x, y})
 		}
@@ -214,25 +252,26 @@ func BuildInverterDayChart(lang string, points []solar.DayPoint, key, color stri
 			future = append(future, cpoint{x, y})
 		}
 	}
-	baseline := chartY(0, float64(m.YMax))
+	baseline := g.y(0, float64(m.YMax))
 	m.PastPath = areaPath(past, baseline)
 	m.FuturePath = monotonePath(future)
 
-	m.TicksX = dayTicksX()
+	m.TicksX = dayTicksX(g)
 	m.TicksY = nil
 	for v := 0; v <= m.YMax; v++ {
-		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: chartY(float64(v), float64(m.YMax)) + 4, Label: fmt.Sprintf("%d", v)})
+		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: g.y(float64(v), float64(m.YMax)) + 4, Label: fmt.Sprintf("%d", v)})
 	}
-	m.PlotRightX = chartW - plotRight
-	m.PlotBottomY = chartH - plotBottomPad
+	m.NowX = g.x(float64(m.Now))
+	m.PlotRightX = g.rightX()
+	m.PlotBottomY = g.bottomY()
 	return m
 }
 
 // dayTicksX is the shared 3-hour X axis (0..1440).
-func dayTicksX() []chartTick {
+func dayTicksX(g chartGeom) []chartTick {
 	var ticks []chartTick
 	for _, t := range axisTicksX {
-		ticks = append(ticks, chartTick{X: chartX(float64(t)), Y: chartH - 6, Label: fmtTime(t)})
+		ticks = append(ticks, chartTick{X: g.x(float64(t)), Y: g.H - 6, Label: fmtTime(t)})
 	}
 	return ticks
 }
@@ -240,27 +279,41 @@ func dayTicksX() []chartTick {
 // BuildCompareChart ports CompareChart: all inverter curves superposed with
 // their own color (no production/consumption series). Normalization by kWp is
 // not ported (interactive toggle).
-func BuildCompareChart(lang string, points []solar.DayPoint, nowMin int, keys []string, names map[string]string, colors []string) DayChartModel {
-	m := DayChartModel{Lang: lang, Now: roundStep(nowMin)}
+func BuildCompareChart(lang string, points []solar.DayPoint, nowMin int, keys []string, names map[string]string, colors []string, kwps []float64, norm bool) DayChartModel {
+	g := geomCompare
+	m := DayChartModel{Lang: lang, Now: roundStep(nowMin), W: g.W, H: g.H}
+
+	// Normalized curves divide each inverter by its installed kWp (React
+	// CompareChart toggle). Missing kWp leaves the raw value.
+	val := func(i int, v float64) float64 {
+		if norm && i < len(kwps) && kwps[i] > 0 {
+			return v / kwps[i]
+		}
+		return v
+	}
 
 	maxV := 0.5
 	for _, p := range points {
-		for _, k := range keys {
-			if v := seriesInvValue(p, k); v > maxV {
+		for i, k := range keys {
+			if v := val(i, seriesInvValue(p, k)); v > maxV {
 				maxV = v
 			}
 		}
 	}
-	m.YMax = int(math.Max(1, math.Ceil(maxV+0.4)))
+	if norm {
+		m.YMax = 1 // fixed 0..1 domain, like the React normalized branch
+	} else {
+		m.YMax = int(math.Max(1, math.Ceil(maxV+0.4)))
+	}
 
 	pts := make(map[string][]cpoint, len(keys))
 	for _, k := range keys {
 		pts[k] = make([]cpoint, 0, len(points))
 	}
 	for _, p := range points {
-		x := chartX(float64(p.T))
-		for _, k := range keys {
-			pts[k] = append(pts[k], cpoint{x, chartY(seriesInvValue(p, k), float64(m.YMax))})
+		x := g.x(float64(p.T))
+		for i, k := range keys {
+			pts[k] = append(pts[k], cpoint{x, g.y(val(i, seriesInvValue(p, k)), float64(m.YMax))})
 		}
 	}
 	for ci, k := range keys {
@@ -274,20 +327,27 @@ func BuildCompareChart(lang string, points []solar.DayPoint, nowMin int, keys []
 		}
 		m.InvPaths = append(m.InvPaths, DayChartInv{Key: k, Name: name, Var: color, Path: monotonePath(pts[k])})
 	}
-	m.TicksX = dayTicksX()
-	for v := 0; v <= m.YMax; v++ {
-		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: chartY(float64(v), float64(m.YMax)) + 4, Label: fmt.Sprintf("%d", v)})
+	m.TicksX = dayTicksX(g)
+	if norm {
+		for _, v := range []float64{0, 0.25, 0.5, 0.75, 1} {
+			m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: g.y(v, 1) + 4, Label: fmt.Sprintf("%.1f", v)})
+		}
+	} else {
+		for v := 0; v <= m.YMax; v++ {
+			m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: g.y(float64(v), float64(m.YMax)) + 4, Label: fmt.Sprintf("%d", v)})
+		}
 	}
-	m.PlotRightX = chartW - plotRight
-	m.PlotBottomY = chartH - plotBottomPad
+	m.NowX = g.x(float64(m.Now))
+	m.PlotRightX = g.rightX()
+	m.PlotBottomY = g.bottomY()
 	return m
 }
 
 // ── Last 14 days bars (Last14Chart port) ────────────────────────────────
 
 const (
-	last14W      = 1100.0
-	last14H      = 240.0
+	last14W      = 373.0 // Last14 card is lg:col-span-4
+	last14H      = 240.0 // geomLast14.H
 	last14Top    = 10.0
 	last14SideL  = 12.0
 	last14SideR  = 12.0
@@ -306,6 +366,7 @@ type last14Bar struct {
 
 // last14Model is the whole bar chart.
 type last14Model struct {
+	W, H        float64 // viewBox
 	Lang        string
 	Color       string
 	Bars        []last14Bar
@@ -349,7 +410,7 @@ func bottomRoundedBarPath(x, y, w, h, r float64) string {
 // buildLast14 ports Last14Chart: daily production * share for the trailing 14
 // days, last bar full opacity, XAxis interval=1.
 func buildLast14(lang string, rows []db.DailyRow, share float64, colorHex string) last14Model {
-	m := last14Model{Lang: lang, Color: colorHex, PlotBottomY: last14H - last14Bottom}
+	m := last14Model{W: last14W, H: last14H, Lang: lang, Color: colorHex, PlotBottomY: last14H - last14Bottom}
 	window := lastN(rows, 14)
 	if len(window) == 0 {
 		return m
@@ -429,6 +490,7 @@ type invShareBar struct {
 // invCompareView is the whole compare tab content.
 type invCompareView struct {
 	Heroes       []invCompareHero
+	Norm         bool // normalized per kWp (?norm=1)
 	Chart        DayChartModel
 	HeadNames    []string
 	HeadColors   []string
