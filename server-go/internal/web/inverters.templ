@@ -247,7 +247,7 @@ templ last14Card(v inversoresView, m last14Model) {
 			<svg viewBox={ "0 0 " + r2s(m.W) + " " + r2s(m.H) } class="anim-bars h-auto w-full" role="img" aria-hidden="true">
 				for _, b := range m.Bars {
 					if b.IsLast {
-						<path d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } stroke={ m.Color } stroke-width="1.5"></path>
+						<path class="bar-up" d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } stroke={ m.Color } stroke-width="1.5"></path>
 					} else {
 						<path d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } opacity="0.55"></path>
 					}

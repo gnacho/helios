@@ -64,6 +64,7 @@ type pageProps struct {
 	DateText  string
 	InvCount  []string
 	BatKwh    float64 // installed battery capacity (0 = no battery)
+	NavDir    string  // "up" | "down": where the selected item comes from
 
 	// Per-device appearance prefs (cookies, like the React localStorage).
 	AccentName   string // naranja|verde|azul|violeta
@@ -544,7 +545,37 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 		p.ChargerOn = cfg.Enabled && cfg.CarCharger.Enabled
 	}
 	p.DateText = weekdayDate(p.Lang, time.Now())
+	p.NavDir = navDirFrom(p, r)
 	return p
+}
+
+// navDirFrom compares the previous page (Referer) with the current one in the
+// nav order, so the active pill can slide in from the right side.
+func navDirFrom(p pageProps, r *http.Request) string {
+	ref := r.Referer()
+	if ref == "" {
+		return ""
+	}
+	u, err := url.Parse(ref)
+	if err != nil || u.Host != r.Host {
+		return ""
+	}
+	idx := func(path string) int {
+		for i, item := range navEntriesFor(p.ChargerOn) {
+			if navIsActive(path, item.Path) {
+				return i
+			}
+		}
+		return -1
+	}
+	prev, cur := idx(u.Path), idx(p.Path)
+	switch {
+	case prev < 0 || cur < 0 || prev == cur:
+		return ""
+	case prev > cur:
+		return "up"
+	}
+	return "down"
 }
 
 // weekdayDate mirrors fmtWeekdayDate in the front (capitalized, localized).

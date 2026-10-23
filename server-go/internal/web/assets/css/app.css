@@ -429,6 +429,21 @@ html.reduce-motion::view-transition-new(*) {
   navigation: auto;
 }
 
+/* El item activo entra desde la dirección del menú de donde venimos (fallback
+ * sin view transitions: funciona en cualquier navegador). */
+.nav-in-down {
+  animation: nav-item-down 0.24s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+.nav-in-up {
+  animation: nav-item-up 0.24s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+@keyframes nav-item-down {
+  from { transform: translateY(-9px); opacity: 0.3; }
+}
+@keyframes nav-item-up {
+  from { transform: translateY(9px); opacity: 0.3; }
+}
+
 /* El item activo del menú / pestaña seleccionada desliza desde su posición
  * anterior: mismo view-transition-name en el activo de cada página. */
 .vt-slide {
@@ -481,10 +496,18 @@ html.reduce-motion::view-transition-new(*) {
   svg.anim-draw {
     animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
   }
-  svg.anim-bars rect {
+  /* Barras dibujadas como <path> (esquinas redondeadas): bar-up crece desde
+   * su base y bar-down desde su borde superior (divergentes de la batería). */
+  svg.anim-bars .bar-up,
+  svg.anim-bars .bar-down {
     transform-box: fill-box;
-    transform-origin: 50% 100%;
     animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
+  }
+  svg.anim-bars .bar-up {
+    transform-origin: 50% 100%;
+  }
+  svg.anim-bars .bar-down {
+    transform-origin: 50% 0%;
   }
   svg.anim-pie {
     transform-origin: center;

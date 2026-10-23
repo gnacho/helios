@@ -37,12 +37,14 @@ type donutSliceView struct {
 	Path      string
 	Pct       float64
 	PctText   string
+	Value     float64 // raw kWh for the count-up tween
 	ValueText string
 }
 
 // donutModel is the render model: slices + center texts.
 type donutModel struct {
 	Slices      []donutSliceView
+	Total       float64 // raw total kWh for the count-up tween
 	TotalText   string
 	CenterSub   string
 	CenterValue string
@@ -114,6 +116,7 @@ func buildDonut(lang string, in []donutSliceIn, padDeg float64) donutModel {
 			total += s.Value
 		}
 	}
+	m.Total = total
 	m.TotalText = fmtEnergy(lang, total)
 	if total <= 0 {
 		return m
@@ -146,6 +149,7 @@ func buildDonut(lang string, in []donutSliceIn, padDeg float64) donutModel {
 			Path:      donutArcPath(donutCX, donutCY, donutROut, donutRIn, a0, a1),
 			Pct:       pct,
 			PctText:   fmt.Sprint(pctInt[si]),
+			Value:     s.Value,
 			ValueText: fmtEnergy(lang, s.Value),
 		})
 		angle += span

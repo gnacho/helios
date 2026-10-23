@@ -153,7 +153,7 @@ templ sidebar(p pageProps, collapsed bool) {
 
 templ navSideLink(p pageProps, item navEntry) {
 	{{ label := navLabel(p, item.Key) }}
-	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)) }>
+	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
 		@iconForNav(item.IconKey, "h-[18px] w-[18px] shrink-0")
 		<span class="flex-1">{ label }</span>
 		if navIsActive(p.Path, item.Path) {
@@ -164,7 +164,7 @@ templ navSideLink(p pageProps, item navEntry) {
 
 templ iconNavLink(p pageProps, item navEntry) {
 	{{ label := navLabel(p, item.Key) }}
-	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)) }>
+	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
 		@iconForNav(item.IconKey, "h-[18px] w-[18px]")
 		<span class="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-md border border-app bg-surface px-2 py-1 text-xs text-app group-hover:block">{ label }</span>
 	</a>
@@ -254,7 +254,7 @@ templ bottomNavItem(p pageProps, item navEntry) {
 			href={ templ.URL(item.Path) }
 			data-active="true"
 			aria-label={ label }
-			class="vt-slide relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1"
+			class={ "vt-slide relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1", templ.KV("nav-in-down", p.NavDir == "down"), templ.KV("nav-in-up", p.NavDir == "up") }
 		>
 			@bottomNavItemInner(item, true, label)
 		</a>

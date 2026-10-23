@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 )
 
 // animNum renders a static number that counts up from zero using a
@@ -36,6 +37,20 @@ templ animNumLiveS(id string, initial float64, dec int, lang, targetExpr, suffix
 		data-on-interval__duration.60ms={ animFollow(id, targetExpr) }
 		data-text={ animText(id, dec, lang, suffix) }
 	>{ formatNumber(lang, 0, dec) + suffix }</span>
+}
+
+// animID turns a label into a safe signal name (no spaces or punctuation).
+func animID(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('_')
+		}
+	}
+	return b.String()
 }
 
 // animSignals declares the tween signals: s = shown value, t = target.

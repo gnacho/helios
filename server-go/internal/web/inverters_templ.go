@@ -1465,14 +1465,14 @@ func last14Card(v inversoresView, m last14Model) templ.Component {
 		}
 		for _, b := range m.Bars {
 			if b.IsLast {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 112, "<path d=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 112, "<path class=\"bar-up\" d=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var83 string
 				templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.ResolveAttributeValue(topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 250, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 250, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var83)
 				if templ_7745c5c3_Err != nil {
@@ -1485,7 +1485,7 @@ func last14Card(v inversoresView, m last14Model) templ.Component {
 				var templ_7745c5c3_Var84 string
 				templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.ResolveAttributeValue(m.Color)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 250, Col: 82}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 250, Col: 97}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var84)
 				if templ_7745c5c3_Err != nil {
@@ -1498,7 +1498,7 @@ func last14Card(v inversoresView, m last14Model) templ.Component {
 				var templ_7745c5c3_Var85 string
 				templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.ResolveAttributeValue(m.Color)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 250, Col: 101}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 250, Col: 116}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var85)
 				if templ_7745c5c3_Err != nil {

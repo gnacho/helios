@@ -273,12 +273,12 @@ templ histBarsSVG(m histBarsModel) {
 			</a>
 			if row.ProdH > 0 {
 				<a href={ templ.URL(row.Href) } aria-label={ row.Label }>
-					<path d={ topRoundedBarPath(row.XProd, row.ProdY, row.BarW, row.ProdH, 4) } fill={ m.ColorProd } fill-opacity={ rowOpacity(row.IsToday) }></path>
+					<path class="bar-up" d={ topRoundedBarPath(row.XProd, row.ProdY, row.BarW, row.ProdH, 4) } fill={ m.ColorProd } fill-opacity={ rowOpacity(row.IsToday) }></path>
 				</a>
 			}
 			if row.ConsH > 0 {
 				<a href={ templ.URL(row.Href) } aria-label={ row.Label }>
-					<path d={ topRoundedBarPath(row.XCons, row.ConsY, row.BarW, row.ConsH, 4) } fill={ m.ColorCons } fill-opacity={ rowOpacity(row.IsToday) }></path>
+					<path class="bar-up" d={ topRoundedBarPath(row.XCons, row.ConsY, row.BarW, row.ConsH, 4) } fill={ m.ColorCons } fill-opacity={ rowOpacity(row.IsToday) }></path>
 				</a>
 			}
 			if row.ShowLabel {
@@ -320,7 +320,7 @@ templ historicoDonutCard(v historicoView) {
 				</svg>
 				<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
 					<p class="font-display text-2xl font-semibold leading-none text-app">
-						{ v.Donut.TotalText } <span class="text-[0.6em] font-medium text-faint">kWh</span>
+						@animNum("donutHistTotal", v.Donut.Total, 1, v.Lang) <span class="text-[0.6em] font-medium text-faint">kWh</span>
 					</p>
 					<p class="mt-1 text-xs text-faint">{ v.Donut.CenterSub }</p>
 				</div>
@@ -330,8 +330,8 @@ templ historicoDonutCard(v historicoView) {
 					<li class="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-[13px]">
 						<span class="h-2.5 w-2.5 shrink-0 rounded-full" style={ "background-color: " + s.Color }></span>
 						<span class="text-muted">{ s.Label }</span>
-						<span class="ml-auto font-semibold tabular-nums text-app">{ s.ValueText } kWh</span>
-						<span class="w-10 text-right text-xs tabular-nums text-faint">{ s.PctText } %</span>
+						<span class="ml-auto font-semibold tabular-nums text-app">@animNum("donutHistV"+animID(s.Label), s.Value, 1, v.Lang) kWh</span>
+						<span class="w-10 text-right text-xs tabular-nums text-faint">@animNum("donutHistP"+animID(s.Label), s.Pct, 0, v.Lang) %</span>
 					</li>
 				}
 			</ul>

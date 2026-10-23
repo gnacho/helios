@@ -146,10 +146,10 @@ templ batPowerSVG(m batPowerChartModel) {
 			<line x1={ r2(batSideL) } x2={ r2(m.PlotRightX) } y1={ r2(m.ZeroY) } y2={ r2(m.ZeroY) } stroke="var(--line)" stroke-width="1.5"></line>
 			for _, b := range m.Buckets {
 				if b.ChargeH > 0 {
-					<path d={ topRoundedBarPath(b.X, b.ChargeY, b.W, b.ChargeH, 3) } fill={ m.ColorCharge }></path>
+					<path class="bar-up" d={ topRoundedBarPath(b.X, b.ChargeY, b.W, b.ChargeH, 3) } fill={ m.ColorCharge }></path>
 				}
 				if b.DischargeH > 0 {
-					<path d={ bottomRoundedBarPath(b.X, b.DischargeY, b.W, b.DischargeH, 3) } fill={ m.ColorDischarge }></path>
+					<path class="bar-down" d={ bottomRoundedBarPath(b.X, b.DischargeY, b.W, b.DischargeH, 3) } fill={ m.ColorDischarge }></path>
 				}
 			}
 		</svg>
@@ -241,10 +241,10 @@ templ weekBarsSVG(m weekBalanceModel) {
 			}
 			for _, d := range m.Days {
 				if d.CargaH > 0 {
-					<path d={ topRoundedBarPath(d.X, d.CargaY, d.BarW, d.CargaH, 3) } fill={ m.ColorCharge }></path>
+					<path class="bar-up" d={ topRoundedBarPath(d.X, d.CargaY, d.BarW, d.CargaH, 3) } fill={ m.ColorCharge }></path>
 				}
 				if d.DescargaH > 0 {
-					<path d={ topRoundedBarPath(d.X+d.BarW+2, d.DescargaY, d.BarW, d.DescargaH, 3) } fill={ m.ColorDischarge }></path>
+					<path class="bar-up" d={ topRoundedBarPath(d.X+d.BarW+2, d.DescargaY, d.BarW, d.DescargaH, 3) } fill={ m.ColorDischarge }></path>
 				}
 				<text x={ r2(d.X + d.BarW + 1) } y={ r2(weekH - 6) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ d.Label }</text>
 			}
@@ -265,7 +265,7 @@ templ energySourceCard(v bateriaView) {
 				</svg>
 				<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
 					<p class="font-display text-2xl font-semibold leading-none text-app">
-						{ v.Donut.TotalText } <span class="text-[0.6em] font-medium text-faint">kWh</span>
+						@animNum("donutBatTotal", v.Donut.Total, 1, v.Lang) <span class="text-[0.6em] font-medium text-faint">kWh</span>
 					</p>
 					<p class="mt-1 text-xs text-faint">{ v.Donut.CenterSub }</p>
 				</div>
@@ -276,8 +276,8 @@ templ energySourceCard(v bateriaView) {
 				<li class="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[13px]">
 					<span class="h-2.5 w-2.5 shrink-0 rounded-full" style={ "background-color: " + s.Color }></span>
 					<span class="text-muted">{ s.Label }</span>
-					<span class="ml-auto font-semibold tabular-nums text-app">{ s.ValueText } kWh</span>
-					<span class="w-10 text-right text-xs tabular-nums text-faint">{ s.PctText } %</span>
+					<span class="ml-auto font-semibold tabular-nums text-app">@animNum("donutBatV"+animID(s.Label), s.Value, 1, v.Lang) kWh</span>
+					<span class="w-10 text-right text-xs tabular-nums text-faint">@animNum("donutBatP"+animID(s.Label), s.Pct, 0, v.Lang) %</span>
 				</li>
 			}
 		</ul>
