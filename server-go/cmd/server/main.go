@@ -124,6 +124,8 @@ func main() {
 	if getenv("HELIOS_UI", "react") == "templ" {
 		ui := web.New(a, database, sol, haReader, store, extStore, ext, extHA, prices, hub)
 		ui.RootFiles = srv.Static.ServeFileNoSPA
+		ui.DataDir = cfg.DataDir
+		ui.Push = pushSvc
 		srv.UI = ui
 		log.Printf("[helios] UI templ activada (HELIOS_UI=templ)")
 	}

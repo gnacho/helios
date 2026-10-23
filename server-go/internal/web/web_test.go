@@ -164,8 +164,8 @@ func TestStubPages(t *testing.T) {
 	_, r, _ := testUI(t)
 	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
 
-	// /historico and /cargador are real pages since phase 4 (covered by their
-	// own tests); /ajustes is still the only stub.
+	// /ajustes is a real page since phase 5 (covered by ajustes_test): the
+	// nav has no stub left; it must render the real page, not the placeholder.
 	req := httptest.NewRequest("GET", "/ajustes", nil)
 	req.AddCookie(cookie)
 	rec := httptest.NewRecorder()
@@ -177,8 +177,8 @@ func TestStubPages(t *testing.T) {
 	if !strings.Contains(body, "Ajustes") {
 		t.Fatalf("falta el título %q", "Ajustes")
 	}
-	if !strings.Contains(body, "Esta vista está en construcción") {
-		t.Fatal("falta el cuerpo del stub")
+	if strings.Contains(body, "Esta vista está en construcción") {
+		t.Fatal("/ajustes ya no es un stub")
 	}
 }
 

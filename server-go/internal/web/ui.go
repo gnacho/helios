@@ -16,6 +16,7 @@ import (
 	"helios-server/internal/db"
 	"helios-server/internal/extensions"
 	"helios-server/internal/install"
+	"helios-server/internal/push"
 	"helios-server/internal/solar"
 	"helios-server/internal/sse"
 	"helios-server/internal/version"
@@ -61,7 +62,8 @@ type pageProps struct {
 // UI serves the templ pages. RootFiles lets the host serve favicon-like
 // files from the SPA static dir (no index.html fallback) before the 404.
 // Ext/ExtHA give the pages access to the charger services in process (day
-// curve + history); Prices are the configured energy prices.
+// curve + history); Prices are the configured energy prices. DataDir feeds
+// the update-progress state of the Ajustes page; Push the VAPID config.
 type UI struct {
 	Auth      *auth.Auth
 	DB        *db.DB
@@ -74,6 +76,8 @@ type UI struct {
 	Prices    solar.PriceConfig
 	Hub       *sse.Hub
 	RootFiles func(w http.ResponseWriter, r *http.Request) bool
+	DataDir   string
+	Push      *push.Service
 	assets    http.Handler
 }
 
@@ -116,9 +120,23 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/bateria", u.handleBateria)
 		r.Get("/historico", u.handleHistorico)
 		r.Get("/cargador", u.handleCargador)
+		r.Get("/ajustes", u.handleAjustes)
+
+		// Ajustes form wrappers (PRG): llaman a los mismos servicios en
+		// proceso que los endpoints JSON (ver ajustes.go).
+		r.Post("/ajustes/topology", u.handleAjustesTopology)
+		r.Post("/ajustes/extensions", u.handleAjustesExtensions)
+		r.Post("/ajustes/push-pref", u.handleAjustesPushPref)
+		r.Post("/ajustes/profile", u.handleAjustesProfile)
+		r.Post("/ajustes/password", u.handleAjustesPassword)
+		r.Post("/ajustes/users", u.handleAjustesUserCreate)
+		r.Post("/ajustes/users/{id}", u.handleAjustesUserSave)
+		r.Post("/ajustes/users/{id}/delete", u.handleAjustesUserDelete)
+
 		for _, item := range navItems[1:] {
 			if item.Path == "/inversores" || item.Path == "/bateria" ||
-				item.Path == "/historico" || item.Path == "/cargador" {
+				item.Path == "/historico" || item.Path == "/cargador" ||
+				item.Path == "/ajustes" {
 				continue // real handlers above
 			}
 			r.Get(item.Path, u.stubHandler(item))
