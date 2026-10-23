@@ -2514,6 +2514,26 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
   .sun-g {
     animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
   }
+}
+.hist-in-right {
+  animation: hist-in-right 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+.hist-in-left {
+  animation: hist-in-left 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+@keyframes hist-in-right {
+  from {
+    transform: translateX(26px);
+    opacity: 0.35;
+  }
+}
+@keyframes hist-in-left {
+  from {
+    transform: translateX(-26px);
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
   :root {
     interpolate-size: allow-keywords;
   }

@@ -132,6 +132,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Use(u.Auth.RequireAuthRedirect)
 		r.Get("/", u.handleDashboard)
 		r.Get("/ui/stream", u.handleStream)
+		r.Get("/ui/historico", u.handleHistoricoPatch)
 
 		r.Get("/inversores", u.handleInversores)
 		r.Get("/bateria", u.handleBateria)

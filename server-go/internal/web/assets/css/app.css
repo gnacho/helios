@@ -564,6 +564,21 @@ html.reduce-motion::view-transition-new(*) {
     animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
   }
 }
+/* Cambio de periodo en el Histórico: el cuerpo parcheado entra deslizando
+ * desde el lado del periodo nuevo (el scroll no se mueve: no hay recarga). */
+.hist-in-right {
+  animation: hist-in-right 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+.hist-in-left {
+  animation: hist-in-left 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+@keyframes hist-in-right {
+  from { transform: translateX(26px); opacity: 0.35; }
+}
+@keyframes hist-in-left {
+  from { transform: translateX(-26px); opacity: 0.35; }
+}
+
 /* Despliegue animado de los paneles (<details>) sin JS: el contenido pasa de
  * 0 a auto con interpolate-size (Chrome 129+/Safari 18.4+); sin soporte se
  * abre normal. Equivale al AnimatePresence height:auto del React. */

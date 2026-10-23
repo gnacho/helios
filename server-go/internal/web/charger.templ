@@ -363,12 +363,16 @@ templ chgHistSVG(m chgHistModel) {
 			<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
 		}
 		for i, row := range m.Rows {
-			if row.PvH > 0 {
-				<rect class="bar-up" x={ r2(row.X) } y={ r2(row.PvY) } width={ r2(row.BarW) } height={ r2(row.PvH) } fill={ m.ColorSolar }></rect>
-			}
-			if row.RestH > 0 {
-				<rect class="bar-up" x={ r2(row.X) } y={ r2(row.RestY) } width={ r2(row.BarW) } height={ r2(row.RestH) } rx="3" fill={ m.ColorGrid }></rect>
-			}
+			// La barra apilada (solar + red) se anima como una unidad: si cada
+			// tramo creciera por su cuenta, el de arriba levitaría.
+			<g class="bar-up">
+				if row.PvH > 0 {
+					<rect x={ r2(row.X) } y={ r2(row.PvY) } width={ r2(row.BarW) } height={ r2(row.PvH) } fill={ m.ColorSolar }></rect>
+				}
+				if row.RestH > 0 {
+					<rect x={ r2(row.X) } y={ r2(row.RestY) } width={ r2(row.BarW) } height={ r2(row.RestH) } rx="3" fill={ m.ColorGrid }></rect>
+				}
+			</g>
 			if chgShowLabel(m.Rows, i) {
 				<text x={ r2(row.X + row.BarW/2) } y={ r2(chgCurveH - 2) } text-anchor="middle" font-size="11" fill="var(--text-faint)" font-family="Inter">{ row.Label }</text>
 			}

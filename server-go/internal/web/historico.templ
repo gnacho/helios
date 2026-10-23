@@ -11,7 +11,14 @@ import (
 
 templ HistoricoPage(v historicoView) {
 	@shellLayout(v.pageProps) {
-		<div class="flex w-full flex-col gap-4 lg:gap-5">
+		@historicoBody(v)
+	}
+}
+
+// historicoBody is the patchable region: /ui/historico replaces it in place
+// (no reload) and the slide direction comes from the previous period.
+templ historicoBody(v historicoView) {
+		<div id="hist-body" class={ "flex w-full flex-col gap-4 lg:gap-5", templ.KV("hist-in-right", v.SlideDir == "right"), templ.KV("hist-in-left", v.SlideDir == "left") }>
 			<header class="flex flex-wrap items-center gap-3">
 				<div class="mr-auto">
 					<h1 class="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{ T(v.Lang, "historico.title") }</h1>
@@ -52,8 +59,7 @@ templ HistoricoPage(v historicoView) {
 					}
 				</div>
 			}
-		</div>
-	}
+	</div>
 }
 
 // periodSelector ports PeriodSelector.tsx: segmented control + date navigator
@@ -64,6 +70,9 @@ templ periodSelector(s periodSelectorView) {
 			for _, tb := range s.Tabs {
 				<a
 					href={ templ.URL(tb.URL) }
+					if tb.Patch != "" {
+						data-on:click__prevent={ tb.Patch }
+					}
 					role="tab"
 					aria-selected={ boolStr(tb.Active) }
 					class={ "relative flex h-8 items-center rounded-full px-3 text-[13px] font-medium transition-colors sm:px-3.5", templ.KV("text-app", tb.Active), templ.KV("text-faint hover:text-muted", !tb.Active) }
@@ -76,14 +85,14 @@ templ periodSelector(s periodSelectorView) {
 			}
 		</div>
 		<div class="flex h-9 items-center gap-0.5 rounded-full border border-app bg-surface p-0.5">
-			<a href={ templ.URL(s.PrevURL) } aria-label={ s.PrevAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+			<a href={ templ.URL(s.PrevURL) } aria-label={ s.PrevAria } data-on:click__prevent={ s.PatchPrev } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
 				@iconChevronLeft("h-4 w-4")
 			</a>
 			<div class="flex h-8 min-w-[92px] items-center justify-center overflow-hidden px-1 sm:min-w-[110px]">
 				<span class="text-[13px] font-semibold tabular-nums text-app">{ s.Label }</span>
 			</div>
 			if s.CanNext {
-				<a href={ templ.URL(s.NextURL) } aria-label={ s.NextAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+				<a href={ templ.URL(s.NextURL) } aria-label={ s.NextAria } data-on:click__prevent={ s.PatchNext } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
 					@iconChevronRight("h-4 w-4")
 				</a>
 			} else {
@@ -95,7 +104,7 @@ templ periodSelector(s periodSelectorView) {
 		if s.IsCurrent {
 			<span class="h-9 cursor-not-allowed rounded-full border border-app px-3.5 text-[13px] font-semibold leading-9 text-faint opacity-60">{ T(s.Lang, "common.today") }</span>
 		} else {
-			<a href={ templ.URL(s.TodayURL) } class="h-9 rounded-full border border-amber-500/40 px-3.5 text-[13px] font-semibold leading-9 text-amber-600 transition-transform hover:bg-amber-500/10 active:scale-95 dark:text-amber-400">
+			<a href={ templ.URL(s.TodayURL) } data-on:click__prevent={ s.PatchToday } class="h-9 rounded-full border border-amber-500/40 px-3.5 text-[13px] font-semibold leading-9 text-amber-600 transition-transform hover:bg-amber-500/10 active:scale-95 dark:text-amber-400">
 				{ T(s.Lang, "common.today") }
 			</a>
 		}

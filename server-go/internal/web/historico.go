@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/starfederation/datastar-go/datastar"
+
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
 	"helios-server/internal/solar"
@@ -563,6 +565,7 @@ type histKpiView struct {
 type periodTabView struct {
 	Key, Label, URL string
 	Active          bool
+	Patch           string // data-on:click expression ("" = plain link)
 }
 
 // periodSelectorView is the PeriodSelector.tsx port (links, no client state).
@@ -577,6 +580,12 @@ type periodSelectorView struct {
 	IsCurrent bool
 	PrevAria  string
 	NextAria  string
+
+	// Expresiones data-on:click para el parche SPA del histórico (vacías en
+	// otros usos del selector, p.ej. el cargador).
+	PatchPrev  string
+	PatchNext  string
+	PatchToday string
 }
 
 func buildPeriodSelector(lang string, period Period, anchor, today time.Time) periodSelectorView {
@@ -591,15 +600,27 @@ func buildPeriodSelector(lang string, period Period, anchor, today time.Time) pe
 		PrevAria:  T(lang, "historico.prevAria"),
 		NextAria:  T(lang, "historico.nextAria"),
 	}
+	cur := "&from=" + string(period) + "&fromAnchor=" + anchor.Format("2006-01-02")
 	for _, p := range []Period{PeriodDia, PeriodSemana, PeriodMes, PeriodAno} {
+		a := initialAnchor(p, today)
 		v.Tabs = append(v.Tabs, periodTabView{
 			Key:    string(p),
 			Label:  T(lang, "historico.periods."+string(p)),
-			URL:    histURL(p, initialAnchor(p, today)),
+			URL:    histURL(p, a),
 			Active: p == period,
+			Patch:  historicoPatchExpr(p, a, cur),
 		})
 	}
+	v.PatchPrev = historicoPatchExpr(period, shiftAnchor(period, anchor, -1), cur)
+	v.PatchNext = historicoPatchExpr(period, shiftAnchor(period, anchor, 1), cur)
+	v.PatchToday = historicoPatchExpr(period, initialAnchor(period, today), cur)
 	return v
+}
+
+// historicoPatchExpr is the Datastar call that swaps the body in place (no page
+// reload, so the scroll never jumps); the href stays as the no-JS fallback.
+func historicoPatchExpr(p Period, a time.Time, cur string) string {
+	return "@get('/ui/historico?period=" + string(p) + "&anchor=" + a.Format("2006-01-02") + cur + "')"
 }
 
 // buildHistKpis ports the 5 KPI cards with their delta chips.
@@ -688,6 +709,7 @@ type historicoView struct {
 	Empty      bool
 
 	Selector periodSelectorView
+	SlideDir string // "left" | "right": dirección del slide al cambiar periodo
 	Kpis     []histKpiView
 
 	Day    histDayChartModel
@@ -705,6 +727,66 @@ type historicoView struct {
 }
 
 func (u *UI) handleHistorico(w http.ResponseWriter, r *http.Request) {
+	v := u.buildHistoricoView(r)
+	_ = HistoricoPage(v).Render(r.Context(), w)
+}
+
+// handleHistoricoPatch answers the Datastar period navigation: it swaps
+// #hist-body in place so the page scroll never moves, with a horizontal slide
+// towards the direction of the new period.
+func (u *UI) handleHistoricoPatch(w http.ResponseWriter, r *http.Request) {
+	v := u.buildHistoricoView(r)
+	v.SlideDir = historicoSlideDir(r)
+	gen := datastar.NewSSE(w, r)
+	_ = gen.PatchElementTempl(historicoBody(v), datastar.WithSelectorID("hist-body"), datastar.WithModeOuter())
+}
+
+// historicoSlideDir compares the requested period/anchor with the previous one
+// (?from/?fromAnchor): later periods enter from the right, earlier from the left.
+func historicoSlideDir(r *http.Request) string {
+	q := r.URL.Query()
+	cur, ok := periodOf(q.Get("period"))
+	if !ok {
+		cur = PeriodSemana
+	}
+	prev, ok := periodOf(q.Get("from"))
+	if !ok {
+		return ""
+	}
+	if cur != prev {
+		if periodRank(cur) > periodRank(prev) {
+			return "right"
+		}
+		return "left"
+	}
+	curA := q.Get("anchor")
+	prevA := q.Get("fromAnchor")
+	if curA != "" && prevA != "" && curA != prevA {
+		if curA > prevA {
+			return "right"
+		}
+		return "left"
+	}
+	return ""
+}
+
+// periodRank orders the periods from short to long.
+func periodRank(p Period) int {
+	switch p {
+	case PeriodDia:
+		return 0
+	case PeriodSemana:
+		return 1
+	case PeriodMes:
+		return 2
+	case PeriodAno:
+		return 3
+	}
+	return 0
+}
+
+// buildHistoricoView gathers everything the histórico page needs.
+func (u *UI) buildHistoricoView(r *http.Request) historicoView {
 	userID, _ := auth.UserIDFrom(r.Context())
 	lang := u.userLang(userID)
 	p := u.baseProps(r, userID, "/historico", "")
@@ -738,8 +820,7 @@ func (u *UI) handleHistorico(w http.ResponseWriter, r *http.Request) {
 	days := rowsInWindow(period, anchor, hist)
 	v.Empty = len(days) == 0
 	if v.Empty {
-		_ = HistoricoPage(v).Render(r.Context(), w)
-		return
+		return v
 	}
 
 	// KPIs del día: hoy para el donut de periodos largos y los récords del día.
@@ -821,8 +902,7 @@ func (u *UI) handleHistorico(w http.ResponseWriter, r *http.Request) {
 	}
 
 	v.Records = buildRecords(lang, period, days, dayKpis, u.Prices, pal)
-
-	_ = HistoricoPage(v).Render(r.Context(), w)
+	return v
 }
 
 // chartPeriodText is the {{period}} of historico.chartTitle.
