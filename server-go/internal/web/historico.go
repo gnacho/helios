@@ -710,6 +710,7 @@ type historicoView struct {
 
 	Selector periodSelectorView
 	SlideDir string // "left" | "right": dirección del slide al cambiar periodo
+	Rev      string // revisión (periodo+ancla): fuerza recrear el DOM parcheado
 	Kpis     []histKpiView
 
 	Day    histDayChartModel
@@ -811,6 +812,7 @@ func (u *UI) buildHistoricoView(r *http.Request) historicoView {
 		IsDay:       period == PeriodDia,
 		Selector:    buildPeriodSelector(lang, period, anchor, today),
 		BackToToday: histURL(period, initialAnchor(period, today)),
+		Rev:         string(period) + "-" + anchor.Format("2006-01-02"),
 	}
 
 	var hist []db.DailyRow

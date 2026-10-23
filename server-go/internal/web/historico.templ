@@ -18,7 +18,11 @@ templ HistoricoPage(v historicoView) {
 // historicoBody is the patchable region: /ui/historico replaces it in place
 // (no reload) and the slide direction comes from the previous period.
 templ historicoBody(v historicoView) {
-		<div id="hist-body" class={ "flex w-full flex-col gap-4 lg:gap-5", templ.KV("hist-in-right", v.SlideDir == "right"), templ.KV("hist-in-left", v.SlideDir == "left") }>
+	<div id="hist-body">
+		<!-- El id de revisión cambia con periodo/ancla: Datastar morphea el
+		     parche y, al no poder emparejar este nodo, lo recrea entero (así
+		     se reinician TODAS las animaciones: barras, areas, donut). -->
+		<div id={ "hist-rev-" + v.Rev } class={ "flex w-full flex-col gap-4 lg:gap-5", templ.KV("hist-in-right", v.SlideDir == "right"), templ.KV("hist-in-left", v.SlideDir == "left") }>
 			<header class="flex flex-wrap items-center gap-3">
 				<div class="mr-auto">
 					<h1 class="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{ T(v.Lang, "historico.title") }</h1>
@@ -59,6 +63,7 @@ templ historicoBody(v historicoView) {
 					}
 				</div>
 			}
+		</div>
 	</div>
 }
 
