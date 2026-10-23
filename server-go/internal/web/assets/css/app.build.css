@@ -1399,6 +1399,21 @@
   .whitespace-pre-line {
     white-space: pre-line;
   }
+  .text-\[var\(--c-bateria\)\] {
+    color: var(--c-bateria);
+  }
+  .text-\[var\(--c-consumo\)\] {
+    color: var(--c-consumo);
+  }
+  .text-\[var\(--c-red-compra\)\] {
+    color: var(--c-red-compra);
+  }
+  .text-\[var\(--c-red-vertido\)\] {
+    color: var(--c-red-vertido);
+  }
+  .text-\[var\(--c-solar\)\] {
+    color: var(--c-solar);
+  }
   .text-amber-500 {
     color: var(--color-amber-500);
   }
