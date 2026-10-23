@@ -271,8 +271,11 @@ func (d *DB) Audit(actor, userID, action string, detail any) error {
 }
 
 func (d *DB) AuditRange(limit, offset int) ([]AuditRow, error) {
+	// COALESCE: las filas con user_id vacío se guardan como NULL
+	// (nullIfEmpty) y Scan a string fallaría con "converting NULL to
+	// string" (bug latente: la API devolvía 500 con el audit lleno).
 	rows, err := d.db.Query(
-		`SELECT id, ts, actor, user_id, action, detail FROM audit_log ORDER BY ts DESC LIMIT ? OFFSET ?`,
+		`SELECT id, ts, actor, COALESCE(user_id, ''), action, detail FROM audit_log ORDER BY ts DESC LIMIT ? OFFSET ?`,
 		limit, offset,
 	)
 	if err != nil {
