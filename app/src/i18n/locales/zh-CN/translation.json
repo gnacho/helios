@@ -603,6 +603,9 @@
       "chargerN": "充电桩 {{n}}",
       "chargerAdd": "添加充电桩",
       "chargerRemove": "移除充电桩"
+    },
+    "role": {
+      "admin": "管理员"
     }
   },
   "footer": {

@@ -606,6 +606,9 @@
       "chargerN": "Cargador {{n}}",
       "chargerAdd": "Añadir cargador",
       "chargerRemove": "Quitar cargador"
+    },
+    "role": {
+      "admin": "Administrador"
     }
   },
   "footer": {
