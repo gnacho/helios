@@ -490,6 +490,10 @@ html.reduce-motion::view-transition-new(*) {
     transform-origin: center;
     animation: pie-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
   }
+  .anim-share {
+    transform-origin: left center;
+    animation: share-grow 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
   .gauge-sweep {
     stroke-dasharray: 1;
     animation: gauge-sweep 1s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
@@ -536,6 +540,10 @@ html.reduce-motion::view-transition-new(*) {
 @keyframes pie-in {
   from { transform: scale(0.55) rotate(-30deg); opacity: 0; }
   to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes share-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 @keyframes gauge-sweep {
   from { stroke-dashoffset: 1; }

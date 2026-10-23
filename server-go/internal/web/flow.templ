@@ -87,9 +87,10 @@ templ flowNodeBattery(d dashboardView, f flowModel) {
 	}
 	<g>
 		<circle cx={ r2(flowBatX) } cy={ r2(flowBatY) } r="33" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"></circle>
-		<foreignObject x={ r2(flowBatX - 28) } y={ r2(flowBatY - 28) } width="56" height="56">
-			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:56px;align-items:center;justify-content:center;">
-				@iconBattery("h-[22px] w-[22px]", soc, f.Live != nil && f.Live.BatteryPower > 0.05)
+		<foreignObject x={ r2(flowBatX - 28) } y={ r2(flowBatY - 30) } width="56" height="62">
+			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:62px;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+				@iconBattery("h-[20px] w-[20px]", soc, f.Live != nil && f.Live.BatteryPower > 0.05)
+				<span style={ "font: 700 11px Inter, sans-serif; font-variant-numeric: tabular-nums; color: var(--c-bateria); line-height: 1;" }>{ fmtInt(d.Lang, soc) }%</span>
 			</div>
 		</foreignObject>
 		<text x={ r2(flowBatX) } y={ r2(flowBatY + 50) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ T(d.Lang, "common.battery") }</text>
@@ -226,7 +227,7 @@ templ inverterCard(d dashboardView, inv invCardModel, index int) {
 				<span class="font-semibold" style={ "color: " + inv.Color }><span data-text={ "$inv." + inv.Key + ".shareText" }>{ inv.ShareText }</span> %</span>
 			</div>
 			<div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-surface-2">
-				<div data-style-width={ "$inv." + inv.Key + ".sharePct + '%'" } class="h-full rounded-full" style={ "width: " + fmtInt(d.Lang, inv.SharePct) + "%; background-color: " + inv.Color }></div>
+				<div data-style-width={ "$inv." + inv.Key + ".sharePct + '%'" } class="anim-share h-full rounded-full" style={ "width: " + fmtInt(d.Lang, inv.SharePct) + "%; background-color: " + inv.Color }></div>
 			</div>
 		</div>
 	</a>

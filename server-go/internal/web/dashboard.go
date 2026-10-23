@@ -319,7 +319,7 @@ func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
 				lastBuckets = len(m.Series.Points)
 				ik, in := chartInvKeys(m)
 				chart := BuildDayChart(lang, m.Series.Points, untilMin(m), ik, in)
-				if perr := gen.PatchElementTempl(dayChartSVG(chart), datastar.WithSelectorID("day-chart"), datastar.WithModeInner()); perr != nil {
+				if perr := gen.PatchElementTempl(dayChartSVGInner(chart), datastar.WithSelectorID("day-chart"), datastar.WithModeInner()); perr != nil {
 					return
 				}
 			}

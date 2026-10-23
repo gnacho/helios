@@ -85,6 +85,7 @@ func buildFlow(lang string, live *solar.LiveData) flowModel {
 		}
 	}
 	m.FvGridExport = exporting
+	m.GridImport = importing
 	solarSurplus := math.Max(0, live.Production-cons)
 	m.GridToBattery = math.Max(0, math.Min(charging-solarSurplus, importing))
 	m.FvToBattery = math.Max(0, charging-m.GridToBattery)
@@ -139,22 +140,28 @@ func sunMinutes(live *solar.LiveData) (sunrise, sunset int) {
 	if live == nil {
 		return sunrise, sunset
 	}
-	if v, ok := live.Sun.NextRising.(string); ok {
-		if mins, err := isoToMinutes(v); err == nil {
-			sunrise = mins
+	now := time.Now()
+	// HA entrega el próximo evento en UTC (y de noche ya es el de mañana):
+	// solo vale si, en hora local, cae hoy. Igual que useSunTimes del React.
+	pick := func(v any, fallback int) int {
+		s, ok := v.(string)
+		if !ok || s == "" {
+			return fallback
 		}
-	}
-	if v, ok := live.Sun.NextSetting.(string); ok {
-		if mins, err := isoToMinutes(v); err == nil {
-			sunset = mins
+		t, err := time.Parse(time.RFC3339Nano, s)
+		if err != nil {
+			return fallback
 		}
+		t = t.In(time.Local)
+		if t.Year() != now.Year() || t.YearDay() != now.YearDay() {
+			return fallback
+		}
+		return t.Hour()*60 + t.Minute()
 	}
-	if sunset <= sunrise {
-		sunrise, sunset = 6*60+50, 21*60+40
-	}
+	sunrise = pick(live.Sun.NextRising, sunrise)
+	sunset = pick(live.Sun.NextSetting, sunset)
 	return sunrise, sunset
 }
-
 // isoToMinutes parses an HA ISO timestamp into minutes-of-day (local time).
 func isoToMinutes(s string) (int, error) {
 	t, err := timeParseISO(s)

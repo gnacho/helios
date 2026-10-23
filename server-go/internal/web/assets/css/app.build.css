@@ -415,6 +415,9 @@
   .block {
     display: block;
   }
+  .contents {
+    display: contents;
+  }
   .flex {
     display: flex;
   }
@@ -513,6 +516,9 @@
   }
   .h-\[18px\] {
     height: 18px;
+  }
+  .h-\[20px\] {
+    height: 20px;
   }
   .h-\[21px\] {
     height: 21px;
@@ -630,6 +636,9 @@
   }
   .w-\[18px\] {
     width: 18px;
+  }
+  .w-\[20px\] {
+    width: 20px;
   }
   .w-\[21px\] {
     width: 21px;
@@ -2355,6 +2364,10 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
     transform-origin: center;
     animation: pie-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
   }
+  .anim-share {
+    transform-origin: left center;
+    animation: share-grow 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
   .gauge-sweep {
     stroke-dasharray: 1;
     animation: gauge-sweep 1s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
@@ -2407,6 +2420,14 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
   to {
     transform: scale(1) rotate(0deg);
     opacity: 1;
+  }
+}
+@keyframes share-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }
 @keyframes gauge-sweep {

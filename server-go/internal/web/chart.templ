@@ -1,5 +1,7 @@
 package web
 
+import "strings"
+
 // DayChart as server-side SVG (port of DayChart.tsx). Series visibility is
 // toggled client-side with Datastar signals ($chart.total, ...); colors use
 // CSS variables so the chart follows the theme.
@@ -10,29 +12,52 @@ templ dayChartSection(d dashboardView, c DayChartModel) {
 				<h2 class="text-[15px] font-semibold text-app">{ T(d.Lang, "chart.title") }</h2>
 				<p class="text-xs text-faint">{ T(d.Lang, "chart.subtitle") }</p>
 			</div>
-			@chartChip(`$chart.total`, T(d.Lang, "chart.total"), "var(--c-solar)")
-			for _, inv := range c.InvPaths {
-				@chartChip("$chart."+inv.Key, inv.Name, inv.Var)
+			@chartChip("total", T(d.Lang, "chart.total"), "var(--c-solar)")
+			for _, inv := range d.Invs {
+				@chartChip(inv.Key, chipLabel(inv.Name), inv.Color)
 			}
-			@chartChip(`$chart.consumo`, T(d.Lang, "chart.consumption"), "var(--c-consumo)")
+			@chartChip("consumo", T(d.Lang, "chart.consumption"), "var(--c-consumo)")
 		</div>
 		@dayChartSVG(c)
 	</section>
 }
 
-templ chartChip(showExpr string, label string, colorVar string) {
+// chartChip toggles one series: flips its signal and asks the server for a
+// chart fragment with the new visible set (server-rendered SVG has no client
+// filtering). key is the signal name: total | consumo | <inverter key>.
+// chartChip toggles one series with the existing data-show bindings (no
+// server round-trip). aria-pressed is kept in sync by the click handler.
+templ chartChip(key, label, colorVar string) {
+	{{ expr := "$chart." + key }}
 	<button
-		data-on:click={ showExpr + " = !" + showExpr[1:] }
-		class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app px-2.5 text-xs font-medium text-app"
+		data-on:click={ expr + " = !" + expr + "; evt.currentTarget.setAttribute('aria-pressed', " + expr + " ? 'true' : 'false')" }
+		aria-pressed="true"
+		class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app px-2.5 text-xs font-medium text-app transition-opacity hover:opacity-90"
 	>
-		<span data-style-opacity={ showExpr + " ? 1 : 0.35" } class="h-2 w-2 rounded-full" style={ "background-color: " + colorVar }></span>
+		<span data-style={ "{ opacity: " + expr + " ? 1 : 0.3 }" } class="h-2 w-2 rounded-full" style={ "background-color: " + colorVar }></span>
 		{ label }
 	</button>
 }
 
+// chipLabel drops the " · 4,4 kWp" suffix of the inverter card name.
+func chipLabel(name string) string {
+	if i := strings.Index(name, " · "); i > 0 {
+		return name[:i]
+	}
+	return name
+}
+
+
 templ dayChartSVG(c DayChartModel) {
 	<div id="day-chart" class="overflow-x-auto px-1 pb-1">
-		<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
+		@dayChartSVGInner(c)
+	</div>
+}
+
+// dayChartSVGInner renders only the SVG: the SSE and chip patches replace the
+// contents of #day-chart (ModeInner), so the wrapper must not come along.
+templ dayChartSVGInner(c DayChartModel) {
+	<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 			<defs>
 				<linearGradient id="grad-prod" x1="0" y1="0" x2="0" y2="1">
 					<stop offset="0%" stop-color="var(--c-solar)" stop-opacity="0.25"></stop>
@@ -78,6 +103,5 @@ templ dayChartSVG(c DayChartModel) {
 			}
 			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-now)" stroke-width="2"></line>
 			<text x={ r2(c.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
-		</svg>
-	</div>
+	</svg>
 }

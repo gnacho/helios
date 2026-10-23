@@ -95,7 +95,7 @@ func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []s
 	g := geomDashboard
 	m := DayChartModel{Lang: lang, Now: roundStep(nowMin), W: g.W, H: g.H}
 
-	// yMax replica: max de producción/consumo/inversores visibles +0.3, ceil, min 1.
+	// yMax replica: max de producción/consumo/inversores +0.3, ceil, min 1.
 	maxV := 0.5
 	for _, p := range points {
 		if p.Production > maxV {
