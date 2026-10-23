@@ -16,7 +16,8 @@ import (
 // donut/bar). Tabs are plain links (?inv=key|compare); the mobile swipe
 // carousel and the interactive toggles are not ported.
 
-// dailyHistory loads the whole daily table (same window as the API default).
+// dailyHistory loads the whole daily table (same window as the API default),
+// paginating past the 1000-row LIMIT so recent days are never truncated.
 func (u *UI) dailyHistory() []db.DailyRow {
 	if u.DB == nil {
 		return nil
@@ -25,9 +26,17 @@ func (u *UI) dailyHistory() []db.DailyRow {
 	if err != nil || from == "" {
 		return nil
 	}
-	rows, err := u.DB.DailyRange(from, solar.TodayStr(), 1000, 0)
-	if err != nil {
-		return nil
+	to := solar.TodayStr()
+	var rows []db.DailyRow
+	for offset := 0; ; offset += 1000 {
+		page, err := u.DB.DailyRange(from, to, 1000, offset)
+		if err != nil {
+			return rows
+		}
+		rows = append(rows, page...)
+		if len(page) < 1000 {
+			break
+		}
 	}
 	return rows
 }

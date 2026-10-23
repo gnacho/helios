@@ -2,6 +2,7 @@ package web
 
 import (
 	"math"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -183,6 +184,45 @@ func TestBestIdx(t *testing.T) {
 	}
 	if got := bestIdx([]float64{7}); got != -1 {
 		t.Fatalf("single = %d", got)
+	}
+}
+
+// TestDailyHistoryPaginates: with more than 1000 daily rows the window must
+// still include the most recent days (LIMIT would silently truncate them).
+func TestDailyHistoryPaginates(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "hist.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	// La ventana acaba en solar.TodayStr(): ancla el extremo nuevo a HOY.
+	today, err := time.ParseInLocation("2006-01-02", solar.TodayStr(), time.Local)
+	if err != nil {
+		t.Fatalf("today: %v", err)
+	}
+	base := today
+	const n = 2500
+	for i := 0; i < n; i++ {
+		date := base.AddDate(0, 0, -i).Format("2006-01-02")
+		if err := d.UpsertDaily(db.DailyRow{Date: date, ProductionKwh: f64Ptr(float64(i))}); err != nil {
+			t.Fatalf("upsert: %v", err)
+		}
+	}
+	u := &UI{DB: d}
+	rows := u.dailyHistory()
+	if len(rows) != n {
+		t.Fatalf("filas = %d (esperado %d)", len(rows), n)
+	}
+	last := rows[len(rows)-1]
+	wantLast := base.Format("2006-01-02")
+	if last.Date != wantLast {
+		t.Fatalf("última fila = %s (esperado %s)", last.Date, wantLast)
+	}
+	first := rows[0]
+	wantFirst := base.AddDate(0, 0, -(n - 1)).Format("2006-01-02")
+	if first.Date != wantFirst {
+		t.Fatalf("primera fila = %s (esperado %s)", first.Date, wantFirst)
 	}
 }
 
