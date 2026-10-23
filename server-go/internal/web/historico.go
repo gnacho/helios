@@ -138,7 +138,9 @@ func histBarY(v, max float64) float64 {
 }
 
 func histURL(p Period, anchor time.Time) string {
-	return "/historico?period=" + string(p) + "&anchor=" + anchor.Format("2006-01-02")
+	// #grafico: al cambiar de periodo la página no salta arriba, aterriza en
+	// la tarjeta que cambia (el navegador hace scroll al ancla).
+	return "/historico?period=" + string(p) + "&anchor=" + anchor.Format("2006-01-02") + "#grafico"
 }
 
 // buildHistoryBars ports the HistoryChart branches for semana/mes/ano.

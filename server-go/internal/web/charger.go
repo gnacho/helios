@@ -707,5 +707,6 @@ func histURLChg(p Period, anchor time.Time, tabKey string) string {
 	if tabKey != "" {
 		u += "&tab=" + url.QueryEscape(tabKey)
 	}
-	return u
+	// #historial-carga: mantener la vista en la tarjeta del histórico.
+	return u + "#historial-carga"
 }

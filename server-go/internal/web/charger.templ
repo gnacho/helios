@@ -82,7 +82,7 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 			</div>
 			@chgCurveSVG(s.Curve)
 		</section>
-		<section class="helios-card col-span-12 shadow-card dark:shadow-card-dark lg:col-span-8" aria-label={ T(v.Lang, "cargador.historyAria") }>
+		<section id="historial-carga" class="helios-card col-span-12 scroll-mt-24 shadow-card dark:shadow-card-dark lg:col-span-8" aria-label={ T(v.Lang, "cargador.historyAria") }>
 			<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
 				<div class="mr-auto">
 					<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "cargador.historyTitle") }</h2>

@@ -775,6 +775,9 @@
   .scroll-mt-20 {
     scroll-margin-top: calc(var(--spacing) * 20);
   }
+  .scroll-mt-24 {
+    scroll-margin-top: calc(var(--spacing) * 24);
+  }
   .grid-cols-1 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }

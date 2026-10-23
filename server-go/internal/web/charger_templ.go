@@ -400,14 +400,14 @@ func chgSingle(v chargerView, s *chgSingleView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</section><section class=\"helios-card col-span-12 shadow-card dark:shadow-card-dark lg:col-span-8\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</section><section id=\"historial-carga\" class=\"helios-card col-span-12 scroll-mt-24 shadow-card dark:shadow-card-dark lg:col-span-8\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(T(v.Lang, "cargador.historyAria"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 85, Col: 137}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 85, Col: 171}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
