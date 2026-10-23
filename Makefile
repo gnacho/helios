@@ -26,6 +26,10 @@ i18n-sync:
 
 web-assets: web-templ web-css
 
+# Binario con artefactos web SIEMPRE al día (evita CSS/templ stale embebidos).
+build: web-assets
+	cd server-go && go build -o $(or $(BIN),/tmp/opencode/helios-go-templ) ./cmd/server
+
 # Verificación de CI: los artefactos generados deben estar al día en git.
 web-check: web-assets i18n-sync
 	@git diff --exit-code -- $(WEB) app/src/i18n > /dev/null || \

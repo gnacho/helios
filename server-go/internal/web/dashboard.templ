@@ -44,9 +44,11 @@ templ DashboardPage(d dashboardView) {
 		>
 			@livePowerStrip(d)
 			<div class="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5" aria-label={ T(d.Lang, "dashboard.kpisLabel") }>
-				@kpiCard(d, T(d.Lang, "dashboard.productionToday"), d.Palette.Solar, false, "", true,
+				@kpiCard(d, T(d.Lang, "dashboard.productionToday"), d.Palette.Solar, "", true,
+					iconSolarPanel("h-[17px] w-[17px]"),
 					`$kpis.productionText`, d.KProduction, "kWh")
-				@kpiCard(d, T(d.Lang, "dashboard.consumptionToday"), d.Palette.Consumo, false, "", false,
+				@kpiCard(d, T(d.Lang, "dashboard.consumptionToday"), d.Palette.Consumo, "", false,
+					iconHouse("h-[17px] w-[17px]"),
 					`$kpis.consumptionText`, d.KConsumption, "kWh")
 				@kpiBattery(d)
 				@kpiAutoconsumo(d)
@@ -145,14 +147,16 @@ func pickColor(iconColor, fallback string) string {
 }
 
 templ kpiBattery(d dashboardView) {
-	@kpiCard(d, T(d.Lang, "common.battery"), d.Palette.Bateria, false, "/bateria", false,
+	@kpiCard(d, T(d.Lang, "common.battery"), d.Palette.Bateria, "/bateria", false,
+		iconBattery("h-[17px] w-[17px]", d.Soc, d.Charging),
 		`$kpis.batteryKwhText`, d.KBatteryKwh, "kWh") {
 		<p data-text="$kpis.socSubText" class="mt-1 text-xs font-medium text-muted">{ d.KSocSub }</p>
 	}
 }
 
 templ kpiAutoconsumo(d dashboardView) {
-	@kpiCard(d, T(d.Lang, "common.autoconsumo"), d.Palette.Bateria, false, "", false,
+	@kpiCard(d, T(d.Lang, "common.autoconsumo"), d.Palette.Bateria, "", false,
+		iconLeaf("h-[17px] w-[17px]"),
 		`$kpis.autoconsumoText`, d.KAutoconsumo, "%") {
 		<div class="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-hover">
 			<div
@@ -165,7 +169,8 @@ templ kpiAutoconsumo(d dashboardView) {
 }
 
 templ kpiGrid(d dashboardView) {
-	@kpiCard(d, T(d.Lang, "dashboard.gridBalance"), d.Palette.RedVertido, false, "/historico", false,
+	@kpiCard(d, T(d.Lang, "dashboard.gridBalance"), d.Palette.RedVertido, "/historico", false,
+		iconUtilityPole("h-[17px] w-[17px]"),
 		`$kpis.gridBalanceText`, d.KGridBalance, "kWh") {
 		<div class="mt-1 flex flex-col gap-0.5 text-[11px] font-medium">
 			<span class="inline-flex items-center gap-1" style={ "color: " + d.Palette.RedVertido }>
@@ -180,21 +185,27 @@ templ kpiGrid(d dashboardView) {
 
 // kpiCard ports the KpiCard frame: icon chip + label + value + optional extra
 // children. onClick in React becomes a link (href) here.
-templ kpiCard(d dashboardView, label string, accent string, live bool, href string, liveDot bool, valueSignal string, valueInit string, unit string) {
+templ kpiCard(d dashboardView, label string, accent string, href string, liveDot bool, icon templ.Component, valueSignal string, valueInit string, unit string) {
 	if href != "" {
 		<a href={ templ.URL(href) } class="helios-card flex h-full w-[42%] shrink-0 snap-center cursor-pointer flex-col gap-2 p-3 text-left shadow-card transition-transform hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] dark:shadow-card-dark sm:p-4 lg:w-auto">
-			@kpiInner(d, label, accent, live, valueSignal, valueInit, unit) { children... }
+			@kpiInner(d, label, accent, liveDot, icon, valueSignal, valueInit, unit) {
+				{ children... }
+			}
 		</a>
 	} else {
 		<div class="helios-card flex h-full w-[42%] shrink-0 snap-center flex-col gap-2 p-3 text-left shadow-card dark:shadow-card-dark sm:p-4 lg:w-auto">
-			@kpiInner(d, label, accent, live, valueSignal, valueInit, unit) { children... }
+			@kpiInner(d, label, accent, liveDot, icon, valueSignal, valueInit, unit) {
+				{ children... }
+			}
 		</div>
 	}
 }
 
-templ kpiInner(d dashboardView, label string, accent string, live bool, valueSignal string, valueInit string, unit string) {
+templ kpiInner(d dashboardView, label string, accent string, live bool, icon templ.Component, valueSignal string, valueInit string, unit string) {
 	<div class="flex items-center justify-between">
-		<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + accent + "1F; color: " + accent }></span>
+		<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + accent + "1F; color: " + accent }>
+			@icon
+		</span>
 		if live {
 			<span class="relative flex h-2 w-2">
 				<span class="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60"></span>
