@@ -173,7 +173,7 @@ templ invKpiCard(v inversoresView, k invKpiView, idx int) {
 		<div>
 			<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ k.Label }</p>
 			<p class="mt-0.5 font-display text-[22px] font-semibold leading-none tracking-[-0.01em] text-app" aria-live="off">
-				{ k.ValueText }
+				<span data-countup>{ k.ValueText }</span>
 				<span class="ml-1 text-[0.6em] font-medium text-faint">{ k.Unit }</span>
 			</p>
 			if k.HasDelta {
