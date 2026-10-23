@@ -363,9 +363,13 @@ func buildInstallCards(lang string, t install.Topology) []invCardView {
 		totalKwp += inv.Kwp
 		totalPanels += panels
 		c := invCardView{
-			Name:    inv.Name,
+			// Paridad con el React: name = model || name.
+			Name:    inv.Model,
 			KwpText: formatNumber(lang, inv.Kwp, 1),
 			Color:   inverterColor(inv.Key),
+		}
+		if c.Name == "" {
+			c.Name = inv.Name
 		}
 		if panels > 0 {
 			c.HasPanels = true
@@ -730,6 +734,9 @@ func (u *UI) handleAjustesTopology(w http.ResponseWriter, r *http.Request) {
 		EnergyIDs:      parseCsvForm(f.Get("cons.energyIds")),
 		RespaldoID:     spOrNil(f.Get("cons.respaldoId")),
 		NoRespaldadaID: spOrNil(f.Get("cons.noRespaldadaId")),
+		// El form no edita PowerUnit: preserva el del perfil actual (el
+		// editor React lo envía dentro de su draft completo).
+		PowerUnit: u.Install.Get().Consumption.PowerUnit,
 	}
 	input.Energy = &install.EnergyConfig{
 		GridImportID:   f.Get("energy.gridImportId"),
