@@ -391,6 +391,9 @@ func (u *UI) handleBateria(w http.ResponseWriter, r *http.Request) {
 
 	pal := newPalette(p.Theme == "dark")
 	m := u.buildDashboard(pal)
+	if k, ok := u.exactDayKpis(m); ok {
+		m.Kpis = k
+	}
 	hist := u.dailyHistory()
 	week := lastN(hist, 7)
 

@@ -194,6 +194,11 @@ type ajustesView struct {
 	UpdatePct     int
 	UpdateSteps   []updateStepView
 
+	// Precios (energía).
+	PriceImport string
+	PriceExport string
+	Co2Factor   string
+
 	// Acerca de.
 	GoVersion   string
 	UptimeText  string
@@ -633,6 +638,10 @@ func (u *UI) buildAjustes(r *http.Request, userID string) ajustesView {
 
 	// Acerca de: versión + runtime (mismo contenido que GET /api/system/info,
 	// computado en proceso; el endpoint JSON no cambia).
+	// Precios en formato decimal castellano (el parse acepta coma o punto).
+	v.PriceImport = strings.Replace(strconv.FormatFloat(u.Prices.PriceImport, 'f', -1, 64), ".", ",", 1)
+	v.PriceExport = strings.Replace(strconv.FormatFloat(u.Prices.PriceExport, 'f', -1, 64), ".", ",", 1)
+	v.Co2Factor = strings.Replace(strconv.FormatFloat(u.Prices.Co2PerKwh, 'f', -1, 64), ".", ",", 1)
 	v.RepoVersion = version.Version
 	v.GoVersion = strings.Split(strings.TrimPrefix(runtime.Version(), "go"), "-")[0]
 	up := int(time.Since(processStart).Seconds())
@@ -1158,4 +1167,50 @@ var accentOptions = []accentOption{
 	{"verde", "#22C55E", "ajustes.accent.verde"},
 	{"azul", "#3B82F6", "ajustes.accent.azul"},
 	{"violeta", "#8B5CF6", "ajustes.accent.violeta"},
+}
+
+// handleAjustesPrices stores the energy prices (KV) and applies them to the
+// server-side savings/CO2 estimates. The React app kept them in localStorage;
+// server-rendered there is no per-device settings store, so they live with the
+// installation (read back on startup).
+func (u *UI) handleAjustesPrices(w http.ResponseWriter, r *http.Request) {
+	username, userID, isAdmin := u.currentUserActor(r)
+	if !isAdmin {
+		ajustesRedirectFlag(w, r, "err", "forbidden")
+		return
+	}
+	parse := func(name string) (float64, bool) {
+		raw := strings.TrimSpace(strings.ReplaceAll(r.PostFormValue(name), ",", "."))
+		v, err := strconv.ParseFloat(raw, 64)
+		if err != nil || v < 0 || v > 10 {
+			return 0, false
+		}
+		return v, true
+	}
+	imp, ok1 := parse("price_import")
+	exp, ok2 := parse("price_export")
+	co2, ok3 := parse("co2_factor")
+	if !ok1 || !ok2 || !ok3 {
+		ajustesRedirectFlag(w, r, "err", "prices")
+		return
+	}
+	kv := map[string]float64{
+		"priceImportEur": imp,
+		"priceExportEur": exp,
+		"co2Factor":      co2,
+	}
+	if u.DB != nil {
+		for k, val := range kv {
+			u.DB.KVSet(k, strconv.FormatFloat(val, 'f', -1, 64))
+		}
+		u.DB.Audit(username, userID, "prices.update", map[string]string{
+			"import": strconv.FormatFloat(imp, 'f', -1, 64),
+			"export": strconv.FormatFloat(exp, 'f', -1, 64),
+			"co2":    strconv.FormatFloat(co2, 'f', -1, 64),
+		})
+	}
+	u.Prices.PriceImport = imp
+	u.Prices.PriceExport = exp
+	u.Prices.Co2PerKwh = co2
+	ajustesRedirectFlag(w, r, "saved", "prices")
 }

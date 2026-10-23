@@ -1,6 +1,9 @@
 package web
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 // head shared by every page. Fonts and tokens mirror app/index.html so the
 // templ UI renders with the same type and theme system as the React SPA.
@@ -330,7 +333,28 @@ func titleKeyFor(path string) string {
 
 // footerLine is the versioned footer (desktop only, inside the shell).
 templ footerLine(p pageProps) {
-	<p class="mt-8 pb-6 text-center text-xs text-faint">{ T(p.Lang, "footer.line1", map[string]string{"version": p.Version}) }</p>
+	<div class="mt-8 flex flex-col items-center justify-between gap-2 border-t border-app pt-4 pb-6 text-center text-xs text-faint sm:flex-row sm:text-left">
+		<p>{ T(p.Lang, "footer.line1", map[string]string{"version": p.Version}) }</p>
+		if line := installLine(p); line != "" {
+			<p>{ line }</p>
+		}
+	</div>
+}
+
+// installLine is Footer.buildInstallLine: "N inversores · Batería X kWh".
+func installLine(p pageProps) string {
+	if len(p.InvCount) == 0 {
+		return ""
+	}
+	key := "footer.inverterMany"
+	if len(p.InvCount) == 1 {
+		key = "footer.inverterOne"
+	}
+	inv := T(p.Lang, key, map[string]string{"n": strconv.Itoa(len(p.InvCount))})
+	if p.BatKwh > 0 {
+		return inv + " · " + T(p.Lang, "footer.battery", map[string]string{"kwh": formatNumber(p.Lang, p.BatKwh, 1)})
+	}
+	return inv
 }
 
 // themeToggle cycles auto -> light -> dark -> auto (server-side cookie).

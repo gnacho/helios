@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"helios-server/internal/alerts"
@@ -106,6 +107,24 @@ func main() {
 		PriceImport: cfg.PriceImport,
 		PriceExport: cfg.PriceExport,
 		Co2PerKwh:   cfg.Co2PerKwh,
+	}
+	// Los precios editados en Ajustes viven en KV y ganan sobre el .env.
+	if database != nil {
+		if v, err := database.KVGet("priceImportEur"); err == nil && v != "" {
+			if f, perr := strconv.ParseFloat(v, 64); perr == nil && f > 0 {
+				prices.PriceImport = f
+			}
+		}
+		if v, err := database.KVGet("priceExportEur"); err == nil && v != "" {
+			if f, perr := strconv.ParseFloat(v, 64); perr == nil && f >= 0 {
+				prices.PriceExport = f
+			}
+		}
+		if v, err := database.KVGet("co2Factor"); err == nil && v != "" {
+			if f, perr := strconv.ParseFloat(v, 64); perr == nil && f > 0 {
+				prices.Co2PerKwh = f
+			}
+		}
 	}
 
 	var haReader solar.HAReader

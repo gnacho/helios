@@ -69,7 +69,7 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 						if st.Signal != "" {
 							if st.AnimID != "" {
 							<span class="font-semibold tabular-nums text-app">
-								@animNumLiveS(st.AnimID, st.Num, 1, v.Lang, st.Signal, st.Suffix)
+								@animNumLiveS(st.AnimID, st.Num, st.Dec, v.Lang, st.Signal, st.Suffix)
 							</span>
 						} else {
 							<span class="font-semibold tabular-nums text-app" data-text={ st.Signal }>{ st.Value }</span>

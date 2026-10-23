@@ -86,6 +86,7 @@ type chgChip struct {
 type chgLiveStat struct {
 	AnimID  string  // count-up tween id ("" = plain data-text)
 	Num     float64 // initial numeric value
+	Dec     int     // decimals kept while counting (matches the formatter)
 	Suffix  string  // constant unit text after the number
 	IconKey string  // zap | clock | gauge
 	Label   string
@@ -599,11 +600,11 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	k := charger.Key
 	sv.Stats = []chgLiveStat{
 		{IconKey: "zap", Label: T(lang, "cargador.currentPower"), Value: powerText, Signal: "$chg." + k + ".powerKw",
-			AnimID: "chg" + k + "Pow", Num: animPow, Suffix: " kW"},
+			AnimID: "chg" + k + "Pow", Num: animPow, Dec: 2, Suffix: " kW"},
 		{IconKey: "clock", Label: T(lang, "cargador.session"), Value: sessionText, Signal: "$chg." + k + ".sessionKwh",
-			AnimID: "chg" + k + "Ses", Num: animSes, Suffix: " kWh"},
+			AnimID: "chg" + k + "Ses", Num: animSes, Dec: 1, Suffix: " kWh"},
 		{IconKey: "gauge", Label: T(lang, "cargador.lifetime"), Value: totalText, Signal: "$chg." + k + ".totalKwh",
-			AnimID: "chg" + k + "Tot", Num: animTot, Suffix: " kWh"},
+			AnimID: "chg" + k + "Tot", Num: animTot, Dec: 1, Suffix: " kWh"},
 	}
 
 	// Curva del día (servicio en proceso, con caché propia).

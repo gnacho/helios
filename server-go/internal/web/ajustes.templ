@@ -31,6 +31,7 @@ templ AjustesPage(v ajustesView) {
 					if v.IsAdmin {
 						@ajustesAdmin(v)
 					}
+					@ajustesPrices(v)
 					@ajustesAbout(v)
 				</div>
 			</div>
@@ -96,6 +97,8 @@ func ajustesSavedText(lang, flag string) string {
 		return T(lang, "admin.users.createdToast", map[string]string{"username": ""})
 	case "pushpref":
 		return T(lang, "ajustes.profile.saved")
+	case "prices":
+		return T(lang, "ajustes.profile.saved")
 	}
 	return flag
 }
@@ -108,7 +111,7 @@ func ajustesErrText(lang, flag string) string {
 		return T(lang, "ajustes.topology.saveError")
 	case "profile":
 		return T(lang, "ajustes.profile.profileError")
-	case "users":
+	case "users", "prices":
 		return T(lang, "common.error")
 	}
 	return T(lang, "common.error")
@@ -1069,6 +1072,37 @@ templ ajustesAudit(v ajustesView) {
 // ── 7. Acerca de ────────────────────────────────────────────────────────────
 
 // System info is computed in process (same content as GET /api/system/info;
+// Precios de energía: el React los guardaba en localStorage (settings del
+// dispositivo). Server-rendered viven con la instalación (KV) y alimentan las
+// estimaciones de ahorro y CO2 del histórico.
+templ ajustesPrices(v ajustesView) {
+	@ajustesSection("precios", T(v.Lang, "ajustes.sections.precios")) {
+		<form method="post" action="/ajustes/prices" class="flex flex-col gap-4">
+			<div class="grid gap-4 sm:grid-cols-3">
+				@ajPriceField(v, "price_import", T(v.Lang, "ajustes.prices.buy"), v.PriceImport, "€/kWh")
+				@ajPriceField(v, "price_export", T(v.Lang, "ajustes.prices.sell"), v.PriceExport, "€/kWh")
+				@ajPriceField(v, "co2_factor", T(v.Lang, "ajustes.prices.co2"), v.Co2Factor, "kg/kWh")
+			</div>
+			<div class="flex flex-wrap items-center gap-3">
+				<button type="submit" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+					{ T(v.Lang, "common.save") }
+				</button>
+				<p class="text-xs text-faint">{ T(v.Lang, "ajustes.prices.note") }</p>
+			</div>
+		</form>
+	}
+}
+
+templ ajPriceField(v ajustesView, name, label, value, suffix string) {
+	<div class="flex flex-col gap-1.5">
+		<label for={ "price-" + name } class="text-xs font-medium text-muted">{ label }</label>
+		<div class="flex items-center gap-2">
+			<input id={ "price-" + name } type="text" inputmode="decimal" name={ name } value={ value } class="h-9 w-full rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+			<span class="shrink-0 text-xs text-faint">{ suffix }</span>
+		</div>
+	</div>
+}
+
 // the endpoint itself is untouched and keeps its contract test).
 templ ajustesAbout(v ajustesView) {
 	@ajustesSection("acerca", T(v.Lang, "ajustes.sections.acerca")) {

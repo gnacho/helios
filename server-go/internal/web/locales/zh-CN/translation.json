@@ -611,7 +611,10 @@
   },
   "footer": {
     "line1": "Helios · 太阳能监控 {{version}} - 通过 Home Assistant 本地获取数据",
-    "line2": "本地安装 · 通过 Home Assistant 获取数据"
+    "line2": "本地安装 · 通过 Home Assistant 获取数据",
+    "battery": "电池 {{kwh}} kWh",
+    "inverterOne": "1 台逆变器",
+    "inverterMany": "{{n}} 台逆变器"
   },
   "stub": {
     "title": "页面未找到",

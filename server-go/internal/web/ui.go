@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -62,6 +63,7 @@ type pageProps struct {
 	ChargerOn bool
 	DateText  string
 	InvCount  []string
+	BatKwh    float64 // installed battery capacity (0 = no battery)
 
 	// Per-device appearance prefs (cookies, like the React localStorage).
 	AccentName   string // naranja|verde|azul|violeta
@@ -138,6 +140,7 @@ func (u *UI) Mount(r chi.Router) {
 		// Ajustes form wrappers (PRG): llaman a los mismos servicios en
 		// proceso que los endpoints JSON (ver ajustes.go).
 		r.Post("/ajustes/topology", u.handleAjustesTopology)
+		r.Post("/ajustes/prices", u.handleAjustesPrices)
 		r.Post("/ajustes/extensions", u.handleAjustesExtensions)
 		r.Post("/ajustes/push-pref", u.handleAjustesPushPref)
 		r.Post("/ajustes/profile", u.handleAjustesProfile)
@@ -166,6 +169,9 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	pal := newPalette(p.Theme == "dark")
 	m := u.buildDashboard(pal)
+	if k, ok := u.exactDayKpis(m); ok {
+		m.Kpis = k
+	}
 
 	signals, err := json.Marshal(dashboardSignals(lang, m))
 	if err != nil {
@@ -452,6 +458,56 @@ func rootStyle(p pageProps) string {
 	return b.String()
 }
 
+// dayKpisCache keeps the exact day counters (same source as the JSON API) for
+// a minute so page renders do not hammer the HA statistics API.
+var dayKpisCache struct {
+	mu   sync.Mutex
+	at   time.Time
+	date string
+	k    DayKpis
+	ok   bool
+}
+
+// exactDayKpis prefers the day KPI counters (daily row / HA statistics), which
+// is exactly what the React app gets from /api/solar/kpis, so both UIs show
+// the same numbers. Falls back to the integrated series without HA.
+func (u *UI) exactDayKpis(m dashboardModel) (DayKpis, bool) {
+	if u.Solar == nil || u.HA == nil {
+		return DayKpis{}, false
+	}
+	date := solar.TodayStr()
+	dayKpisCache.mu.Lock()
+	if dayKpisCache.at.After(time.Now().Add(-time.Minute)) && dayKpisCache.date == date && dayKpisCache.ok {
+		k := dayKpisCache.k
+		dayKpisCache.mu.Unlock()
+		k.Soc = m.Kpis.Soc
+		return k, true
+	}
+	dayKpisCache.mu.Unlock()
+
+	sk, err := u.Solar.GetKpis(u.HA, date, u.Prices)
+	if err != nil {
+		return DayKpis{}, false
+	}
+	k := DayKpis{
+		ProductionKwh:        sk.ProductionKwh,
+		ConsumptionKwh:       sk.ConsumptionKwh,
+		GridImportKwh:        sk.GridImportKwh,
+		GridExportKwh:        sk.GridExportKwh,
+		BatteryChargedKwh:    sk.BatteryChargedKwh,
+		BatteryDischargedKwh: sk.BatteryDischargedKwh,
+		Soc:                  m.Kpis.Soc,
+		AutoconsumoPct:       sk.AutoconsumoPct,
+		AutosuficienciaPct:   sk.AutosuficienciaPct,
+		PeakProductionKw:     sk.PeakProductionKw,
+		PeakAt:               sk.PeakAt,
+	}
+	dayKpisCache.mu.Lock()
+	dayKpisCache.at, dayKpisCache.date, dayKpisCache.k, dayKpisCache.ok = time.Now(), date, k, true
+	dayKpisCache.mu.Unlock()
+	return k, true
+}
+
 // baseProps builds the common props: lang from the user profile, theme from
 // the cookie, sidebar state from its cookie, user chip data and the date.
 func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
@@ -474,8 +530,12 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 		}
 	}
 	if u.Install != nil {
-		for _, inv := range u.Install.Get().Inverters {
+		inst := u.Install.Get()
+		for _, inv := range inst.Inverters {
 			p.InvCount = append(p.InvCount, inv.Key)
+		}
+		if inst.Battery.Enabled {
+			p.BatKwh = inst.Battery.CapacityKwh
 		}
 	}
 	if u.ExtStore != nil {

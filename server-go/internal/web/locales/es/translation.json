@@ -614,7 +614,10 @@
   },
   "footer": {
     "line1": "Helios · Monitor Solar {{version}} - datos locales vía Home Assistant",
-    "line2": "Instalación local · datos vía Home Assistant"
+    "line2": "Instalación local · datos vía Home Assistant",
+    "battery": "Batería {{kwh}} kWh",
+    "inverterOne": "1 inversor",
+    "inverterMany": "{{n}} inversores"
   },
   "stub": {
     "title": "No encontrado",

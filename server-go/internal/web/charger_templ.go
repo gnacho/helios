@@ -328,7 +328,7 @@ func chgSingle(v chargerView, s *chgSingleView) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = animNumLiveS(st.AnimID, st.Num, 1, v.Lang, st.Signal, st.Suffix).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = animNumLiveS(st.AnimID, st.Num, st.Dec, v.Lang, st.Signal, st.Suffix).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
