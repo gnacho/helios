@@ -233,6 +233,16 @@ func nowPct(kwp, nowKw float64) float64 {
 	return pct
 }
 
+// streamSignals composes the full signal tree of /ui/stream: the dashboard
+// subtree plus the charger subtree (ignored by pages without bindings).
+func (u *UI) streamSignals(lang string, m dashboardModel) map[string]any {
+	signals := dashboardSignals(lang, m)
+	if chg := u.chargerSignals(lang); chg != nil {
+		signals["chg"] = chg
+	}
+	return signals
+}
+
 // handleStream serves GET /ui/stream: a Datastar SSE stream that patches the
 // dashboard signals on every hub broadcast (throttled to 1s in the hub).
 func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
@@ -251,7 +261,7 @@ func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
 	gen := datastar.NewSSE(w, r)
 
 	// Estado inicial: señales completas antes del primer tick del hub.
-	if err := gen.MarshalAndPatchSignals(dashboardSignals(lang, u.buildDashboard(newPalette(themeFrom(r) == "dark")))); err != nil {
+	if err := gen.MarshalAndPatchSignals(u.streamSignals(lang, u.buildDashboard(newPalette(themeFrom(r) == "dark")))); err != nil {
 		return
 	}
 
@@ -273,7 +283,7 @@ func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
 			m.Live = live
 			m.Online = u.HA.IsConnected()
 			m.Kpis = IntegrateSeries(m.Series.Points, untilMin(m), liveSoc(live))
-			if uerr := gen.MarshalAndPatchSignals(dashboardSignals(lang, m)); uerr != nil {
+			if uerr := gen.MarshalAndPatchSignals(u.streamSignals(lang, m)); uerr != nil {
 				return
 			}
 			// Nuevo bucket de 5 min → refresca la curva (fragmento SVG).

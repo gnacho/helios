@@ -75,3 +75,15 @@ func T(lang, key string, repl ...map[string]string) string {
 	}
 	return s
 }
+
+// TP is T with i18next-style plural suffix selection: key_one when the
+// catalog has it and count == 1 (zh-CN has no plural distinction), key_other
+// otherwise. Mirrors the trees_one/trees_other and streakDays_* keys.
+func TP(lang, key string, count int, repl map[string]string) string {
+	if normalizeLang(lang) != "zh-CN" && count == 1 {
+		if _, ok := lookup(catalogs[normalizeLang(lang)], key+"_one"); ok {
+			return T(lang, key+"_one", repl)
+		}
+	}
+	return T(lang, key+"_other", repl)
+}

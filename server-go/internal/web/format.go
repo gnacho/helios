@@ -56,6 +56,16 @@ func fmtInt(lang string, v float64) string {
 	return formatNumber(lang, math.Round(v), 0)
 }
 
+// fmtEuro mirrors fmtEuro(): 2 decimals + the euro sign.
+func fmtEuro(lang string, v float64) string {
+	return formatNumber(lang, v, 2) + " €"
+}
+
+// fmtPct mirrors fmtPct(): rounded integer percent (no sign).
+func fmtPct(lang string, v float64) string {
+	return fmtInt(lang, v)
+}
+
 // fmtTime mirrors fmtTime(): HH:MM from minutes since midnight.
 func fmtTime(minutes int) string {
 	m := ((minutes % 1440) + 1440) % 1440

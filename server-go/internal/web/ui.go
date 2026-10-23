@@ -60,6 +60,8 @@ type pageProps struct {
 
 // UI serves the templ pages. RootFiles lets the host serve favicon-like
 // files from the SPA static dir (no index.html fallback) before the 404.
+// Ext/ExtHA give the pages access to the charger services in process (day
+// curve + history); Prices are the configured energy prices.
 type UI struct {
 	Auth      *auth.Auth
 	DB        *db.DB
@@ -67,24 +69,31 @@ type UI struct {
 	HA        solar.HAReader
 	Install   *install.Store
 	ExtStore  *extensions.Store
+	Ext       *extensions.Ext
+	ExtHA     extensions.HA
+	Prices    solar.PriceConfig
 	Hub       *sse.Hub
 	RootFiles func(w http.ResponseWriter, r *http.Request) bool
 	assets    http.Handler
 }
 
-func New(a *auth.Auth, database *db.DB, sol *solar.Solar, ha solar.HAReader, installStore *install.Store, extStore *extensions.Store, hub *sse.Hub) *UI {
+func New(a *auth.Auth, database *db.DB, sol *solar.Solar, ha solar.HAReader, installStore *install.Store, extStore *extensions.Store, ext *extensions.Ext, extHA extensions.HA, prices solar.PriceConfig, hub *sse.Hub) *UI {
 	sub, err := fs.Sub(assetsEmbed, "assets")
 	if err != nil {
 		panic("web: assets subtree: " + err.Error())
 	}
 	return &UI{
-		Auth:    a,
-		DB:      database,
-		Solar:   sol,
-		HA:      ha,
-		Install: installStore,
-		Hub:     hub,
-		assets:  http.StripPrefix("/assets/", http.FileServer(http.FS(sub))),
+		Auth:     a,
+		DB:       database,
+		Solar:    sol,
+		HA:       ha,
+		Install:  installStore,
+		ExtStore: extStore,
+		Ext:      ext,
+		ExtHA:    extHA,
+		Prices:   prices,
+		Hub:      hub,
+		assets:   http.StripPrefix("/assets/", http.FileServer(http.FS(sub))),
 	}
 }
 
@@ -105,8 +114,11 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/ui/stream", u.handleStream)
 		r.Get("/inversores", u.handleInversores)
 		r.Get("/bateria", u.handleBateria)
+		r.Get("/historico", u.handleHistorico)
+		r.Get("/cargador", u.handleCargador)
 		for _, item := range navItems[1:] {
-			if item.Path == "/inversores" || item.Path == "/bateria" {
+			if item.Path == "/inversores" || item.Path == "/bateria" ||
+				item.Path == "/historico" || item.Path == "/cargador" {
 				continue // real handlers above
 			}
 			r.Get(item.Path, u.stubHandler(item))

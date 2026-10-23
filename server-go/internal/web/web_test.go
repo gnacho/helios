@@ -13,6 +13,7 @@ import (
 
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
+	"helios-server/internal/solar"
 )
 
 func testUI(t *testing.T) (*UI, *chi.Mux, *auth.Auth) {
@@ -27,7 +28,7 @@ func testUI(t *testing.T) (*UI, *chi.Mux, *auth.Auth) {
 	if _, err := a.RegisterUser("nacho", "password1", "es", "admin"); err != nil {
 		t.Fatalf("register: %v", err)
 	}
-	u := New(a, d, nil, nil, nil, nil, nil)
+	u := New(a, d, nil, nil, nil, nil, nil, nil, solar.PriceConfig{}, nil)
 	u.RootFiles = func(w http.ResponseWriter, r *http.Request) bool { return false }
 
 	r := chi.NewRouter()
@@ -163,26 +164,21 @@ func TestStubPages(t *testing.T) {
 	_, r, _ := testUI(t)
 	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
 
-	cases := []struct{ path, wantTitle string }{
-		{"/historico", "Histórico"},
-		{"/cargador", "Cargador"},
-		{"/ajustes", "Ajustes"},
+	// /historico and /cargador are real pages since phase 4 (covered by their
+	// own tests); /ajustes is still the only stub.
+	req := httptest.NewRequest("GET", "/ajustes", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
 	}
-	for _, c := range cases {
-		req := httptest.NewRequest("GET", c.path, nil)
-		req.AddCookie(cookie)
-		rec := httptest.NewRecorder()
-		r.ServeHTTP(rec, req)
-		if rec.Code != 200 {
-			t.Fatalf("%s: status = %d", c.path, rec.Code)
-		}
-		body := rec.Body.String()
-		if !strings.Contains(body, c.wantTitle) {
-			t.Fatalf("%s: falta el título %q", c.path, c.wantTitle)
-		}
-		if !strings.Contains(body, "Esta vista está en construcción") {
-			t.Fatalf("%s: falta el cuerpo del stub", c.path)
-		}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Ajustes") {
+		t.Fatalf("falta el título %q", "Ajustes")
+	}
+	if !strings.Contains(body, "Esta vista está en construcción") {
+		t.Fatal("falta el cuerpo del stub")
 	}
 }
 

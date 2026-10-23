@@ -354,6 +354,84 @@ func iconForStat(key string, class string) templ.Component {
 	return iconActivity(class)
 }
 
+// ── Phase 4 icons (paths copied verbatim from lucide-react v0.562.0) ────
+
+templ iconCable(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z"></path>
+		<path d="M17 21v-2"></path>
+		<path d="M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10"></path>
+		<path d="M21 21v-2"></path>
+		<path d="M3 5V3"></path>
+		<path d="M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z"></path>
+		<path d="M7 5V3"></path>
+	</svg>
+}
+
+templ iconPlugZap(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"></path>
+		<path d="m2 22 3-3"></path>
+		<path d="M7.5 13.5 10 11"></path>
+		<path d="M10.5 16.5 13 14"></path>
+		<path d="m18 3-4 4h6l-4 4"></path>
+	</svg>
+}
+
+templ iconPower(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M12 2v10"></path>
+		<path d="M18.4 6.6a9 9 0 1 1-12.77.04"></path>
+	</svg>
+}
+
+templ iconChevronLeft(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="m15 18-6-6 6-6"></path>
+	</svg>
+}
+
+templ iconChevronRight(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="m9 18 6-6-6-6"></path>
+	</svg>
+}
+
+templ iconEuro(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M4 10h12"></path>
+		<path d="M4 14h9"></path>
+		<path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"></path>
+	</svg>
+}
+
+templ iconTrophy(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"></path>
+		<path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"></path>
+		<path d="M18 9h1.5a1 1 0 0 0 0-5H18"></path>
+		<path d="M4 22h16"></path>
+		<path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"></path>
+		<path d="M6 9H4.5a1 1 0 0 1 0-5H6"></path>
+	</svg>
+}
+
+templ iconFlame(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"></path>
+	</svg>
+}
+
+templ iconCalendarCheck(class string) {
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={ class } aria-hidden="true">
+		<path d="M8 2v4"></path>
+		<path d="M16 2v4"></path>
+		<rect width="18" height="18" x="3" y="4" rx="2"></rect>
+		<path d="M3 10h18"></path>
+		<path d="m9 16 2 2 4-4"></path>
+	</svg>
+}
+
 // brandLogo is the vectorized Helios mark (solar disk), copied from
 // app/src/components/BrandLogoIcon.tsx. The gradient id is a parameter so
 // several instances per page keep unique ids.

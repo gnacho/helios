@@ -1,0 +1,361 @@
+package web
+
+import (
+	"fmt"
+)
+
+// /cargador page (port of Cargador.tsx). Tabs are links (?tab=key). The power
+// and amperage buttons call the EXISTING JSON API (POST /api/charger/action)
+// through Datastar: $charger/$action/$amps signals travel in the @post body
+// (the API ignores unknown keys) and $ui.busy/$ui.error carry the loading and
+// error states. The image upload button (client-side canvas) is not ported.
+
+templ ChargerPage(v chargerView) {
+	@shellLayout(v.pageProps) {
+		<div data-signals={ v.Signals } class="w-full">
+			<div class="flex flex-col gap-4 lg:gap-5">
+				if len(v.Tabs) > 1 {
+					@chgTabs(v)
+				}
+				if v.Active != nil {
+					@chgSingle(v, v.Active)
+				}
+			</div>
+		</div>
+	}
+}
+
+// chgTabs is the segmented control (sticky on mobile, like the React page).
+templ chgTabs(v chargerView) {
+	<div class="sticky top-14 z-30 -mx-4 bg-[color-mix(in_srgb,var(--bg)_85%,transparent)] px-4 py-2 backdrop-blur-[16px] lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+		<div class="flex h-10 w-full items-center gap-1 overflow-x-auto rounded-full border border-app bg-surface p-1 no-scrollbar lg:w-fit" role="tablist" aria-label={ T(v.Lang, "cargador.tabsAria") }>
+			for _, tb := range v.Tabs {
+				<a
+					href={ templ.URL("/cargador?tab=" + tb.Key) }
+					role="tab"
+					aria-selected={ boolStr(tb.Active) }
+					class={ "relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none", templ.KV("text-app", tb.Active), templ.KV("text-faint hover:text-muted", !tb.Active) }
+				>
+					if tb.Active {
+						<span class="absolute inset-0 rounded-full bg-surface-2 shadow-inner"></span>
+					}
+					<span class="relative z-10 flex items-center gap-1.5">
+						if tb.Charging {
+							<span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+						} else {
+							<span class="h-2 w-2 rounded-full bg-faint opacity-40"></span>
+						}
+						{ tb.Name }
+					</span>
+				</a>
+			}
+		</div>
+	</div>
+}
+
+templ chgSingle(v chargerView, s *chgSingleView) {
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+		@chgHero(v, s)
+		<section class="helios-card col-span-12 shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "cargador.todayAria") }>
+			<div class="px-4 pb-1 pt-4 sm:px-5">
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "cargador.todayTitle") }</h2>
+				<p class="text-xs text-faint">{ T(v.Lang, "cargador.todaySubtitle") }</p>
+			</div>
+			<div class="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 pb-2 sm:px-5">
+				for _, st := range s.Stats {
+					<span class="inline-flex items-center gap-1.5 text-[13px] text-muted">
+						@iconForChgStat(st.IconKey, "h-[13px] w-[13px] shrink-0 text-faint")
+						{ st.Label }
+						if st.Signal != "" {
+							<span class="font-semibold tabular-nums text-app" data-text={ st.Signal }>{ st.Value }</span>
+						} else {
+							<span class="font-semibold tabular-nums text-app">{ st.Value }</span>
+						}
+					</span>
+				}
+			</div>
+			@chgCurveSVG(s.Curve)
+		</section>
+		<section class="helios-card col-span-12 shadow-card dark:shadow-card-dark lg:col-span-8" aria-label={ T(v.Lang, "cargador.historyAria") }>
+			<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+				<div class="mr-auto">
+					<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "cargador.historyTitle") }</h2>
+					<p class="text-xs capitalize text-faint">{ s.HistSub }</p>
+					<p class="mt-0.5 text-xs text-faint">{ T(v.Lang, "cargador.historyHint") }</p>
+				</div>
+			</div>
+			<div class="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-5">
+				@chgPeriodNav(v, s)
+			</div>
+			<div class="flex flex-wrap items-center gap-3 px-4 pb-1 sm:px-5">
+				<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+					<span class="h-2 w-2 rounded-full" style={ "background-color: " + s.Pal.Bateria }></span> { T(v.Lang, "cargador.fromSolar") }
+				</span>
+				<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+					<span class="h-2 w-2 rounded-full" style={ "background-color: " + s.Pal.Consumo }></span> { T(v.Lang, "cargador.fromGrid") }
+				</span>
+			</div>
+			<div class="px-1">
+				if !s.HistHasData {
+					<div class="flex h-[220px] items-center justify-center px-6 text-center text-sm text-faint">
+						{ T(v.Lang, "cargador.noHistory") }
+					</div>
+				} else {
+					@chgHistSVG(s.Hist)
+				}
+			</div>
+		</section>
+		<section class="helios-card col-span-12 flex flex-col gap-5 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:col-span-4">
+			<div>
+				<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "cargador.periodTotal") }</p>
+				<p class="mt-1 font-display text-[28px] font-semibold leading-none tracking-[-0.01em] text-app">
+					{ s.TotalKwhText } <span class="text-[0.6em] font-medium text-faint">kWh</span>
+				</p>
+			</div>
+			<div class="border-t border-app pt-5">
+				<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "cargador.fromSolar") }</p>
+				<p class="mt-1 font-display text-[22px] font-semibold leading-none text-app">
+					{ s.PctSolarText } <span class="text-[0.6em] font-medium text-faint">%</span>
+				</p>
+				<div class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={ s.PctSolarText } aria-valuemin="0" aria-valuemax="100" aria-label={ T(v.Lang, "cargador.pctSolarAria") }>
+					<div class="h-full rounded-full" style={ "width: " + chgPctWidth(s.PctSolar) + "; background-color: " + s.Pal.Bateria }></div>
+				</div>
+				<p class="mt-1.5 text-sm text-muted">
+					{ s.PvKwhText } kWh · { T(v.Lang, "cargador.fromGrid") }: { s.RestKwhText } kWh
+				</p>
+			</div>
+			<div class="border-t border-app pt-5">
+				<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "common.production") }</p>
+				<p class="mt-1 font-display text-[22px] font-semibold leading-none text-app">
+					{ s.ProdKwhText } <span class="text-[0.6em] font-medium text-faint">kWh</span>
+				</p>
+				<p class="mt-1.5 text-sm text-muted">{ T(v.Lang, "cargador.ofProduction", map[string]string{"pct": s.PctOfProdText}) }</p>
+			</div>
+			<div class="border-t border-app pt-5">
+				<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "cargador.avgDay") }</p>
+				<p class="mt-1 font-display text-[22px] font-semibold leading-none text-app">
+					{ s.AvgDayText } <span class="text-[0.6em] font-medium text-faint">kWh</span>
+				</p>
+			</div>
+		</section>
+	</div>
+}
+
+func chgPctWidth(pct float64) string {
+	if pct > 100 {
+		pct = 100
+	}
+	return fmt.Sprintf("%.1f%%", pct)
+}
+
+func iconForChgStat(key string, class string) templ.Component {
+	switch key {
+	case "clock":
+		return iconClock(class)
+	case "gauge":
+		return iconGauge(class)
+	}
+	return iconZap(class)
+}
+
+// chgHero is the photo + actions card.
+templ chgHero(v chargerView, s *chgSingleView) {
+	<section class="helios-card col-span-12 flex flex-col gap-4 p-5 shadow-card dark:shadow-card-dark sm:p-6">
+		<div class="flex flex-wrap items-center gap-3">
+			<h2 class="text-[17px] font-semibold text-app">{ s.Name }</h2>
+			<span class={ "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold", s.Chip.Cls }>
+				@iconForChgState(s.Chip.State, "h-[14px] w-[14px]")
+				{ s.Chip.Text }
+			</span>
+		</div>
+		<div class="flex flex-col gap-5 lg:flex-row lg:items-stretch">
+			<div class="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[42%] dark:bg-transparent">
+				if s.HasImage {
+					<img src={ templ.URL(s.ImageURL) } alt={ s.Name } draggable="false" class="h-full max-h-full w-full object-contain select-none"/>
+				} else {
+					@iconCarFront("h-[72px] w-[72px]")
+				}
+			</div>
+			<div class="flex min-w-0 flex-1 flex-col justify-center gap-5">
+				if s.PowerKnown {
+					<button
+						type="button"
+						data-on:click={ s.PowerClick }
+						data-indicator="$ui.busy"
+						data-attr-disabled="$ui.busy"
+						data-attr-aria-pressed={ s.PressedExpr }
+						title={ s.PowerTitle }
+						class={ "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50", templ.KV("bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400", s.PowerOn), templ.KV("bg-brand text-white hover:opacity-90", !s.PowerOn) }
+					>
+						@iconPower("h-5 w-5")
+						{ s.PowerLabel }
+					</button>
+				} else {
+					<button
+						type="button"
+						disabled
+						aria-pressed="false"
+						title={ s.PowerTitle }
+						class="inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-brand text-base font-semibold text-white opacity-50"
+					>
+						@iconPower("h-5 w-5")
+						{ s.PowerLabel }
+					</button>
+				}
+				<div data-show="$ui.error != ''" class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400" data-text="$ui.error"></div>
+				if s.HasAmps {
+					<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label={ s.AmpsAria }>
+						<span class="mr-1 text-xs text-faint">{ s.AmpsLabel }</span>
+						for _, chip := range s.AmpChips {
+							if chip.Active {
+								<button
+									type="button"
+									aria-pressed="true"
+									data-on:click={ chip.ClickExpr }
+									data-indicator="$ui.busy"
+									data-attr-disabled={ "$ui.busy" }
+									class="inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-brand bg-brand/10 px-2 text-xs font-semibold tabular-nums text-brand transition-colors disabled:opacity-50"
+								>
+									{ chip.AmpsText }
+								</button>
+							} else {
+								<button
+									type="button"
+									aria-pressed="false"
+									data-on:click={ chip.ClickExpr }
+									data-indicator="$ui.busy"
+									data-attr-disabled={ "$ui.busy" }
+									class="inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-app bg-surface px-2 text-xs font-semibold tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
+								>
+									{ chip.AmpsText }
+								</button>
+							}
+						}
+					</div>
+				}
+				<div class="flex items-center gap-2 px-1">
+					@iconThermometer("h-[15px] w-[15px] shrink-0 text-faint")
+					<span class="text-[13px] text-muted">{ T(v.Lang, "cargador.temperature") }</span>
+					<span class="text-[15px] font-semibold tabular-nums text-app" data-text={ "$chg." + s.Key + ".tempText" }>{ s.TempText }</span>
+				</div>
+			</div>
+		</div>
+	</section>
+}
+
+func iconForChgState(state string, class string) templ.Component {
+	switch state {
+	case "charging":
+		return iconBatteryCharging(class)
+	case "connected":
+		return iconCable(class)
+	}
+	return iconPlugZap(class)
+}
+
+// chgPeriodNav is the period navigation of the charger history (same control
+// as Histórico, semana/mes/año only).
+templ chgPeriodNav(v chargerView, s *chgSingleView) {
+	<div class="flex flex-wrap items-center gap-2 sm:gap-3">
+		<div role="tablist" aria-label={ T(v.Lang, "historico.periodAria") } class="flex h-9 items-center rounded-full border border-app bg-surface p-0.5">
+			for _, tb := range s.Sel.Tabs {
+				<a
+					href={ templ.URL(tb.URL) }
+					role="tab"
+					aria-selected={ boolStr(tb.Active) }
+					class={ "relative flex h-8 items-center rounded-full px-3 text-[13px] font-medium transition-colors sm:px-3.5", templ.KV("text-app", tb.Active), templ.KV("text-faint hover:text-muted", !tb.Active) }
+				>
+					if tb.Active {
+						<span class="absolute inset-0 rounded-full bg-surface-2 shadow-inner"></span>
+					}
+					<span class="relative">{ tb.Label }</span>
+				</a>
+			}
+		</div>
+		<div class="flex h-9 items-center gap-0.5 rounded-full border border-app bg-surface p-0.5">
+			<a href={ templ.URL(s.Sel.PrevURL) } aria-label={ s.Sel.PrevAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+				@iconChevronLeft("h-4 w-4")
+			</a>
+			<div class="flex h-8 min-w-[92px] items-center justify-center overflow-hidden px-1 sm:min-w-[110px]">
+				<span class="text-[13px] font-semibold tabular-nums text-app">{ s.NavLabel }</span>
+			</div>
+			if s.Sel.CanNext {
+				<a href={ templ.URL(s.Sel.NextURL) } aria-label={ s.Sel.NextAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+					@iconChevronRight("h-4 w-4")
+				</a>
+			} else {
+				<span aria-hidden="true" class="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-full text-faint opacity-50">
+					@iconChevronRight("h-4 w-4")
+				</span>
+			}
+		</div>
+		if !s.Sel.IsCurrent {
+			<a href={ templ.URL(s.Sel.TodayURL) } class="h-9 rounded-full border border-amber-500/40 px-3.5 text-[13px] font-semibold leading-9 text-amber-600 transition-transform hover:bg-amber-500/10 active:scale-95 dark:text-amber-400">
+				{ T(v.Lang, "common.today") }
+			</a>
+		}
+	</div>
+}
+
+// chgCurveSVG is the day charging curve (area, palette.consumo).
+templ chgCurveSVG(c chgCurveModel) {
+	<div class="overflow-x-auto px-1 pb-2">
+		<svg viewBox="0 0 1100 220" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+			<defs>
+				<linearGradient id="chg-curve" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color={ c.Color } stop-opacity="0.35"></stop>
+					<stop offset="100%" stop-color={ c.Color } stop-opacity="0.02"></stop>
+				</linearGradient>
+			</defs>
+			for _, t := range c.TicksY[1:] {
+				<line x1={ r2(34) } x2={ r2(c.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+			}
+			for _, t := range c.TicksY {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+			for i, t := range c.TicksX {
+				if i == len(c.TicksX)-1 {
+					<text x={ r2(chgCurveW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				} else {
+					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				}
+			}
+			if c.AreaPath != "" {
+				<path d={ c.AreaPath } fill="url(#chg-curve)" stroke={ c.Color } stroke-width="2"></path>
+			}
+		</svg>
+	</div>
+}
+
+// chgHistSVG is the stacked day/month/year history (pv solar + grid rest).
+templ chgHistSVG(m chgHistModel) {
+	<svg viewBox="0 0 1100 220" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+		for _, t := range m.TicksY[1:] {
+			<line x1={ r2(34) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+		}
+		for _, t := range m.TicksY {
+			<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+		}
+		for i, row := range m.Rows {
+			if row.PvH > 0 {
+				<rect x={ r2(row.X) } y={ r2(row.PvY) } width={ r2(row.BarW) } height={ r2(row.PvH) } fill={ m.ColorSolar }></rect>
+			}
+			if row.RestH > 0 {
+				<rect x={ r2(row.X) } y={ r2(row.RestY) } width={ r2(row.BarW) } height={ r2(row.RestH) } rx="3" fill={ m.ColorGrid }></rect>
+			}
+			if chgShowLabel(m.Rows, i) {
+				<text x={ r2(row.X + row.BarW/2) } y={ r2(chgCurveH - 2) } text-anchor="middle" font-size="11" fill="var(--text-faint)" font-family="Inter">{ row.Label }</text>
+			}
+		}
+	</svg>
+}
+
+// chgShowLabel mirrors the React minTickGap: with a month of ~30 daily
+// columns only 1 of every 3 labels fits (React interval=2 on mes).
+func chgShowLabel(rows []chgHistRow, i int) bool {
+	_ = rows
+	if len(rows) > 20 {
+		return i%3 == 0
+	}
+	return true
+}
