@@ -5,7 +5,7 @@ package web
 // bind to the $live.* signals patched by /ui/stream.
 templ BateriaPage(v bateriaView) {
 	@shellLayout(v.pageProps) {
-		<div data-signals={ v.Signals } data-on-load={ "@get('/ui/stream')" } class="mx-auto w-full max-w-6xl">
+		<div data-signals={ v.Signals } data-on-load={ "@get('/ui/stream')" } class="w-full">
 			<div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
 				<section class="helios-card col-span-12 p-5 shadow-card dark:shadow-card-dark sm:p-6" aria-label={ T(v.Lang, "bateria.gaugeAria", map[string]string{"pct": v.Gauge.SocText}) }>
 					<div class="flex flex-col items-center gap-6 lg:flex-row lg:items-stretch">

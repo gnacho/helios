@@ -4,7 +4,7 @@ package web
 // live texts bind to the $inv.* signals patched by /ui/stream.
 templ InversoresPage(v inversoresView) {
 	@shellLayout(v.pageProps) {
-		<div data-signals={ v.Signals } data-on-load={ "@get('/ui/stream')" } class="mx-auto w-full max-w-6xl">
+		<div data-signals={ v.Signals } data-on-load={ "@get('/ui/stream')" } class="w-full">
 			<div class="flex flex-col gap-4 lg:gap-5">
 				if len(v.Tabs) > 1 {
 					@invTabs(v)

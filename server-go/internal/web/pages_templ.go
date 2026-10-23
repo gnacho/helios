@@ -44,7 +44,7 @@ func StubPage(p pageProps) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"mx-auto w-full max-w-6xl px-4 py-6\"><div class=\"helios-card p-10 text-center shadow-card dark:shadow-card-dark\"><h1 class=\"font-display text-lg font-semibold text-app\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"w-full px-4 py-6 md:px-6\"><div class=\"helios-card p-10 text-center shadow-card dark:shadow-card-dark\"><h1 class=\"font-display text-lg font-semibold text-app\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -122,7 +122,7 @@ func NotFoundPage(p pageProps) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"mx-auto w-full max-w-6xl px-4 py-6\"><div class=\"helios-card p-10 text-center shadow-card dark:shadow-card-dark\"><h1 class=\"font-display text-lg font-semibold text-app\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"w-full px-4 py-6 md:px-6\"><div class=\"helios-card p-10 text-center shadow-card dark:shadow-card-dark\"><h1 class=\"font-display text-lg font-semibold text-app\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

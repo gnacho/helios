@@ -70,7 +70,7 @@ func BateriaPage(v bateriaView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" class=\"mx-auto w-full max-w-6xl\"><div class=\"grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5\"><section class=\"helios-card col-span-12 p-5 shadow-card dark:shadow-card-dark sm:p-6\" aria-label=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" class=\"w-full\"><div class=\"grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5\"><section class=\"helios-card col-span-12 p-5 shadow-card dark:shadow-card-dark sm:p-6\" aria-label=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
