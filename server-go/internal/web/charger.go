@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"time"
@@ -641,16 +642,30 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 		solarRows = u.dailyHistory()
 	}
 
+	// Selector del cargador: mismas pestañas que el React (semana/mes/año, sin
+	// día) y TODAS las URLs apuntan a /cargador conservando el cargador activo
+	// (antes solo la de semana lo hacía y el resto saltaba al Histórico).
 	sv.Sel = buildPeriodSelector(lang, period, anchor, today)
-	// La semana del cargador arranca HOY (no ayer como el Histórico).
-	for i := range sv.Sel.Tabs {
-		if sv.Sel.Tabs[i].Key == string(PeriodSemana) {
-			sv.Sel.Tabs[i].URL = histURLChg(period, today)
+	tabKey := charger.Key
+	chgTabAnchor := func(p Period) time.Time {
+		if p == PeriodSemana {
+			return today // la semana del cargador incluye el día en curso
 		}
+		return initialAnchor(p, today)
 	}
-	sv.Sel.PrevURL = histURLChg(period, shiftAnchor(period, anchor, -1))
-	sv.Sel.NextURL = histURLChg(period, shiftAnchor(period, anchor, 1))
-	sv.Sel.TodayURL = histURLChg(period, today)
+	tabs := sv.Sel.Tabs[:0]
+	for _, tab := range sv.Sel.Tabs {
+		p := Period(tab.Key)
+		if p == PeriodDia {
+			continue
+		}
+		tab.URL = histURLChg(p, chgTabAnchor(p), tabKey)
+		tabs = append(tabs, tab)
+	}
+	sv.Sel.Tabs = tabs
+	sv.Sel.PrevURL = histURLChg(period, shiftAnchor(period, anchor, -1), tabKey)
+	sv.Sel.NextURL = histURLChg(period, shiftAnchor(period, anchor, 1), tabKey)
+	sv.Sel.TodayURL = histURLChg(period, chgTabAnchor(period), tabKey)
 	sv.Sel.CanNext = canGoNext(period, anchor, today)
 	sv.Sel.IsCurrent = isCurrentPeriod(period, anchor, today)
 	sv.NavLabel = periodNavLabel(period, anchor, lang)
@@ -685,7 +700,12 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	_ = ChargerPage(v).Render(r.Context(), w)
 }
 
-// histURLChg is the cargador history navigation URL.
-func histURLChg(p Period, anchor time.Time) string {
-	return "/cargador?period=" + string(p) + "&anchor=" + anchor.Format("2006-01-02")
+// histURLChg is the cargador history navigation URL (keeps the active
+// charger tab so period changes stay in the same card).
+func histURLChg(p Period, anchor time.Time, tabKey string) string {
+	u := "/cargador?period=" + string(p) + "&anchor=" + anchor.Format("2006-01-02")
+	if tabKey != "" {
+		u += "&tab=" + url.QueryEscape(tabKey)
+	}
+	return u
 }
