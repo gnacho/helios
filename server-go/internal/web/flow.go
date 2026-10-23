@@ -162,6 +162,7 @@ func sunMinutes(live *solar.LiveData) (sunrise, sunset int) {
 	sunset = pick(live.Sun.NextSetting, sunset)
 	return sunrise, sunset
 }
+
 // isoToMinutes parses an HA ISO timestamp into minutes-of-day (local time).
 func isoToMinutes(s string) (int, error) {
 	t, err := timeParseISO(s)
