@@ -249,7 +249,7 @@ templ last14Card(v inversoresView, m last14Model) {
 					if b.IsLast {
 						<path class="bar-up" d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } stroke={ m.Color } stroke-width="1.5"></path>
 					} else {
-						<path d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } opacity="0.55"></path>
+						<path class="bar-up" d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } opacity="0.55"></path>
 					}
 				}
 				for _, b := range m.Bars {
