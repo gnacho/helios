@@ -6,12 +6,15 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
+	"helios-server/internal/extensions"
 	"helios-server/internal/install"
 	"helios-server/internal/solar"
 	"helios-server/internal/sse"
@@ -47,6 +50,12 @@ type pageProps struct {
 	Title   string
 	Error   string
 	Next    string
+
+	Username  string
+	Collapsed bool
+	ChargerOn bool
+	DateText  string
+	InvCount  []string
 }
 
 // UI serves the templ pages. RootFiles lets the host serve favicon-like
@@ -57,12 +66,13 @@ type UI struct {
 	Solar     *solar.Solar
 	HA        solar.HAReader
 	Install   *install.Store
+	ExtStore  *extensions.Store
 	Hub       *sse.Hub
 	RootFiles func(w http.ResponseWriter, r *http.Request) bool
 	assets    http.Handler
 }
 
-func New(a *auth.Auth, database *db.DB, sol *solar.Solar, ha solar.HAReader, installStore *install.Store, hub *sse.Hub) *UI {
+func New(a *auth.Auth, database *db.DB, sol *solar.Solar, ha solar.HAReader, installStore *install.Store, extStore *extensions.Store, hub *sse.Hub) *UI {
 	sub, err := fs.Sub(assetsEmbed, "assets")
 	if err != nil {
 		panic("web: assets subtree: " + err.Error())
@@ -87,6 +97,7 @@ func (u *UI) Mount(r chi.Router) {
 	r.Post("/login", u.handleLoginSubmit)
 	r.Post("/logout", u.handleLogout)
 	r.Post("/theme", u.handleTheme)
+	r.Post("/sidebar", u.handleSidebarToggle)
 
 	r.Group(func(r chi.Router) {
 		r.Use(u.Auth.RequireAuthRedirect)
@@ -303,20 +314,75 @@ func (u *UI) handleTheme(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
-// baseProps builds the common props; lang comes from the user profile and
-// the theme from the helios_theme cookie.
+// baseProps builds the common props: lang from the user profile, theme from
+// the cookie, sidebar state from its cookie, user chip data and the date.
 func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
-	if userID != "" {
-		if usr, _ := u.DB.GetUserByID(userID); usr != nil && usr.Language != "" {
-			lang = usr.Language
-		}
-	}
-	return pageProps{
+	p := pageProps{
 		Lang:    normalizeLang(lang),
 		Theme:   themeFrom(r),
 		Version: version.Version,
 		Path:    path,
 	}
+	if c, err := r.Cookie("helios_sidebar"); err == nil && c.Value == "1" {
+		p.Collapsed = true
+	}
+	if userID != "" {
+		if usr, _ := u.DB.GetUserByID(userID); usr != nil {
+			if usr.Language != "" {
+				p.Lang = normalizeLang(usr.Language)
+			}
+			p.Username = usr.Username
+		}
+	}
+	if u.Install != nil {
+		for _, inv := range u.Install.Get().Inverters {
+			p.InvCount = append(p.InvCount, inv.Key)
+		}
+	}
+	if u.ExtStore != nil {
+		cfg := u.ExtStore.Get()
+		p.ChargerOn = cfg.Enabled && cfg.CarCharger.Enabled
+	}
+	p.DateText = weekdayDate(p.Lang, time.Now())
+	return p
+}
+
+// weekdayDate mirrors fmtWeekdayDate in the front (capitalized, localized).
+func weekdayDate(lang string, t time.Time) string {
+	esDays := []string{"domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"}
+	esMonths := []string{"enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"}
+	enDays := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+	enMonths := []string{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+	zhDays := []string{"日", "一", "二", "三", "四", "五", "六"}
+	d, m := t.Weekday(), int(t.Month())
+	switch normalizeLang(lang) {
+	case "es":
+		s := esDays[d] + ", " + strconv.Itoa(t.Day()) + " de " + esMonths[m-1]
+		return strings.ToUpper(s[:1]) + s[1:]
+	case "zh-CN":
+		return strconv.Itoa(t.Day()) + "月" + strconv.Itoa(m) + "日星期" + zhDays[d]
+	default:
+		return enDays[d] + ", " + enMonths[m-1] + " " + strconv.Itoa(t.Day())
+	}
+}
+
+// handleSidebarToggle flips the helios_sidebar cookie and returns to the page.
+func (u *UI) handleSidebarToggle(w http.ResponseWriter, r *http.Request) {
+	collapsed := false
+	if c, err := r.Cookie("helios_sidebar"); err == nil && c.Value == "1" {
+		collapsed = true
+	}
+	next := safeNext(r.PostFormValue("next"))
+	value := "1"
+	maxAge := 31536000
+	if collapsed {
+		value = "0"
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: "helios_sidebar", Value: value, Path: "/",
+		MaxAge: maxAge, SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
 func loginURL(next string) string {

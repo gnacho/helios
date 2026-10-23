@@ -27,7 +27,7 @@ func testUI(t *testing.T) (*UI, *chi.Mux, *auth.Auth) {
 	if _, err := a.RegisterUser("nacho", "password1", "es", "admin"); err != nil {
 		t.Fatalf("register: %v", err)
 	}
-	u := New(a, d, nil, nil, nil, nil)
+	u := New(a, d, nil, nil, nil, nil, nil)
 	u.RootFiles = func(w http.ResponseWriter, r *http.Request) bool { return false }
 
 	r := chi.NewRouter()

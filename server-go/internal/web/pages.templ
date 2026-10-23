@@ -4,28 +4,26 @@ package web
 // the page title and an explicit "under construction" body so the flag can
 // be enabled without pretending a page is done.
 templ StubPage(p pageProps) {
-	@Layout(p) {
-		@navBar(p)
-		<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
+	@shellLayout(p) {
+		<div class="mx-auto w-full max-w-6xl px-4 py-6">
 			<div class="helios-card p-10 text-center shadow-card dark:shadow-card-dark">
 				<h1 class="font-display text-lg font-semibold text-app">{ p.Title }</h1>
 				<p class="mt-2 text-sm text-muted">{ T(p.Lang, "stub.body") }</p>
 			</div>
-			@footerLine(p)
-		</main>
+		</div>
+		@footerLine(p)
 	}
 }
 
 // NotFoundPage is served for unknown routes in templ UI mode.
 templ NotFoundPage(p pageProps) {
-	@Layout(p) {
-		@navBar(p)
-		<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
+	@shellLayout(p) {
+		<div class="mx-auto w-full max-w-6xl px-4 py-6">
 			<div class="helios-card p-10 text-center shadow-card dark:shadow-card-dark">
 				<h1 class="font-display text-lg font-semibold text-app">{ T(p.Lang, "stub.title") }</h1>
 				<p class="mt-2 text-sm text-muted">{ T(p.Lang, "stub.desc") }</p>
 			</div>
-			@footerLine(p)
-		</main>
+		</div>
+		@footerLine(p)
 	}
 }

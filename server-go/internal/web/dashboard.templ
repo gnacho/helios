@@ -36,12 +36,11 @@ type dashboardView struct {
 }
 
 templ DashboardPage(d dashboardView) {
-	@Layout(d.pageProps) {
-		@navBar(d.pageProps)
-		<main
+	@shellLayout(d.pageProps) {
+		<div
 			data-signals={ d.Signals }
 			data-on-load={ "@get('/ui/stream')" }
-			class="mx-auto w-full max-w-6xl flex-1 px-4 py-6"
+			class="mx-auto w-full max-w-6xl"
 		>
 			@livePowerStrip(d)
 			<div class="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5" aria-label={ T(d.Lang, "dashboard.kpisLabel") }>
@@ -58,8 +57,7 @@ templ DashboardPage(d dashboardView) {
 			<div class="mt-4">
 				@dayChartSection(d, d.Chart)
 			</div>
-			@footerLine(d.pageProps)
-		</main>
+		</div>
 	}
 }
 
