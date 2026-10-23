@@ -2434,11 +2434,11 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
 }
 @keyframes accent-slide {
   from {
-    transform: translateY(calc(-50% + var(--nav-shift, 0px)));
+    translate: 0 calc(-50% + var(--nav-shift, 0px));
     opacity: 0.2;
   }
   to {
-    transform: translateY(-50%);
+    translate: 0 -50%;
     opacity: 1;
   }
 }

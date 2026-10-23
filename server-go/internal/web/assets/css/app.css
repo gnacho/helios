@@ -474,13 +474,16 @@ html.reduce-motion::view-transition-new(*) {
 .vt-accent {
   animation: accent-slide 0.3s cubic-bezier(0.25, 1, 0.5, 1) both;
 }
+/* Tailwind v4 usa la propiedad `translate` (no `transform`) para
+ * -translate-y-1/2: animar `transform` se sumaba y dejaba la barra 10 px
+ * alta. Se anima la misma propiedad para quedar centrada con las letras. */
 @keyframes accent-slide {
   from {
-    transform: translateY(calc(-50% + var(--nav-shift, 0px)));
+    translate: 0 calc(-50% + var(--nav-shift, 0px));
     opacity: 0.2;
   }
   to {
-    transform: translateY(-50%);
+    translate: 0 -50%;
     opacity: 1;
   }
 }
