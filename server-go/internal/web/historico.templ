@@ -170,7 +170,7 @@ templ histKpiCard(v historicoView, k histKpiView, idx int) {
 			</p>
 			if k.HasProgress {
 				<div class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={ fmtInt(v.Lang, k.ProgressPct) } aria-valuemin="0" aria-valuemax="100" aria-label={ k.Label }>
-					<div class="h-full rounded-full" style={ "width: " + fmtInt(v.Lang, k.ProgressPct) + "%; background-color: " + k.Color }></div>
+					<div class="anim-share h-full rounded-full" style={ "width: " + fmtInt(v.Lang, k.ProgressPct) + "%; background-color: " + k.Color }></div>
 				</div>
 			}
 			if k.Sub != "" {

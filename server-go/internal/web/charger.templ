@@ -125,7 +125,7 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 					{ s.PctSolarText } <span class="text-[0.6em] font-medium text-faint">%</span>
 				</p>
 				<div class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={ s.PctSolarText } aria-valuemin="0" aria-valuemax="100" aria-label={ T(v.Lang, "cargador.pctSolarAria") }>
-					<div class="h-full rounded-full" style={ "width: " + chgPctWidth(s.PctSolar) + "; background-color: " + s.Pal.Bateria }></div>
+					<div class="anim-share h-full rounded-full" style={ "width: " + chgPctWidth(s.PctSolar) + "; background-color: " + s.Pal.Bateria }></div>
 				</div>
 				<p class="mt-1.5 text-sm text-muted">
 					{ s.PvKwhText } kWh · { T(v.Lang, "cargador.fromGrid") }: { s.RestKwhText } kWh
