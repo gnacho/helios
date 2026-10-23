@@ -46,7 +46,7 @@ templ flowSVG(d dashboardView, f flowModel) {
 			}
 		}
 		{{ fvActive := f.Live != nil && f.Live.Production > 0.1 }}
-		@flowNode(d, flowFvX, flowFvY, T(d.Lang, "flow.fv"), flowValueText(d.ProductionText, "kW"), fvActive, "var(--c-solar)", "top", iconSolarPanel(pickStr(fvActive, "h-7 w-7 text-[var(--c-solar)]", "h-7 w-7 text-faint")))
+		@flowNode(d, flowFvX, flowFvY, T(d.Lang, "flow.fv"), flowValueText(d.ProductionText, "kW"), fvActive, "var(--c-solar)", "top", iconSolarPanel(pickStr(fvActive, "h-7 w-7 text-[var(--c-solar)]", "h-7 w-7 text-[color-mix(in_srgb,var(--line)_55%,var(--text-faint)_45%)]")))
 		@flowNodeHome(d, f)
 		@flowNodeBattery(d, f)
 		@flowNodeGrid(d, f)

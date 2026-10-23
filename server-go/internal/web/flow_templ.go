@@ -256,7 +256,7 @@ func flowSVG(d dashboardView, f flowModel) templ.Component {
 			}
 		}
 		fvActive := f.Live != nil && f.Live.Production > 0.1
-		templ_7745c5c3_Err = flowNode(d, flowFvX, flowFvY, T(d.Lang, "flow.fv"), flowValueText(d.ProductionText, "kW"), fvActive, "var(--c-solar)", "top", iconSolarPanel(pickStr(fvActive, "h-7 w-7 text-[var(--c-solar)]", "h-7 w-7 text-faint"))).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = flowNode(d, flowFvX, flowFvY, T(d.Lang, "flow.fv"), flowValueText(d.ProductionText, "kW"), fvActive, "var(--c-solar)", "top", iconSolarPanel(pickStr(fvActive, "h-7 w-7 text-[var(--c-solar)]", "h-7 w-7 text-[color-mix(in_srgb,var(--line)_55%,var(--text-faint)_45%)]"))).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

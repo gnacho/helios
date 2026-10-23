@@ -1399,6 +1399,12 @@
   .whitespace-pre-line {
     white-space: pre-line;
   }
+  .text-\[color-mix\(in_srgb\,var\(--line\)_55\%\,var\(--text-faint\)_45\%\)\] {
+    color: var(--line);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in srgb,var(--line) 55%,var(--text-faint) 45%);
+    }
+  }
   .text-\[var\(--c-bateria\)\] {
     color: var(--c-bateria);
   }
