@@ -136,6 +136,14 @@ templ ajustesSectionHealth(id string, title string, ok bool, lang string) {
 	</section>
 }
 
+// pickInt is a tiny ternary for ints.
+func pickInt(cond bool, a, b int) int {
+	if cond {
+		return a
+	}
+	return b
+}
+
 // pickStr is a tiny ternary for strings.
 func pickStr(cond bool, a, b string) string {
 	if cond {

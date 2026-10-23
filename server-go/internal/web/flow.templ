@@ -46,7 +46,7 @@ templ flowSVG(d dashboardView, f flowModel) {
 			}
 		}
 		{{ fvActive := f.Live != nil && f.Live.Production > 0.1 }}
-		@flowNode(d, flowFvX, flowFvY, T(d.Lang, "flow.fv"), flowValueText(d.ProductionText, "kW"), fvActive, "var(--c-solar)", "top", iconSolarPanel(pickStr(fvActive, "h-7 w-7 text-[var(--c-solar)]", "h-7 w-7 text-[color-mix(in_srgb,var(--line)_55%,var(--text-faint)_45%)]")))
+		@flowNode(d, flowFvX, flowFvY, T(d.Lang, "flow.fv"), flowValueText(d.ProductionText, "kW"), fvActive, "var(--c-solar)", pickStr(fvActive, "var(--c-solar)", "color-mix(in srgb, var(--line) 55%, var(--text-faint) 45%)"), "top", iconSolarPanel("h-7 w-7"))
 		@flowNodeHome(d, f)
 		@flowNodeBattery(d, f)
 		@flowNodeGrid(d, f)
@@ -54,7 +54,7 @@ templ flowSVG(d dashboardView, f flowModel) {
 }
 
 // flowNode is one circle node with icon, label and value (FlowNode in React).
-templ flowNode(d dashboardView, x float64, y float64, label string, value string, active bool, glowVar string, textSide string, icon templ.Component) {
+templ flowNode(d dashboardView, x float64, y float64, label string, value string, active bool, glowVar string, iconColor string, textSide string, icon templ.Component) {
 	{{ r := 33.0 }}
 	{{ labelY := y + 50.0 }}
 	{{ valueY := y + 64.0 }}
@@ -68,7 +68,7 @@ templ flowNode(d dashboardView, x float64, y float64, label string, value string
 		}
 		<circle cx={ r2(x) } cy={ r2(y) } r={ r2(r) } fill="var(--surface)" stroke={ pickVar(active, glowVar, "var(--line)") } stroke-width={ pickF(active, 2, 1.5) }></circle>
 		<foreignObject x={ r2(x - 28) } y={ r2(y - 28) } width="56" height="56">
-			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:56px;align-items:center;justify-content:center;">
+			<div xmlns="http://www.w3.org/1999/xhtml" style={ "display:flex;width:56px;height:56px;align-items:center;justify-content:center;color: " + iconColor }>
 				@icon
 			</div>
 		</foreignObject>
@@ -78,7 +78,7 @@ templ flowNode(d dashboardView, x float64, y float64, label string, value string
 }
 
 templ flowNodeHome(d dashboardView, f flowModel) {
-	@flowNode(d, flowHomeX, flowHomeY, T(d.Lang, "flow.home"), flowValueText(d.ConsumptionText, "kW"), f.Live != nil && f.Live.Consumption != nil && *f.Live.Consumption > 0.05, "var(--c-consumo)", "bottom", iconHouse("h-7 w-7 text-[var(--c-consumo)]"))
+	@flowNode(d, flowHomeX, flowHomeY, T(d.Lang, "flow.home"), flowValueText(d.ConsumptionText, "kW"), f.Live != nil && f.Live.Consumption != nil && *f.Live.Consumption > 0.05, f.HomeColor, f.HomeColor, "bottom", iconHouse("h-7 w-7"))
 }
 
 templ flowNodeBattery(d dashboardView, f flowModel) {

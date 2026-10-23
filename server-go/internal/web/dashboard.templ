@@ -103,13 +103,13 @@ templ livePowerStrip(d dashboardView) {
 			<span class="text-xs text-faint">· { T(d.Lang, "live.lastReading", map[string]string{"time": d.AtText}) }</span>
 		</div>
 		<div class="grid grid-cols-2 lg:grid-cols-4">
-			@stripValue(d, T(d.Lang, "common.production"), "liveProd", "$live.productionKw", d.LiveProdKw, "", "",
+			@stripValue(d, T(d.Lang, "common.production"), "liveProd", "$live.productionKw", d.LiveProdKw, "kW", "", "",
 				d.Palette.Solar, d.ProdIconColor, "",
 				iconSolarPanel("h-[18px] w-[18px]"))
-			@stripValue(d, T(d.Lang, "common.consumption"), "liveCons", "$live.consumptionKw", d.LiveConsKw, "", "",
+			@stripValue(d, T(d.Lang, "common.consumption"), "liveCons", "$live.consumptionKw", d.LiveConsKw, "kW", "", "",
 				d.Palette.Consumo, "", "border-l border-app",
 				iconHouse("h-[18px] w-[18px]"))
-			@stripValue(d, T(d.Lang, "common.battery"), "liveBat", "$live.batteryKw", d.LiveBatKw, `$live.batteryStatus`, d.BatteryStatus,
+			@stripValue(d, T(d.Lang, "common.battery"), "liveBat", "$live.soc", d.Soc, "%", `$live.batteryStatus`, d.BatteryStatus,
 				d.Palette.Bateria, "", "border-t border-app lg:border-l lg:border-t-0",
 				iconBattery("h-[18px] w-[18px]", d.Soc, d.Charging))
 			@stripGrid(d)
@@ -143,7 +143,7 @@ templ stripGrid(d dashboardView) {
 // server-rendered initial value.
 templ stripValue(
 	d dashboardView, label string,
-	animID string, animTarget string, animInit float64,
+	animID string, animTarget string, animInit float64, unit string,
 	statusSignal string, statusInit string,
 	color string, iconColor string, extraClass string,
 	icon templ.Component,
@@ -158,8 +158,8 @@ templ stripValue(
 		<div class="min-w-0">
 			<p class="text-[11px] font-medium uppercase tracking-[0.06em] text-faint">{ label }</p>
 			<p class="font-display text-[22px] font-semibold leading-tight text-app" aria-live="off">
-				@animNumLive(animID, animInit, 2, d.Lang, animTarget)
-				<span class="ml-1 text-[0.6em] font-medium text-faint">kW</span>
+				@animNumLive(animID, animInit, pickInt(unit == "%", 0, 2), d.Lang, animTarget)
+				<span class="ml-1 text-[0.6em] font-medium text-faint">{ unit }</span>
 			</p>
 			if statusSignal != "" {
 				<p data-text={ statusSignal } class="text-[11px] font-medium" style={ "color: " + color }>{ statusInit }</p>

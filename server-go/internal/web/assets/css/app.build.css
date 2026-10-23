@@ -1399,26 +1399,14 @@
   .whitespace-pre-line {
     white-space: pre-line;
   }
-  .text-\[color-mix\(in_srgb\,var\(--line\)_55\%\,var\(--text-faint\)_45\%\)\] {
-    color: var(--line);
-    @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in srgb,var(--line) 55%,var(--text-faint) 45%);
-    }
-  }
   .text-\[var\(--c-bateria\)\] {
     color: var(--c-bateria);
-  }
-  .text-\[var\(--c-consumo\)\] {
-    color: var(--c-consumo);
   }
   .text-\[var\(--c-red-compra\)\] {
     color: var(--c-red-compra);
   }
   .text-\[var\(--c-red-vertido\)\] {
     color: var(--c-red-vertido);
-  }
-  .text-\[var\(--c-solar\)\] {
-    color: var(--c-solar);
   }
   .text-amber-500 {
     color: var(--color-amber-500);
