@@ -215,6 +215,7 @@ templ topbarDesktop(p pageProps) {
 			<p class="text-[11px] capitalize leading-tight text-faint">{ p.DateText }</p>
 		</div>
 		<div class="flex items-center gap-2">
+			@alertsBell(p)
 			@themeToggle(p)
 			@userChip(p)
 		</div>
@@ -229,6 +230,7 @@ templ headerMobile(p pageProps) {
 			<span class="font-display text-base font-semibold text-app">Helios</span>
 		</a>
 		<div class="flex items-center gap-2">
+			@alertsBell(p)
 			@themeToggle(p)
 			@userChip(p)
 		</div>
@@ -360,10 +362,21 @@ func installLine(p pageProps) string {
 // themeToggle cycles auto -> light -> dark -> auto (server-side cookie).
 // "auto" (no cookie) follows the OS preference via the CSS media variant.
 templ themeToggle(p pageProps) {
-	<form method="post" action="/theme" class="shrink-0">
+	<!-- ≥sm: los tres estados con su texto, como el header del React. -->
+	<div class="hidden items-center gap-0.5 rounded-full border border-app bg-surface p-0.5 sm:flex" role="radiogroup" aria-label={ T(p.Lang, "theme.label") }>
+		@themeOption(p, "auto", T(p.Lang, "theme.system"))
+		@themeOption(p, "light", T(p.Lang, "theme.light"))
+		@themeOption(p, "dark", T(p.Lang, "theme.dark"))
+	</div>
+	<!-- <sm: un solo botón que alterna auto -> claro -> oscuro. -->
+	<form method="post" action="/theme" class="shrink-0 sm:hidden">
 		<input type="hidden" name="next" value={ p.Path }/>
 		<input type="hidden" name="theme" value={ themeNext(p.Theme) }/>
-		<button type="submit" aria-label={ T(p.Lang, "theme."+themeStateName(p.Theme)) } title={ T(p.Lang, "theme."+themeStateName(p.Theme)) } class="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-app">
+		{{ curLabel := T(p.Lang, "theme."+themeStateName(p.Theme)) }}
+		if p.Theme == "" {
+			{{ curLabel = T(p.Lang, "theme.system") }}
+		}
+		<button type="submit" aria-label={ curLabel } title={ curLabel } class="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-app">
 			if p.Theme == "dark" {
 				@iconSun("h-4 w-4")
 			} else if p.Theme == "light" {
@@ -373,4 +386,62 @@ templ themeToggle(p pageProps) {
 			}
 		</button>
 	</form>
+}
+
+// themeOption is one of the three theme buttons (auto=Sistema, claro, oscuro).
+templ themeOption(p pageProps, key, label string) {
+	{{ active := themeStateName(p.Theme) == key }}
+	<form method="post" action="/theme">
+		<input type="hidden" name="next" value={ p.Path }/>
+		<input type="hidden" name="theme" value={ key }/>
+		<button type="submit" role="radio" aria-checked={ boolStr(active) } aria-label={ label } title={ label } class={ "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] transition-colors", templ.KV("bg-surface-2 font-semibold text-app shadow-inner", active), templ.KV("text-faint hover:text-app", !active) }>
+			if key == "dark" {
+				@iconMoon("h-3.5 w-3.5")
+			} else if key == "light" {
+				@iconSun("h-3.5 w-3.5")
+			} else {
+				@iconSunMoon("h-3.5 w-3.5")
+			}
+			{ label }
+		</button>
+	</form>
+}
+
+// alertsBell is the header bell (AlertsBell in the React shell): live alerts
+// from HA with a severity dot and a details dropdown, no JS.
+templ alertsBell(p pageProps) {
+	{{ dot := "" }}
+	if p.AlertLevel == "critical" {
+		{{ dot = "bg-rose-500" }}
+	} else if p.AlertLevel == "warning" {
+		{{ dot = "bg-amber-500" }}
+	} else if p.AlertLevel == "info" {
+		{{ dot = "bg-sky-500" }}
+	}
+	<details class="relative shrink-0">
+		<summary aria-label={ T(p.Lang, "alerts.label", map[string]string{"count": strconv.Itoa(p.AlertCount)}) } title={ T(p.Lang, "alerts.label", map[string]string{"count": strconv.Itoa(p.AlertCount)}) } class="relative flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:text-app">
+			@iconBell("h-4 w-4")
+			if dot != "" {
+				<span class={ "absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full " + dot }></span>
+			}
+		</summary>
+		<div class="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-app bg-surface shadow-lg">
+			if len(p.Alerts) == 0 {
+				<p class="px-3 py-2.5 text-xs text-muted">{ T(p.Lang, "alerts.empty") }</p>
+			} else {
+				for _, a := range p.Alerts {
+					{{ ac := "bg-sky-500" }}
+					if a.Severity == "critical" {
+						{{ ac = "bg-rose-500" }}
+					} else if a.Severity == "warning" {
+						{{ ac = "bg-amber-500" }}
+					}
+					<div class="flex items-start gap-2 px-3 py-2">
+						<span class={ "mt-1 h-2 w-2 shrink-0 rounded-full " + ac }></span>
+						<span class="text-xs leading-snug text-app">{ a.Text }</span>
+					</div>
+				}
+			}
+		</div>
+	</details>
 }

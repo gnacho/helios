@@ -43,7 +43,8 @@
     "darkActive": "Dark active",
     "lightActive": "Light active",
     "toLight": "Switch to light theme",
-    "toDark": "Switch to dark theme"
+    "toDark": "Switch to dark theme",
+    "system": "System"
   },
   "connection": {
     "connected": "HAOS · Local",

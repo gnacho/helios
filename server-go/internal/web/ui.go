@@ -65,6 +65,9 @@ type pageProps struct {
 	InvCount  []string
 	BatKwh    float64 // installed battery capacity (0 = no battery)
 	NavDir    string  // "up" | "down": where the selected item comes from
+	Alerts      []solar.LiveAlert
+	AlertLevel  string // "critical" | "warning" | "info" | ""
+	AlertCount  int
 	NavShift  int     // px between the previous and current menu item (accent slide)
 
 	// Per-device appearance prefs (cookies, like the React localStorage).
@@ -546,9 +549,54 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 		cfg := u.ExtStore.Get()
 		p.ChargerOn = cfg.Enabled && cfg.CarCharger.Enabled
 	}
+	p.Alerts, p.AlertLevel = u.alertsSnapshot()
+	p.AlertCount = len(p.Alerts)
 	p.DateText = weekdayDate(p.Lang, time.Now())
 	p.NavDir, p.NavShift = navDirFrom(p, r)
 	return p
+}
+
+// alertsSnapshot returns the live alerts (same list the React bell shows) with
+// a short cache so every page render does not hit HA again.
+var alertsCache struct {
+	mu     sync.Mutex
+	at     time.Time
+	alerts []solar.LiveAlert
+	level  string
+}
+
+func (u *UI) alertsSnapshot() ([]solar.LiveAlert, string) {
+	if u.Solar == nil || u.HA == nil {
+		return nil, ""
+	}
+	alertsCache.mu.Lock()
+	if alertsCache.at.After(time.Now().Add(-15*time.Second)) {
+		a, l := alertsCache.alerts, alertsCache.level
+		alertsCache.mu.Unlock()
+		return a, l
+	}
+	alertsCache.mu.Unlock()
+
+	live := u.Solar.ComputeLive(u.HA)
+	level := ""
+	for _, a := range live.Alerts {
+		switch a.Severity {
+		case "critical":
+			level = "critical"
+		case "warning":
+			if level != "critical" {
+				level = "warning"
+			}
+		default:
+			if level == "" {
+				level = "info"
+			}
+		}
+	}
+	alertsCache.mu.Lock()
+	alertsCache.at, alertsCache.alerts, alertsCache.level = time.Now(), live.Alerts, level
+	alertsCache.mu.Unlock()
+	return live.Alerts, level
 }
 
 // navDirFrom compares the previous page (Referer) with the current one in the
