@@ -32,7 +32,7 @@ templ chartChip(showExpr string, label string, colorVar string) {
 }
 
 templ dayChartSVG(c DayChartModel) {
-	<div class="overflow-x-auto px-1 pb-1">
+	<div id="day-chart" class="overflow-x-auto px-1 pb-1">
 		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
 		<defs>
 			<linearGradient id="grad-prod" x1="0" y1="0" x2="0" y2="1">

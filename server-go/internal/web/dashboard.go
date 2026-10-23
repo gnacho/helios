@@ -255,6 +255,7 @@ func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lastBuckets := -1
 	flusher, _ := w.(http.Flusher)
 	heartbeat := time.NewTicker(25 * time.Second)
 	defer heartbeat.Stop()
@@ -274,6 +275,15 @@ func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
 			m.Kpis = IntegrateSeries(m.Series.Points, untilMin(m), liveSoc(live))
 			if uerr := gen.MarshalAndPatchSignals(dashboardSignals(lang, m)); uerr != nil {
 				return
+			}
+			// Nuevo bucket de 5 min → refresca la curva (fragmento SVG).
+			if len(m.Series.Points) != lastBuckets {
+				lastBuckets = len(m.Series.Points)
+				ik, in := chartInvKeys(m)
+				chart := BuildDayChart(lang, m.Series.Points, untilMin(m), ik, in)
+				if perr := gen.PatchElementTempl(dayChartSVG(chart), datastar.WithSelectorID("day-chart"), datastar.WithModeInner()); perr != nil {
+					return
+				}
 			}
 		case <-heartbeat.C:
 			// Comentario SSE: mantiene viva la conexión tras proxies sin tocar señales.
