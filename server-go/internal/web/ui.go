@@ -58,17 +58,17 @@ type pageProps struct {
 	Error   string
 	Next    string
 
-	Username  string
-	Collapsed bool
-	ChargerOn bool
-	DateText  string
-	InvCount  []string
-	BatKwh    float64 // installed battery capacity (0 = no battery)
-	NavDir    string  // "up" | "down": where the selected item comes from
-	Alerts      []solar.LiveAlert
-	AlertLevel  string // "critical" | "warning" | "info" | ""
-	AlertCount  int
-	NavShift  int     // px between the previous and current menu item (accent slide)
+	Username   string
+	Collapsed  bool
+	ChargerOn  bool
+	DateText   string
+	InvCount   []string
+	BatKwh     float64 // installed battery capacity (0 = no battery)
+	NavDir     string  // "up" | "down": where the selected item comes from
+	Alerts     []solar.LiveAlert
+	AlertLevel string // "critical" | "warning" | "info" | ""
+	AlertCount int
+	NavShift   int // px between the previous and current menu item (accent slide)
 
 	// Per-device appearance prefs (cookies, like the React localStorage).
 	AccentName   string // naranja|verde|azul|violeta
@@ -570,7 +570,7 @@ func (u *UI) alertsSnapshot() ([]solar.LiveAlert, string) {
 		return nil, ""
 	}
 	alertsCache.mu.Lock()
-	if alertsCache.at.After(time.Now().Add(-15*time.Second)) {
+	if alertsCache.at.After(time.Now().Add(-15 * time.Second)) {
 		a, l := alertsCache.alerts, alertsCache.level
 		alertsCache.mu.Unlock()
 		return a, l
