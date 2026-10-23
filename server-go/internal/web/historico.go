@@ -541,6 +541,8 @@ type histKpiView struct {
 	Color       string
 	Label       string
 	ValueText   string
+	Num         float64 // raw value for the Datastar count-up tween
+	Dec         int     // fixed decimals of Num
 	Unit        string
 	HasProgress bool
 	ProgressPct float64
@@ -622,11 +624,23 @@ func buildHistKpis(lang string, period Period, totals, prev PeriodTotals, hasPre
 	kpis[2].ValueText, kpis[2].Unit = fmtInt(lang, totals.AutoconsumoPct), "%"
 	kpis[2].HasProgress, kpis[2].ProgressPct = true, clampPct(totals.AutoconsumoPct)
 	kpis[3].ValueText, kpis[3].Unit = formatNumber(lang, totals.AhorroEur, 2), "€"
+	// Raw values for the count-up tween (decimals must match the formatter).
+	decOf := func(v float64) int {
+		if v >= 100 {
+			return 0
+		}
+		return 1
+	}
+	kpis[0].Num, kpis[0].Dec = totals.ProductionKwh, decOf(totals.ProductionKwh)
+	kpis[1].Num, kpis[1].Dec = totals.ConsumptionKwh, decOf(totals.ConsumptionKwh)
+	kpis[2].Num, kpis[2].Dec = totals.AutoconsumoPct, 0
+	kpis[3].Num, kpis[3].Dec = totals.AhorroEur, 2
 	kpis[3].Sub = T(lang, "historico.savingsDetail", map[string]string{
 		"importPrice": fmtEuro(lang, prices.PriceImport),
 		"exportPrice": fmtEuro(lang, prices.PriceExport),
 	})
 	kpis[4].ValueText, kpis[4].Unit = fmtInt(lang, totals.Co2Kg), "kg"
+	kpis[4].Num, kpis[4].Dec = totals.Co2Kg, 0
 	kpis[4].Sub = TP(lang, "historico.trees", treesOf(totals.Co2Kg), map[string]string{"count": strconv.Itoa(treesOf(totals.Co2Kg))})
 
 	if prodDelta != nil {

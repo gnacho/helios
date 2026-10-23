@@ -126,6 +126,7 @@ type chgSingleView struct {
 	Sel         periodSelectorView
 
 	// Totals of the period (side card).
+	TotalKwh      float64
 	TotalKwhText  string
 	PctSolar      float64
 	PctSolarText  string
@@ -636,6 +637,7 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	sv.Hist, _ = chgHistoryChart(lang, period, anchor, today, hist, solarRows, pal)
 	sv.HistHasData = st.Kwh > 0 || st.Prod > 0
 
+	sv.TotalKwh = st.Kwh
 	sv.TotalKwhText = fmtEnergy(lang, st.Kwh)
 	sv.PctSolar = 0
 	if st.Kwh > 0 {

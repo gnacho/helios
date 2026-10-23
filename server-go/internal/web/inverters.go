@@ -300,11 +300,11 @@ func buildSingleView(lang string, pal Palette, m dashboardModel, metas []invMeta
 		perf = dayKwh / meta.Kwp
 	}
 	v.Kpis = []invKpiView{
-		{Label: T(lang, "inversores.today"), ValueText: fmtEnergy(lang, dayKwh), Unit: "kWh", Accent: color,
+		{Label: T(lang, "inversores.today"), ValueText: fmtEnergy(lang, dayKwh), Num: dayKwh, Dec: 1, Unit: "kWh", Accent: color,
 			HasDelta: true, DeltaText: T(lang, "inversores.vsYesterday")},
-		{Label: T(lang, "inversores.thisMonth"), ValueText: formatNumber(lang, meta.MonthKwh, 0), Unit: "kWh", Accent: color},
-		{Label: T(lang, "inversores.total"), ValueText: formatNumber(lang, meta.TotalMwh, 2), Unit: "MWh", Accent: color},
-		{Label: T(lang, "inversores.performance"), ValueText: formatNumber(lang, perf, 2), Unit: "kWh/kWp", Accent: color},
+		{Label: T(lang, "inversores.thisMonth"), ValueText: formatNumber(lang, meta.MonthKwh, 0), Num: meta.MonthKwh, Dec: 0, Unit: "kWh", Accent: color},
+		{Label: T(lang, "inversores.total"), ValueText: formatNumber(lang, meta.TotalMwh, 2), Num: meta.TotalMwh, Dec: 2, Unit: "MWh", Accent: color},
+		{Label: T(lang, "inversores.performance"), ValueText: formatNumber(lang, perf, 2), Num: perf, Dec: 2, Unit: "kWh/kWp", Accent: color},
 	}
 	return v
 }

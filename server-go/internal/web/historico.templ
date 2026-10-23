@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // /historico page (port of Historico.tsx + PeriodSelector + HistoryChart +
@@ -155,7 +156,7 @@ templ histKpiCard(v historicoView, k histKpiView, idx int) {
 		<div>
 			<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ k.Label }</p>
 			<p class="mt-0.5 font-display text-[22px] font-semibold leading-none tracking-[-0.01em] text-app">
-				{ k.ValueText }
+				@animNum("k"+strconv.Itoa(idx), k.Num, k.Dec, v.Lang)
 				<span class="ml-1 text-[0.6em] font-medium text-faint">{ k.Unit }</span>
 			</p>
 			if k.HasProgress {

@@ -197,6 +197,8 @@ type invHeroModel struct {
 type invKpiView struct {
 	Label     string
 	ValueText string
+	Num       float64 // raw value for the Datastar count-up tween
+	Dec       int     // fixed decimals of Num
 	Unit      string
 	Accent    string
 	HasDelta  bool
