@@ -600,7 +600,7 @@ func buildPeriodSelector(lang string, period Period, anchor, today time.Time) pe
 		PrevAria:  T(lang, "historico.prevAria"),
 		NextAria:  T(lang, "historico.nextAria"),
 	}
-	cur := "&from=" + string(period) + "&fromAnchor=" + anchor.Format("2006-01-02")
+	cur := ""
 	for _, p := range []Period{PeriodDia, PeriodSemana, PeriodMes, PeriodAno} {
 		a := initialAnchor(p, today)
 		v.Tabs = append(v.Tabs, periodTabView{
@@ -709,7 +709,6 @@ type historicoView struct {
 	Empty      bool
 
 	Selector periodSelectorView
-	SlideDir string // "left" | "right": dirección del slide al cambiar periodo
 	Rev      string // revisión (periodo+ancla): fuerza recrear el DOM parcheado
 	Kpis     []histKpiView
 
@@ -737,53 +736,8 @@ func (u *UI) handleHistorico(w http.ResponseWriter, r *http.Request) {
 // towards the direction of the new period.
 func (u *UI) handleHistoricoPatch(w http.ResponseWriter, r *http.Request) {
 	v := u.buildHistoricoView(r)
-	v.SlideDir = historicoSlideDir(r)
 	gen := datastar.NewSSE(w, r)
 	_ = gen.PatchElementTempl(historicoBody(v), datastar.WithSelectorID("hist-body"), datastar.WithModeOuter())
-}
-
-// historicoSlideDir compares the requested period/anchor with the previous one
-// (?from/?fromAnchor): later periods enter from the right, earlier from the left.
-func historicoSlideDir(r *http.Request) string {
-	q := r.URL.Query()
-	cur, ok := periodOf(q.Get("period"))
-	if !ok {
-		cur = PeriodSemana
-	}
-	prev, ok := periodOf(q.Get("from"))
-	if !ok {
-		return ""
-	}
-	if cur != prev {
-		if periodRank(cur) > periodRank(prev) {
-			return "right"
-		}
-		return "left"
-	}
-	curA := q.Get("anchor")
-	prevA := q.Get("fromAnchor")
-	if curA != "" && prevA != "" && curA != prevA {
-		if curA > prevA {
-			return "right"
-		}
-		return "left"
-	}
-	return ""
-}
-
-// periodRank orders the periods from short to long.
-func periodRank(p Period) int {
-	switch p {
-	case PeriodDia:
-		return 0
-	case PeriodSemana:
-		return 1
-	case PeriodMes:
-		return 2
-	case PeriodAno:
-		return 3
-	}
-	return 0
 }
 
 // buildHistoricoView gathers everything the histórico page needs.

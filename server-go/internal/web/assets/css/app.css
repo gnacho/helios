@@ -525,77 +525,38 @@ html.reduce-motion::view-transition-new(*) {
  * anim-bars: las barras crecen desde su base (scaleY, fill-box).
  * anim-pie:  los quesitos crecen desde el centro con un pequeño barrido.
  * gauge-sweep: el arco del SOC se dibuja (pathLength normalizado).
- * El sol recorre el arco con offset-distance (keyframes; --sun-travel la fija
- * el server por render).
- * Todo vive bajo prefers-reduced-motion: no-preference y la clase
- * html.reduce-motion lo anula globalmente. El delay de 0.35s deja pasar el
- * view transition para que el dibujo no quede congelado en su primer frame.
+ * El sol recorre el arco con offset-distance.
+ * Mandan el switch de Ajustes (html.reduce-motion), no el SO: el usuario
+ * decide aqui; reduce-motion global anula todas con animation-duration 0.
  */
-@media (prefers-reduced-motion: no-preference) {
-  svg.anim-draw {
-    animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
-  }
-  /* Barras dibujadas como <path> (esquinas redondeadas): bar-up crece desde
-   * su base y bar-down desde su borde superior (divergentes de la batería). */
-  svg.anim-bars .bar-up,
-  svg.anim-bars .bar-down {
-    transform-box: fill-box;
-    animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
-  }
-  svg.anim-bars .bar-up {
-    transform-origin: 50% 100%;
-  }
-  svg.anim-bars .bar-down {
-    transform-origin: 50% 0%;
-  }
-  svg.anim-pie {
-    transform-origin: center;
-    animation: pie-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
-  }
-  .anim-share {
-    transform-origin: left center;
-    animation: share-grow 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
-  }
-  .gauge-sweep {
-    stroke-dasharray: 1;
-    animation: gauge-sweep 1s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
-  }
-  .sun-g {
-    animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
-  }
+html:not(.reduce-motion) svg.anim-draw {
+  animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
 }
-/* Cambio de periodo en el Histórico: el cuerpo parcheado entra deslizando
- * desde el lado del periodo nuevo (el scroll no se mueve: no hay recarga). */
-.hist-in-right {
-  animation: hist-in-right 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+html:not(.reduce-motion) svg.anim-bars .bar-up,
+html:not(.reduce-motion) svg.anim-bars .bar-down {
+  transform-box: fill-box;
+  animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
 }
-.hist-in-left {
-  animation: hist-in-left 0.26s cubic-bezier(0.25, 1, 0.5, 1) both;
+html:not(.reduce-motion) svg.anim-bars .bar-up {
+  transform-origin: 50% 100%;
 }
-@keyframes hist-in-right {
-  from { transform: translateX(26px); opacity: 0.35; }
+html:not(.reduce-motion) svg.anim-bars .bar-down {
+  transform-origin: 50% 0%;
 }
-@keyframes hist-in-left {
-  from { transform: translateX(-26px); opacity: 0.35; }
+html:not(.reduce-motion) svg.anim-pie {
+  transform-origin: center;
+  animation: pie-in 0.8s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
 }
-
-/* Despliegue animado de los paneles (<details>) sin JS: el contenido pasa de
- * 0 a auto con interpolate-size (Chrome 129+/Safari 18.4+); sin soporte se
- * abre normal. Equivale al AnimatePresence height:auto del React. */
-@media (prefers-reduced-motion: no-preference) {
-  :root {
-    interpolate-size: allow-keywords;
-  }
-  details::details-content {
-    block-size: 0;
-    overflow: hidden;
-    transition:
-      block-size 0.25s cubic-bezier(0.25, 1, 0.5, 1),
-      content-visibility 0.25s allow-discrete;
-  }
-  details[open]::details-content {
-    block-size: auto;
-  }
+html:not(.reduce-motion) .anim-share {
+  transform-origin: left center;
+  animation: share-grow 0.8s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+html:not(.reduce-motion) .gauge-sweep {
+  stroke-dasharray: 1;
+  animation: gauge-sweep 1s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
+}
+html:not(.reduce-motion) .sun-g {
+  animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
 }
 @property --sun-travel {
   syntax: "<percentage>";
