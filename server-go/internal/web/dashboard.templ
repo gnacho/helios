@@ -9,6 +9,7 @@ type dashboardView struct {
 	pageProps
 	Signals string
 	Palette Palette
+	Chart   DayChartModel
 
 	AtText         string
 	Soc            float64
@@ -54,9 +55,8 @@ templ DashboardPage(d dashboardView) {
 				@kpiAutoconsumo(d)
 				@kpiGrid(d)
 			</div>
-			<div class="helios-card mt-4 p-8 text-center shadow-card dark:shadow-card-dark">
-				<p class="text-sm text-muted">{ T(d.Lang, "dashboard.flowTitle") } · DayChart/SVG</p>
-				<p class="mt-1 text-xs text-faint">{ T(d.Lang, "stub.body") }</p>
+			<div class="mt-4">
+				@dayChartSection(d, d.Chart)
 			</div>
 			@footerLine(d.pageProps)
 		</main>

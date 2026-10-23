@@ -171,7 +171,28 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 		}
 	}
 	signals["inv"] = inv
+
+	// Señales de visibilidad del chart (port de los chips de DayChart).
+	chart := map[string]any{"total": true, "consumo": true}
+	for i, in := range m.Invs {
+		chart[in.Key] = i < 2 // inversores ocultos por defecto, como en React
+	}
+	signals["chart"] = chart
 	return signals
+}
+
+// chartInvKeys replica el fallback de Dashboard.tsx: topología o solis/fox.
+func chartInvKeys(m dashboardModel) ([]string, map[string]string) {
+	if len(m.Invs) > 0 {
+		keys := make([]string, 0, len(m.Invs))
+		names := map[string]string{}
+		for _, in := range m.Invs {
+			keys = append(keys, in.Key)
+			names[in.Key] = in.Name
+		}
+		return keys, names
+	}
+	return []string{"solis", "fox"}, map[string]string{"solis": "Solis", "fox": "Fox"}
 }
 
 // inverterLiveKw mirrors liveKw() in Dashboard.tsx.

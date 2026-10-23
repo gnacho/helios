@@ -164,7 +164,6 @@ func TestStubPages(t *testing.T) {
 	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
 
 	cases := []struct{ path, wantTitle string }{
-		{"/", "Hoy"},
 		{"/inversores", "Inversores"},
 		{"/bateria", "Batería"},
 		{"/historico", "Histórico"},

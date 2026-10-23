@@ -113,10 +113,12 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		signals = []byte("{}")
 	}
 
+	invKeys, invNames := chartInvKeys(m)
 	d := dashboardView{
 		pageProps:      p,
 		Signals:        string(signals),
 		Palette:        pal,
+		Chart:          BuildDayChart(lang, m.Series.Points, untilMin(m), invKeys, invNames),
 		AtText:         "--:--",
 		GridKwText:     "—",
 		GridStatus:     "—",
