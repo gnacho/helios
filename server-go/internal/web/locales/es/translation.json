@@ -201,7 +201,8 @@
     "imageEdit": "Cambiar imagen (PNG con transparencia, alto recomendado 460 px; se reescala solo)",
     "imageClear": "Quitar imagen",
     "imageOk": "Imagen actualizada",
-    "imageCleared": "Imagen quitada"
+    "imageCleared": "Imagen quitada",
+    "imageError": "No se pudo guardar la imagen"
   },
   "inversores": {
     "title": "Inversores",

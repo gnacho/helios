@@ -201,7 +201,8 @@
     "imageEdit": "更换图片 (透明 PNG，建议高度 460 px；自动缩放)",
     "imageClear": "移除图片",
     "imageOk": "图片已更新",
-    "imageCleared": "图片已移除"
+    "imageCleared": "图片已移除",
+    "imageError": "无法保存图片"
   },
   "inversores": {
     "title": "逆变器",

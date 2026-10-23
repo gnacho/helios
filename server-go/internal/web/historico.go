@@ -60,7 +60,9 @@ func histY(v float64) float64 {
 type histDayChartModel struct {
 	Lang        string
 	ProdPath    string
+	ProdLine    string
 	ConsPath    string
+	ConsLine    string
 	TicksX      []chartTick
 	TicksY      []chartTick
 	PlotRightX  float64
@@ -93,7 +95,9 @@ func buildHistoryDayChart(lang string, points []solar.DayPoint, nowMin int, hasN
 	}
 	baseline := histY(0)
 	m.ProdPath = areaPath(prod, baseline)
+	m.ProdLine = monotoneLine(prod)
 	m.ConsPath = areaPath(cons, baseline)
+	m.ConsLine = monotoneLine(cons)
 	return m
 }
 

@@ -217,6 +217,7 @@ type invDayChartModel struct {
 	YMax        int
 	Now         int
 	PastPath    string
+	PastLine    string
 	FuturePath  string
 	TicksX      []chartTick
 	TicksY      []chartTick
@@ -256,6 +257,7 @@ func BuildInverterDayChart(lang string, points []solar.DayPoint, key, color stri
 	}
 	baseline := g.y(0, float64(m.YMax))
 	m.PastPath = areaPath(past, baseline)
+	m.PastLine = monotoneLine(past)
 	m.FuturePath = monotonePath(future)
 
 	m.TicksX = dayTicksX(g)

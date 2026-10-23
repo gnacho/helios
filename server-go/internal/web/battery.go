@@ -96,6 +96,7 @@ type socDayChartModel struct {
 	W, H        float64 // viewBox
 	Lang        string
 	PastPath    string
+	PastLine    string
 	FuturePath  string
 	Events      []socEventDot
 	TicksX      []chartTick
@@ -149,6 +150,7 @@ func buildSocDayChart(lang string, points []solar.DayPoint, nowMin int, pal Pale
 	}
 	baseline := g.y(0, 100)
 	m.PastPath = areaPath(past, baseline)
+	m.PastLine = monotoneLine(past)
 	m.FuturePath = monotonePath(future)
 
 	addEvent := func(p solar.DayPoint, key string) {
@@ -188,8 +190,8 @@ const (
 	batTop       = 10.0
 	batSideL     = 34.0
 	batSideR     = 12.0
-	batBottom    = 24.0
-	batYMax      = 2.6
+	batBottom    = 32.0
+	batYMax      = 2.6 // minimum domain (react [-2.6, 2.6]); grows with the data
 	batBucketMin = 15
 )
 
@@ -200,6 +202,7 @@ type batBucket struct {
 }
 
 type batPowerChartModel struct {
+	YMax           float64
 	Lang           string
 	Buckets        []batBucket
 	TicksX         []chartTick
@@ -210,26 +213,37 @@ type batPowerChartModel struct {
 	ColorDischarge string
 }
 
-func batY(v float64) float64 {
+func batY(v, yMax float64) float64 {
 	plotH := batH - batTop - batBottom
-	return batTop + (1-(v+batYMax)/(2*batYMax))*plotH
+	return batTop + (1-(v+yMax)/(2*yMax))*plotH
 }
 
 // buildBatPowerChart ports the divergent 15-min bar chart: charge (battery
 // color) up, discharge (solar color) down, axis centered on 0.
 func buildBatPowerChart(lang string, points []solar.DayPoint, pal Palette) batPowerChartModel {
+	// Domain grows with the data: a 2.7 kW spike must not overrun the axis
+	// labels (react uses a fixed [-2.6, 2.6] and clips).
+	maxAbs := 0.0
+	for _, p := range points {
+		if a := abs(p.BatteryPower); a > maxAbs {
+			maxAbs = a
+		}
+	}
+	yMax := math.Max(batYMax, math.Ceil(maxAbs*10)/10)
 	m := batPowerChartModel{
+		YMax:           yMax,
 		Lang:           lang,
 		ColorCharge:    pal.Bateria,
 		ColorDischarge: pal.Solar,
-		ZeroY:          batY(0),
+		ZeroY:          batY(0, yMax),
 		PlotRightX:     batW - batSideR,
 	}
 	for _, t := range []int{0, 240, 480, 720, 960, 1200, 1440} {
-		m.TicksX = append(m.TicksX, chartTick{X: batX(float64(t)), Y: batH - 6, Label: fmtTime(t)})
+		m.TicksX = append(m.TicksX, chartTick{X: batX(float64(t)), Y: batH - 8, Label: fmtTime(t)})
 	}
+	// Fixed ticks like the React YAxis (they stay inside the grown domain).
 	for _, v := range []int{-2, -1, 0, 1, 2} {
-		m.TicksY = append(m.TicksY, chartTick{X: batSideL - 6, Y: batY(float64(v)) + 4, Label: fmt.Sprintf("%d", v)})
+		m.TicksY = append(m.TicksY, chartTick{X: batSideL - 6, Y: batY(float64(v), yMax) + 4, Label: fmt.Sprintf("%d", v)})
 	}
 
 	plotW := batW - batSideL - batSideR
@@ -254,11 +268,11 @@ func buildBatPowerChart(lang string, points []solar.DayPoint, pal Palette) batPo
 		bucket := batBucket{X: batSideL + float64(b)*slot + (slot-barW)/2, W: barW}
 		switch {
 		case avg > 0.005:
-			bucket.ChargeY = batY(avg)
-			bucket.ChargeH = batY(0) - batY(avg)
+			bucket.ChargeY = batY(avg, yMax)
+			bucket.ChargeH = batY(0, yMax) - batY(avg, yMax)
 		case avg < -0.005:
-			bucket.DischargeY = batY(0)
-			bucket.DischargeH = batY(avg) - batY(0)
+			bucket.DischargeY = batY(0, yMax)
+			bucket.DischargeH = batY(avg, yMax) - batY(0, yMax)
 		}
 		m.Buckets = append(m.Buckets, bucket)
 	}

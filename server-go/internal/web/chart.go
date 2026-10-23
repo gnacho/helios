@@ -66,8 +66,10 @@ type DayChartModel struct {
 	NowX float64 // x of the "now" marker
 
 	ProdPastPath   string // area (filled) up to now
+	ProdPastLine   string // stroke-only data line (no baseline closure)
 	ProdFuturePath string // dashed line from now on
 	ConsPath       string // consumption area
+	ConsLine       string // stroke-only data line
 	InvPaths       []DayChartInv
 
 	TicksX      []chartTick
@@ -138,8 +140,10 @@ func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []s
 
 	baseline := g.y(0, float64(m.YMax))
 	m.ProdPastPath = areaPath(past, baseline)
+	m.ProdPastLine = monotoneLine(past)
 	m.ProdFuturePath = monotonePath(future)
 	m.ConsPath = areaPath(cons, baseline)
+	m.ConsLine = monotoneLine(cons)
 	for _, k := range invKeys {
 		name := k
 		if n, ok := invNames[k]; ok && n != "" {

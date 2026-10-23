@@ -49,6 +49,7 @@ type chgCurveModel struct {
 	Color       string
 	YMax        int
 	AreaPath    string
+	LinePath    string
 	TicksX      []chartTick
 	TicksY      []chartTick
 	PlotRightX  float64
@@ -146,6 +147,8 @@ type chargerView struct {
 	Palette Palette
 	Tabs    []chgTabView
 	Active  *chgSingleView
+	IsAdmin bool
+	ImgErr  bool
 }
 
 // chargerSignals builds the $chg subtree for every charger: server-formatted
@@ -243,7 +246,7 @@ func chgDayCurveChart(lang string, points []extensions.CurvePoint, color string)
 		Color:       color,
 		TicksX:      chgTicksX(),
 		PlotRightX:  chgCurveW - 12,
-		PlotBottomY: chgCurveH - 14,
+		PlotBottomY: chgCurveH - 24,
 	}
 	yMaxF := 1.0
 	for _, p := range points {
@@ -266,6 +269,7 @@ func chgDayCurveChart(lang string, points []extensions.CurvePoint, color string)
 		pts = append(pts, cpoint{chartXin(float64(p.T), chgCurveW), chgCurveY(p.Kw, float64(m.YMax))})
 	}
 	m.AreaPath = areaPath(pts, chgCurveY(0, float64(m.YMax)))
+	m.LinePath = monotoneLine(pts)
 	return m
 }
 
@@ -273,7 +277,7 @@ func chgDayCurveChart(lang string, points []extensions.CurvePoint, color string)
 func chgTicksX() []chartTick {
 	var ticks []chartTick
 	for _, t := range axisTicksX {
-		ticks = append(ticks, chartTick{X: chartXin(float64(t), chgCurveW), Y: chgCurveH - 6, Label: fmtTime(t)})
+		ticks = append(ticks, chartTick{X: chartXin(float64(t), chgCurveW), Y: chgCurveH - 8, Label: fmtTime(t)})
 	}
 	return ticks
 }
@@ -282,7 +286,7 @@ func chgTicksX() []chartTick {
 func chartXin(t, w float64) float64 { return (chartGeom{w, 0}).x(t) }
 
 func chgCurveY(v, yMax float64) float64 {
-	top, bottom := 10.0, chgCurveH-14.0
+	top, bottom := 10.0, chgCurveH-24.0
 	return top + (1-v/yMax)*(bottom-top)
 }
 
@@ -293,7 +297,7 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 		W:           chgHistW,
 		Lang:        lang,
 		PlotRightX:  chgHistW - 12,
-		PlotBottomY: chgCurveH - 14,
+		PlotBottomY: chgCurveH - 24,
 		ColorSolar:  pal.Bateria,
 		ColorGrid:   pal.Consumo,
 	}
@@ -477,7 +481,8 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 		charger = &cfg.CarCharger.Chargers[0]
 	}
 
-	v := chargerView{pageProps: p, Palette: pal}
+	_, _, isAdmin := u.currentUserActor(r)
+	v := chargerView{pageProps: p, Palette: pal, IsAdmin: isAdmin, ImgErr: r.URL.Query().Get("imgerr") == "1"}
 	for i := range cfg.CarCharger.Chargers {
 		c := &cfg.CarCharger.Chargers[i]
 		charging := false

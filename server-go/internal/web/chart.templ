@@ -61,13 +61,15 @@ templ dayChartSVG(c DayChartModel) {
 				}
 			}
 			<g data-show="$chart.total">
-				<path d={ c.ProdPastPath } fill="url(#grad-prod)" stroke="var(--c-solar)" stroke-width="2.5"></path>
+				<path d={ c.ProdPastPath } fill="url(#grad-prod)"></path>
+				<path d={ c.ProdPastLine } fill="none" stroke="var(--c-solar)" stroke-width="2.5"></path>
 			</g>
 			<g data-show="$chart.total">
 				<path d={ c.ProdFuturePath } fill="none" stroke="var(--c-solar)" stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.5"></path>
 			</g>
 			<g data-show="$chart.consumo">
-				<path d={ c.ConsPath } fill="url(#grad-cons)" stroke="var(--c-consumo)" stroke-width="2"></path>
+				<path d={ c.ConsPath } fill="url(#grad-cons)"></path>
+				<path d={ c.ConsLine } fill="none" stroke="var(--c-consumo)" stroke-width="2"></path>
 			</g>
 			for _, inv := range c.InvPaths {
 				<g data-show={ "$chart." + inv.Key }>

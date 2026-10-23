@@ -108,8 +108,8 @@ func TestBuildBatPowerChart(t *testing.T) {
 	if b0.ChargeH <= 0 || b0.DischargeH != 0 {
 		t.Fatalf("bucket 0 = %+v", b0)
 	}
-	wantH := batY(0) - batY(1.5)
-	if math.Abs(b0.ChargeH-wantH) > 0.01 || math.Abs(b0.ChargeY-batY(1.5)) > 0.01 {
+	wantH := batY(0, m.YMax) - batY(1.5, m.YMax)
+	if math.Abs(b0.ChargeH-wantH) > 0.01 || math.Abs(b0.ChargeY-batY(1.5, m.YMax)) > 0.01 {
 		t.Fatalf("carga h/y = %v/%v", b0.ChargeH, b0.ChargeY)
 	}
 	// Segundo bucket: descarga de 1 kW.
@@ -117,7 +117,7 @@ func TestBuildBatPowerChart(t *testing.T) {
 	if b1.DischargeH <= 0 || b1.ChargeH != 0 {
 		t.Fatalf("bucket 1 = %+v", b1)
 	}
-	if math.Abs(b1.DischargeH-(batY(-1)-batY(0))) > 0.01 {
+	if math.Abs(b1.DischargeH-(batY(-1, m.YMax)-batY(0, m.YMax))) > 0.01 {
 		t.Fatalf("descarga h = %v", b1.DischargeH)
 	}
 	// Bucket con media por debajo del umbral: sin barras.

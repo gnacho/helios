@@ -174,14 +174,32 @@ templ chgHero(v chargerView, s *chgSingleView) {
 				@iconForChgState(s.Chip.State, "h-[14px] w-[14px]")
 				{ s.Chip.Text }
 			</span>
+			if v.IsAdmin {
+				<form method="post" action="/cargador/charger-image" enctype="multipart/form-data" class="ml-auto flex items-center gap-1.5">
+					<input type="hidden" name="charger" value={ s.Key }/>
+					<label class="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app bg-surface px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app" title={ T(v.Lang, "cargador.imageEdit") }>
+						@iconImagePlus("h-[14px] w-[14px]")
+						<span class="hidden sm:inline">{ T(v.Lang, "cargador.imageEdit") }</span>
+						<input type="file" name="image" accept="image/png,image/jpeg,image/webp" class="sr-only" required/>
+					</label>
+					<button type="submit" class="inline-flex h-8 items-center justify-center rounded-lg border border-app bg-surface px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app">
+						{ T(v.Lang, "common.save") }
+					</button>
+				</form>
+			}
 		</div>
+		if v.ImgErr {
+			<p class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">{ T(v.Lang, "cargador.imageError") }</p>
+		}
 		<div class="flex flex-col gap-5 lg:flex-row lg:items-stretch">
-			<div class="flex min-h-44 shrink-0 items-center justify-center self-stretch rounded-3xl bg-white p-3 lg:w-[42%] dark:bg-transparent">
-				if s.HasImage {
-					<img src={ templ.URL(s.ImageURL) } alt={ s.Name } draggable="false" class="h-full max-h-full w-full object-contain select-none"/>
-				} else {
-					@iconCarFront("h-[72px] w-[72px]")
-				}
+			<div class="flex shrink-0 flex-col gap-2 self-stretch lg:w-[42%]">
+				<div class="flex min-h-44 flex-1 items-center justify-center rounded-3xl bg-white p-3 dark:bg-transparent">
+					if s.HasImage {
+						<img src={ templ.URL(s.ImageURL) } alt={ s.Name } draggable="false" class="h-full max-h-full w-full object-contain select-none"/>
+					} else {
+						@iconCarFront("h-[72px] w-[72px]")
+					}
+				</div>
 			</div>
 			<div class="flex min-w-0 flex-1 flex-col justify-center gap-5">
 				if s.PowerKnown {
@@ -328,7 +346,8 @@ templ chgCurveSVG(c chgCurveModel) {
 				}
 			}
 			if c.AreaPath != "" {
-				<path d={ c.AreaPath } fill="url(#chg-curve)" stroke={ c.Color } stroke-width="2"></path>
+				<path d={ c.AreaPath } fill="url(#chg-curve)"></path>
+				<path d={ c.LinePath } fill="none" stroke={ c.Color } stroke-width="2"></path>
 			}
 		</svg>
 	</div>

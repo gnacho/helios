@@ -212,7 +212,8 @@ templ socDaySVG(m socDayChartModel) {
 			}
 			<rect x={ r2(plotLeft) } y={ r2(m.ReserveY) } width={ r2(m.PlotRightX - plotLeft) } height={ r2(m.PlotBottomY - m.ReserveY) } fill={ m.ColorBuy } fill-opacity="0.06"></rect>
 			<text x={ r2(m.PlotRightX - 6) } y={ r2(m.PlotBottomY - 6) } text-anchor="end" style={ "fill: " + m.ColorBuy + "; font-size: 10px; font-weight: 600; font-family: Inter" }>{ m.ReserveLbl }</text>
-			<path d={ m.PastPath } fill="url(#grad-soc-day)" stroke={ m.ColorBat } stroke-width="2.5"></path>
+			<path d={ m.PastPath } fill="url(#grad-soc-day)"></path>
+			<path d={ m.PastLine } fill="none" stroke={ m.ColorBat } stroke-width="2.5"></path>
 			<path d={ m.FuturePath } fill="none" stroke={ m.ColorBat } stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.55"></path>
 			for _, e := range m.Events {
 				if e.Past {
