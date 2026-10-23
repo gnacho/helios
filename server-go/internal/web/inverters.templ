@@ -1,0 +1,441 @@
+package web
+
+// /inversores page (port of Inversores.tsx). Tabs are server-rendered links;
+// live texts bind to the $inv.* signals patched by /ui/stream.
+templ InversoresPage(v inversoresView) {
+	@shellLayout(v.pageProps) {
+		<div data-signals={ v.Signals } data-on-load={ "@get('/ui/stream')" } class="mx-auto w-full max-w-6xl">
+			<div class="flex flex-col gap-4 lg:gap-5">
+				if len(v.Tabs) > 1 {
+					@invTabs(v)
+				}
+				if v.Single != nil {
+					@invSingle(v, v.Single)
+				}
+				if v.Compare != nil {
+					@invCompare(v, v.Compare)
+				}
+				<p class="flex items-center gap-1.5 text-xs text-faint">
+					@iconActivity("h-3 w-3")
+					{ v.Note }
+				</p>
+			</div>
+		</div>
+	}
+}
+
+// invTabs is the segmented control (sticky on mobile, like the React page).
+templ invTabs(v inversoresView) {
+	<div class="sticky top-14 z-30 -mx-4 bg-[color-mix(in_srgb,var(--bg)_85%,transparent)] px-4 py-2 backdrop-blur-[16px] lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+		<div class="flex h-10 w-full items-center gap-1 overflow-x-auto rounded-full border border-app bg-surface p-1 no-scrollbar lg:w-fit" role="tablist" aria-label={ T(v.Lang, "inversores.tabAria") }>
+			for _, tb := range v.Tabs {
+				<a
+					href={ templ.URL("/inversores?inv=" + tb.Key) }
+					role="tab"
+					aria-selected={ boolStr(tb.Active) }
+					class={ "relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none", templ.KV("text-faint hover:text-muted", !tb.Active) }
+					style={ tabColor(tb) }
+				>
+					if tb.Active {
+						<span class="absolute inset-0 rounded-full bg-surface-2 shadow-inner"></span>
+					}
+					<span class="relative z-10 flex items-center gap-1.5">
+						if tb.IsCompare {
+							@iconArrowLeftRight("h-3.5 w-3.5")
+						} else {
+							<span class="h-2 w-2 rounded-full" style={ "background-color: " + tb.Color + "; opacity: " + tabDotOpacity(tb) }></span>
+						}
+						{ tb.Label }
+					</span>
+				</a>
+			}
+		</div>
+	</div>
+}
+
+func tabColor(tb invTabView) string {
+	if tb.Active && tb.Color != "" {
+		return "color: " + tb.Color
+	}
+	return ""
+}
+
+func tabDotOpacity(tb invTabView) string {
+	if tb.Active {
+		return "1"
+	}
+	return "0.4"
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
+// ── Per-inverter view ───────────────────────────────────────────────────
+templ invSingle(v inversoresView, s *invSingleView) {
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+		<div class="lg:col-span-4">
+			@invHeroCard(v, s.Hero)
+		</div>
+		<div class="grid grid-cols-2 gap-4 lg:col-span-8 xl:grid-cols-4" aria-label={ T(v.Lang, "inversores.kpisAria", map[string]string{"name": s.Hero.Name}) }>
+			for i, k := range s.Kpis {
+				@invKpiCard(v, k, i)
+			}
+		</div>
+		<div class="lg:col-span-8">
+			@invDayChart(v, s.Chart)
+		</div>
+		<div class="lg:col-span-4">
+			@last14Card(v, s.Last14)
+		</div>
+	</div>
+}
+
+// invHeroCard ports InverterHeroCard.tsx.
+templ invHeroCard(v inversoresView, h invHeroModel) {
+	<section class="helios-card h-full border-t-[3px] p-5 shadow-card hover:-translate-y-0.5 hover:shadow-lg dark:shadow-card-dark" style={ "border-top-color: " + h.Color } aria-label={ h.Aria }>
+		<div class="flex items-start gap-3">
+			<span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={ "background-color: " + h.Color + "1F; color: " + h.Color }>
+				@iconZap("h-6 w-6")
+			</span>
+			<div class="min-w-0 flex-1">
+				<p class="font-display text-[22px] font-semibold leading-tight tracking-[-0.01em] text-app">{ h.Name }</p>
+				<p class="truncate text-[13px] text-muted">{ h.ModelText }</p>
+			</div>
+			<div class="flex flex-col items-end gap-1.5">
+				<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+					<span class="relative flex h-1.5 w-1.5">
+						<span class="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60"></span>
+						<span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+					</span>
+					{ h.OnlineText }
+				</span>
+				if h.HasBattery {
+					<span class="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
+						@iconBatteryCharging("h-3 w-3 shrink-0 text-faint")
+						{ h.BatteryKwhText } <span class="text-faint">kWh</span>
+					</span>
+				}
+				<span class={ "inline-flex items-center gap-1.5 text-[12px] font-medium", templ.KV("text-amber-600 dark:text-amber-400", h.TempHot), templ.KV("text-muted", !h.TempHot) }>
+					@iconThermometerSun("h-3 w-3 shrink-0 text-faint")
+					{ h.TempText } <span class="text-faint">°C</span>
+				</span>
+			</div>
+		</div>
+		<div class="mt-5">
+			<p class="font-display text-[48px] font-semibold leading-none tracking-[-0.02em]" style={ "color: " + h.Color } aria-live="off">
+				<span data-text={ h.NowSignal }>{ h.NowText }</span>
+				<span class="ml-1.5 text-[0.42em] font-medium text-faint">kW</span>
+			</p>
+			<p class="mt-1 text-sm text-muted">{ h.ProducingText }</p>
+		</div>
+		<ul class="mt-5 flex flex-col gap-2.5 border-t border-app pt-4 text-sm">
+			<li class="flex items-center gap-2.5 text-muted">
+				@iconSun("h-[15px] w-[15px] shrink-0 text-faint")
+				{ h.SolarFieldText } <span class="ml-auto font-medium text-app">{ h.Panels }</span>
+			</li>
+			if h.HasBattery {
+				<li class="flex items-center gap-2.5 text-muted">
+					@iconBatteryCharging("h-[15px] w-[15px] shrink-0 text-faint")
+					{ T(v.Lang, "common.battery") } <span class="ml-auto font-medium text-app">{ h.CoupledText }</span>
+				</li>
+			}
+		</ul>
+	</section>
+}
+
+// iconForKpiIdx maps the 4 per-inverter KPIs to their icon (Sun,
+// CalendarRange, History, Gauge in Inversores.tsx).
+func iconForKpiIdx(i int, class string) templ.Component {
+	switch i {
+	case 0:
+		return iconSun(class)
+	case 1:
+		return iconCalendarRange(class)
+	case 2:
+		return iconHistory(class)
+	case 3:
+		return iconGauge(class)
+	}
+	return iconSun(class)
+}
+
+templ invKpiCard(v inversoresView, k invKpiView, idx int) {
+	<div class="helios-card flex h-full flex-col gap-2 p-3 shadow-card dark:shadow-card-dark sm:p-4">
+		<div class="flex items-center justify-between">
+			<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + k.Accent + "1F; color: " + k.Accent }>
+				@iconForKpiIdx(idx, "h-[17px] w-[17px]")
+			</span>
+		</div>
+		<div>
+			<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ k.Label }</p>
+			<p class="mt-0.5 font-display text-[22px] font-semibold leading-none tracking-[-0.01em] text-app" aria-live="off">
+				{ k.ValueText }
+				<span class="ml-1 text-[0.6em] font-medium text-faint">{ k.Unit }</span>
+			</p>
+			if k.HasDelta {
+				<span class="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+					@iconArrowUp("h-3 w-3")
+					{ k.DeltaText }
+				</span>
+			}
+		</div>
+	</div>
+}
+
+// invDayChart ports InverterDayChart.tsx (past area + dashed forecast).
+templ invDayChart(v inversoresView, c invDayChartModel) {
+	<section class="helios-card h-full shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "inversores.powerTodayAria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "inversores.powerToday") }</h2>
+				<p class="text-xs capitalize text-faint">{ v.DateText }</p>
+			</div>
+		</div>
+		@invDaySVG(c)
+	</section>
+}
+
+templ invDaySVG(c invDayChartModel) {
+	<div class="overflow-x-auto px-1 pb-2">
+		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+			<defs>
+				<linearGradient id={ "grad-inv-" + c.Key } x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color={ c.Color } stop-opacity="0.25"></stop>
+					<stop offset="100%" stop-color={ c.Color } stop-opacity="0"></stop>
+				</linearGradient>
+				<linearGradient id={ "grad-inv-now-" + c.Key } x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="#F59E0B"></stop>
+					<stop offset="100%" stop-color="#F97316"></stop>
+				</linearGradient>
+			</defs>
+			for _, t := range c.TicksY[1:] {
+				<line x1={ r2(plotLeft) } x2={ r2(c.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+			}
+			for _, t := range c.TicksY {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+			for i, t := range c.TicksX {
+				if i == len(c.TicksX)-1 {
+					<text x={ r2(chartW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				} else {
+					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				}
+			}
+			<path d={ c.PastPath } fill={ "url(#grad-inv-" + c.Key + ")" } stroke={ c.Color } stroke-width="2.5"></path>
+			<path d={ c.FuturePath } fill="none" stroke={ c.Color } stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.5"></path>
+			<line x1={ r2(chartX(float64(c.Now))) } x2={ r2(chartX(float64(c.Now))) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke={ "url(#grad-inv-now-" + c.Key + ")" } stroke-width="2"></line>
+			<text x={ r2(chartX(float64(c.Now)) + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
+		</svg>
+	</div>
+}
+
+// last14Card ports Last14Chart (server SVG bars, interval=1 labels).
+templ last14Card(v inversoresView, m last14Model) {
+	<section class="helios-card h-full shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "inversores.last14aria") }>
+		<div class="px-4 pb-1 pt-4 sm:px-5">
+			<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "inversores.last14") }</h2>
+			<p class="text-xs text-faint">{ T(v.Lang, "inversores.last14sub") }</p>
+		</div>
+		<div class="px-1 pb-2">
+			<svg viewBox="0 0 1100 240" class="h-auto w-full" role="img" aria-hidden="true">
+				for _, b := range m.Bars {
+					if b.IsLast {
+						<path d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } stroke={ m.Color } stroke-width="1.5"></path>
+					} else {
+						<path d={ topRoundedBarPath(b.X, b.Y, b.W, b.H, last14BarR) } fill={ m.Color } opacity="0.55"></path>
+					}
+				}
+				for _, b := range m.Bars {
+					if b.ShowLabel {
+						<text x={ r2(b.X + b.W/2) } y={ r2(last14H - 6) } text-anchor="middle" font-size="11" fill="var(--text-faint)" font-family="Inter">{ b.Label }</text>
+					}
+				}
+			</svg>
+		</div>
+	</section>
+}
+
+// ── Compare view ────────────────────────────────────────────────────────
+templ invCompare(v inversoresView, c *invCompareView) {
+	<div class="flex flex-col gap-4 lg:gap-5">
+		@invCompareHeroCard(v, c)
+		@invCompareChart(v, c)
+		<div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+			@invMetricsCard(v, c)
+			@invShareCard(v, c)
+		</div>
+	</div>
+}
+
+templ invCompareHeroCard(v inversoresView, c *invCompareView) {
+	<section class="helios-card relative overflow-hidden shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "inversores.compareAria") }>
+		<div class="grid sm:grid-cols-2 lg:grid-cols-2">
+			for i, h := range c.Heroes {
+				<div class={ "flex flex-col gap-1 p-5 sm:p-6", templ.KV("border-t border-app lg:border-t-0 lg:border-l", i > 0) }>
+					<p class="flex items-center gap-2 text-sm font-semibold text-app">
+						<span class="h-2.5 w-2.5 rounded-full" style={ "background-color: " + h.Color }></span>
+						{ h.Name } <span class="text-xs font-normal text-faint">{ h.KwpText }</span>
+					</p>
+					<p class="font-display text-[32px] font-semibold leading-tight tracking-[-0.01em]" style={ "color: " + h.Color } aria-live="off">
+						<span data-text={ h.NowSignal }>{ h.NowText }</span>
+						<span class="text-[0.55em] font-medium text-faint">kW</span>
+					</p>
+					<p class="text-sm text-muted">
+						{ h.TodayLabel } <span class="font-semibold text-app">{ h.KwhText } kWh</span>
+					</p>
+				</div>
+			}
+		</div>
+		if len(c.Heroes) == 2 {
+			<span class="absolute left-1/2 top-1/2 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-app bg-surface text-center font-display text-xs font-bold leading-10 text-muted shadow-md lg:flex">VS</span>
+		}
+	</section>
+}
+
+templ invCompareChart(v inversoresView, c *invCompareView) {
+	<section class="helios-card shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "inversores.curvesTitle") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "inversores.curvesTitle") }</h2>
+				<p class="text-xs text-faint">{ T(v.Lang, "inversores.instantPower") }</p>
+			</div>
+			for _, inv := range c.Chart.InvPaths {
+				<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+					<span class="h-2 w-2 rounded-full" style={ "background-color: " + inv.Var }></span>
+					{ inv.Name }
+				</span>
+			}
+		</div>
+		@invCompareSVG(v, c.Chart)
+	</section>
+}
+
+templ invCompareSVG(v inversoresView, c DayChartModel) {
+	<div class="overflow-x-auto px-1 pb-2">
+		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+			<defs>
+				for _, inv := range c.InvPaths {
+					<linearGradient id={ "grad-cmp-" + inv.Key } x1="0" y1="0" x2="0" y2="1">
+						<stop offset="0%" stop-color={ inv.Var } stop-opacity="0.2"></stop>
+						<stop offset="100%" stop-color={ inv.Var } stop-opacity="0"></stop>
+					</linearGradient>
+				}
+				<linearGradient id="grad-cmp-now" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="#F59E0B"></stop>
+					<stop offset="100%" stop-color="#F97316"></stop>
+				</linearGradient>
+			</defs>
+			for _, t := range c.TicksY[1:] {
+				<line x1={ r2(plotLeft) } x2={ r2(c.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+			}
+			for _, t := range c.TicksY {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+			for i, t := range c.TicksX {
+				if i == len(c.TicksX)-1 {
+					<text x={ r2(chartW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				} else {
+					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				}
+			}
+			for _, inv := range c.InvPaths {
+				<path d={ inv.Path } fill={ "url(#grad-cmp-" + inv.Key + ")" } stroke={ inv.Var } stroke-width="2"></path>
+			}
+			<line x1={ r2(chartX(float64(c.Now))) } x2={ r2(chartX(float64(c.Now))) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-cmp-now)" stroke-width="2"></line>
+			<text x={ r2(chartX(float64(c.Now)) + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(v.Lang, "chart.now") }</text>
+		</svg>
+	</div>
+}
+
+templ invMetricsCard(v inversoresView, c *invCompareView) {
+	<section class="helios-card p-4 shadow-card dark:shadow-card-dark sm:p-5 lg:col-span-7" aria-label={ T(v.Lang, "inversores.metricsAria") }>
+		<h2 class="px-1 text-[15px] font-semibold text-app">{ T(v.Lang, "inversores.metricsTitle") }</h2>
+		<div class="mt-2 overflow-x-auto px-1">
+			<table class="w-full text-sm">
+				<thead>
+					<tr class="border-b border-app">
+						<th class="px-2 py-2 text-left text-xs font-medium text-faint">{ T(v.Lang, "inversores.metric") }</th>
+						for i, name := range c.HeadNames {
+							if i < len(c.HeadColors) {
+								<th class="px-2 py-2 text-left text-xs font-semibold" style={ "color: " + c.HeadColors[i] }>{ name }</th>
+							}
+						}
+					</tr>
+				</thead>
+				<tbody>
+					for _, row := range c.Rows {
+						<tr class="border-b border-app">
+							<td class="px-2 py-2.5 text-sm text-muted">{ row.Label }</td>
+							for _, cell := range row.Cells {
+								if cell.Chip {
+									<td class="px-2 py-2.5">
+										<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+											<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+											{ T(v.Lang, "common.online") }
+										</span>
+									</td>
+								} else {
+									<td class="px-2 py-2.5 text-sm font-medium tabular-nums" style={ "color: " + cell.Color }>
+										{ cell.Text }
+										if cell.Best {
+											<span class="ml-1.5 inline-flex items-center rounded-full bg-emerald-500/12 p-0.5 text-emerald-600 dark:text-emerald-400" aria-label={ c.BestAria }>
+												@iconTriangleSolid("h-2 w-2")
+											</span>
+										}
+									</td>
+								}
+							}
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</section>
+}
+
+templ invShareCard(v inversoresView, c *invCompareView) {
+	<section class="helios-card flex flex-col p-4 shadow-card dark:shadow-card-dark sm:p-5 lg:col-span-5" aria-label={ T(v.Lang, "inversores.shareAria") }>
+		<div class="flex items-center gap-2">
+			<h2 class="mr-auto text-[15px] font-semibold text-app">{ T(v.Lang, "inversores.shareTitle") }</h2>
+			<button data-on:click="$share.mode = 'barra'" class="inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium capitalize text-faint transition-colors hover:text-muted">
+				{ T(v.Lang, "inversores.bars") }
+			</button>
+			<button data-on:click="$share.mode = 'donut'" class="inline-flex h-7 items-center rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted">
+				Donut
+			</button>
+		</div>
+		<div class="mt-4 flex min-h-[200px] flex-1 flex-col justify-center">
+			<div data-show="$share.mode == 'donut'" class="relative">
+				<svg viewBox="0 0 200 200" class="mx-auto w-full max-w-[220px]" role="img" aria-label={ T(v.Lang, "inversores.shareAria") }>
+					for _, s := range c.Share.Slices {
+						<path d={ s.Path } fill={ s.Color }></path>
+					}
+				</svg>
+				<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+					<p class="font-display text-xl font-semibold text-app">{ c.Share.TotalText }</p>
+					<p class="text-[11px] font-medium text-faint">{ c.Share.CenterSub }</p>
+				</div>
+				<div class="mt-1 flex flex-wrap justify-center gap-4">
+					for _, s := range c.Share.Slices {
+						<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+							<span class="h-2 w-2 rounded-full" style={ "background-color: " + s.Color }></span>
+							{ s.Label } { s.PctText } %
+						</span>
+					}
+				</div>
+			</div>
+			<div data-show="$share.mode == 'barra'" class="flex h-7 w-full overflow-hidden rounded-full bg-surface-2" role="img" aria-label={ c.Share.TotalText + " kWh" }>
+				for _, b := range c.ShareBars {
+					<div class="flex h-full items-center overflow-hidden" style={ "background-color: " + b.Color + "; width: " + b.WidthText }>
+						<span class="whitespace-nowrap px-3 text-xs font-semibold text-white">{ b.LabelText }</span>
+					</div>
+				}
+			</div>
+		</div>
+		<p class="mt-4 text-sm text-muted">{ c.ShareInsight }</p>
+	</section>
+}

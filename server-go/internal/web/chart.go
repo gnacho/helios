@@ -35,9 +35,9 @@ type DayChartModel struct {
 	ConsPath       string // consumption area
 	InvPaths       []DayChartInv
 
-	TicksX   []chartTick
-	TicksY   []chartTick
-	PlotRightX float64
+	TicksX      []chartTick
+	TicksY      []chartTick
+	PlotRightX  float64
 	PlotBottomY float64
 }
 
@@ -205,7 +205,7 @@ func writeMonotoneRun(b *strings.Builder, pts []cpoint) {
 			m[i] = 0
 		} else {
 			w1 := 2*(pts[i+1].x-pts[i].x) + (pts[i].x - pts[i-1].x)
-			w2 := (pts[i+1].x-pts[i].x) + 2*(pts[i].x-pts[i-1].x)
+			w2 := (pts[i+1].x - pts[i].x) + 2*(pts[i].x-pts[i-1].x)
 			m[i] = (w1 + w2) / (w1/d[i-1] + w2/d[i])
 		}
 	}

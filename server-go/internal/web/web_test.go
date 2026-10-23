@@ -164,8 +164,6 @@ func TestStubPages(t *testing.T) {
 	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
 
 	cases := []struct{ path, wantTitle string }{
-		{"/inversores", "Inversores"},
-		{"/bateria", "Batería"},
 		{"/historico", "Histórico"},
 		{"/cargador", "Cargador"},
 		{"/ajustes", "Ajustes"},
@@ -185,6 +183,67 @@ func TestStubPages(t *testing.T) {
 		if !strings.Contains(body, "Esta vista está en construcción") {
 			t.Fatalf("%s: falta el cuerpo del stub", c.path)
 		}
+	}
+}
+
+// TestInversoresPage: the real page renders without HA/install (empty
+// fallback topology) with tabs, hero and charts.
+func TestInversoresPage(t *testing.T) {
+	_, r, _ := testUI(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	cases := []struct {
+		name string
+		url  string
+		want []string
+	}{
+		{"compare por defecto", "/inversores", []string{"Comparativa", "Solis", "Fox", "Métricas de hoy", "Reparto de hoy", "grad-cmp-solis"}},
+		{"tab por inversor", "/inversores?inv=solis", []string{"Solis S5-EH1P5K-L", "Produciendo ahora", "Últimos 14 días", "grad-inv-solis"}},
+		{"alias tab=", "/inversores?tab=fox", []string{"Fox H1-3.0-E", "grad-inv-fox"}},
+	}
+	for _, c := range cases {
+		req := httptest.NewRequest("GET", c.url, nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		if rec.Code != 200 {
+			t.Fatalf("%s: status = %d", c.name, rec.Code)
+		}
+		body := rec.Body.String()
+		for _, want := range c.want {
+			if !strings.Contains(body, want) {
+				t.Fatalf("%s: falta %q", c.name, want)
+			}
+		}
+	}
+}
+
+// TestBateriaPage: gauge and charts render without HA data; the donut only
+// appears with consumption (covered by buildDonut unit tests).
+func TestBateriaPage(t *testing.T) {
+	_, r, _ := testUI(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	req := httptest.NewRequest("GET", "/bateria", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		"En reposo",    // chip inicial sin live
+		"Cargada hoy",  // stats
+		"grad-soc-day", // curva SOC
+		"Reserva",      // gauge tick
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta %q en /bateria", want)
+		}
+	}
+	if strings.Contains(body, "¿De dónde vino tu energía?") {
+		t.Fatal("el donut no debería renderizar sin datos de consumo")
 	}
 }
 

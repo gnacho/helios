@@ -63,10 +63,10 @@ templ flowNode(d dashboardView, x float64, y float64, label string, value string
 	}
 	<g>
 		if active {
-			<circle cx={ r2(x) } cy={ r2(y) } r={ r2(r+4) } fill="none" stroke={ glowVar } stroke-opacity="0.2" stroke-width="3"></circle>
+			<circle cx={ r2(x) } cy={ r2(y) } r={ r2(r + 4) } fill="none" stroke={ glowVar } stroke-opacity="0.2" stroke-width="3"></circle>
 		}
 		<circle cx={ r2(x) } cy={ r2(y) } r={ r2(r) } fill="var(--surface)" stroke={ pickVar(active, glowVar, "var(--line)") } stroke-width={ pickF(active, 2, 1.5) }></circle>
-		<foreignObject x={ r2(x-28) } y={ r2(y-28) } width="56" height="56">
+		<foreignObject x={ r2(x - 28) } y={ r2(y - 28) } width="56" height="56">
 			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:56px;align-items:center;justify-content:center;">
 				@icon
 			</div>
@@ -87,13 +87,13 @@ templ flowNodeBattery(d dashboardView, f flowModel) {
 	}
 	<g>
 		<circle cx={ r2(flowBatX) } cy={ r2(flowBatY) } r="33" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"></circle>
-		<foreignObject x={ r2(flowBatX-28) } y={ r2(flowBatY-28) } width="56" height="56">
+		<foreignObject x={ r2(flowBatX - 28) } y={ r2(flowBatY - 28) } width="56" height="56">
 			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:56px;align-items:center;justify-content:center;">
 				@iconBattery("h-[22px] w-[22px]", soc, f.Live != nil && f.Live.BatteryPower > 0.05)
 			</div>
 		</foreignObject>
-		<text x={ r2(flowBatX) } y={ r2(flowBatY+50) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ T(d.Lang, "common.battery") }</text>
-		<text data-text="$live.batteryText" x={ r2(flowBatX) } y={ r2(flowBatY+64) } text-anchor="middle" style="fill: var(--text); font-size: 12.5px; font-weight: 600;">{ f.BatteryText }</text>
+		<text x={ r2(flowBatX) } y={ r2(flowBatY + 50) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ T(d.Lang, "common.battery") }</text>
+		<text data-text="$live.batteryText" x={ r2(flowBatX) } y={ r2(flowBatY + 64) } text-anchor="middle" style="fill: var(--text); font-size: 12.5px; font-weight: 600;">{ f.BatteryText }</text>
 	</g>
 }
 
@@ -104,13 +104,13 @@ templ flowNodeGrid(d dashboardView, f flowModel) {
 	}
 	<g>
 		<circle cx={ r2(flowGridX) } cy={ r2(flowGridY) } r="33" fill="var(--surface)" stroke={ gridVar } stroke-width="1.5"></circle>
-		<foreignObject x={ r2(flowGridX-28) } y={ r2(flowGridY-28) } width="56" height="56">
+		<foreignObject x={ r2(flowGridX - 28) } y={ r2(flowGridY - 28) } width="56" height="56">
 			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:56px;align-items:center;justify-content:center;">
 				@iconUtilityPole("h-7 w-7")
 			</div>
 		</foreignObject>
-		<text x={ r2(flowGridX) } y={ r2(flowGridY+50) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ T(d.Lang, "common.grid") }</text>
-		<text data-text="$live.gridText" x={ r2(flowGridX) } y={ r2(flowGridY+64) } text-anchor="middle" style="fill: var(--text); font-size: 12.5px; font-weight: 600;">{ f.GridText }</text>
+		<text x={ r2(flowGridX) } y={ r2(flowGridY + 50) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ T(d.Lang, "common.grid") }</text>
+		<text data-text="$live.gridText" x={ r2(flowGridX) } y={ r2(flowGridY + 64) } text-anchor="middle" style="fill: var(--text); font-size: 12.5px; font-weight: 600;">{ f.GridText }</text>
 	</g>
 }
 
@@ -151,7 +151,9 @@ templ solarArcCard(d dashboardView, a arcModel) {
 		</svg>
 		<div class="mt-1 flex items-center justify-between text-xs font-medium text-muted">
 			<span class="inline-flex items-center gap-1.5">
-				@iconSunrise("h-[15px] w-[15px] text-faint") { fmtTime(a.Sunrise) }
+				@iconSunrise("h-[15px] w-[15px] text-faint") {
+					fmtTime(a.Sunrise) 
+				}
 			</span>
 			<span class="inline-flex items-center gap-1.5">
 				{ fmtTime(a.Sunset) } @iconSunset("h-[15px] w-[15px] text-faint")
@@ -159,7 +161,9 @@ templ solarArcCard(d dashboardView, a arcModel) {
 		</div>
 		<div class="mt-3 flex flex-wrap items-center gap-2 border-t border-app pt-3 text-xs text-muted">
 			<span class="inline-flex items-center gap-1.5">
-				@iconCloudSun("h-[15px] w-[15px] text-solar") { a.WeatherLabel }
+				@iconCloudSun("h-[15px] w-[15px] text-solar") {
+					a.WeatherLabel 
+				}
 			</span>
 			if a.HasTemp {
 				<span aria-hidden="true">·</span>
@@ -181,7 +185,7 @@ templ inverterCardsRow(d dashboardView) {
 }
 
 templ inverterCard(d dashboardView, inv invCardModel, index int) {
-	<a href={ templ.URL("/inversores?tab=" + inv.Key) } class="helios-card group w-full p-5 text-left shadow-card transition-transform hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] dark:shadow-card-dark">
+	<a href={ templ.URL("/inversores?inv=" + inv.Key) } class="helios-card group w-full p-5 text-left shadow-card transition-transform hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] dark:shadow-card-dark">
 		<div class="flex items-center gap-3">
 			<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={ "background-color: " + inv.Color + "1F; color: " + inv.Color }>
 				@iconZap("h-[18px] w-[18px]")

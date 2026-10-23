@@ -23,10 +23,10 @@ func timeParseISO(s string) (time.Time, error) {
 
 // flowNode coordinates (viewBox 340x345).
 const (
-	flowFvX, flowFvY         = 170.0, 78.0
-	flowHomeX, flowHomeY     = 170.0, 200.0
-	flowBatX, flowBatY       = 62.0, 276.0
-	flowGridX, flowGridY     = 278.0, 276.0
+	flowFvX, flowFvY     = 170.0, 78.0
+	flowHomeX, flowHomeY = 170.0, 200.0
+	flowBatX, flowBatY   = 62.0, 276.0
+	flowGridX, flowGridY = 278.0, 276.0
 )
 
 const (
@@ -192,15 +192,15 @@ func sparklinePath(values []float64, w, h float64) string {
 
 // arcModel is the solar arc view (SolarArc.tsx).
 type arcModel struct {
-	SunX, SunY    float64
-	Sunrise       int
-	Sunset        int
-	PeakAt        int
-	PeakText      string
-	Daytime       bool
-	WeatherLabel  string
-	TempText      string
-	HasTemp       bool
+	SunX, SunY   float64
+	Sunrise      int
+	Sunset       int
+	PeakAt       int
+	PeakText     string
+	Daytime      bool
+	WeatherLabel string
+	TempText     string
+	HasTemp      bool
 }
 
 func buildArc(lang string, live *solar.LiveData, k DayKpis) arcModel {
@@ -218,13 +218,13 @@ func buildArc(lang string, live *solar.LiveData, k DayKpis) arcModel {
 	}
 	angle := math.Pi * (1 - frac)
 	a := arcModel{
-		SunX:   150 + 108*math.Cos(angle),
-		SunY:   128 - 108*math.Sin(angle),
-		Sunrise: sunrise,
-		Sunset:  sunset,
-		PeakAt:  k.PeakAt,
+		SunX:     150 + 108*math.Cos(angle),
+		SunY:     128 - 108*math.Sin(angle),
+		Sunrise:  sunrise,
+		Sunset:   sunset,
+		PeakAt:   k.PeakAt,
 		PeakText: fmtEnergy(lang, k.PeakProductionKw),
-		Daytime: atMin >= sunrise && atMin <= sunset,
+		Daytime:  atMin >= sunrise && atMin <= sunset,
 	}
 	if live != nil && live.Weather != "" {
 		if v, ok := lookup(catalogs[normalizeLang(lang)], "weather."+live.Weather); ok {
@@ -244,7 +244,7 @@ func buildArc(lang string, live *solar.LiveData, k DayKpis) arcModel {
 
 // invCardModel is one inverter card view (InverterCard.tsx).
 type invCardModel struct {
-	Key, Name, Model, Color    string
+	Key, Name, Model, Color     string
 	NowText, KwhText, ShareText string
 	SharePct                    float64
 	SparkPath                   string

@@ -346,7 +346,7 @@ func flowNode(d dashboardView, x float64, y float64, label string, value string,
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(r + 4))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 66, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 66, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 			if templ_7745c5c3_Err != nil {
@@ -359,7 +359,7 @@ func flowNode(d dashboardView, x float64, y float64, label string, value string,
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(glowVar)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 66, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 66, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 			if templ_7745c5c3_Err != nil {
@@ -442,7 +442,7 @@ func flowNode(d dashboardView, x float64, y float64, label string, value string,
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(x - 28))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 69, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 69, Col: 31}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -455,7 +455,7 @@ func flowNode(d dashboardView, x float64, y float64, label string, value string,
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(y - 28))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 69, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 69, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var26)
 		if templ_7745c5c3_Err != nil {
@@ -642,7 +642,7 @@ func flowNodeBattery(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowBatX - 28))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 90, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 90, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 		if templ_7745c5c3_Err != nil {
@@ -655,7 +655,7 @@ func flowNodeBattery(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowBatY - 28))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 90, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 90, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var38)
 		if templ_7745c5c3_Err != nil {
@@ -689,7 +689,7 @@ func flowNodeBattery(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowBatY + 50))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 95, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 95, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var40)
 		if templ_7745c5c3_Err != nil {
@@ -702,7 +702,7 @@ func flowNodeBattery(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "common.battery"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 95, Col: 218}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 95, Col: 220}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -728,7 +728,7 @@ func flowNodeBattery(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowBatY + 64))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 96, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 96, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
 		if templ_7745c5c3_Err != nil {
@@ -741,7 +741,7 @@ func flowNodeBattery(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var44 string
 		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(f.BatteryText)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 96, Col: 179}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 96, Col: 181}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 		if templ_7745c5c3_Err != nil {
@@ -826,7 +826,7 @@ func flowNodeGrid(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var49 string
 		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowGridX - 28))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 107, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 107, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var49)
 		if templ_7745c5c3_Err != nil {
@@ -839,7 +839,7 @@ func flowNodeGrid(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var50 string
 		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowGridY - 28))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 107, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 107, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var50)
 		if templ_7745c5c3_Err != nil {
@@ -873,7 +873,7 @@ func flowNodeGrid(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowGridY + 50))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 112, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 112, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var52)
 		if templ_7745c5c3_Err != nil {
@@ -886,7 +886,7 @@ func flowNodeGrid(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var53 string
 		templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "common.grid"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 112, Col: 217}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 112, Col: 219}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 		if templ_7745c5c3_Err != nil {
@@ -912,7 +912,7 @@ func flowNodeGrid(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var55 string
 		templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(flowGridY + 64))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 113, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 113, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var55)
 		if templ_7745c5c3_Err != nil {
@@ -925,7 +925,7 @@ func flowNodeGrid(d dashboardView, f flowModel) templ.Component {
 		var templ_7745c5c3_Var56 string
 		templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(f.GridText)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 113, Col: 175}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 113, Col: 177}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 		if templ_7745c5c3_Err != nil {
@@ -1067,7 +1067,7 @@ func solarArcCard(d dashboardView, a arcModel) templ.Component {
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(fmtTime(a.Sunset))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 157, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 159, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 		if templ_7745c5c3_Err != nil {
@@ -1119,7 +1119,7 @@ func solarArcCard(d dashboardView, a arcModel) templ.Component {
 			var templ_7745c5c3_Var65 string
 			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(a.TempText)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 166, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 170, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {
@@ -1137,7 +1137,7 @@ func solarArcCard(d dashboardView, a arcModel) templ.Component {
 		var templ_7745c5c3_Var66 string
 		templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "solar.peak", map[string]string{"kw": a.PeakText, "time": fmtTime(a.PeakAt)}))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 168, Col: 187}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 172, Col: 187}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 		if templ_7745c5c3_Err != nil {
@@ -1219,9 +1219,9 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var69 templ.SafeURL
-		templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/inversores?tab=" + inv.Key))
+		templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/inversores?inv=" + inv.Key))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 184, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 188, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 		if templ_7745c5c3_Err != nil {
@@ -1234,7 +1234,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var70 string
 		templ_7745c5c3_Var70, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + inv.Color + "1F; color: " + inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 186, Col: 146}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 190, Col: 146}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 		if templ_7745c5c3_Err != nil {
@@ -1255,7 +1255,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var71 string
 		templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(inv.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 190, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 194, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 		if templ_7745c5c3_Err != nil {
@@ -1268,7 +1268,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var72 string
 		templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(inv.Model)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 191, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 195, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 		if templ_7745c5c3_Err != nil {
@@ -1281,7 +1281,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var73 string
 		templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "common.online"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 194, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 198, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 		if templ_7745c5c3_Err != nil {
@@ -1294,7 +1294,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var74 string
 		templ_7745c5c3_Var74, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("color: " + inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 199, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 203, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 		if templ_7745c5c3_Err != nil {
@@ -1307,7 +1307,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var75 string
 		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.ResolveAttributeValue("$inv." + inv.Key + ".nowText")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 200, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 204, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var75)
 		if templ_7745c5c3_Err != nil {
@@ -1320,7 +1320,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var76 string
 		templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(inv.NowText)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 200, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 204, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 		if templ_7745c5c3_Err != nil {
@@ -1333,7 +1333,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var77 string
 		templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "inverter.today"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 204, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 208, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 		if templ_7745c5c3_Err != nil {
@@ -1346,7 +1346,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var78 string
 		templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.ResolveAttributeValue("$inv." + inv.Key + ".kwhText")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 204, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 208, Col: 122}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var78)
 		if templ_7745c5c3_Err != nil {
@@ -1359,7 +1359,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var79 string
 		templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(inv.KwhText)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 204, Col: 138}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 208, Col: 138}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 		if templ_7745c5c3_Err != nil {
@@ -1372,7 +1372,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var80 string
 		templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.ResolveAttributeValue("0 0 140 48")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 208, Col: 31}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 212, Col: 31}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var80)
 		if templ_7745c5c3_Err != nil {
@@ -1385,7 +1385,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var81 string
 		templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.ResolveAttributeValue("spark-" + inv.Key)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 210, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 214, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var81)
 		if templ_7745c5c3_Err != nil {
@@ -1398,7 +1398,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var82 string
 		templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.ResolveAttributeValue(inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 211, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 215, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var82)
 		if templ_7745c5c3_Err != nil {
@@ -1411,7 +1411,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var83 string
 		templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.ResolveAttributeValue(inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 212, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 216, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var83)
 		if templ_7745c5c3_Err != nil {
@@ -1424,7 +1424,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var84 string
 		templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.ResolveAttributeValue(inv.SparkPath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 215, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 219, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var84)
 		if templ_7745c5c3_Err != nil {
@@ -1437,7 +1437,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var85 string
 		templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.ResolveAttributeValue("url(#spark-" + inv.Key + ")")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 215, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 219, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var85)
 		if templ_7745c5c3_Err != nil {
@@ -1450,7 +1450,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var86 string
 		templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.ResolveAttributeValue(inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 215, Col: 88}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 219, Col: 88}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var86)
 		if templ_7745c5c3_Err != nil {
@@ -1463,7 +1463,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var87 string
 		templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(T(d.Lang, "inverter.shareToday"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 221, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 225, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var87))
 		if templ_7745c5c3_Err != nil {
@@ -1476,7 +1476,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var88 string
 		templ_7745c5c3_Var88, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("color: " + inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 222, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 226, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var88))
 		if templ_7745c5c3_Err != nil {
@@ -1489,7 +1489,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var89 string
 		templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.ResolveAttributeValue("$inv." + inv.Key + ".shareText")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 222, Col: 114}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 226, Col: 114}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var89)
 		if templ_7745c5c3_Err != nil {
@@ -1502,7 +1502,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var90 string
 		templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(inv.ShareText)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 222, Col: 132}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 226, Col: 132}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var90))
 		if templ_7745c5c3_Err != nil {
@@ -1515,7 +1515,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var91 string
 		templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.ResolveAttributeValue("$inv." + inv.Key + ".sharePct + '%'")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 225, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 229, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var91)
 		if templ_7745c5c3_Err != nil {
@@ -1528,7 +1528,7 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 		var templ_7745c5c3_Var92 string
 		templ_7745c5c3_Var92, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("width: " + fmtInt(d.Lang, inv.SharePct) + "%; background-color: " + inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 225, Col: 182}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 229, Col: 182}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var92))
 		if templ_7745c5c3_Err != nil {

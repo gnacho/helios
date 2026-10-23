@@ -103,7 +103,12 @@ func (u *UI) Mount(r chi.Router) {
 		r.Use(u.Auth.RequireAuthRedirect)
 		r.Get("/", u.handleDashboard)
 		r.Get("/ui/stream", u.handleStream)
+		r.Get("/inversores", u.handleInversores)
+		r.Get("/bateria", u.handleBateria)
 		for _, item := range navItems[1:] {
+			if item.Path == "/inversores" || item.Path == "/bateria" {
+				continue // real handlers above
+			}
 			r.Get(item.Path, u.stubHandler(item))
 		}
 	})

@@ -1,0 +1,284 @@
+package web
+
+// /bateria page (port of Bateria.tsx + SocHeroGauge, SocDayChart,
+// BatteryPowerChart and the energy-source donut). Static render; live texts
+// bind to the $live.* signals patched by /ui/stream.
+templ BateriaPage(v bateriaView) {
+	@shellLayout(v.pageProps) {
+		<div data-signals={ v.Signals } data-on-load={ "@get('/ui/stream')" } class="mx-auto w-full max-w-6xl">
+			<div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+				<section class="helios-card col-span-12 p-5 shadow-card dark:shadow-card-dark sm:p-6" aria-label={ T(v.Lang, "bateria.gaugeAria", map[string]string{"pct": v.Gauge.SocText}) }>
+					<div class="flex flex-col items-center gap-6 lg:flex-row lg:items-stretch">
+						<div class="flex shrink-0 flex-col items-center justify-center gap-3 lg:w-[38%]">
+							@socGaugeSVG(v.Gauge)
+							<span class={ "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold", v.Chip.Cls }>{ v.Chip.Text }</span>
+						</div>
+						<div class="flex min-w-0 flex-1 items-center lg:border-l lg:border-app lg:pl-6">
+							<div class="grid w-full grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+								for _, s := range v.Stats {
+									<div class="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-surface-2">
+										@iconForStat(s.IconKey, "h-[15px] w-[15px] shrink-0 text-faint")
+										<span class="text-[13px] text-muted">{ s.Label }</span>
+										<span class="ml-auto text-[15px] font-semibold tabular-nums text-app">{ s.Value }</span>
+									</div>
+								}
+							</div>
+						</div>
+					</div>
+				</section>
+				<div class="col-span-12 lg:col-span-6">
+					@batPowerCard(v)
+				</div>
+				<div class="col-span-12 lg:col-span-6">
+					@socDayCard(v)
+				</div>
+				<section class="helios-card col-span-12 shadow-card dark:shadow-card-dark lg:col-span-8" aria-label={ T(v.Lang, "bateria.weekAria") }>
+					<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+						<div class="mr-auto">
+							<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "bateria.weekTitle") }</h2>
+							<p class="text-xs text-faint">{ T(v.Lang, "bateria.weekSubtitle") }</p>
+						</div>
+						<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+							<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Bateria }></span>
+							{ T(v.Lang, "bateria.charge") }
+						</span>
+						<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+							<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Solar }></span>
+							{ T(v.Lang, "bateria.discharge") }
+						</span>
+					</div>
+					@weekBarsSVG(v.Week)
+					<div class="px-4 pb-4 sm:px-5">
+						<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+							{ T(v.Lang, "bateria.avgAuto", map[string]string{"pct": fmtInt(v.Lang, float64(v.WeekAvg))}) }
+						</span>
+					</div>
+				</section>
+				<section class="helios-card col-span-12 flex flex-col gap-5 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:col-span-4">
+					<div>
+						<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "bateria.workMode") }</p>
+						<span class="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+							@iconBatteryCharging("h-3 w-3")
+							{ T(v.Lang, "common.autoconsumo") }
+						</span>
+						<p class="mt-2 text-sm text-muted">{ T(v.Lang, "bateria.workModeDesc") }</p>
+					</div>
+					<div class="border-t border-app pt-5">
+						<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "bateria.minReserve") }</p>
+						<p class="mt-1 font-display text-[28px] font-semibold leading-none tracking-[-0.01em] text-app">
+							{ fmtInt(v.Lang, BatteryReservePct) } <span class="text-[0.6em] font-medium text-faint">%</span>
+						</p>
+						<div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={ fmtInt(v.Lang, BatteryReservePct) } aria-valuemin="0" aria-valuemax="100" aria-label={ T(v.Lang, "bateria.minReserveAria", map[string]string{"pct": fmtInt(v.Lang, BatteryReservePct)}) }>
+							<div class="h-full rounded-full" style={ "width: " + fmtInt(v.Lang, BatteryReservePct) + "%; background-color: " + v.Palette.RedCompra }></div>
+						</div>
+						<p class="mt-1.5 text-sm text-muted">{ T(v.Lang, "bateria.minReserveDesc", map[string]string{"kwh": "1,0"}) }</p>
+					</div>
+					<div class="border-t border-app pt-5">
+						<p class="text-xs text-faint">{ T(v.Lang, "bateria.readOnly") }</p>
+					</div>
+				</section>
+				if len(v.Donut.Slices) > 0 {
+					@energySourceCard(v)
+				}
+			</div>
+		</div>
+	}
+}
+
+// socGaugeSVG ports SocHeroGauge (static arc; the GSAP sweep is not ported).
+templ socGaugeSVG(g socGaugeModel) {
+	<div class="flex justify-center" role="img" aria-label={ g.Aria }>
+		<svg width="230" height="212" viewBox="0 0 260 240" fill="none">
+			<path d={ g.TrackPath } stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"></path>
+			if g.ValuePath != "" {
+				<path d={ g.ValuePath } stroke={ g.Color } stroke-width="16" stroke-linecap="round"></path>
+			}
+			<g>
+				<line x1={ r2(g.TickX1) } y1={ r2(g.TickY1) } x2={ r2(g.TickX2) } y2={ r2(g.TickY2) } stroke={ g.BuyColor } stroke-width="2" stroke-dasharray="3 3" stroke-linecap="round"></line>
+				<text x={ r2(g.LabelX) } y={ r2(g.LabelY + 3) } text-anchor="middle" style={ "fill: " + g.BuyColor + "; font-size: 10px; font-weight: 600; font-family: Inter" }>{ g.ReserveLbl }</text>
+			</g>
+			<text x="130" y="136" text-anchor="middle" class="font-display" style={ "fill: " + g.Color + "; font-size: 56px; font-weight: 600; letter-spacing: -0.02em" }>
+				<tspan data-text="$live.socText">{ g.SocText }</tspan>
+				<tspan style="font-size: 26px; fill: var(--text-faint); font-weight: 500">%</tspan>
+			</text>
+			<text x="130" y="164" text-anchor="middle" style="fill: var(--text-muted); font-size: 14px; font-weight: 500; font-family: Inter">{ g.KwhText }</text>
+		</svg>
+	</div>
+}
+
+// batPowerCard ports BatteryPowerChart (divergent 15-min bars).
+templ batPowerCard(v bateriaView) {
+	<section class="helios-card shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "bateria.powerAria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "bateria.powerTitle") }</h2>
+				<p class="text-xs text-faint">{ T(v.Lang, "bateria.powerSubtitle") }</p>
+			</div>
+			<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+				<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Bateria }></span>
+				{ T(v.Lang, "bateria.charge") }
+			</span>
+			<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+				<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Solar }></span>
+				{ T(v.Lang, "bateria.discharge") }
+			</span>
+		</div>
+		@batPowerSVG(v.Power)
+	</section>
+}
+
+templ batPowerSVG(m batPowerChartModel) {
+	<div class="overflow-x-auto px-1 pb-2">
+		<svg viewBox="0 0 1100 300" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+			for _, t := range m.TicksY[1:] {
+				<line x1={ r2(batSideL) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+			}
+			for i, t := range m.TicksX {
+				if i == len(m.TicksX)-1 {
+					<text x={ r2(batW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				} else {
+					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				}
+			}
+			for _, t := range m.TicksY {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+			<line x1={ r2(batSideL) } x2={ r2(m.PlotRightX) } y1={ r2(m.ZeroY) } y2={ r2(m.ZeroY) } stroke="var(--line)" stroke-width="1.5"></line>
+			for _, b := range m.Buckets {
+				if b.ChargeH > 0 {
+					<path d={ topRoundedBarPath(b.X, b.ChargeY, b.W, b.ChargeH, 3) } fill={ m.ColorCharge }></path>
+				}
+				if b.DischargeH > 0 {
+					<path d={ bottomRoundedBarPath(b.X, b.DischargeY, b.W, b.DischargeH, 3) } fill={ m.ColorDischarge }></path>
+				}
+			}
+		</svg>
+	</div>
+}
+
+// socDayCard ports SocDayChart (reserve zone + projection + events).
+templ socDayCard(v bateriaView) {
+	<section class="helios-card shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "bateria.socAria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "bateria.socTitle") }</h2>
+				<p class="text-xs text-faint">{ T(v.Lang, "bateria.socSubtitle") }</p>
+			</div>
+		</div>
+		@socDaySVG(v.Soc)
+		<div class="flex flex-wrap gap-x-4 gap-y-1 px-4 pb-4 sm:px-5">
+			for _, e := range v.Soc.Events {
+				if e.Past {
+					<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+						<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Bateria }></span>
+						{ e.Label }
+					</span>
+				} else {
+					<span class="inline-flex items-center gap-1.5 text-xs text-faint">
+						<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Bateria + "; opacity: 0.45" }></span>
+						{ e.Label }
+					</span>
+				}
+			}
+		</div>
+	</section>
+}
+
+templ socDaySVG(m socDayChartModel) {
+	<div class="overflow-x-auto px-1 pb-2">
+		<svg viewBox="0 0 1100 380" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+			<defs>
+				<linearGradient id="grad-soc-day" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color={ m.ColorBat } stop-opacity="0.25"></stop>
+					<stop offset="100%" stop-color={ m.ColorBat } stop-opacity="0"></stop>
+				</linearGradient>
+				<linearGradient id="grad-soc-now" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="#F59E0B"></stop>
+					<stop offset="100%" stop-color="#F97316"></stop>
+				</linearGradient>
+			</defs>
+			for _, t := range m.TicksY[1:] {
+				<line x1={ r2(plotLeft) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+			}
+			for i, t := range m.TicksX {
+				if i == len(m.TicksX)-1 {
+					<text x={ r2(chartW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				} else {
+					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				}
+			}
+			for _, t := range m.TicksY {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+			<rect x={ r2(plotLeft) } y={ r2(m.ReserveY) } width={ r2(m.PlotRightX - plotLeft) } height={ r2(m.PlotBottomY - m.ReserveY) } fill={ m.ColorBuy } fill-opacity="0.06"></rect>
+			<text x={ r2(m.PlotRightX - 6) } y={ r2(m.PlotBottomY - 6) } text-anchor="end" style={ "fill: " + m.ColorBuy + "; font-size: 10px; font-weight: 600; font-family: Inter" }>{ m.ReserveLbl }</text>
+			<path d={ m.PastPath } fill="url(#grad-soc-day)" stroke={ m.ColorBat } stroke-width="2.5"></path>
+			<path d={ m.FuturePath } fill="none" stroke={ m.ColorBat } stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.55"></path>
+			for _, e := range m.Events {
+				if e.Past {
+					<circle cx={ r2(e.X) } cy={ r2(e.Y) } r="6" fill={ m.ColorBat } fill-opacity="0.25"></circle>
+					<circle cx={ r2(e.X) } cy={ r2(e.Y) } r="3.5" fill={ m.ColorBat } stroke="var(--surface)" stroke-width="1.5"></circle>
+				} else {
+					<circle cx={ r2(e.X) } cy={ r2(e.Y) } r="6" fill={ m.ColorBat } fill-opacity="0.12"></circle>
+					<circle cx={ r2(e.X) } cy={ r2(e.Y) } r="3.5" fill={ m.ColorBat } fill-opacity="0.45" stroke="var(--surface)" stroke-width="1.5"></circle>
+				}
+			}
+			<line x1={ r2(m.NowX) } x2={ r2(m.NowX) } y1={ r2(plotTop) } y2={ r2(m.PlotBottomY) } stroke="url(#grad-soc-now)" stroke-width="2"></line>
+			<text x={ r2(m.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(m.Lang, "chart.now") }</text>
+		</svg>
+	</div>
+}
+
+templ weekBarsSVG(m weekBalanceModel) {
+	<div class="overflow-x-auto px-1">
+		<svg viewBox="0 0 1100 280" class="h-auto w-full min-w-[640px]" role="img" aria-hidden="true">
+			for _, t := range m.TicksY[1:] {
+				<line x1={ r2(weekSideL) } x2={ r2(weekW - weekSideR) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+			}
+			for _, t := range m.TicksY {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+			for _, d := range m.Days {
+				if d.CargaH > 0 {
+					<path d={ topRoundedBarPath(d.X, d.CargaY, d.BarW, d.CargaH, 3) } fill={ m.ColorCharge }></path>
+				}
+				if d.DescargaH > 0 {
+					<path d={ topRoundedBarPath(d.X+d.BarW+2, d.DescargaY, d.BarW, d.DescargaH, 3) } fill={ m.ColorDischarge }></path>
+				}
+				<text x={ r2(d.X + d.BarW + 1) } y={ r2(weekH - 6) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ d.Label }</text>
+			}
+		</svg>
+	</div>
+}
+
+// energySourceCard ports EnergySourceDonut.tsx as a static card.
+templ energySourceCard(v bateriaView) {
+	<section class="helios-card col-span-12 flex flex-col gap-4 p-5 shadow-card dark:shadow-card-dark sm:p-6 lg:flex-row lg:items-center" aria-label={ T(v.Lang, "historico.donutAria") }>
+		<div class="lg:w-1/2">
+			<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.donutTitle") }</h2>
+			<div class="relative mt-2">
+				<svg viewBox="0 0 200 200" class="mx-auto w-full max-w-[240px]" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
+					for _, s := range v.Donut.Slices {
+						<path d={ s.Path } fill={ s.Color }></path>
+					}
+				</svg>
+				<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+					<p class="font-display text-2xl font-semibold leading-none text-app">
+						{ v.Donut.TotalText } <span class="text-[0.6em] font-medium text-faint">kWh</span>
+					</p>
+					<p class="mt-1 text-xs text-faint">{ v.Donut.CenterSub }</p>
+				</div>
+			</div>
+		</div>
+		<ul class="flex flex-col gap-1.5 lg:w-1/2">
+			for _, s := range v.Donut.Slices {
+				<li class="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[13px]">
+					<span class="h-2.5 w-2.5 shrink-0 rounded-full" style={ "background-color: " + s.Color }></span>
+					<span class="text-muted">{ s.Label }</span>
+					<span class="ml-auto font-semibold tabular-nums text-app">{ s.ValueText } kWh</span>
+					<span class="w-10 text-right text-xs tabular-nums text-faint">{ s.PctText } %</span>
+				</li>
+			}
+		</ul>
+	</section>
+}

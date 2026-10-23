@@ -254,13 +254,13 @@ templ bottomNavItem(p pageProps, item navEntry) {
 }
 
 templ bottomNavItemInner(item navEntry, active bool, label string) {
-		<span class={ "flex", templ.KV("text-brand", active), templ.KV("text-faint", !active) }>
-			@iconForNav(item.IconKey, "h-[22px] w-[22px]")
-		</span>
-		<span class={ "text-[10px] font-medium", templ.KV("text-brand", active), templ.KV("text-faint", !active) }>{ label }</span>
-		if active {
-			<span class="absolute bottom-1.5 h-1 w-1 rounded-full bg-brand"></span>
-		}
+	<span class={ "flex", templ.KV("text-brand", active), templ.KV("text-faint", !active) }>
+		@iconForNav(item.IconKey, "h-[22px] w-[22px]")
+	</span>
+	<span class={ "text-[10px] font-medium", templ.KV("text-brand", active), templ.KV("text-faint", !active) }>{ label }</span>
+	if active {
+		<span class="absolute bottom-1.5 h-1 w-1 rounded-full bg-brand"></span>
+	}
 }
 
 // userChip: avatar + username, links to Ajustes (webapp-shell canon).
