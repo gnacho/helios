@@ -142,7 +142,7 @@ func TestTopRoundedBarPath(t *testing.T) {
 }
 
 func TestBuildInverterDayChart(t *testing.T) {
-	m := BuildInverterDayChart("es", testSeries(), "solis", "#0EA5E9", 720)
+	m := BuildInverterDayChart("es", testSeries(), "solis", "Solis", "#0EA5E9", 720)
 	if m.YMax != 3 { // max solis 2.2 + 0.4 → ceil 3
 		t.Fatalf("yMax = %d", m.YMax)
 	}

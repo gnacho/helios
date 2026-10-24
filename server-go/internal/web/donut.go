@@ -227,11 +227,12 @@ type invDayChartModel struct {
 	TicksY      []chartTick
 	PlotRightX  float64
 	PlotBottomY float64
+	Hover       []hoverCol
 }
 
 // BuildInverterDayChart ports the InverterDayChart series geometry (domain
 // dataMax + 0.4, ceil, min 1).
-func BuildInverterDayChart(lang string, points []solar.DayPoint, key, color string, nowMin int) invDayChartModel {
+func BuildInverterDayChart(lang string, points []solar.DayPoint, key, name, color string, nowMin int) invDayChartModel {
 	g := geomInvDay
 	m := invDayChartModel{W: g.W, H: g.H, Lang: lang, Key: key, Color: color, Now: roundStep(nowMin)}
 
@@ -272,6 +273,11 @@ func BuildInverterDayChart(lang string, points []solar.DayPoint, key, color stri
 	m.NowX = g.x(float64(m.Now))
 	m.PlotRightX = g.rightX()
 	m.PlotBottomY = g.bottomY()
+	m.Hover = dayHoverColumns(points, g.x,
+		hoverBox{Left: plotLeft, Right: g.rightX(), Top: plotTop, Bottom: g.bottomY()},
+		func(p solar.DayPoint) []hoverRow {
+			return []hoverRow{{Color: color, Label: name, Value: fmtKwVal(lang, seriesInvValue(p, key)) + " kW"}}
+		})
 	return m
 }
 
@@ -336,6 +342,33 @@ func BuildCompareChart(lang string, points []solar.DayPoint, nowMin int, keys []
 		m.InvPaths = append(m.InvPaths, DayChartInv{Key: k, Name: name, Var: color, Path: monotonePath(pts[k])})
 	}
 	m.TicksX = dayTicksX(g)
+	rows := make([]hoverRow, 0, len(keys))
+	for ci, k := range keys {
+		name := k
+		if n, ok := names[k]; ok && n != "" {
+			name = n
+		}
+		color := "var(--c-solar)"
+		if ci < len(colors) && colors[ci] != "" {
+			color = colors[ci]
+		}
+		rows = append(rows, hoverRow{Color: color, Label: name})
+	}
+	m.Hover = dayHoverColumns(points, g.x,
+		hoverBox{Left: plotLeft, Right: g.rightX(), Top: plotTop, Bottom: g.bottomY()},
+		func(p solar.DayPoint) []hoverRow {
+			out := make([]hoverRow, len(rows))
+			for i, k := range keys {
+				v := val(i, seriesInvValue(p, k))
+				unit := " kW"
+				if norm {
+					unit = " kW/kWp"
+				}
+				out[i] = rows[i]
+				out[i].Value = fmtKwVal(lang, v) + unit
+			}
+			return out
+		})
 	if norm {
 		for _, v := range []float64{0, 0.25, 0.5, 0.75, 1} {
 			m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: g.y(v, 1) + 4, Label: fmt.Sprintf("%.1f", v)})

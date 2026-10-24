@@ -145,6 +145,7 @@
     "socTitle": "State of charge · today",
     "socSubtitle": "0-100 % · dashed night projection",
     "socAria": "Battery state of charge throughout the day",
+    "socRow": "State of charge",
     "socFull": "Battery full {{time}}",
     "chargeStart": "Charge start {{time}}",
     "dischargeStart": "Discharge start {{time}}",

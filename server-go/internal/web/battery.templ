@@ -189,6 +189,7 @@ templ batPowerSVG(m batPowerChartModel) {
 					<path class="bar-down" d={ bottomRoundedBarPath(b.X, b.DischargeY, b.W, b.DischargeH, 3) } fill={ m.ColorDischarge }></path>
 				}
 			}
+					@chartHoverLayer(m.Hover)
 		</svg>
 	</div>
 }
@@ -263,6 +264,7 @@ templ socDaySVG(m socDayChartModel) {
 			}
 			<line x1={ r2(m.NowX) } x2={ r2(m.NowX) } y1={ r2(plotTop) } y2={ r2(m.PlotBottomY) } stroke="url(#grad-soc-now)" stroke-width="2"></line>
 			<text x={ r2(m.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(m.Lang, "chart.now") }</text>
+					@chartHoverLayer(m.Hover)
 		</svg>
 	</div>
 }

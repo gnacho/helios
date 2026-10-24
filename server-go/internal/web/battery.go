@@ -108,6 +108,7 @@ type socDayChartModel struct {
 	PlotBottomY float64
 	ColorBat    string
 	ColorBuy    string
+	Hover       []hoverCol
 }
 
 // buildSocDayChart ports the SOC curve: fixed 0..100 domain with 20-steps,
@@ -131,6 +132,11 @@ func buildSocDayChart(lang string, points []solar.DayPoint, nowMin int, pal Pale
 		m.TicksY = append(m.TicksY, chartTick{X: plotLeft - 6, Y: g.y(float64(v), 100) + 4, Label: fmt.Sprintf("%d", v)})
 	}
 	m.ReserveY = g.y(BatteryReservePct, 100)
+	m.Hover = dayHoverColumns(points, g.x,
+		hoverBox{Left: plotLeft, Right: g.rightX(), Top: plotTop, Bottom: g.bottomY()},
+		func(p solar.DayPoint) []hoverRow {
+			return []hoverRow{{Color: pal.Bateria, Label: T(lang, "bateria.socRow"), Value: fmtInt(lang, p.Soc) + " %"}}
+		})
 
 	nowIdx := roundStep(nowMin) / stepMin
 	if nowIdx > len(points) {
@@ -211,6 +217,7 @@ type batPowerChartModel struct {
 	PlotRightX     float64
 	ColorCharge    string
 	ColorDischarge string
+	Hover          []hoverCol
 }
 
 func batY(v, yMax float64) float64 {
@@ -249,6 +256,37 @@ func buildBatPowerChart(lang string, points []solar.DayPoint, pal Palette) batPo
 	plotW := batW - batSideL - batSideR
 	nBuckets := 24 * 60 / batBucketMin
 	slot := plotW / float64(nBuckets)
+
+	// Tooltip: the React chart showed "Cargando/Descargando X kW" per bucket.
+	// Every bar is hoverable, including the empty ones (the bars cover the day).
+	samples := make([]hoverSample, 0, nBuckets)
+	for b := 0; b < nBuckets; b++ {
+		start := b * batBucketMin
+		end := start + batBucketMin
+		var sum float64
+		var n int
+		for _, p := range points {
+			if p.T >= start && p.T < end {
+				sum += p.BatteryPower
+				n++
+			}
+		}
+		value := 0.0
+		if n > 0 {
+			value = sum / float64(n)
+		}
+		label := T(lang, "common.charging")
+		if value < -0.005 {
+			label = T(lang, "common.discharging")
+		}
+		samples = append(samples, hoverSample{
+			X:     batX(float64(start)),
+			W:     slot,
+			Title: fmtTime(start),
+			Rows:  []hoverRow{{Color: pal.Bateria, Label: label, Value: fmtKwVal(lang, abs(value)) + " kW"}},
+		})
+	}
+	m.Hover = buildHoverCols(samples, hoverBox{Left: batSideL, Right: batW - batSideR, Top: batTop, Bottom: batH - batBottom})
 	barW := slot * 0.7
 	for b := 0; b < nBuckets; b++ {
 		start := b * batBucketMin

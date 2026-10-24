@@ -236,6 +236,7 @@ templ invDaySVG(c invDayChartModel) {
 			<path d={ c.FuturePath } fill="none" stroke={ c.Color } stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.5"></path>
 			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke={ "url(#grad-inv-now-" + c.Key + ")" } stroke-width="2"></line>
 			<text x={ r2(c.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
+					@chartHoverLayer(c.Hover)
 		</svg>
 	</div>
 }
@@ -376,6 +377,7 @@ templ invCompareSVG(v inversoresView, c DayChartModel) {
 			}
 			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-cmp-now)" stroke-width="2"></line>
 			<text x={ r2(c.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(v.Lang, "chart.now") }</text>
+					@chartHoverLayer(c.Hover)
 		</svg>
 	</div>
 }

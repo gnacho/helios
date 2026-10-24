@@ -223,6 +223,9 @@
   .collapse {
     visibility: collapse;
   }
+  .invisible {
+    visibility: hidden;
+  }
   .visible {
     visibility: visible;
   }
@@ -2807,6 +2810,23 @@ html:not(.reduce-motion) .rev-b .anim-share {
 }
 html.reduce-motion .chg-photo {
   animation: none;
+}
+.cc-hit {
+  fill: transparent;
+}
+.cc-tip {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.cc-hover:hover .cc-tip {
+  opacity: 1;
+}
+.anim-pie path {
+  transition: opacity .12s ease;
+}
+.anim-pie path:hover {
+  opacity: .82;
 }
 @property --tw-translate-x {
   syntax: "*";

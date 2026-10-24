@@ -145,6 +145,7 @@
     "socTitle": "Estado de carga · hoy",
     "socSubtitle": "0-100 % · proyección nocturna discontinua",
     "socAria": "Estado de carga de la batería a lo largo del día",
+    "socRow": "Estado de carga",
     "socFull": "Batería llena {{time}}",
     "chargeStart": "Inicio de carga {{time}}",
     "dischargeStart": "Inicio descarga {{time}}",

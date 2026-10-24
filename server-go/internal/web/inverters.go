@@ -291,7 +291,7 @@ func buildSingleView(lang string, pal Palette, m dashboardModel, metas []invMeta
 			SolarFieldText: T(lang, "inverter.solarField"),
 			CoupledText:    T(lang, "inverter.batteryCoupled"),
 		},
-		Chart:  BuildInverterDayChart(lang, m.Series.Points, key, color, untilMin(m)),
+		Chart:  BuildInverterDayChart(lang, m.Series.Points, key, meta.Name, color, untilMin(m)),
 		Last14: buildLast14(lang, hist, share, color),
 	}
 

@@ -145,6 +145,7 @@
     "socTitle": "充电状态 · 今天",
     "socSubtitle": "0-100 % · 夜间预测为虚线",
     "socAria": "全天电池充电状态",
+    "socRow": "充电状态",
     "socFull": "电池已充满 {{time}}",
     "chargeStart": "开始充电 {{time}}",
     "dischargeStart": "开始放电 {{time}}",

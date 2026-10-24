@@ -71,6 +71,8 @@ type DayChartModel struct {
 	TicksY      []chartTick
 	PlotRightX  float64
 	PlotBottomY float64
+
+	Hover []hoverCol
 }
 
 type DayChartInv struct {
@@ -159,6 +161,27 @@ func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []s
 	m.NowX = g.x(float64(m.Now))
 	m.PlotRightX = g.rightX()
 	m.PlotBottomY = g.bottomY()
+
+	// Tooltip: production and consumption plus every inverter curve, like the
+	// React <Tooltip> (it listed the series with their own color).
+	invVars := make([]DayChartInv, len(m.InvPaths))
+	copy(invVars, m.InvPaths)
+	m.Hover = dayHoverColumns(points, g.x,
+		hoverBox{Left: plotLeft, Right: g.rightX(), Top: plotTop, Bottom: g.bottomY()},
+		func(p solar.DayPoint) []hoverRow {
+			rows := []hoverRow{
+				{Color: "var(--c-solar)", Label: T(lang, "chart.productionTotal"), Value: fmtKwVal(lang, p.Production) + " kW"},
+				{Color: "var(--c-consumo)", Label: T(lang, "chart.consumption"), Value: fmtKwVal(lang, p.Consumption) + " kW"},
+			}
+			for _, inv := range invVars {
+				// A curve at zero adds noise: the React tooltip only listed the
+				// series that had a value at that time.
+				if v := seriesInvValue(p, inv.Key); v > 0.005 {
+					rows = append(rows, hoverRow{Color: inv.Var, Label: inv.Name, Value: fmtKwVal(lang, v) + " kW"})
+				}
+			}
+			return rows
+		})
 	return m
 }
 
