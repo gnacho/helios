@@ -254,6 +254,16 @@
     "alertsAria": "Notificaciones"
   },
   "historico": {
+      "heatmapTitleCons": "Año completo · consumo diario",
+      "heatmapTitleAuto": "Año completo · autoconsumo diario",
+      "metricProd": "Producción",
+      "metricCons": "Consumo",
+      "metricAuto": "Autoconsumo",
+      "metricAria": "Métrica del mapa de calor",
+      "cellAriaCons": "{{date}}: {{kwh}} kWh consumidos",
+      "cellAriaAuto": "{{date}}: {{kwh}} kWh autoconsumidos",
+      "cellNoData": "Sin datos de reparto para este día",
+      "goToDay": "Ir al día",
     "title": "Histórico",
     "export": "Exportar",
     "exportPng": "Imagen PNG",
@@ -324,17 +334,7 @@
       "streakText": "Produciendo {{threshold}} kWh o más",
       "bestMonthTitle": "Mejor mes",
       "bestMonthText": "El mes con más producción del año"
-    },
-    "heatmapTitleCons": "Año completo · consumo diario",
-    "heatmapTitleAuto": "Año completo · autoconsumo diario",
-    "metricProd": "Producción",
-    "metricCons": "Consumo",
-    "metricAuto": "Autoconsumo",
-    "metricAria": "Métrica del mapa de calor",
-    "cellAriaCons": "{{date}}: {{kwh}} kWh consumidos",
-    "cellAriaAuto": "{{date}}: {{kwh}} kWh autoconsumidos",
-    "cellNoData": "Sin datos de reparto para este día",
-    "goToDay": "Ir al día"
+    }
   },
   "ajustes": {
     "title": "Ajustes",

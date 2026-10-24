@@ -254,6 +254,16 @@
     "alertsAria": "通知"
   },
   "historico": {
+      "heatmapTitleCons": "全年 · 每日用电",
+      "heatmapTitleAuto": "全年 · 每日自用",
+      "metricProd": "发电",
+      "metricCons": "用电",
+      "metricAuto": "自用",
+      "metricAria": "热力图指标",
+      "cellAriaCons": "{{date}}：用电 {{kwh}} kWh",
+      "cellAriaAuto": "{{date}}：自用 {{kwh}} kWh",
+      "cellNoData": "该日没有用电构成数据",
+      "goToDay": "查看该日",
     "title": "历史",
     "export": "导出",
     "exportPng": "PNG 图片",
