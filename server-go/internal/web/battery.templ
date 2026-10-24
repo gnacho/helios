@@ -34,7 +34,7 @@ templ BateriaPage(v bateriaView) {
 						<div class="hidden @[1100px]:block @[1100px]:w-px @[1100px]:shrink-0 @[1100px]:self-stretch" style="background-color: var(--line)"></div>
 						if len(v.Donut.Slices) > 0 {
 							<div class="flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1100px]:w-[461px] @[1100px]:shrink-0">
-									<div class="relative w-[160px] shrink-0 sm:w-[233px]">
+									<div class="relative w-[233px] shrink-0">
 										<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
 											for _, sl := range v.Donut.Slices {
 												<path d={ sl.Path } fill={ sl.Color }></path>

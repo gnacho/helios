@@ -171,7 +171,7 @@ func BateriaPage(v bateriaView) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if len(v.Donut.Slices) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1100px]:w-[461px] @[1100px]:shrink-0\"><div class=\"relative w-[160px] shrink-0 sm:w-[233px]\"><svg viewBox=\"0 0 200 200\" class=\"anim-pie mx-auto w-full\" role=\"img\" aria-label=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1100px]:w-[461px] @[1100px]:shrink-0\"><div class=\"relative w-[233px] shrink-0\"><svg viewBox=\"0 0 200 200\" class=\"anim-pie mx-auto w-full\" role=\"img\" aria-label=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
