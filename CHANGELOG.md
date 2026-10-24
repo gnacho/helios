@@ -5,6 +5,19 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.5] - 2026-10-24
+
+### Fixed
+
+- **La página se quedaba vacía un instante al cambiar de menú (Firefox).** Al
+  navegar, Firefox vacía el viewport mientras el documento nuevo espera a las
+  hojas de estilo que bloquean el render, y entre ellas estaba la de Google
+  Fonts: otro dominio, con su ida y vuelta en cada cambio de página. Medido con
+  capturas sin pérdida, había un fotograma con la página entera vacía.
+- **Las fuentes ahora se sirven desde la propia app** (`/assets/fonts`). Inter y
+  Space Grotesk son variables, así que un único fichero por familia cubre todos
+  los pesos (76 KB en total) y de paso desaparece la petición a Google.
+
 ## [1.1.4] - 2026-10-24
 
 ### Fixed
