@@ -1,7 +1,9 @@
 package web
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -26,6 +28,19 @@ import (
 
 //go:embed assets
 var assetsEmbed embed.FS
+
+// assetVersion is a short hash of the CSS and JS we ship. It travels in the
+// query string (?v=...) because the files have a fixed name and are cached:
+// without it, a change in the stylesheet could take minutes to show up.
+var assetVersion = func() string {
+	h := sha256.New()
+	for _, name := range []string{"assets/css/app.build.css", "assets/js/gestures.js", "assets/js/datastar.js"} {
+		if b, err := assetsEmbed.ReadFile(name); err == nil {
+			h.Write(b)
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil))[:10]
+}()
 
 const (
 	themeCookie   = "helios_theme"
@@ -70,7 +85,8 @@ type pageProps struct {
 	Alerts     []solar.LiveAlert
 	AlertLevel string // "critical" | "warning" | "info" | ""
 	AlertCount int
-	NavShift   int // px between the previous and current menu item (accent slide)
+	AssetVer   string // content hash for /assets URLs
+	NavShift   int    // px between the previous and current menu item (accent slide)
 
 	// Per-device appearance prefs (cookies, like the React localStorage).
 	AccentName   string // naranja|verde|azul|violeta
@@ -304,7 +320,12 @@ func (u *UI) NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UI) handleAssets(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "public, max-age=300")
+	// A versioned URL points at immutable content; the bare one revalidates.
+	if r.URL.Query().Get("v") != "" {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "public, max-age=300")
+	}
 	u.assets.ServeHTTP(w, r)
 }
 
@@ -558,6 +579,7 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 	if loc, _ := u.townFromKV(); loc != "" {
 		p.Town = loc
 	}
+	p.AssetVer = assetVersion
 	p.DateText = weekdayDate(p.Lang, time.Now())
 	p.NavDir, p.NavShift = navDirFrom(p, r)
 	return p

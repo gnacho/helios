@@ -18,8 +18,8 @@ templ head(p pageProps) {
 	<link rel="preconnect" href="https://fonts.googleapis.com"/>
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"/>
-	<link rel="stylesheet" href="/assets/css/app.build.css"/>
-	<script src="/assets/js/gestures.js" defer></script>
+	<link rel="stylesheet" href={ templ.URL("/assets/css/app.build.css?v=" + p.AssetVer) }/>
+	<script src={ templ.URL("/assets/js/gestures.js?v=" + p.AssetVer) } defer></script>
 	<script>
 		// Theme init (Tailwind's documented 3-way pattern): the server renders
 		// the class for pinned themes; this only resolves "auto" (no cookie).
@@ -31,7 +31,7 @@ templ head(p pageProps) {
 			el.classList.toggle("light", !!m && !dark);
 		})();
 	</script>
-	<script type="module" src="/assets/js/datastar.js"></script>
+	<script type="module" src={ templ.URL("/assets/js/datastar.js?v=" + p.AssetVer) }></script>
 }
 
 // Layout is the page shell: html/head/body with the theme class applied
