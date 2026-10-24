@@ -104,6 +104,16 @@ type chgChip struct {
 	Cls   string
 }
 
+// sameKwh reports whether two counters hold the same reading: a "lifetime"
+// total that mirrors the session (the Svitrix and feyree integrations both do
+// this) is not an accumulated total and must not be shown as one.
+func sameKwh(a, b *float64) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	return math.Abs(*a-*b) < 0.005
+}
+
 // chgLiveStat is one stat of the day-curve card header.
 type chgLiveStat struct {
 	AnimID  string  // count-up tween id ("" = plain data-text)
@@ -757,13 +767,26 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	k := charger.Key
-	sv.Stats = []chgLiveStat{
-		{IconKey: "zap", Label: T(lang, "cargador.currentPower"), Value: powerText, Signal: "$chg." + k + ".powerKw",
-			AnimID: "chg" + k + "Pow", Num: animPow, Dec: 2, Suffix: " kW"},
-		{IconKey: "clock", Label: T(lang, "cargador.session"), Value: sessionText, Signal: "$chg." + k + ".sessionKwh",
-			AnimID: "chg" + k + "Ses", Num: animSes, Dec: 1, Suffix: " kWh"},
-		{IconKey: "gauge", Label: T(lang, "cargador.lifetime"), Value: totalText, Signal: "$chg." + k + ".totalKwh",
-			AnimID: "chg" + k + "Tot", Num: animTot, Dec: 1, Suffix: " kWh"},
+	powStat := chgLiveStat{IconKey: "zap", Label: T(lang, "cargador.currentPower"), Value: powerText, Signal: "$chg." + k + ".powerKw",
+		AnimID: "chg" + k + "Pow", Num: animPow, Dec: 2, Suffix: " kW"}
+	sesStat := chgLiveStat{IconKey: "clock", Label: T(lang, "cargador.session"), Value: sessionText, Signal: "$chg." + k + ".sessionKwh",
+		AnimID: "chg" + k + "Ses", Num: animSes, Dec: 1, Suffix: " kWh"}
+	totStat := chgLiveStat{IconKey: "gauge", Label: T(lang, "cargador.lifetime"), Value: totalText, Signal: "$chg." + k + ".totalKwh",
+		AnimID: "chg" + k + "Tot", Num: animTot, Dec: 1, Suffix: " kWh"}
+	// Solo se muestra lo que el cargador publica de verdad: un 0,00 kW de una
+	// entidad unavailable y un "total" que repite la sesión son ruido, no datos.
+	if !hasLive {
+		sv.Stats = []chgLiveStat{powStat, sesStat, totStat}
+	} else {
+		var stats []chgLiveStat
+		if live.PowerKnown {
+			stats = append(stats, powStat)
+		}
+		stats = append(stats, sesStat)
+		if live.TotalKwh != nil && !sameKwh(live.SessionKwh, live.TotalKwh) {
+			stats = append(stats, totStat)
+		}
+		sv.Stats = stats
 	}
 
 	// Curva del día (servicio en proceso, con caché propia).

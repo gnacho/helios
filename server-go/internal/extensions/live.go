@@ -26,6 +26,7 @@ type LiveCharger struct {
 	Connected  bool      `json:"connected"`
 	State      *string   `json:"state,omitempty"`
 	PowerKw    float64   `json:"powerKw"`
+	PowerKnown bool      `json:"powerKnown"`
 	SessionKwh *float64  `json:"sessionKwh,omitempty"`
 	TotalKwh   *float64  `json:"totalKwh,omitempty"`
 	TempC      *float64  `json:"tempC,omitempty"`
@@ -133,6 +134,7 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 	}
 	if powerKw != nil {
 		out.PowerKw = *powerKw
+		out.PowerKnown = true
 	}
 	if sw != nil {
 		on := *sw == "on"
