@@ -263,11 +263,15 @@ templ chgHero(v chargerView, s *chgSingleView) {
 						}
 					</div>
 				}
-				<div class="flex items-center gap-2 px-1">
-					@iconThermometer("h-[15px] w-[15px] shrink-0 text-faint")
-					<span class="text-[13px] text-muted">{ T(v.Lang, "cargador.temperature") }</span>
-					<span class="text-[15px] font-semibold tabular-nums text-app" data-text={ "$chg." + s.Key + ".tempText" }>{ s.TempText }</span>
-				</div>
+				<!-- Temperatura solo si el cargador expone el sensor: sin dato la
+				     fila mostraba un guion suelto que no aporta nada. -->
+				if s.TempKnown {
+					<div class="flex items-center gap-2 px-1">
+						@iconThermometer("h-[15px] w-[15px] shrink-0 text-faint")
+						<span class="text-[13px] text-muted">{ T(v.Lang, "cargador.temperature") }</span>
+						<span class="text-[15px] font-semibold tabular-nums text-app" data-text={ "$chg." + s.Key + ".tempText" }>{ s.TempText }</span>
+					</div>
+				}
 			</div>
 		</div>
 	</section>
