@@ -562,6 +562,11 @@ html:not(.reduce-motion) svg.anim-bars .bar-down {
   transform-box: fill-box;
   animation: bar-grow 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
 }
+/* Linea de autoconsumo: se traza revelando el grupo de izquierda a derecha
+ * (mantiene el trazo discontinuo y los puntos entran a su paso). */
+html:not(.reduce-motion) svg.anim-bars .auto-line {
+  animation: chart-reveal 0.9s cubic-bezier(0.25, 1, 0.5, 1) 0.35s both;
+}
 html:not(.reduce-motion) svg.anim-bars .bar-up {
   transform-origin: 50% 100%;
 }
@@ -591,6 +596,7 @@ html:not(.reduce-motion) .sun-g {
  */
 html:not(.reduce-motion) .rev-b svg.anim-bars .bar-up,
 html:not(.reduce-motion) .rev-b svg.anim-bars .bar-down { animation-name: bar-grow-b; }
+html:not(.reduce-motion) .rev-b svg.anim-bars .auto-line { animation-name: chart-reveal-b; }
 html:not(.reduce-motion) .rev-b svg.anim-pie { animation-name: pie-in-b; }
 html:not(.reduce-motion) .rev-b svg.anim-draw { animation-name: chart-reveal-b; }
 html:not(.reduce-motion) .rev-b .anim-share { animation-name: share-grow-b; }

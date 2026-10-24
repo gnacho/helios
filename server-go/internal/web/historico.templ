@@ -300,10 +300,14 @@ templ histBarsSVG(m histBarsModel) {
 			}
 		}
 		if m.HasAuto {
-			<path d={ m.AutoPath } fill="none" stroke={ m.ColorAuto } stroke-width="2" stroke-dasharray="5 4"></path>
-			for _, row := range m.Rows {
-				<circle cx={ r2(row.AutoX) } cy={ r2(row.AutoY) } r="2.5" fill={ m.ColorAuto }></circle>
-			}
+			<!-- El grupo se revela de izquierda a derecha: la linea se traza y
+			     los puntos aparecen a su paso (misma animacion que las barras). -->
+			<g class="auto-line">
+				<path d={ m.AutoPath } fill="none" stroke={ m.ColorAuto } stroke-width="2" stroke-dasharray="5 4"></path>
+				for _, row := range m.Rows {
+					<circle cx={ r2(row.AutoX) } cy={ r2(row.AutoY) } r="2.5" fill={ m.ColorAuto }></circle>
+				}
+			</g>
 		}
 	</svg>
 }
