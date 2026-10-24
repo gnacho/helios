@@ -88,6 +88,18 @@ func (d *DB) MinDailyDate() (string, error) {
 	return *date, nil
 }
 
+// MaxDailyDate devuelve la última fecha consolidada ("" si no hay filas).
+func (d *DB) MaxDailyDate() (string, error) {
+	var date *string
+	if err := d.db.QueryRow(`SELECT MAX(date) FROM daily`).Scan(&date); err != nil {
+		return "", err
+	}
+	if date == nil {
+		return "", nil
+	}
+	return *date, nil
+}
+
 func (d *DB) DailyCount(from, to string) (int, error) {
 	var n int
 	err := d.db.QueryRow(`SELECT COUNT(*) FROM daily WHERE date >= ? AND date <= ?`, from, to).Scan(&n)

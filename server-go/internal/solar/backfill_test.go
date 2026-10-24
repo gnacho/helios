@@ -259,3 +259,51 @@ func TestBackfillDaySeriesSkipsOldWithoutBackup(t *testing.T) {
 		t.Fatalf("no debería tocar días fuera de la ventana sin backup (ran=%v rows=%d)", ran, rows)
 	}
 }
+
+// TestConsolidateDailyFillsGap: el servidor no tenía ningún job que escribiera
+// `daily` (solo el backfill inicial, que corre con la tabla vacía), así que el
+// histórico se quedaba parado y días como el 22 y el 23 salían "sin datos".
+func TestConsolidateDailyFillsGap(t *testing.T) {
+	d := testDB(t)
+	s := New(install.NewStore(), d)
+	f := newCounting()
+	f.stats = ha.Stats{
+		"sensor.energia_solis_diaria_um": {
+			dayRow("2026-10-20T00:00:00Z", floatPtr(10), nil),
+			dayRow("2026-10-21T00:00:00Z", floatPtr(25), nil),
+			dayRow("2026-10-22T00:00:00Z", floatPtr(31), nil),
+		},
+	}
+	// Solo el 20 está consolidado: faltan 21 y 22.
+	if err := d.UpsertDaily(dbRow("2026-10-20")); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	n, err := s.ConsolidateDaily(f)
+	if err != nil {
+		t.Fatalf("consolidate: %v", err)
+	}
+	if n < 2 {
+		t.Fatalf("esperaba rellenar 21 y 22, filas = %d", n)
+	}
+	for _, date := range []string{"2026-10-21", "2026-10-22"} {
+		if row, err := d.DailyRowByDate(date); err != nil || row == nil {
+			t.Fatalf("falta el día %s (err=%v)", date, err)
+		}
+	}
+	// Nunca debe escribir el día en curso (parcial).
+	if row, err := d.DailyRowByDate(TodayStr()); err == nil && row != nil {
+		t.Fatalf("escribió el día en curso: %s", TodayStr())
+	}
+}
+
+// TestConsolidateDailyFromEmpty lanza el backfill completo si no hay nada.
+func TestConsolidateDailyFromEmpty(t *testing.T) {
+	d := testDB(t)
+	s := New(install.NewStore(), d)
+	f := newCounting()
+	f.stats = ha.Stats{}
+	if _, err := s.ConsolidateDaily(f); err != nil {
+		t.Fatalf("consolidate vacío: %v", err)
+	}
+}

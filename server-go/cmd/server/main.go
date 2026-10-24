@@ -203,6 +203,29 @@ func startBackgroundLoops(database *db.DB, client *ha.Client, store *install.Sto
 		}
 	}()
 
+	// Consolidación del histórico diario: cada 30 min (idempotente). El cierre
+	// de ayer se escribe en cuanto HA publica las estadísticas del día, sin
+	// depender de una hora exacta ni de que el proceso estuviera vivo a las
+	// 00:00; además rellena cualquier hueco previo.
+	go func() {
+		ticker := time.NewTicker(30 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("[backfill] panic en consolidación: %v", r)
+					}
+				}()
+				if rows, err := sol.ConsolidateDaily(client); err != nil {
+					log.Printf("[backfill] consolidación: %v", err)
+				} else if rows > 0 {
+					log.Printf("[backfill] consolidación: %d filas", rows)
+				}
+			}()
+		}
+	}()
+
 	// Acumulación de cargadores: cada 60 s.
 	go func() {
 		ticker := time.NewTicker(time.Minute)
@@ -243,9 +266,9 @@ func startBackgroundLoops(database *db.DB, client *ha.Client, store *install.Sto
 			}
 		}()
 		time.Sleep(5 * time.Second)
-		if ran, rows, err := sol.MaybeBackfill(client); err != nil {
+		if rows, err := sol.ConsolidateDaily(client); err != nil {
 			log.Printf("[backfill] error: %v", err)
-		} else if ran {
+		} else if rows > 0 {
 			log.Printf("[backfill] histórico: %d filas", rows)
 		}
 		if ran, rows := sol.BackfillDaySeries(client, ha.Stats{}); ran {

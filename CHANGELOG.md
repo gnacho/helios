@@ -5,6 +5,18 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.4] - 2026-10-24
+
+### Fixed
+
+- **El histórico diario dejó de crecer.** El servidor Go no tenía ningún proceso
+  que consolidara el día: `daily` solo se escribía en el backfill inicial, que
+  únicamente corre con la tabla vacía. El histórico se quedó parado en la fecha
+  de ese backfill y días como el 22 y el 23 de octubre salían como "sin datos
+  para este periodo". Ahora, al arrancar y cada 30 minutos, se rellenan los días
+  que falten desde el último consolidado (idempotente y sin escribir nunca el
+  día en curso, que sigue siendo parcial).
+
 ## [1.1.3] - 2026-10-24
 
 ### Fixed

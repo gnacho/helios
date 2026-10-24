@@ -32,12 +32,43 @@ func gapBetween(prevKey, key string) int {
 
 // BackfillHistory reconstruye la tabla daily desde las statistics diarias de HAOS.
 // Devuelve el número de filas escritas.
+// BackfillHistory recalcula todo el histórico diario desde 2024-01-01.
 func (s *Solar) BackfillHistory(haReader HAReader) (int, error) {
+	return s.backfillHistoryFrom(haReader, time.Date(2024, 1, 1, 0, 0, 0, 0, time.Local))
+}
+
+// ConsolidateDaily rellena los días que falten en `daily` desde el último
+// consolidado (idempotente: el upsert reescribe los mismos valores). El
+// servicio no tenía ningún job que escribiera la tabla, así que solo se llenaba
+// con el backfill inicial y el histórico se quedaba parado en esa fecha (bug
+// real: 22 y 23 de octubre salían como "sin datos").
+func (s *Solar) ConsolidateDaily(haReader HAReader) (int, error) {
+	empty, err := s.DB.DailyEmpty()
+	if err != nil {
+		return 0, err
+	}
+	if empty {
+		return s.BackfillHistory(haReader)
+	}
+	last, err := s.DB.MaxDailyDate()
+	if err != nil || last == "" {
+		return 0, err
+	}
+	d, err := time.ParseInLocation("2006-01-02", last, time.Local)
+	if err != nil {
+		return 0, err
+	}
+	// Dos días de margen: el reparto de huecos necesita contexto y el upsert
+	// es idempotente.
+	start := d.AddDate(0, 0, -2)
+	return s.backfillHistoryFrom(haReader, start)
+}
+
+func (s *Solar) backfillHistoryFrom(haReader HAReader, start time.Time) (int, error) {
 	t := s.Store.Get()
 
 	now := time.Now()
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, 1)
-	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.Local)
 	queryStart := start.AddDate(0, 0, -2)
 
 	srcs, mapping := s.Store.DeepSourceDailyKeys()
