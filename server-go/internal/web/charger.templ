@@ -113,7 +113,7 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 						{ T(v.Lang, "cargador.noHistory") }
 					</div>
 				} else {
-					<div id={ "chg-hist-" + s.Key } class="w-full">
+					<div id={ "chg-hist-" + s.Key + "-" + string(s.Period) } class="w-full">
 						@chgHistSVG(s.Hist)
 					</div>
 				}
@@ -303,6 +303,7 @@ templ chgPeriodNav(v chargerView, s *chgSingleView) {
 			for _, tb := range s.Sel.Tabs {
 				<a
 					href={ templ.URL(tb.URL) }
+					data-on:click__prevent={ chgPeriodSwapClick(tb.URL) }
 					role="tab"
 					aria-selected={ boolStr(tb.Active) }
 					class={ "relative flex h-8 items-center rounded-full px-3 text-[13px] font-medium transition-colors sm:px-3.5", templ.KV("text-app", tb.Active), templ.KV("text-faint hover:text-muted", !tb.Active) }
@@ -315,14 +316,14 @@ templ chgPeriodNav(v chargerView, s *chgSingleView) {
 			}
 		</div>
 		<div class="flex h-9 items-center gap-0.5 rounded-full border border-app bg-surface p-0.5">
-			<a href={ templ.URL(s.Sel.PrevURL) } aria-label={ s.Sel.PrevAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+			<a href={ templ.URL(s.Sel.PrevURL) } data-on:click__prevent={ chgPeriodSwapClick(s.Sel.PrevURL) } aria-label={ s.Sel.PrevAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
 				@iconChevronLeft("h-4 w-4")
 			</a>
 			<div class="flex h-8 min-w-[92px] items-center justify-center overflow-hidden px-1 sm:min-w-[110px]">
 				<span class="text-[13px] font-semibold tabular-nums text-app">{ s.NavLabel }</span>
 			</div>
 			if s.Sel.CanNext {
-				<a href={ templ.URL(s.Sel.NextURL) } aria-label={ s.Sel.NextAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+				<a href={ templ.URL(s.Sel.NextURL) } data-on:click__prevent={ chgPeriodSwapClick(s.Sel.NextURL) } aria-label={ s.Sel.NextAria } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
 					@iconChevronRight("h-4 w-4")
 				</a>
 			} else {
@@ -332,7 +333,7 @@ templ chgPeriodNav(v chargerView, s *chgSingleView) {
 			}
 		</div>
 		if !s.Sel.IsCurrent {
-			<a href={ templ.URL(s.Sel.TodayURL) } class="h-9 rounded-full border border-amber-500/40 px-3.5 text-[13px] font-semibold leading-9 text-amber-600 transition-transform hover:bg-amber-500/10 active:scale-95 dark:text-amber-400">
+			<a href={ templ.URL(s.Sel.TodayURL) } data-on:click__prevent={ chgPeriodSwapClick(s.Sel.TodayURL) } class="h-9 rounded-full border border-amber-500/40 px-3.5 text-[13px] font-semibold leading-9 text-amber-600 transition-transform hover:bg-amber-500/10 active:scale-95 dark:text-amber-400">
 				{ T(v.Lang, "common.today") }
 			</a>
 		}

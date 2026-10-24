@@ -297,6 +297,26 @@ func clickTab(url, patch string) string {
 		"history.pushState({}, '', '" + jsQuote(url) + "'); " + patch
 }
 
+// panelSwapClick swaps a page panel in place: the browser URL is pushed and the
+// panel endpoint (which reads the same query) is patched. Links keep their href.
+func panelSwapClick(pageURL, endpoint string) string {
+	q := pageURL
+	if i := strings.IndexByte(q, '#'); i >= 0 {
+		q = q[:i]
+	}
+	if i := strings.IndexByte(q, '?'); i >= 0 {
+		q = q[i:]
+	} else {
+		q = ""
+	}
+	return clickTab(pageURL, "@get('"+jsQuote(endpoint)+q+"')")
+}
+
+// chgPeriodSwapClick changes the charger history period without reloading.
+func chgPeriodSwapClick(u string) string {
+	return panelSwapClick(u, "/ui/chg")
+}
+
 func chgTabSwapClick(key string) string {
 	return clickTab("/cargador?tab="+url.QueryEscape(key), "@get('/ui/chg?tab="+jsQuote(key)+"')")
 }

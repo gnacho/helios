@@ -127,10 +127,11 @@ type chgLiveStat struct {
 }
 
 type chgSingleView struct {
-	Key  string
-	Name string
-	Lang string
-	Pal  Palette
+	Key    string
+	Name   string
+	Lang   string
+	Pal    Palette
+	Period Period // active history period (recreates the bars on change)
 
 	HasImage   bool
 	ImageURL   string
@@ -664,9 +665,9 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 
 	// Vista del cargador activo.
 	sv := &chgSingleView{
-		Key:  charger.Key,
-		Name: charger.Name,
-		Lang: lang,
+		Key:    charger.Key,
+		Name:   charger.Name,
+		Lang:   lang,
 		Pal:  pal,
 	}
 	var live extensions.LiveCharger
@@ -826,6 +827,7 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	// Selector del cargador: mismas pestañas que el React (semana/mes/año, sin
 	// día) y TODAS las URLs apuntan a /cargador conservando el cargador activo
 	// (antes solo la de semana lo hacía y el resto saltaba al Histórico).
+	sv.Period = period
 	sv.Sel = buildPeriodSelector(lang, period, anchor, today, 0)
 	tabKey := charger.Key
 	chgTabAnchor := func(p Period) time.Time {

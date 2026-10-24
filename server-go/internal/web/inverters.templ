@@ -322,11 +322,11 @@ templ invCompareChart(v inversoresView, c *invCompareView) {
 			}
 			// Normalizar por kWp: enlace GET (?norm=1), igual que el resto de tabs.
 			if c.Norm {
-				<a href="/inversores?inv=compare" aria-pressed="true" class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app bg-surface-2 px-2.5 text-xs font-semibold text-app transition-colors hover:text-app">
+				<a href="/inversores?inv=compare" data-on:click__prevent={ panelSwapClick("/inversores?inv=compare", "/ui/inv") } aria-pressed="true" class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app bg-surface-2 px-2.5 text-xs font-semibold text-app transition-colors hover:text-app">
 					{ T(v.Lang, "inversores.normalize") }
 				</a>
 			} else {
-				<a href="/inversores?inv=compare&norm=1" aria-pressed="false" class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted">
+				<a href="/inversores?inv=compare&norm=1" data-on:click__prevent={ panelSwapClick("/inversores?inv=compare&norm=1", "/ui/inv") } aria-pressed="false" class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app px-2.5 text-xs font-medium text-faint transition-colors hover:text-muted">
 					{ T(v.Lang, "inversores.normalize") }
 				</a>
 			}
