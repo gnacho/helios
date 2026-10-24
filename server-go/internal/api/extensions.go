@@ -2,12 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
-	"math"
 	"net/http"
 	"os"
-	"regexp"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -136,9 +134,6 @@ func (s *Server) handleChargerHistory(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"from": fromFinal, "to": toFinal, "days": days})
 }
 
-var switchIDRe = regexp.MustCompile(`^switch\.[a-z0-9_]+$`)
-var ampIDRe = regexp.MustCompile(`^(number|input_select|select)\.[a-z0-9_]+$`)
-
 func (s *Server) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 	username, userID, isAdmin := s.currentUser(r)
 	if !isAdmin {
@@ -175,56 +170,24 @@ func (s *Server) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 	}
 	s.DB.Audit(username, userID, "charger.action", detail)
 
-	switch body.Action {
-	case "on", "off":
-		if !switchIDRe.MatchString(charger.SwitchID) {
-			writeJSON(w, 400, map[string]any{"error": "el cargador no tiene switch configurado"})
-			return
-		}
-		service := "turn_off"
-		if body.Action == "on" {
-			service = "turn_on"
-		}
-		if err := s.ExtHA.CallService("switch", service, map[string]any{"entity_id": charger.SwitchID}); err != nil {
+	amps, err := extensions.ApplyAction(s.ExtHA, *charger, body.Action, body.Amps)
+	if err != nil {
+		switch {
+		case errors.Is(err, extensions.ErrChargerAction),
+			errors.Is(err, extensions.ErrChargerNoSwitch),
+			errors.Is(err, extensions.ErrChargerNoAmp),
+			errors.Is(err, extensions.ErrChargerAmps):
+			writeJSON(w, 400, map[string]any{"error": err.Error()})
+		default:
 			writeJSON(w, 502, map[string]any{"error": err.Error()})
-			return
 		}
-		writeJSON(w, 200, map[string]any{"ok": true})
-
-	case "amp":
-		if body.Amps == nil {
-			writeJSON(w, 400, map[string]any{"error": "amperaje requerido"})
-			return
-		}
-		amps := math.Round(*body.Amps*10) / 10
-		if amps < 6 || amps > 32 {
-			writeJSON(w, 400, map[string]any{"error": "amperaje fuera de rango (6-32 A)"})
-			return
-		}
-		if !ampIDRe.MatchString(charger.AmpID) {
-			writeJSON(w, 400, map[string]any{"error": "el cargador no tiene entidad de corriente configurada"})
-			return
-		}
-		domain := charger.AmpID[:indexOf(charger.AmpID, '.')]
-		var err error
-		if domain == "number" {
-			err = s.ExtHA.CallService("number", "set_value", map[string]any{
-				"entity_id": charger.AmpID, "value": amps,
-			})
-		} else {
-			err = s.ExtHA.CallService(domain, "select_option", map[string]any{
-				"entity_id": charger.AmpID, "option": strconv.FormatFloat(amps, 'f', -1, 64),
-			})
-		}
-		if err != nil {
-			writeJSON(w, 502, map[string]any{"error": err.Error()})
-			return
-		}
-		writeJSON(w, 200, map[string]any{"ok": true, "amps": amps})
-
-	default:
-		writeJSON(w, 400, map[string]any{"error": "acción no soportada"})
+		return
 	}
+	resp := map[string]any{"ok": true}
+	if body.Action == "amp" {
+		resp["amps"] = amps
+	}
+	writeJSON(w, 200, resp)
 }
 
 func (s *Server) handleBydAction(w http.ResponseWriter, r *http.Request) {

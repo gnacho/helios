@@ -1,0 +1,450 @@
+package web
+
+import (
+	"strconv"
+	"strings"
+)
+
+// head shared by every page. Fonts and tokens mirror app/index.html so the
+// templ UI renders with the same type and theme system as the React SPA.
+templ head(p pageProps) {
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<title>{ p.Title }</title>
+	<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+	<!-- PWA: mismo manifest y mismo start_url que la SPA (las paginas templ se
+	     sirven desde /, asi que la app instalada sigue apuntando ahi). -->
+	<link rel="manifest" href="/manifest.webmanifest"/>
+	<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F6FA"/>
+	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#080D1A"/>
+	<link rel="preconnect" href="https://fonts.googleapis.com"/>
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"/>
+	<link rel="stylesheet" href={ templ.URL("/assets/css/app.build.css?v=" + p.AssetVer) }/>
+	<script src={ templ.URL("/assets/js/gestures.js?v=" + p.AssetVer) } defer></script>
+	<script>
+		// Theme init (Tailwind's documented 3-way pattern): the server renders
+		// the class for pinned themes; this only resolves "auto" (no cookie).
+		(function () {
+			var m = document.cookie.match(/(?:^|; )helios_theme=(light|dark)/);
+			var dark = m ? m[1] === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+			var el = document.documentElement;
+			el.classList.toggle("dark", dark);
+			el.classList.toggle("light", !!m && !dark);
+		})();
+	</script>
+	<script type="module" src={ templ.URL("/assets/js/datastar.js?v=" + p.AssetVer) }></script>
+}
+
+// Layout is the page shell: html/head/body with the theme class applied
+// server-side from the helios_theme cookie (no flash of wrong theme).
+templ Layout(p pageProps) {
+	<!DOCTYPE html>
+	<html lang={ p.Lang } class={ templ.KV("dark", p.Theme == "dark"), templ.KV("light", p.Theme == "light"), templ.KV("reduce-motion", p.ReduceMotion) } style={ rootStyle(p) }>
+		@head(p)
+		<body class="flex min-h-dvh flex-col bg-app font-sans text-app antialiased">
+			{ children... }
+		</body>
+	</html>
+}
+
+// ── Navigation items ────────────────────────────────────────────────────
+
+// navEntry is one navigation destination (AppLayout NAV_ITEMS).
+type navEntry struct {
+	Path    string
+	Key     string // i18n key
+	IconKey string // activity | zap | battery | chart | car
+}
+
+func navEntriesFor(chargerOn bool) []navEntry {
+	items := []navEntry{
+		{"/", "nav.dashboard", "activity"},
+		{"/inversores", "nav.inversores", "zap"},
+		{"/bateria", "nav.bateria", "battery"},
+		{"/historico", "nav.historico", "chart"},
+	}
+	if chargerOn {
+		items = append(items, navEntry{"/cargador", "nav.cargador", "car"})
+	}
+	return items
+}
+
+func iconForNav(key string, class string) templ.Component {
+	switch key {
+	case "activity":
+		return iconActivity(class)
+	case "zap":
+		return iconZap(class)
+	case "battery":
+		return iconBatteryCharging(class)
+	case "chart":
+		return iconChartColumn(class)
+	case "car":
+		return iconCarFront(class)
+	}
+	return iconActivity(class)
+}
+
+func navIsActive(current, to string) bool {
+	if to == "/" {
+		return current == "/"
+	}
+	return strings.HasPrefix(current, to)
+}
+
+// ── Shell (AppLayout port) ──────────────────────────────────────────────
+
+// shellLayout is the authenticated app frame: sidebar (≥lg), rail (md),
+// topbars and bottom nav (<md). p carries collapsed/chargerOn/user.
+templ shellLayout(p pageProps) {
+	@Layout(p) {
+		if p.Collapsed {
+			@sidebar(p, true)
+		} else {
+			@sidebar(p, false)
+		}
+		@rail(p)
+		@topbarDesktop(p)
+		@headerMobile(p)
+		<main class={ "w-auto max-w-[1440px] px-4 pb-24 pt-4 md:ml-16 md:px-6 md:pb-6 md:pt-6", templ.KV("lg:ml-16", p.Collapsed), templ.KV("lg:ml-[232px]", !p.Collapsed) }>
+			{ children... }
+			<div class="hidden lg:block">
+				@footerLine(p)
+			</div>
+		</main>
+		@bottomNav(p)
+	}
+}
+
+// sidebar: 232px expanded or 64px collapsed rail (≥lg only).
+templ sidebar(p pageProps, collapsed bool) {
+	if collapsed {
+		<aside data-nav="side-rail" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 lg:flex">
+			@logo(p, true)
+			<nav class="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={ T(p.Lang, "nav.dashboard") }>
+				for _, item := range navEntriesFor(p.ChargerOn) {
+					@iconNavLink(p, item)
+				}
+			</nav>
+			<div class="flex flex-col items-center gap-2">
+				@settingsIconLink(p, "bg-brand/15 text-brand", "border border-app bg-surface text-muted hover:text-app")
+				@sidebarToggle(p, true)
+			</div>
+		</aside>
+	} else {
+		<aside data-nav="side" class="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-app bg-surface lg:flex">
+			@logo(p, false)
+			<nav class="flex-1 space-y-1 overflow-y-auto p-3" aria-label={ T(p.Lang, "nav.dashboard") }>
+				for _, item := range navEntriesFor(p.ChargerOn) {
+					@navSideLink(p, item)
+				}
+			</nav>
+			<div class="border-t border-app p-3">
+				<div class="flex items-center gap-2">
+					<a href="/ajustes" class={ "flex h-9 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors", templ.KV("bg-brand/15 text-brand", navIsActive(p.Path, "/ajustes")), templ.KV("bg-brand/8 text-brand hover:bg-brand/15", !navIsActive(p.Path, "/ajustes")) }>
+						@iconSettings("h-[18px] w-[18px]")
+						{ T(p.Lang, "nav.ajustes") }
+					</a>
+					@sidebarToggle(p, false)
+				</div>
+			</div>
+		</aside>
+	}
+}
+
+templ navSideLink(p pageProps, item navEntry) {
+	{{ label := navLabel(p, item.Key) }}
+	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
+		@iconForNav(item.IconKey, "h-[18px] w-[18px] shrink-0")
+		<span class="flex-1">{ label }</span>
+		if navIsActive(p.Path, item.Path) {
+			<span class="vt-accent bg-brand-gradient absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full" style={ navShiftStyle(p) }></span>
+		}
+	</a>
+}
+
+templ iconNavLink(p pageProps, item navEntry) {
+	{{ label := navLabel(p, item.Key) }}
+	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
+		@iconForNav(item.IconKey, "h-[18px] w-[18px]")
+		<span class="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-md border border-app bg-surface px-2 py-1 text-xs text-app group-hover:block">{ label }</span>
+	</a>
+}
+
+templ settingsIconLink(p pageProps, activeClass string, idleClass string) {
+	<a href="/ajustes" aria-label={ T(p.Lang, "nav.ajustes") } class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors", templ.KV(activeClass, navIsActive(p.Path, "/ajustes")), templ.KV(idleClass, !navIsActive(p.Path, "/ajustes")) }>
+		@iconSettings("h-4 w-4")
+	</a>
+}
+
+// sidebarToggle posts to /sidebar: the server flips the helios_sidebar cookie.
+templ sidebarToggle(p pageProps, collapsed bool) {
+	{{ label := T(p.Lang, "nav.collapse") }}
+	{{ icon := iconChevronsLeft("h-4 w-4") }}
+	if collapsed {
+		{{ label = T(p.Lang, "nav.expand") }}
+		{{ icon = iconChevronsRight("h-4 w-4") }}
+	}
+	<form method="post" action="/sidebar" class="shrink-0">
+		<input type="hidden" name="next" value={ p.Path }/>
+		<button type="submit" aria-label={ label } class="flex h-9 w-9 items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:text-app">
+			@icon
+		</button>
+	</form>
+}
+
+// rail: 64px icon-only sidebar for md (tablet).
+templ rail(p pageProps) {
+	<aside data-nav="rail" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
+		@logo(p, true)
+		<nav class="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={ T(p.Lang, "nav.dashboard") }>
+			for _, item := range navEntriesFor(p.ChargerOn) {
+				@iconNavLink(p, item)
+			}
+		</nav>
+		<div class="flex flex-col items-center gap-2">
+			@settingsIconLink(p, "bg-brand/15 text-brand", "border border-app bg-surface text-muted hover:text-app")
+		</div>
+	</aside>
+}
+
+// topbarDesktop: title + date on the left, user on the right (md+).
+templ topbarDesktop(p pageProps) {
+	<header class={ "sticky top-0 z-30 hidden h-14 items-center justify-between border-b border-app bg-app/80 px-6 backdrop-blur-[16px] md:flex md:ml-16", templ.KV("lg:ml-16", p.Collapsed), templ.KV("lg:ml-[232px]", !p.Collapsed) }>
+		<div class="min-w-0">
+			<h1 class="font-display text-lg font-semibold leading-tight tracking-[-0.01em] text-app">{ navLabel(p, titleKeyFor(p.Path)) }</h1>
+			<p class="text-[11px] capitalize leading-tight text-faint">{ p.DateText }</p>
+		</div>
+		<div class="flex items-center gap-2">
+			@alertsBell(p)
+			@themeToggle(p)
+			@userChip(p)
+		</div>
+	</header>
+}
+
+// headerMobile: logo + actions (<md).
+templ headerMobile(p pageProps) {
+	<header class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden [view-transition-name:helios-header]">
+		<a href="/" aria-label={ T(p.Lang, "nav.dashboard") } class="flex items-center gap-2">
+			@brandLogo("helios-logo-header", "h-8 w-8")
+			<span class="font-display text-base font-semibold text-app">Helios</span>
+		</a>
+		<div class="flex items-center gap-2">
+			@alertsBell(p)
+			@themeToggle(p)
+			@userChip(p)
+		</div>
+	</header>
+}
+
+// bottomNav: scrollable icon row (<md).
+templ bottomNav(p pageProps) {
+	<nav data-nav="bottom" class="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden [view-transition-name:helios-nav]" aria-label={ T(p.Lang, "nav.dashboard") }>
+		<div class="flex h-16 overflow-x-auto no-scrollbar">
+			for _, item := range navEntriesFor(p.ChargerOn) {
+				@bottomNavItem(p, item)
+			}
+		</div>
+	</nav>
+}
+
+templ bottomNavItem(p pageProps, item navEntry) {
+	{{ active := navIsActive(p.Path, item.Path) }}
+	{{ label := navLabel(p, item.Key) }}
+	if active {
+		<a
+			href={ templ.URL(item.Path) }
+			data-active="true"
+			aria-label={ label }
+			class={ "vt-slide relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1", templ.KV("nav-in-down", p.NavDir == "down"), templ.KV("nav-in-up", p.NavDir == "up") }
+		>
+			@bottomNavItemInner(item, true, label)
+		</a>
+	} else {
+		<a
+			href={ templ.URL(item.Path) }
+			aria-label={ label }
+			class="relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1"
+		>
+			@bottomNavItemInner(item, false, label)
+		</a>
+	}
+}
+
+templ bottomNavItemInner(item navEntry, active bool, label string) {
+	<span class={ "flex", templ.KV("text-brand", active), templ.KV("text-faint", !active) }>
+		@iconForNav(item.IconKey, "h-[22px] w-[22px]")
+	</span>
+	<span class={ "text-[10px] font-medium", templ.KV("text-brand", active), templ.KV("text-faint", !active) }>{ label }</span>
+	if active {
+		<span class="vt-accent-dot absolute bottom-1.5 h-1 w-1 rounded-full bg-brand"></span>
+	}
+}
+
+// userChip: avatar + username, links to Ajustes (webapp-shell canon).
+templ userChip(p pageProps) {
+	<a href="/ajustes" aria-label={ T(p.Lang, "nav.ajustes") } title={ T(p.Lang, "nav.ajustes") } class="flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-2.5 transition-colors hover:text-app">
+		<span class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/12 text-brand">
+			@iconUser("h-3.5 w-3.5")
+		</span>
+		if p.Username != "" {
+			<span class="hidden max-w-[120px] truncate text-[13px] font-semibold text-app sm:inline">{ p.Username }</span>
+		}
+	</a>
+}
+
+templ logo(p pageProps, collapsed bool) {
+	<a href="/" aria-label={ T(p.Lang, "nav.dashboard") } class={ "flex h-16 shrink-0 items-center gap-2.5 rounded-xl px-4 transition-opacity hover:opacity-80", templ.KV("justify-center px-0", collapsed) }>
+		@brandLogo("helios-logo-side", "h-9 w-9 shrink-0")
+		if !collapsed {
+			<div class="min-w-0">
+				<p class="font-display text-lg font-semibold leading-tight tracking-tight text-app">Helios</p>
+				<p class="truncate text-[11px] font-medium text-faint">{ T(p.Lang, "common.tagline") }</p>
+			</div>
+		}
+	</a>
+}
+
+// navLabel resolves singular/plural for the inverters entry.
+func navLabel(p pageProps, key string) string {
+	if key == "nav.inversores" {
+		if len(p.InvCount) == 1 {
+			return T(p.Lang, "nav.inversor")
+		}
+	}
+	return T(p.Lang, key)
+}
+
+func titleKeyFor(path string) string {
+	switch {
+	case path == "/":
+		return "nav.dashboard"
+	case strings.HasPrefix(path, "/inversores"):
+		return "nav.inversores"
+	case strings.HasPrefix(path, "/bateria"):
+		return "nav.bateria"
+	case strings.HasPrefix(path, "/historico"):
+		return "nav.historico"
+	case strings.HasPrefix(path, "/cargador"):
+		return "nav.cargador"
+	case strings.HasPrefix(path, "/ajustes"):
+		return "nav.ajustes"
+	}
+	return "nav.dashboard"
+}
+
+// footerLine is the versioned footer (desktop only, inside the shell).
+templ footerLine(p pageProps) {
+	<div class="mt-8 flex flex-col items-center justify-between gap-2 border-t border-app pt-4 pb-6 text-center text-xs text-faint sm:flex-row sm:text-left">
+		<p>{ T(p.Lang, "footer.line1", map[string]string{"version": p.Version}) }</p>
+		if line := installLine(p); line != "" {
+			<p>{ line }</p>
+		}
+	</div>
+}
+
+// installLine is Footer.buildInstallLine: "N inversores · Batería X kWh".
+func installLine(p pageProps) string {
+	if len(p.InvCount) == 0 {
+		return ""
+	}
+	key := "footer.inverterMany"
+	if len(p.InvCount) == 1 {
+		key = "footer.inverterOne"
+	}
+	inv := T(p.Lang, key, map[string]string{"n": strconv.Itoa(len(p.InvCount))})
+	if p.BatKwh > 0 {
+		return inv + " · " + T(p.Lang, "footer.battery", map[string]string{"kwh": formatNumber(p.Lang, p.BatKwh, 1)})
+	}
+	return inv
+}
+
+// themeToggle cycles auto -> light -> dark -> auto (server-side cookie).
+// "auto" (no cookie) follows the OS preference via the CSS media variant.
+templ themeToggle(p pageProps) {
+	<!-- ≥sm: los tres estados con su texto, como el header del React. -->
+	<div class="hidden items-center gap-0.5 rounded-full border border-app bg-surface p-0.5 sm:flex" role="radiogroup" aria-label={ T(p.Lang, "theme.label") }>
+		@themeOption(p, "auto", T(p.Lang, "theme.system"))
+		@themeOption(p, "light", T(p.Lang, "theme.light"))
+		@themeOption(p, "dark", T(p.Lang, "theme.dark"))
+	</div>
+	<!-- <sm: un solo botón que alterna auto -> claro -> oscuro. -->
+	<form method="post" action="/theme" class="shrink-0 sm:hidden">
+		<input type="hidden" name="next" value={ p.Path }/>
+		<input type="hidden" name="theme" value={ themeNext(p.Theme) }/>
+		{{ curLabel := T(p.Lang, "theme."+themeStateName(p.Theme)) }}
+		if p.Theme == "" {
+			{{ curLabel = T(p.Lang, "theme.system") }}
+		}
+		<button type="submit" aria-label={ curLabel } title={ curLabel } class="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover hover:text-app">
+			if p.Theme == "dark" {
+				@iconSun("h-4 w-4")
+			} else if p.Theme == "light" {
+				@iconMoon("h-4 w-4")
+			} else {
+				@iconSunMoon("h-4 w-4")
+			}
+		</button>
+	</form>
+}
+
+// themeOption is one of the three theme buttons (auto=Sistema, claro, oscuro).
+templ themeOption(p pageProps, key, label string) {
+	{{ active := themeStateName(p.Theme) == key }}
+	<form method="post" action="/theme">
+		<input type="hidden" name="next" value={ p.Path }/>
+		<input type="hidden" name="theme" value={ key }/>
+		<button type="submit" role="radio" aria-checked={ boolStr(active) } aria-label={ label } title={ label } class={ "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] transition-colors", templ.KV("bg-surface-2 font-semibold text-app shadow-inner", active), templ.KV("text-faint hover:text-app", !active) }>
+			if key == "dark" {
+				@iconMoon("h-3.5 w-3.5")
+			} else if key == "light" {
+				@iconSun("h-3.5 w-3.5")
+			} else {
+				@iconSunMoon("h-3.5 w-3.5")
+			}
+			{ label }
+		</button>
+	</form>
+}
+
+// alertsBell is the header bell (AlertsBell in the React shell): live alerts
+// from HA with a severity dot and a details dropdown, no JS.
+templ alertsBell(p pageProps) {
+	{{ dot := "" }}
+	if p.AlertLevel == "critical" {
+		{{ dot = "bg-rose-500" }}
+	} else if p.AlertLevel == "warning" {
+		{{ dot = "bg-amber-500" }}
+	} else if p.AlertLevel == "info" {
+		{{ dot = "bg-sky-500" }}
+	}
+	<details class="relative shrink-0">
+		<summary aria-label={ T(p.Lang, "alerts.label", map[string]string{"count": strconv.Itoa(p.AlertCount)}) } title={ T(p.Lang, "alerts.label", map[string]string{"count": strconv.Itoa(p.AlertCount)}) } class="relative flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:text-app">
+			@iconBell("h-4 w-4")
+			if dot != "" {
+				<span class={ "absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full " + dot }></span>
+			}
+		</summary>
+		<div class="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-app bg-surface shadow-lg">
+			if len(p.Alerts) == 0 {
+				<p class="px-3 py-2.5 text-xs text-muted">{ T(p.Lang, "alerts.empty") }</p>
+			} else {
+				for _, a := range p.Alerts {
+					{{ ac := "bg-sky-500" }}
+					if a.Severity == "critical" {
+						{{ ac = "bg-rose-500" }}
+					} else if a.Severity == "warning" {
+						{{ ac = "bg-amber-500" }}
+					}
+					<div class="flex items-start gap-2 px-3 py-2">
+						<span class={ "mt-1 h-2 w-2 shrink-0 rounded-full " + ac }></span>
+						<span class="text-xs leading-snug text-app">{ a.Text }</span>
+					</div>
+				}
+			}
+		</div>
+	</details>
+}

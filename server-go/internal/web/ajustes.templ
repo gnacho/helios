@@ -1,0 +1,1305 @@
+package web
+
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+)
+
+// /ajustes page (port of Ajustes.tsx + TopologyEditor.tsx). Forms are plain
+// HTML posted to the /ajustes/* wrappers (PRG); BYD actions and the update
+// flow call the existing JSON API through Datastar (@post/@get + polling).
+// The deferred pieces (image upload, municipality autocomplete, PWA prompt,
+// localStorage-only settings) are documented in ajustes.go.
+templ AjustesPage(v ajustesView) {
+	@shellLayout(v.pageProps) {
+		<div data-signals={ ajustesSignals(v) } class="w-full">
+			<div class="flex flex-col gap-4 lg:gap-5">
+				<header>
+					<h1 class="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{ T(v.Lang, "ajustes.title") }</h1>
+					<p class="text-sm text-muted">{ T(v.Lang, "ajustes.subtitle") }</p>
+				</header>
+				@ajustesSavedBanner(v)
+				<div class="flex w-full flex-col gap-5">
+					@ajustesInstall(v)
+					@ajustesAppearance(v)
+					@ajustesConnection(v)
+					if v.IsAdmin {
+						@ajustesExtensions(v)
+					}
+					@ajustesProfile(v)
+					if v.IsAdmin {
+						@ajustesAdmin(v)
+					}
+					@ajustesPrices(v)
+					@ajustesAbout(v)
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// ajustesSignals seeds the Datastar signals of the page (update flow + BYD).
+// The update signals ($step/$pct) match the JSON keys of
+// /api/update/progress so the polling merges in place; the connection test
+// signals ($connected/$station) match the /api/solar/live response.
+func ajustesSignals(v ajustesView) string {
+	sig := map[string]any{
+		"running":    v.UpdateRunning,
+		"step":       v.UpdateStep,
+		"pct":        v.UpdatePct,
+		"updIdx":     updateStepIndex(v.UpdateStep),
+		"confirm":    false,
+		"ack":        false,
+		"checked":    false,
+		"available":  false,
+		"canApply":   false,
+		"latest":     "",
+		"latestBody": "",
+		"connTested": false,
+		"connected":  false,
+		"station":    "",
+		"bydBusy":    false,
+		"chgSel":     v.ChargerSel,
+		"installName":     v.InstallName,
+		"installLocation": v.InstallLocation,
+		"locOpen":         false,
+	}
+	if raw, err := json.Marshal(sig); err == nil {
+		return string(raw)
+	}
+	return "{}"
+}
+
+// ajustesSavedBanner shows the PRG result of a form wrapper.
+templ ajustesSavedBanner(v ajustesView) {
+	if v.Saved != "" {
+		<div role="status" class="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
+			@iconCheck("h-4 w-4 shrink-0")
+			<span>{ ajustesSavedText(v.Lang, v.Saved) }</span>
+		</div>
+	}
+	if v.Err != "" {
+		<div role="alert" class="flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">
+			@iconTriangleAlert("h-4 w-4 shrink-0")
+			<span>{ ajustesErrText(v.Lang, v.Err) }</span>
+		</div>
+	}
+}
+
+func ajustesSavedText(lang, flag string) string {
+	switch flag {
+	case "topology":
+		return T(lang, "ajustes.topology.savedRestart")
+	case "extensions":
+		return T(lang, "ajustes.extensions.savedRestart")
+	case "profile":
+		return T(lang, "ajustes.profile.saved")
+	case "password":
+		return T(lang, "ajustes.security.changed")
+	case "users":
+		return T(lang, "admin.users.createdToast", map[string]string{"username": ""})
+	case "pushpref":
+		return T(lang, "ajustes.profile.saved")
+	case "prices", "install":
+		return T(lang, "ajustes.profile.saved")
+	}
+	return flag
+}
+
+func ajustesErrText(lang, flag string) string {
+	switch flag {
+	case "forbidden":
+		return T(lang, "common.error")
+	case "topology":
+		return T(lang, "ajustes.topology.saveError")
+	case "profile":
+		return T(lang, "ajustes.profile.profileError")
+	case "users", "prices":
+		return T(lang, "common.error")
+	}
+	return T(lang, "common.error")
+}
+
+// ajustesSection ports the React Section card (title + optional badge).
+// ajustesSectionHealth is Section + HealthBadge (Conexión y datos).
+templ ajustesSectionHealth(id string, title string, ok bool, lang string) {
+	<section id={ id } class="helios-card scroll-mt-20 p-5 shadow-card dark:shadow-card-dark lg:scroll-mt-6">
+		<div class="mb-4 flex items-center gap-2.5">
+			<h2 class="text-[15px] font-semibold text-app">{ title }</h2>
+			<span
+				role="status"
+				aria-label={ pickStr(ok, T(lang, "ajustes.health.alive"), T(lang, "ajustes.health.down")) }
+				title={ pickStr(ok, T(lang, "ajustes.health.alive"), T(lang, "ajustes.health.down")) }
+				class={ "ml-auto flex h-6 w-6 items-center justify-center rounded-full", templ.KV("bg-emerald-500/15 text-emerald-500", ok), templ.KV("bg-amber-500/15 text-amber-500", !ok) }
+			>
+				@iconHeartPulse("h-3.5 w-3.5")
+			</span>
+		</div>
+		{ children... }
+	</section>
+}
+
+// pickInt is a tiny ternary for ints.
+func pickInt(cond bool, a, b int) int {
+	if cond {
+		return a
+	}
+	return b
+}
+
+// pickStr is a tiny ternary for strings.
+func pickStr(cond bool, a, b string) string {
+	if cond {
+		return a
+	}
+	return b
+}
+
+templ ajustesSection(id string, title string) {
+	<section id={ id } class="helios-card scroll-mt-20 p-5 shadow-card dark:shadow-card-dark lg:scroll-mt-6">
+		<div class="mb-4 flex items-center gap-2.5">
+			<h2 class="text-[15px] font-semibold text-app">{ title }</h2>
+		</div>
+		{ children... }
+	</section>
+}
+
+// ── 1. Instalación ──────────────────────────────────────────────────────────
+templ ajustesInstall(v ajustesView) {
+	@ajustesSection("instalacion", T(v.Lang, "ajustes.sections.instalacion")) {
+		<div class="grid gap-3 md:grid-cols-3">
+			for _, c := range v.InvCards {
+				@ajustesInvCard(v, c)
+			}
+		</div>
+		<form method="post" action="/ajustes/install" data-on:change="@post('/ajustes/install')" class="mt-4 grid gap-4 border-t border-app pt-4 sm:grid-cols-2">
+			<div>
+				<label for="install-name" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.name") }</label>
+				<div class="relative">
+					<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconHouse("h-[15px] w-[15px]")</span>
+					<input id="install-name" type="text" name="install_name" data-bind="installName" value={ v.InstallName } class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
+				</div>
+			</div>
+			<div>
+				<label for="install-location" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.location") }</label>
+				<div class="relative">
+					<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconMapPin("h-[15px] w-[15px]")</span>
+					<input id="install-location" type="text" name="install_location" data-bind="installLocation" value={ v.InstallLocation } autocomplete="off" placeholder={ T(v.Lang, "ajustes.install.locationPlaceholder") } data-on:input__debounce.250ms="$locOpen = true; @get('/ui/municipios?q=' + encodeURIComponent($installLocation))" data-on:focus="$locOpen = true" class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
+					<!-- Combobox propio (respeta el tema): el panel lo patchea /ui/municipios. -->
+					<div id="municipios-panel" data-show="$locOpen" class="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-xl border border-app bg-surface p-1 shadow-lg">
+						@municipiosPanel(searchMunicipios(v.InstallLocation, 8))
+					</div>
+				</div>
+				@ajustesSunNote(v.SunNote)
+			</div>
+		</form>
+	}
+}
+
+templ ajustesInvCard(v ajustesView, c invCardView) {
+	<div class={ "group rounded-xl border-2 bg-surface p-4 transition-colors", templ.KV("border-brand/35", c.IsTotal) } style={ "border-color: color-mix(in srgb, " + c.Color + " 35%, transparent)" }>
+		<div class="mb-3 flex h-10 items-center gap-2">
+			<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={ "background-color: color-mix(in srgb, " + c.Color + " 12%, transparent); color: " + c.Color }>
+				if c.IsTotal {
+					@iconSun("h-4 w-4")
+				} else {
+					@iconZap("h-4 w-4")
+				}
+			</span>
+			<p class="min-w-0 truncate font-display text-[15px] font-semibold text-app">{ c.Name }</p>
+		</div>
+		<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "ajustes.install.theoretical") }</p>
+		<p class="font-display text-3xl font-bold leading-tight text-app">
+			{ c.KwpText } <span class="text-base font-medium text-faint">kWp</span>
+		</p>
+		<div class="mt-3 flex flex-col gap-2">
+			if c.HasPanels {
+				<p class="flex items-center gap-2 text-[13px] text-muted">
+					@iconLayoutGrid("h-[15px] w-[15px] shrink-0 text-faint")
+					{ c.PanelsText }
+				</p>
+			}
+			if c.HasBattery {
+				<p class="flex items-center gap-2 text-[13px] text-muted">
+					@iconBatteryCharging("h-[15px] w-[15px] shrink-0 text-faint")
+					{ c.BatteryText }
+				</p>
+			}
+		</div>
+	</div>
+}
+
+// ── 2. Apariencia ───────────────────────────────────────────────────────────
+
+// Theme lives in the helios_theme cookie (auto = no cookie, follows the OS).
+// Accent, density and motion are per-device cookies too (the React app kept
+// them in localStorage); all of them render server-side, no custom JS.
+templ ajustesAppearance(v ajustesView) {
+	@ajustesSection("apariencia", T(v.Lang, "ajustes.sections.apariencia")) {
+		<div class="flex max-w-3xl flex-col gap-4 sm:flex-row sm:gap-5">
+			<div role="radiogroup" aria-label={ T(v.Lang, "theme.label") } class="grid grid-cols-3 gap-2 sm:w-[46%] sm:flex-shrink-0">
+				@ajustesThemeOption(v, "dark")
+				@ajustesThemeOption(v, "light")
+				@ajustesThemeOption(v, "auto")
+			</div>
+			<div class="flex flex-col gap-3 sm:flex-1">
+				<div>
+					<p class="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "ajustes.accent.title") }</p>
+					<div class="flex items-center gap-3">
+						<div role="radiogroup" aria-label={ T(v.Lang, "ajustes.accent.title") } class="flex items-center gap-2">
+							for _, acc := range accentOptions {
+								{{ active := v.AccentName == acc.ID }}
+								<form method="post" action="/appearance">
+									<input type="hidden" name="accent" value={ acc.ID }/>
+									<input type="hidden" name="next" value="/ajustes"/>
+									<button type="submit" role="radio" aria-checked={ boolStr(active) } aria-label={ T(v.Lang, acc.Label) } title={ T(v.Lang, acc.Label) } class={ "relative flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110", templ.KV("ring-2 ring-brand ring-offset-2 ring-offset-[var(--surface)]", active) } style={ "background-color: " + acc.Hex }>
+										if active {
+											@iconCheck("h-3 w-3 text-white")
+										}
+									</button>
+								</form>
+							}
+						</div>
+						<div class="ml-auto flex items-center gap-2">
+							<span class="text-[13px] text-muted">{ T(v.Lang, "ajustes.reduceMotion") }</span>
+							<form method="post" action="/appearance">
+								<input type="hidden" name="next" value="/ajustes"/>
+								if v.ReduceMotion {
+									<input type="hidden" name="motion" value="on"/>
+								} else {
+									<input type="hidden" name="motion" value="off"/>
+								}
+								<button type="submit" role="switch" aria-checked={ boolStr(!v.ReduceMotion) } aria-label={ T(v.Lang, "ajustes.reduceMotion") } class="group inline-flex">
+									<span class={ "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors", templ.KV("border-brand bg-brand", !v.ReduceMotion), templ.KV("border-app bg-surface-2", v.ReduceMotion) }>
+										<span class={ "absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform", templ.KV("translate-x-4", !v.ReduceMotion) }></span>
+									</span>
+								</button>
+							</form>
+						</div>
+					</div>
+				</div>
+				<div>
+					<p class="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "ajustes.density.title") }</p>
+					<div role="radiogroup" aria-label={ T(v.Lang, "ajustes.density.title") } class="flex rounded-xl border border-app bg-surface p-0.5">
+						for _, d := range []string{"comfortable", "compact"} {
+							{{ active := v.Density == d }}
+							<form method="post" action="/appearance" class="flex-1">
+								<input type="hidden" name="density" value={ d }/>
+								<input type="hidden" name="next" value="/ajustes"/>
+								<button type="submit" role="radio" aria-checked={ boolStr(active) } class={ "h-8 w-full rounded-lg text-[13px] transition-colors", templ.KV("bg-surface-2 font-semibold text-app shadow-soft", active), templ.KV("text-faint hover:text-muted", !active) }>
+									{ T(v.Lang, "ajustes.density."+d) }
+								</button>
+							</form>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// themeActive marks the selected card: "auto" is the empty cookie.
+func themeActive(current, option string) bool {
+	if option == "auto" {
+		return current == ""
+	}
+	return current == option
+}
+
+templ ajustesThemeOption(v ajustesView, theme string) {
+	{{ active := themeActive(v.Theme, theme) }}
+	{{ label := T(v.Lang, "theme."+theme) }}
+	<form method="post" action="/theme">
+		<input type="hidden" name="theme" value={ theme }/>
+		<input type="hidden" name="next" value="/ajustes"/>
+		<button type="submit" role="radio" aria-checked={ boolStr(active) } class={ "group relative flex w-full flex-col gap-2 rounded-xl border-2 p-2 transition-all", templ.KV("border-brand bg-brand/5", active), templ.KV("border-app hover:border-brand/30", !active) }>
+			@ajustesThemePreview(theme)
+			<div class="flex items-center justify-center gap-1.5">
+				if theme == "dark" {
+					@iconMoon("h-3.5 w-3.5")
+				} else if theme == "light" {
+					@iconSun("h-3.5 w-3.5")
+				} else {
+					@iconSunMoon("h-3.5 w-3.5")
+				}
+				<span class={ "text-xs font-medium", templ.KV("text-brand", active), templ.KV("text-muted", !active) }>{ label }</span>
+			</div>
+			if active {
+				<span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white">
+					@iconCheck("h-3 w-3")
+				</span>
+			}
+		</button>
+	</form>
+}
+
+templ ajustesThemePreview(theme string) {
+	if theme == "dark" {
+		<div class="flex h-[64px] w-full flex-col rounded-lg border border-app bg-[#0E1524] p-1.5">
+			<div class="mb-1 h-1.5 w-full rounded bg-[#1B2537]"></div>
+			<div class="flex flex-1 gap-1">
+				<div class="w-1/4 rounded bg-[#1B2537]"></div>
+				<div class="flex flex-1 flex-col gap-1">
+					<div class="h-2 w-3/4 rounded bg-brand/60"></div>
+					<div class="h-4 flex-1 rounded bg-[#141C2E]"></div>
+				</div>
+			</div>
+		</div>
+	} else if theme == "auto" {
+		<div class="flex h-[64px] w-full overflow-hidden rounded-lg border border-app">
+			<div class="flex w-1/2 flex-col bg-[#F4F6FA] p-1.5">
+				<div class="mb-1 h-1.5 w-full rounded bg-[#E3E8F0]"></div>
+				<div class="flex flex-1 gap-1">
+					<div class="w-1/4 rounded bg-[#E3E8F0]"></div>
+					<div class="flex flex-1 flex-col gap-1">
+						<div class="h-2 w-3/4 rounded bg-brand/60"></div>
+						<div class="h-4 flex-1 rounded bg-white"></div>
+					</div>
+				</div>
+			</div>
+			<div class="flex w-1/2 flex-col bg-[#0E1524] p-1.5">
+				<div class="mb-1 h-1.5 w-full rounded bg-[#1B2537]"></div>
+				<div class="flex flex-1 gap-1">
+					<div class="w-1/4 rounded bg-[#1B2537]"></div>
+					<div class="flex flex-1 flex-col gap-1">
+						<div class="h-2 w-3/4 rounded bg-brand/60"></div>
+						<div class="h-4 flex-1 rounded bg-[#141C2E]"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	} else {
+		<div class="flex h-[64px] w-full flex-col rounded-lg border border-app bg-[#F4F6FA] p-1.5">
+			<div class="mb-1 h-1.5 w-full rounded bg-[#E3E8F0]"></div>
+			<div class="flex flex-1 gap-1">
+				<div class="w-1/4 rounded bg-[#E3E8F0]"></div>
+				<div class="flex flex-1 flex-col gap-1">
+					<div class="h-2 w-3/4 rounded bg-brand/60"></div>
+					<div class="h-4 flex-1 rounded bg-white"></div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// ── 3. Conexión + TopologyEditor ────────────────────────────────────────────
+templ ajustesConnection(v ajustesView) {
+	@ajustesSectionHealth("conexion", T(v.Lang, "ajustes.sections.conexionDatos"), v.HAOk, v.Lang) {
+		<div class="group flex flex-col gap-4">
+			<input id="topo-edit" type="checkbox" class="sr-only"/>
+			<p class="text-sm leading-snug text-muted">{ T(v.Lang, "ajustes.connection.desc") }</p>
+			<div class="flex flex-wrap items-center gap-3">
+				<button
+					type="button"
+					data-on:click="$connTested = true; @get('/api/solar/live')"
+					data-indicator="$bydBusy"
+					class="inline-flex h-9 items-center gap-2 rounded-full bg-brand-gradient px-5 text-[13px] font-semibold text-white shadow-md transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-70"
+				>
+					{ T(v.Lang, "ajustes.connection.test") }
+				</button>
+				<span class={ "inline-flex h-8 items-center gap-2 rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted" }>
+					<span class="relative flex h-2 w-2">
+						if v.HAOk {
+							<span class="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60"></span>
+							<span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+						} else {
+							<span class="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
+						}
+					</span>
+					if v.HAOk {
+						<span>{ T(v.Lang, "ajustes.connection.connected", map[string]string{"station": "Home Assistant"}) }</span>
+					} else {
+						<span>{ T(v.Lang, "ajustes.connection.reconnecting") }</span>
+					}
+				</span>
+				if v.IsAdmin {
+					<label for="topo-edit" title={ T(v.Lang, "ajustes.topology.edit") } class="ml-auto inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-app bg-surface px-4 text-[13px] font-medium text-app transition-colors hover:border-brand/50 hover:text-brand group-has-[#topo-edit:checked]:border-brand group-has-[#topo-edit:checked]:bg-brand/5 group-has-[#topo-edit:checked]:text-brand">
+						@iconPencil("h-[13px] w-[13px]")
+						{ T(v.Lang, "ajustes.topology.edit") }
+					</label>
+				}
+			</div>
+			<div data-show="$connTested" class="rounded-xl border border-app bg-surface px-3 py-2 text-sm text-muted">
+				<span data-show="$connected">{ T(v.Lang, "ajustes.connection.connectedToast", map[string]string{"station": ""}) }<span class="font-semibold text-app" data-text="$station"></span></span>
+				<span data-show="!$connected">{ T(v.Lang, "ajustes.connection.unreachableToast") }</span>
+			</div>
+			if v.IsAdmin {
+				<div class="hidden group-has-[#topo-edit:checked]:block">
+					@topologyEditor(v)
+				</div>
+			}
+			<details class="rounded-xl border border-app px-3">
+				<summary class="cursor-pointer py-3 text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.connection.entities") }</summary>
+				<div class="overflow-x-auto pb-3">
+					<table class="w-full text-left text-sm">
+						<thead>
+							<tr class="border-b border-app">
+								<th class="py-2 pr-4 text-xs font-medium text-faint">{ T(v.Lang, "ajustes.connection.entity") }</th>
+								<th class="py-2 text-xs font-medium text-faint">{ T(v.Lang, "ajustes.connection.description") }</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, row := range v.Entities {
+								<tr class="border-b border-app/50 last:border-0">
+									<td class="py-2 pr-4 font-mono text-xs text-app">{ row.Entity }</td>
+									<td class="py-2 text-xs text-muted">{ T(v.Lang, "ajustes.connection."+row.Desc) }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</details>
+		</div>
+	}
+}
+
+// topologyEditor is the port of TopologyEditor.tsx as an inline details +
+// form. Fields not shown (glitchOffsets, tempC) are preserved by
+// install.Normalize from the base profile (same as the API flow).
+templ topologyEditor(v ajustesView) {
+	<div class="rounded-xl border border-app px-3" id="topology-editor">
+		if len(v.Topo.Inverters) > 0 {
+			<p class="pt-3 text-xs text-faint">{ T(v.Lang, "ajustes.topology.configured") }</p>
+		}
+		<form method="post" action="/ajustes/topology" class="flex flex-col gap-6 pb-4">
+			<fieldset class="flex flex-col gap-3">
+				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.inverters") }</legend>
+				for i, inv := range v.Topo.Inverters {
+					<div class="rounded-xl border border-app bg-surface p-3">
+						<div class="mb-2 flex items-center justify-between">
+							<p class="text-xs font-semibold text-muted">{ T(v.Lang, "ajustes.topology.inverterLabel", map[string]string{"n": strconv.Itoa(i + 1)}) }</p>
+						</div>
+						<div class="grid gap-3 sm:grid-cols-3">
+							@ajField(T(v.Lang, "ajustes.topology.name"), "inv."+strconv.Itoa(i)+".name", inv.Name, "")
+							@ajField(T(v.Lang, "ajustes.topology.model"), "inv."+strconv.Itoa(i)+".model", inv.Model, "")
+							@ajField(T(v.Lang, "ajustes.topology.panels"), "inv."+strconv.Itoa(i)+".panels", inv.Panels, "10 × 440 W")
+							@ajField(T(v.Lang, "ajustes.topology.kwp"), "inv."+strconv.Itoa(i)+".kwp", f2s(inv.Kwp), "")
+							@ajField(T(v.Lang, "ajustes.topology.powerId"), "inv."+strconv.Itoa(i)+".powerId", inv.PowerID, "sensor.inverter_power")
+							<div class="grid grid-cols-2 gap-3">
+								@ajSelect(T(v.Lang, "ajustes.topology.powerUnit"), "inv."+strconv.Itoa(i)+".powerUnit", string(inv.PowerUnit), rawOptions("kW", "W"))
+								@ajField(T(v.Lang, "ajustes.topology.energyCap"), "inv."+strconv.Itoa(i)+".energyCap", f2s(inv.EnergyCap), "")
+							</div>
+							@ajField(T(v.Lang, "ajustes.topology.backupPowerId"), "inv."+strconv.Itoa(i)+".backupPowerId", inv.BackupPowerID, "sensor.inverter_cloud_power")
+							@ajSelect(T(v.Lang, "ajustes.topology.backupPowerUnit"), "inv."+strconv.Itoa(i)+".backupPowerUnit", string(inv.BackupPowerUnit), rawOptions("kW", "W"))
+							@ajField(T(v.Lang, "ajustes.topology.energyId"), "inv."+strconv.Itoa(i)+".energyId", inv.EnergyID, "sensor.inverter_energy_today")
+							<div class="grid grid-cols-2 gap-3">
+								{{ accOpts := []ajOption{{Value: "state", Label: T(v.Lang, "ajustes.topology.accState")}, {Value: "sum", Label: T(v.Lang, "ajustes.topology.accSum")}} }}
+								@ajSelect(T(v.Lang, "ajustes.topology.energyAcc"), "inv."+strconv.Itoa(i)+".energyAcc", string(inv.EnergyAcc), accOpts)
+								<div class="flex items-end pb-1">
+									@ajCheckbox("inv."+strconv.Itoa(i)+".hasBattery", inv.HasBattery, T(v.Lang, "ajustes.topology.hasBattery"))
+								</div>
+							</div>
+							@ajField(T(v.Lang, "ajustes.topology.deepIds"), "inv."+strconv.Itoa(i)+".deepIds", csvJoin(inv.DeepIDs), "sensor.inverter_energy_total")
+							if inv.HasBattery {
+								@ajField(T(v.Lang, "ajustes.topology.batteryKwh"), "inv."+strconv.Itoa(i)+".batteryKwh", f2s(inv.BatteryKwh), "")
+							}
+							<input type="hidden" name={ "inv." + strconv.Itoa(i) + ".key" } value={ inv.Key }/>
+						</div>
+					</div>
+				}
+				<input type="hidden" name="inv.count" value={ strconv.Itoa(len(v.Topo.Inverters)) }/>
+				<p class="text-xs text-faint">{ T(v.Lang, "ajustes.topology.desc") }</p>
+			</fieldset>
+			<fieldset class="flex flex-col gap-3">
+				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.battery") }</legend>
+				<div class="rounded-xl border border-app bg-surface p-3">
+					<div class="grid gap-3 sm:grid-cols-3">
+						<div class="flex items-center gap-2 sm:col-span-3">
+							@ajCheckbox("battery.enabled", v.Topo.Battery.Enabled, T(v.Lang, "ajustes.topology.enabled"))
+						</div>
+						@ajField(T(v.Lang, "ajustes.topology.powerId"), "battery.powerId", v.Topo.Battery.PowerID, "sensor.battery_power")
+						@ajField(T(v.Lang, "ajustes.topology.capacityKwh"), "battery.capacityKwh", f2s(v.Topo.Battery.CapacityKwh), "")
+						@ajField(T(v.Lang, "ajustes.topology.stateId"), "battery.stateId", v.Topo.Battery.StateID, "sensor.battery_state")
+						@ajField(T(v.Lang, "ajustes.topology.socId"), "battery.socId", v.Topo.Battery.SocID, "sensor.battery_soc")
+						@ajField(T(v.Lang, "ajustes.topology.chargingStates"), "battery.chargingStates", csvJoin(v.Topo.Battery.ChargingStates), "Cargando, charging")
+						@ajField(T(v.Lang, "ajustes.topology.dischargingStates"), "battery.dischargingStates", csvJoin(v.Topo.Battery.DischargingStates), "Descargando, discharging")
+					</div>
+				</div>
+			</fieldset>
+			<fieldset class="flex flex-col gap-3">
+				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.grid") }</legend>
+				<div class="rounded-xl border border-app bg-surface p-3">
+					<div class="grid gap-3 sm:grid-cols-3">
+						{{ gridOpts := []ajOption{{Value: "attrs", Label: T(v.Lang, "ajustes.topology.gridAttrs")}, {Value: "sensor", Label: T(v.Lang, "ajustes.topology.gridSensor")}} }}
+						@ajSelect(T(v.Lang, "ajustes.topology.gridMode"), "grid.mode", v.Topo.Grid.Mode, gridOpts)
+						@ajField(T(v.Lang, "ajustes.topology.statusAttrsId"), "statusAttrsId", ajPtr(v.Topo.StatusAttrsID), "sensor.inverter_status")
+						if v.Topo.Grid.Mode == "attrs" {
+							@ajField(T(v.Lang, "ajustes.topology.attrsId"), "grid.attrsId", ajPtr(v.Topo.Grid.AttrsID), "sensor.grid_scraper")
+						} else {
+							@ajField(T(v.Lang, "ajustes.topology.sensorId"), "grid.sensorId", ajPtr(v.Topo.Grid.SensorID), "sensor.grid_power")
+							@ajField(T(v.Lang, "ajustes.topology.importId"), "grid.importId", ajPtr(v.Topo.Grid.ImportID), "sensor.grid_import_power")
+							@ajField(T(v.Lang, "ajustes.topology.exportId"), "grid.exportId", ajPtr(v.Topo.Grid.ExportID), "sensor.grid_export_power")
+						}
+					</div>
+				</div>
+			</fieldset>
+			<fieldset class="flex flex-col gap-3">
+				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.consumption") }</legend>
+				<div class="rounded-xl border border-app bg-surface p-3">
+					<div class="grid gap-3 sm:grid-cols-3">
+						@ajField(T(v.Lang, "ajustes.topology.powerIds"), "cons.powerIds", csvJoin(v.Topo.Consumption.PowerIDs), "sensor.house_power, sensor.garage_power")
+						@ajField(T(v.Lang, "ajustes.topology.energyIds"), "cons.energyIds", csvJoin(v.Topo.Consumption.EnergyIDs), "sensor.house_energy")
+						@ajField(T(v.Lang, "ajustes.topology.respaldoId"), "cons.respaldoId", ajPtr(v.Topo.Consumption.RespaldoID), "sensor.backup_power")
+						@ajField(T(v.Lang, "ajustes.topology.noRespaldadaId"), "cons.noRespaldadaId", ajPtr(v.Topo.Consumption.NoRespaldadaID), "sensor.non_backup_power")
+					</div>
+				</div>
+			</fieldset>
+			<fieldset class="flex flex-col gap-3">
+				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.energy") }</legend>
+				<div class="rounded-xl border border-app bg-surface p-3">
+					<div class="grid gap-3 sm:grid-cols-3">
+						@ajField(T(v.Lang, "ajustes.topology.gridImportId"), "energy.gridImportId", v.Topo.Energy.GridImportID, "sensor.grid_import_energy")
+						@ajField(T(v.Lang, "ajustes.topology.gridExportId"), "energy.gridExportId", v.Topo.Energy.GridExportID, "sensor.grid_export_energy")
+						@ajField(T(v.Lang, "ajustes.topology.consumptionId"), "energy.consumptionId", v.Topo.Energy.ConsumptionID, "sensor.house_energy_today")
+						@ajField(T(v.Lang, "ajustes.topology.batChargeId"), "energy.batChargeId", v.Topo.Energy.BatChargeID, "sensor.battery_charge_energy")
+						@ajField(T(v.Lang, "ajustes.topology.batDischargeId"), "energy.batDischargeId", v.Topo.Energy.BatDischargeID, "sensor.battery_discharge_energy")
+					</div>
+				</div>
+			</fieldset>
+			<fieldset class="flex flex-col gap-3">
+				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.environment") }</legend>
+				<div class="grid gap-3 rounded-xl border border-app bg-surface p-3 sm:grid-cols-3">
+					@ajField(T(v.Lang, "ajustes.topology.sun"), "env.sun", v.Topo.Sun, "sun.sun")
+					@ajField(T(v.Lang, "ajustes.topology.weather"), "env.weather", v.Topo.Weather, "weather.forecast")
+					@ajField(T(v.Lang, "ajustes.topology.weatherTemp"), "env.weatherTemp", v.Topo.WeatherTemp, "sensor.outdoor_temperature")
+				</div>
+			</fieldset>
+			<button type="submit" class="inline-flex h-9 items-center gap-2 self-start rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+				@iconSave("h-4 w-4")
+				{ T(v.Lang, "ajustes.topology.save") }
+			</button>
+		</form>
+	</div>
+}
+
+func ajPtr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// ajField is the TopologyEditor Field wrapper (label + mono input).
+templ ajField(label, name, value, placeholder string) {
+	<div class="flex flex-col gap-1.5">
+		<label class="text-xs font-medium text-muted">{ label }</label>
+		<input type="text" name={ name } value={ value } placeholder={ placeholder } class="h-9 rounded-xl border border-app bg-surface-2 px-3 font-mono text-xs text-app outline-none focus:border-brand"/>
+	</div>
+}
+
+// ajSelect renders a native select from label/value pairs.
+templ ajSelect(label, name, value string, options []ajOption) {
+	<div class="flex flex-col gap-1.5">
+		<label class="text-xs font-medium text-muted">{ label }</label>
+		<select name={ name } class="h-9 rounded-xl border border-app bg-surface-2 px-2 font-mono text-xs text-app outline-none focus:border-brand">
+			for _, o := range options {
+				if o.Value == value {
+					<option value={ o.Value } selected>{ o.Label }</option>
+				} else {
+					<option value={ o.Value }>{ o.Label }</option>
+				}
+			}
+		</select>
+	</div>
+}
+
+type ajOption struct {
+	Value string
+	Label string
+}
+
+// rawOptions wraps bare values as options (unit lists, user/admin).
+func rawOptions(vals ...string) []ajOption {
+	out := make([]ajOption, 0, len(vals))
+	for _, v := range vals {
+		out = append(out, ajOption{Value: v, Label: v})
+	}
+	return out
+}
+
+// ajCheckbox is the Switch of the React editor (native checkbox styled).
+templ ajCheckbox(name string, checked bool, label string) {
+	<label class="flex items-center gap-2 text-xs font-medium text-muted">
+		<input type="checkbox" name={ name } value="1" checked?={ checked } class="peer sr-only"/>
+		<span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-app bg-surface-2 transition-colors peer-checked:bg-brand peer-checked:border-brand">
+			<span class="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></span>
+		</span>
+		{ label }
+	</label>
+}
+
+// ── 4. Extensiones (admin) ──────────────────────────────────────────────────
+templ ajustesExtensions(v ajustesView) {
+	@ajustesSection("extensiones", T(v.Lang, "ajustes.sections.extensiones")) {
+		<form method="post" action="/ajustes/extensions" class="group flex flex-col gap-4">
+			<input id="chg-config" type="checkbox" class="sr-only" checked?={ v.Saved == "extensions" }/>
+			<input id="byd-config" type="checkbox" class="sr-only" checked?={ v.Saved == "extensions" }/>
+			<div class="flex flex-wrap items-center gap-x-4 gap-y-3">
+				<div class="flex items-center gap-2.5">
+					@iconPuzzle("h-[18px] w-[18px] shrink-0 text-brand")
+					<span class="text-sm font-semibold text-app">{ T(v.Lang, "ajustes.extensions.enable") }</span>
+					@ajCheckbox("ext.enabled", v.ExtEnabled, "")
+				</div>
+				if v.ExtEnabled {
+					<div class="hidden h-6 w-px bg-app sm:block"></div>
+					<div class="flex items-center gap-2.5">
+						@iconCarFront("h-[18px] w-[18px] shrink-0 text-brand")
+						<span class="text-sm font-semibold text-app">{ T(v.Lang, "ajustes.extensions.carCharger") }</span>
+						@ajCheckbox("chg.enabled", v.ChargerEnabled, "")
+						if v.ChargerEnabled {
+							<label for="chg-config" title={ T(v.Lang, "ajustes.extensions.configure") } aria-controls="ext-charger-config" class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#chg-config:checked]:border-brand group-has-[#chg-config:checked]:bg-brand/10 group-has-[#chg-config:checked]:text-brand">
+								@iconSettings2("h-[15px] w-[15px]")
+							</label>
+						}
+					</div>
+					<div class="flex items-center gap-2.5">
+						<span class="text-sm font-semibold text-app">BYD</span>
+						@ajCheckbox("byd.enabled", v.BydEnabled, "")
+						<label for="byd-config" title={ T(v.Lang, "ajustes.extensions.configure") } aria-controls="byd-config-panel" class="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#byd-config:checked]:border-brand group-has-[#byd-config:checked]:bg-brand/10 group-has-[#byd-config:checked]:text-brand">
+							@iconSettings2("h-[15px] w-[15px]")
+						</label>
+					</div>
+				}
+			</div>
+			if !v.ExtEnabled {
+				<p class="text-sm text-muted">{ T(v.Lang, "ajustes.extensions.offHint") }</p>
+			} else if !v.ChargerEnabled {
+				<p class="text-sm text-muted">{ T(v.Lang, "ajustes.extensions.carChargerOffHint") }</p>
+			} else {
+				<div id="ext-charger-config" class="hidden flex-col gap-3 group-has-[#chg-config:checked]:flex">
+					<div class="flex flex-wrap items-center gap-2" role="tablist" aria-label={ T(v.Lang, "ajustes.extensions.chargerSelect") }>
+						for _, c := range v.Chargers {
+							<button type="button" role="tab" aria-selected={ pickStr(c.Idx == v.ChargerSel, "true", "false") } data-on:click={ chgTabClick(c.Idx) } data-class={ "{ 'border-brand bg-brand/10 text-brand': $chgSel == " + strconv.Itoa(c.Idx) + " }" } class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted transition-colors hover:text-app">
+								{ c.Name }
+							</button>
+						}
+						<button type="submit" form="ext-add" aria-label={ T(v.Lang, "ajustes.extensions.chargerAdd") } title={ T(v.Lang, "ajustes.extensions.chargerAdd") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
+							@iconPlus("h-3.5 w-3.5")
+						</button>
+						if len(v.Chargers) > 1 {
+							for _, c := range v.Chargers {
+								<button type="submit" form={ "ext-remove-" + strconv.Itoa(c.Idx) } title={ T(v.Lang, "ajustes.extensions.chargerRemove") } aria-label={ T(v.Lang, "ajustes.extensions.chargerRemove") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-rose-500">
+									@iconTrash2("h-3.5 w-3.5")
+								</button>
+							}
+						}
+					</div>
+					for _, c := range v.Chargers {
+						<div data-show={ "$chgSel == " + strconv.Itoa(c.Idx) }>
+							@ajChargerFields(v, c)
+						</div>
+					}
+					<button type="submit" class="inline-flex h-9 w-fit items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+						{ T(v.Lang, "ajustes.extensions.save") }
+					</button>
+				</div>
+				<input type="hidden" name="chg.count" value={ strconv.Itoa(len(v.Chargers)) }/>
+			}
+			<!-- Panel BYD (su cabecera vive arriba, junto al cargador). -->
+			<div id="byd-config-panel" class="hidden flex-col gap-3 group-has-[#byd-config:checked]:flex">
+				<div class="rounded-xl border border-app bg-surface p-3">
+					<div class="grid gap-3 sm:grid-cols-3">
+						for _, f := range bydConfigFields {
+							@ajField(bydFieldLabels[f], "byd."+f, v.BydValues[f], "")
+						}
+					</div>
+				</div>
+				<button type="submit" class="inline-flex h-9 w-fit items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+					{ T(v.Lang, "ajustes.extensions.save") }
+				</button>
+			</div>
+		</form>
+		<!-- Forms de add/remove fuera del form principal (no se pueden anidar). -->
+		<form method="post" action="/ajustes/extensions" id="ext-add" class="hidden">
+			<input type="hidden" name="action" value="add-charger"/>
+		</form>
+		for _, c := range v.Chargers {
+			<form method="post" action="/ajustes/extensions" id={ "ext-remove-" + strconv.Itoa(c.Idx) } class="hidden">
+				<input type="hidden" name="action" value="remove-charger"/>
+				<input type="hidden" name="remove" value={ strconv.Itoa(c.Idx) }/>
+			</form>
+		}
+		if len(v.BydActions) > 0 {
+			<div class="flex flex-wrap items-center gap-2" role="group" aria-label="BYD">
+				<span class="text-xs font-medium text-faint">Acciones BYD</span>
+				for _, a := range v.BydActions {
+					<button
+						type="button"
+						data-on:click={ a.ClickExpr }
+						data-indicator="$bydBusy"
+						data-attr:disabled="$bydBusy"
+						class="inline-flex h-8 items-center rounded-full border border-app bg-surface px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
+					>
+						{ a.Label }
+					</button>
+				}
+			</div>
+		}
+	}
+}
+
+// profileLangLabel shows the current profile language (flag + name).
+templ profileLangLabel(v ajustesView) {
+	for _, l := range v.Languages {
+		if l.Code == v.ProfileLang {
+			<span>{ l.Flag }</span>
+			<span class="hidden sm:inline">{ l.Name }</span>
+		}
+	}
+}
+
+// ajustesSunNote is the sun line under the location (patched on autosave).
+templ ajustesSunNote(note string) {
+	<p id="sun-note" class={ "mt-1 text-right text-xs text-faint", templ.KV("hidden", note == "") }>{ note }</p>
+}
+
+// municipiosPanel renders the custom autocomplete options: picking one sets
+// the signal, closes the panel and saves in place (no page reload).
+templ municipiosPanel(items []municipio) {
+	if len(items) == 0 {
+		<p class="px-2 py-1.5 text-xs text-faint">—</p>
+	}
+	for _, m := range items {
+		<button
+			type="button"
+			data-on:click__prevent={ "$installLocation = \"" + m.Display + "\"; $locOpen = false; @post('/ajustes/install')" }
+			class="block w-full truncate rounded-lg px-2 py-1.5 text-left text-sm text-app transition-colors hover:bg-surface-2"
+		>
+			{ m.Display }
+		</button>
+	}
+}
+
+// chgTabClick selects a charger tab and keeps aria-selected in sync.
+func chgTabClick(idx int) string {
+	i := strconv.Itoa(idx)
+	return "$chgSel = " + i + "; document.querySelectorAll('#ext-charger-config [role=tab]').forEach((b, n) => b.setAttribute('aria-selected', n === " + i + " ? 'true' : 'false'))"
+}
+
+// ajChargerFields is the collapsible per-charger fieldset.
+templ ajChargerFields(v ajustesView, c chargerFormView) {
+	<div class="rounded-xl border border-app bg-surface p-3">
+		<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			@ajField(T(v.Lang, "ajustes.extensions.f.name"), "chg."+strconv.Itoa(c.Idx)+".name", c.Name, "")
+			@ajSelect(T(v.Lang, "ajustes.extensions.f.powerUnit"), "chg."+strconv.Itoa(c.Idx)+".powerUnit", c.PowerUnit, rawOptions("kW", "W"))
+			@ajField(T(v.Lang, "ajustes.extensions.f.chargingStates"), "chg."+strconv.Itoa(c.Idx)+".chargingStates", c.ChargingStates, "charging")
+			@ajField(T(v.Lang, "ajustes.extensions.f.powerId"), "chg."+strconv.Itoa(c.Idx)+".powerId", c.PowerID, "")
+			@ajField(T(v.Lang, "ajustes.extensions.f.energyTotalId"), "chg."+strconv.Itoa(c.Idx)+".energyTotalId", c.EnergyTotalID, "")
+			@ajField(T(v.Lang, "ajustes.extensions.f.energyDivisor"), "chg."+strconv.Itoa(c.Idx)+".energyDivisor", c.EnergyDivisor, "1")
+			<div class="flex flex-col gap-1.5">
+				<span class="text-xs text-muted">{ T(v.Lang, "ajustes.extensions.f.chargerInHouseMeters") }</span>
+				<div class="flex h-9 items-center gap-2">
+					@ajCheckbox("chg."+strconv.Itoa(c.Idx)+".inHouse", c.ChargerInHouseMeters, T(v.Lang, "ajustes.extensions.f.chargerInHouseMetersHint"))
+				</div>
+			</div>
+			@ajField(T(v.Lang, "ajustes.extensions.f.energySessionId"), "chg."+strconv.Itoa(c.Idx)+".energySessionId", c.EnergySessionID, "")
+			@ajField(T(v.Lang, "ajustes.extensions.f.stateId"), "chg."+strconv.Itoa(c.Idx)+".stateId", c.StateID, "")
+			@ajField(T(v.Lang, "ajustes.extensions.f.tempId"), "chg."+strconv.Itoa(c.Idx)+".tempId", c.TempID, "")
+			@ajField(T(v.Lang, "ajustes.extensions.f.switchId"), "chg."+strconv.Itoa(c.Idx)+".switchId", c.SwitchID, "")
+			@ajField(T(v.Lang, "ajustes.extensions.f.ampId"), "chg."+strconv.Itoa(c.Idx)+".ampId", c.AmpID, "number.cargador_corriente")
+			@ajField(T(v.Lang, "ajustes.extensions.f.imageUrl"), "chg."+strconv.Itoa(c.Idx)+".imageUrl", c.ImageURL, "/chargers/coche.png")
+			@ajField(T(v.Lang, "ajustes.extensions.f.connectedStates"), "chg."+strconv.Itoa(c.Idx)+".connectedStates", c.ConnectedStates, "connected")
+			<input type="hidden" name={ "chg." + strconv.Itoa(c.Idx) + ".key" } value={ c.Key }/>
+		</div>
+	</div>
+}
+
+// ── 5. Perfil ───────────────────────────────────────────────────────────────
+templ ajustesProfile(v ajustesView) {
+	<section id="perfil" class="helios-card rounded-2xl p-5 shadow-card dark:shadow-card-dark">
+		<div class="group flex flex-col gap-4">
+			<!-- Cada control de usuario se edita en línea: lápiz/sobre abren el
+			     campo con check (guardar) y X (cancelar). Todo a la derecha. -->
+			<input id="perfil-name" type="checkbox" class="sr-only"/>
+			<input id="perfil-mail" type="checkbox" class="sr-only"/>
+			<input id="perfil-pwd" type="checkbox" class="sr-only"/>
+			<input id="perfil-notif" type="checkbox" class="sr-only"/>
+			<div class="flex flex-wrap items-center gap-3">
+				<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
+					@iconUser("h-5 w-5")
+				</div>
+				<div class="min-w-0">
+					<label for="perfil-name" class="flex cursor-pointer items-center gap-1.5 group-has-[#perfil-name:checked]:hidden">
+						<span class="truncate text-[15px] font-semibold leading-tight text-app">{ firstNonEmpty(v.DisplayName, v.Username) }</span>
+						<span class="text-faint opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true">@iconPencil("h-3 w-3")</span>
+					</label>
+					<form method="post" action="/ajustes/profile" class="hidden items-center gap-1 group-has-[#perfil-name:checked]:flex">
+						<input type="hidden" name="email" value={ v.Email }/>
+						<input type="hidden" name="language" value={ v.ProfileLang }/>
+						<input type="text" name="display_name" value={ v.DisplayName } placeholder={ v.Username } aria-label={ T(v.Lang, "ajustes.profile.displayName") } autofocus class="h-9 w-[160px] rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+						<button type="submit" aria-label={ T(v.Lang, "common.save") } title={ T(v.Lang, "common.save") } class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white transition-opacity hover:opacity-90">
+							@iconCheck("h-4 w-4")
+						</button>
+						<label for="perfil-name" title={ T(v.Lang, "common.cancel") } aria-label={ T(v.Lang, "common.cancel") } class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface-2 text-muted transition-colors hover:bg-surface hover:text-app">
+							@iconX("h-4 w-4")
+						</label>
+					</form>
+					if v.IsAdmin {
+						<p class="text-[12px] leading-tight text-faint">{ T(v.Lang, "ajustes.role.admin") }</p>
+					}
+				</div>
+				<div class="ml-auto flex flex-wrap items-center gap-1.5">
+					<!-- Email: icono de sobre -> campo con check/X -->
+					<label for="perfil-mail" title={ T(v.Lang, "ajustes.profile.email") } aria-label={ T(v.Lang, "ajustes.profile.email") } class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-mail:checked]:hidden">
+						@iconMail("h-4 w-4")
+					</label>
+					<form method="post" action="/ajustes/profile" class="hidden items-center gap-1 group-has-[#perfil-mail:checked]:flex">
+						<input type="hidden" name="display_name" value={ v.DisplayName }/>
+						<input type="hidden" name="language" value={ v.ProfileLang }/>
+						<input type="email" name="email" value={ v.Email } placeholder={ T(v.Lang, "ajustes.profile.emailPlaceholder") } aria-label={ T(v.Lang, "ajustes.profile.email") } autofocus class="h-9 w-[200px] rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+						<button type="submit" aria-label={ T(v.Lang, "common.save") } title={ T(v.Lang, "common.save") } class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white transition-opacity hover:opacity-90">
+							@iconCheck("h-4 w-4")
+						</button>
+						<label for="perfil-mail" title={ T(v.Lang, "common.cancel") } aria-label={ T(v.Lang, "common.cancel") } class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface-2 text-muted transition-colors hover:bg-surface hover:text-app">
+							@iconX("h-4 w-4")
+						</label>
+					</form>
+					<!-- Idioma: desplegable propio (respeta el tema), guarda al elegir. -->
+					<details class="relative">
+						<summary aria-label={ T(v.Lang, "ajustes.sections.idioma") } class="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-app bg-surface-2 px-2.5 text-sm text-app transition-colors hover:bg-surface">
+							@profileLangLabel(v)
+							@iconChevronDown("h-3.5 w-3.5 text-faint")
+						</summary>
+						<div class="absolute right-0 z-40 mt-1 w-48 rounded-xl border border-app bg-surface p-1 shadow-lg">
+							for _, l := range v.Languages {
+								{{ active := l.Code == v.ProfileLang }}
+								<form method="post" action="/ajustes/profile">
+									<input type="hidden" name="display_name" value={ v.DisplayName }/>
+									<input type="hidden" name="email" value={ v.Email }/>
+									<input type="hidden" name="language" value={ l.Code }/>
+									<button type="submit" class={ "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface-2", templ.KV("font-semibold text-app", active), templ.KV("text-muted", !active) }>
+										<span>{ l.Flag } { l.Name }</span>
+										if active {
+											<span class="ml-auto text-brand">@iconCheck("h-3.5 w-3.5")</span>
+										}
+									</button>
+								</form>
+							}
+						</div>
+					</details>
+					<label for="perfil-pwd" title={ T(v.Lang, "ajustes.security.change") } class="flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app bg-surface px-2.5 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-pwd:checked]:border-brand group-has-[#perfil-pwd:checked]:bg-brand/10 group-has-[#perfil-pwd:checked]:text-brand">
+						@iconKeyRound("h-4 w-4")
+						<span class="hidden xl:inline">{ T(v.Lang, "common.password") }</span>
+					</label>
+					<label for="perfil-notif" title={ T(v.Lang, "ajustes.sections.notificaciones") } class="flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app bg-surface px-2.5 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-notif:checked]:border-brand group-has-[#perfil-notif:checked]:bg-brand/10 group-has-[#perfil-notif:checked]:text-brand">
+						@iconBell("h-4 w-4")
+						<span class="hidden xl:inline">{ T(v.Lang, "ajustes.sections.notificaciones") }</span>
+					</label>
+					<form method="post" action="/logout" class="shrink-0">
+						<input type="hidden" name="next" value="/login"/>
+						<button type="submit" title={ T(v.Lang, "common.logout") } aria-label={ T(v.Lang, "common.logout") } class="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 text-[13px] font-medium text-rose-600 transition-colors hover:bg-rose-500/15 dark:text-rose-400">
+							@iconLogOut("h-4 w-4")
+							<span class="hidden xl:inline">{ T(v.Lang, "common.logout") }</span>
+						</button>
+					</form>
+				</div>
+			</div>
+			<div class="hidden border-t border-app pt-4 peer-checked/pwd:block">
+				<form method="post" action="/ajustes/password" class="flex flex-col gap-2">
+					<input type="password" name="current" autoComplete="current-password" placeholder={ T(v.Lang, "ajustes.security.current") } class="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+					<div class="grid gap-2 sm:grid-cols-2">
+						<input type="password" name="password" autoComplete="new-password" placeholder={ T(v.Lang, "ajustes.security.new") } class="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+						<input type="password" name="confirm" autoComplete="new-password" placeholder={ T(v.Lang, "ajustes.security.confirm") } class="h-9 rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+					</div>
+					<button type="submit" class="bg-brand-gradient inline-flex h-9 self-start items-center rounded-lg px-4 text-sm font-semibold text-white hover:opacity-90">
+						{ T(v.Lang, "ajustes.security.submit") }
+					</button>
+				</form>
+			</div>
+<div class="hidden border-t border-app pt-4 peer-checked/notif:block">
+<div class="mt-3 flex flex-col gap-1.5">
+					if !v.PushConfigured {
+						<p class="rounded-lg bg-surface-2 px-3 py-2 text-xs text-faint">{ T(v.Lang, "ajustes.notif.noConfigurado") }</p>
+					}
+					if v.PushSubscribed {
+						<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ T(v.Lang, "ajustes.notif.tiposTitulo") }</p>
+					} else {
+						<p class="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">{ T(v.Lang, "ajustes.notif.descripcion") }</p>
+					}
+					for _, pr := range v.PushPrefs {
+						<form method="post" action="/ajustes/push-pref" class="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
+							<input type="hidden" name="tipo" value={ pr.Tipo }/>
+							if pr.Enabled {
+								<input type="hidden" name="enabled" value="0"/>
+							} else {
+								<input type="hidden" name="enabled" value="1"/>
+							}
+							<span class="text-sm text-app">{ pr.Label }</span>
+							<button type="submit" role="switch" aria-checked={ boolStr(pr.Enabled) } aria-label={ pr.Label } class="group inline-flex">
+								<span class={ "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors", templ.KV("border-brand bg-brand", pr.Enabled), templ.KV("border-app bg-surface-2", !pr.Enabled) }>
+									<span class={ "absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform", templ.KV("translate-x-4", pr.Enabled) }></span>
+								</span>
+							</button>
+						</form>
+					}
+				</div>
+			</div>
+		</div>
+	</section>
+}
+
+// ── 6. Admin: update + usuarios + auditoría ────────────────────────────────
+templ ajustesAdmin(v ajustesView) {
+	<section id="admin" class="helios-card scroll-mt-20 border-l-4 border-l-brand bg-brand/[0.03] p-5 shadow-card dark:shadow-card-dark">
+		<!-- Barra horizontal como el AdminZone del React: update + dos paneles. -->
+		<div class="flex flex-wrap items-start gap-3">
+			<div class="flex h-9 shrink-0 items-center gap-2">
+				@iconShieldCheck("h-[18px] w-[18px] text-brand")
+				<h2 class="font-display text-[15px] font-semibold text-app">{ T(v.Lang, "ajustes.sections.administracion") }</h2>
+			</div>
+			<div class="hidden h-6 w-px bg-app sm:block"></div>
+			<div class="flex flex-col gap-1">
+				<button
+					type="button"
+					data-on:click="$checked = true; @get('/api/update/status')"
+					data-indicator="$bydBusy"
+					data-attr:disabled="$bydBusy"
+					class="inline-flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-60"
+				>
+					@iconRefreshCw("h-3.5 w-3.5")
+					<span class="hidden sm:inline">{ T(v.Lang, "ajustes.about.checkUpdates") }</span>
+				</button>
+				<span data-show="$checked && !$available && !$running" class="text-[10px] font-medium text-emerald-500">{ T(v.Lang, "ajustes.about.upToDate", map[string]string{"version": v.RepoVersion}) }</span>
+				<button type="button" data-show="$available && !$running" data-on:click="$confirm = true" class="inline-flex h-7 w-fit items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20">
+					{ T(v.Lang, "ajustes.about.updateNow") }
+				</button>
+			</div>
+			<details class="group">
+				<summary class="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app group-open:border-brand group-open:bg-brand/10 group-open:text-brand">
+					@iconUserPlus("h-4 w-4")
+					<span class="hidden sm:inline">{ T(v.Lang, "ajustes.sections.usuarios") }</span>
+					@iconChevronDown("h-3.5 w-3.5 transition-transform group-open:rotate-180")
+				</summary>
+				<div class="mt-4 border-t border-app pt-4">
+					@ajustesUsers(v)
+				</div>
+			</details>
+			<details class="group">
+				<summary class="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app group-open:border-brand group-open:bg-brand/10 group-open:text-brand">
+					@iconFileText("h-4 w-4")
+					<span class="hidden sm:inline">{ T(v.Lang, "audit.title") }</span>
+					@iconChevronDown("h-3.5 w-3.5 transition-transform group-open:rotate-180")
+				</summary>
+				<div class="mt-4 border-t border-app pt-4">
+					@ajustesAudit(v)
+				</div>
+			</details>
+		</div>
+		@ajustesUpdateConfirm(v)
+		@ajustesUpdateProgress(v)
+	</section>
+}
+
+// ajustesUpdateBox ports AdminZone's update widget + UpdateDialog: check
+// (existing /api/update/status), confirm with downtime checkbox, progress
+// steps polled from /api/update/progress, restarting + error states.
+templ ajustesUpdateBox(v ajustesView) {
+	<div class="flex flex-col gap-3">
+		<div class="flex flex-wrap items-center gap-3">
+			<button
+				type="button"
+				data-on:click="$checked = true; @get('/api/update/status')"
+				data-indicator="$bydBusy"
+				data-attr:disabled="$bydBusy"
+				class="inline-flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-3 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-60"
+			>
+				@iconRefreshCw("h-3.5 w-3.5")
+				{ T(v.Lang, "ajustes.about.checkUpdates") }
+			</button>
+			<span data-show="$checked && !$available && !$running" class="text-xs font-medium text-emerald-500">{ T(v.Lang, "ajustes.about.upToDate", map[string]string{"version": v.RepoVersion}) }</span>
+			<button type="button" data-show="$available && !$running" data-on:click="$confirm = true" class="inline-flex h-7 items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20">
+				{ T(v.Lang, "ajustes.about.updateNow") }
+			</button>
+		</div>
+		@ajustesUpdateConfirm(v)
+		@ajustesUpdateProgress(v)
+	</div>
+}
+
+templ ajustesUpdateConfirm(v ajustesView) {
+	<div data-show="$confirm && !$running" class="flex flex-col gap-3 rounded-xl border border-app bg-surface p-4">
+		<p class="flex items-center gap-2 text-sm font-semibold text-app">
+			@iconCloudDownload("h-4 w-4 text-brand")
+			{ T(v.Lang, "update.dialog.title") }
+		</p>
+		<div class="flex items-center justify-center gap-3 rounded-xl border border-app bg-surface-2 px-4 py-3">
+			<span class="font-mono text-sm text-muted">{ v.RepoVersion }</span>
+			@iconArrowRight("h-4 w-4 text-faint")
+			<span class="font-mono text-sm font-semibold text-brand" data-text="$latest">...</span>
+		</div>
+		<div class="max-h-44 overflow-y-auto rounded-xl border border-app bg-surface-2 px-3.5 py-2.5">
+			<p class="text-xs font-semibold uppercase tracking-wider text-faint">{ T(v.Lang, "update.dialog.changelogTitle") }</p>
+			<div class="mt-1 whitespace-pre-line text-xs leading-snug text-muted" data-text="$latestBody"></div>
+		</div>
+		<label class="flex cursor-pointer items-start gap-2.5 rounded-xl bg-amber-500/10 px-3.5 py-2.5 text-xs leading-snug text-amber-600 dark:text-amber-400">
+			<input type="checkbox" data-bind="$ack" class="mt-0.5 h-4 w-4 rounded border-app accent-[var(--brand)]"/>
+			<span>{ T(v.Lang, "update.dialog.downNotice") }</span>
+		</label>
+		<div class="flex justify-end gap-2">
+			<button type="button" data-on:click="$confirm = false" class="inline-flex h-9 items-center rounded-lg border border-app px-4 text-[13px] font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-app">
+				{ T(v.Lang, "update.dialog.cancel") }
+			</button>
+			<button
+				type="button"
+				data-on:click="$running = true; $confirm = false; @post('/api/update/apply')"
+				data-on:fetch-error="$running = false; $confirm = true"
+				data-attr:disabled="!$ack"
+				class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+			>
+				@iconCloudDownload("h-4 w-4")
+				{ T(v.Lang, "update.dialog.start") }
+			</button>
+		</div>
+	</div>
+}
+
+// updateStepShow returns the data-show expression of one step state icon.
+func updateStepShow(idx int, kind string) string {
+	switch kind {
+	case "done":
+		return fmt.Sprintf("$updIdx > %d || $step === 'done'", idx)
+	case "active":
+		return fmt.Sprintf("$updIdx === %d && $step !== 'done'", idx)
+	}
+	return fmt.Sprintf("$updIdx < %d && $step !== 'done'", idx)
+}
+
+templ ajustesUpdateProgress(v ajustesView) {
+	<div
+		data-show="$running"
+		class="flex flex-col gap-3 rounded-xl border border-app bg-surface p-4"
+		role="status"
+		data-on-interval__duration.2s="if ($running && $step !== 'done') @get('/api/update/progress')"
+	>
+		<ul class="flex flex-col gap-2.5">
+			for i, s := range v.UpdateSteps {
+				<li class="flex items-center gap-2.5 text-sm">
+					<span data-show={ updateStepShow(i, "done") } class="flex h-4 w-4 items-center justify-center text-emerald-500">
+						@iconCheck("h-4 w-4")
+					</span>
+					<span data-show={ updateStepShow(i, "active") } class="flex h-4 w-4 items-center justify-center text-brand">
+						@iconLoaderCircle("h-4 w-4 animate-spin")
+					</span>
+					<span data-show={ updateStepShow(i, "idle") } class="flex h-4 w-4 items-center justify-center text-faint opacity-40">
+						@iconCircle("h-4 w-4")
+					</span>
+					<span class="text-muted">{ s.Label }</span>
+				</li>
+			}
+		</ul>
+		<div class="flex flex-col gap-1.5">
+			<div class="h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+				<div class="h-full rounded-full bg-brand" data-attr:style="'width: ' + ($pct || 0) + '%'"></div>
+			</div>
+			<div class="flex items-center justify-between text-xs text-faint">
+				<span data-text="$step"></span>
+				<span class="font-mono" data-text="($pct || 0) + '%'"></span>
+			</div>
+		</div>
+		<p class="text-center text-xs text-faint" data-show="$step !== 'done' && $step !== 'restart'">{ T(v.Lang, "update.dialog.hideHint") }</p>
+		<p class="flex flex-col items-center gap-1 py-2 text-center" data-show="$step === 'done' || $step === 'restart'">
+			@iconLoaderCircle("h-8 w-8 animate-spin text-brand")
+			<span class="text-sm font-medium text-app">{ T(v.Lang, "update.dialog.restarting") }</span>
+			<span class="text-xs text-faint">{ T(v.Lang, "update.dialog.reloadSoon") }</span>
+		</p>
+		<div data-on-interval__duration.3s="if ($running) fetch('/health').then(r => { if (r.ok && ($step === 'done' || $step === 'restart')) window.location.reload() }).catch(() => {})"></div>
+	</div>
+}
+
+templ ajustesUsers(v ajustesView) {
+	<div class="mt-3 flex flex-col gap-3">
+		<p class="text-sm leading-snug text-muted">{ T(v.Lang, "admin.users.subtitle") }</p>
+		if len(v.Users) == 0 {
+			<p class="text-sm text-faint">{ T(v.Lang, "admin.users.empty") }</p>
+		}
+		for _, usr := range v.Users {
+			<div class="rounded-lg border border-app bg-surface px-4 py-3">
+				<div class="flex flex-wrap items-center gap-3">
+					<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2">
+						@iconUser("h-4 w-4")
+					</span>
+					<div class="min-w-0 flex-1">
+						<p class="text-sm font-medium text-app">
+							{ usr.Username }
+							if usr.IsMe {
+								<span class="ml-1.5 text-xs font-normal text-faint">({ T(v.Lang, "admin.users.you") })</span>
+							}
+						</p>
+						<p class="text-xs text-faint">{ usr.RoleText }</p>
+					</div>
+					<form method="post" action={ templ.URL("/ajustes/users/" + usr.ID) } class="flex flex-wrap items-center gap-2">
+						<select name="language" aria-label={ T(v.Lang, "admin.users.language") } class="h-8 rounded-lg border border-app bg-surface-2 px-2 text-xs text-app outline-none focus:border-brand">
+							for _, l := range v.Languages {
+								if l.Code == usr.Language {
+									<option value={ l.Code } selected>{ l.Name }</option>
+								} else {
+									<option value={ l.Code }>{ l.Name }</option>
+								}
+							}
+						</select>
+						if !usr.IsMe {
+							<select name="role" aria-label={ T(v.Lang, "admin.users.role") } class="h-8 rounded-lg border border-app bg-surface-2 px-2 text-xs text-app outline-none focus:border-brand">
+								if usr.Role == "admin" {
+									<option value="user">{ T(v.Lang, "admin.users.roleUser") }</option>
+									<option value="admin" selected>{ T(v.Lang, "admin.users.roleAdmin") }</option>
+								} else {
+									<option value="user" selected>{ T(v.Lang, "admin.users.roleUser") }</option>
+									<option value="admin">{ T(v.Lang, "admin.users.roleAdmin") }</option>
+								}
+							</select>
+						}
+						<input type="password" name="password" autoComplete="new-password" placeholder={ T(v.Lang, "admin.users.newPassword") } class="h-8 w-36 rounded-lg border border-app bg-surface-2 px-2 text-xs text-app outline-none focus:border-brand"/>
+						<button type="submit" title={ T(v.Lang, "common.save") } class="inline-flex h-8 items-center gap-1 rounded-lg bg-brand-gradient px-3 text-xs font-semibold text-white hover:opacity-90">
+							@iconSave("h-3.5 w-3.5")
+						</button>
+					</form>
+					if !usr.IsMe {
+						<form method="post" action={ templ.URL("/ajustes/users/" + usr.ID + "/delete") } class="flex items-center gap-1.5">
+							<label class="flex cursor-pointer items-center gap-1 text-[11px] text-faint">
+								<input type="checkbox" name="confirm" required class="h-3.5 w-3.5 accent-[var(--brand)]"/>
+								{ T(v.Lang, "admin.users.delete") }
+							</label>
+							<button type="submit" title={ T(v.Lang, "admin.users.delete") } class="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-500/30 text-rose-500 transition-colors hover:bg-rose-500/10">
+								@iconTrash2("h-4 w-4")
+							</button>
+						</form>
+					}
+				</div>
+			</div>
+		}
+		<details class="rounded-lg border border-app bg-surface px-4 py-3">
+			<summary class="cursor-pointer text-[13px] font-semibold text-muted">{ T(v.Lang, "admin.users.create") }</summary>
+			<form method="post" action="/ajustes/users" class="mt-3 flex flex-col gap-3 border-t border-app pt-3">
+				<div class="grid gap-3 sm:grid-cols-2">
+					@ajField(T(v.Lang, "admin.users.username"), "username", "", "")
+					@ajField(T(v.Lang, "admin.users.password"), "password", "", "")
+					@ajustesLangSelect(v)
+					{{ roleOpts := []ajOption{{Value: "user", Label: T(v.Lang, "admin.users.roleUser")}, {Value: "admin", Label: T(v.Lang, "admin.users.roleAdmin")}} }}
+					@ajSelect(T(v.Lang, "admin.users.role"), "role", "user", roleOpts)
+				</div>
+				<button type="submit" class="bg-brand-gradient inline-flex h-9 items-center justify-center gap-2 self-start rounded-full px-5 text-sm font-semibold text-white hover:opacity-90">
+					@iconUserPlus("h-4 w-4")
+					{ T(v.Lang, "admin.users.create") }
+				</button>
+			</form>
+		</details>
+	</div>
+}
+
+templ ajustesLangSelect(v ajustesView) {
+	<div class="flex flex-col gap-1.5">
+		<label class="text-xs font-medium text-muted">{ T(v.Lang, "admin.users.language") }</label>
+		<select name="language" class="h-9 rounded-xl border border-app bg-surface-2 px-2 font-mono text-xs text-app outline-none focus:border-brand">
+			for _, l := range v.Languages {
+				<option value={ l.Code }>{ l.Name }</option>
+			}
+		</select>
+	</div>
+}
+
+templ ajustesAudit(v ajustesView) {
+	<div class="mt-3 overflow-x-auto">
+		if len(v.Audit) == 0 {
+			<p class="text-[13px] text-muted">{ T(v.Lang, "audit.empty") }</p>
+		} else {
+			<table class="w-full text-left text-sm">
+				<thead>
+					<tr class="border-b border-app">
+						<th class="py-2 pr-4 text-xs font-medium text-faint">{ T(v.Lang, "audit.when") }</th>
+						<th class="py-2 pr-4 text-xs font-medium text-faint">{ T(v.Lang, "audit.actor") }</th>
+						<th class="py-2 text-xs font-medium text-faint">{ T(v.Lang, "audit.action") }</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, e := range v.Audit {
+						<tr class="border-b border-app/50 last:border-0">
+							<td class="whitespace-nowrap py-2 pr-4 text-[13px] text-muted">{ e.When }</td>
+							<td class="py-2 pr-4 text-[13px] text-app">{ e.Actor }</td>
+							<td class="py-2 text-[13px] text-muted">{ e.Action }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
+}
+
+// ── 7. Acerca de ────────────────────────────────────────────────────────────
+
+// System info is computed in process (same content as GET /api/system/info;
+// Precios de energía: el React los guardaba en localStorage (settings del
+// dispositivo). Server-rendered viven con la instalación (KV) y alimentan las
+// estimaciones de ahorro y CO2 del histórico.
+templ ajustesPrices(v ajustesView) {
+	@ajustesSection("precios", T(v.Lang, "ajustes.sections.precios")) {
+		<form method="post" action="/ajustes/prices" class="flex flex-col gap-4">
+			<div class="grid gap-4 sm:grid-cols-3">
+				@ajPriceField(v, "price_import", T(v.Lang, "ajustes.prices.buy"), v.PriceImport, "€/kWh")
+				@ajPriceField(v, "price_export", T(v.Lang, "ajustes.prices.sell"), v.PriceExport, "€/kWh")
+				@ajPriceField(v, "co2_factor", T(v.Lang, "ajustes.prices.co2"), v.Co2Factor, "kg/kWh")
+			</div>
+			<div class="flex flex-wrap items-center gap-3">
+				<button type="submit" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+					{ T(v.Lang, "common.save") }
+				</button>
+				<p class="text-xs text-faint">{ T(v.Lang, "ajustes.prices.note") }</p>
+			</div>
+		</form>
+	}
+}
+
+templ ajPriceField(v ajustesView, name, label, value, suffix string) {
+	<div class="flex flex-col gap-1.5">
+		<label for={ "price-" + name } class="text-xs font-medium text-muted">{ label }</label>
+		<div class="flex items-center gap-2">
+			<input id={ "price-" + name } type="text" inputmode="decimal" name={ name } value={ value } class="h-9 w-full rounded-xl border border-app bg-surface-2 px-3 text-sm text-app outline-none focus:border-brand"/>
+			<span class="shrink-0 text-xs text-faint">{ suffix }</span>
+		</div>
+	</div>
+}
+
+// the endpoint itself is untouched and keeps its contract test).
+templ ajustesAbout(v ajustesView) {
+	@ajustesSection("acerca", T(v.Lang, "ajustes.sections.acerca")) {
+		<div class="grid gap-6 md:grid-cols-2">
+			<div class="flex items-start gap-4">
+				@brandLogo("helios-logo-about", "h-12 w-12")
+				<div class="min-w-0 flex-1">
+					<div class="flex items-baseline gap-2">
+						<span class="font-display text-xl font-bold text-app">Helios</span>
+						<span class="font-mono text-xs text-faint">v{ v.RepoVersion }</span>
+					</div>
+					<p class="mt-1.5 text-sm leading-relaxed text-muted">{ T(v.Lang, "ajustes.about.desc") }</p>
+					<div class="mt-3 flex flex-wrap gap-3 text-[11px] text-faint">
+						<span>Go { v.GoVersion }</span>
+						<span>·</span>
+						<span>Uptime { v.UptimeText }</span>
+					</div>
+				</div>
+			</div>
+			<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				@ajustesAboutLink("https://github.com/gnacho/helios", T(v.Lang, "ajustes.about.code")) {
+					@iconGithub("h-4 w-4 shrink-0")
+				}
+				@ajustesAboutLink("https://helios.cloudless.club", T(v.Lang, "ajustes.about.changes")) {
+					@iconFileText("h-4 w-4 shrink-0")
+				}
+				@ajustesAboutLink("https://ko-fi.com/gnacho", T(v.Lang, "ajustes.about.kofi")) {
+					@iconHeart("h-4 w-4 shrink-0")
+				}
+				@ajustesAboutLink("https://cloudless.club", T(v.Lang, "ajustes.about.privacy")) {
+					@iconShieldCheck("h-4 w-4 shrink-0")
+				}
+			</div>
+		</div>
+	}
+}
+
+// The icon is passed as children (children pass-through pattern).
+templ ajustesAboutLink(href, label string) {
+	<a href={ templ.URL(href) } target="_blank" rel="noreferrer" class="flex items-center gap-2.5 rounded-xl border border-app px-3.5 py-2.5 text-sm text-muted transition-colors hover:border-brand/40 hover:text-brand">
+		{ children... }
+		<span>{ label }</span>
+	</a>
+}

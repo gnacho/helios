@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"helios-server/internal/alerts"
@@ -19,6 +20,7 @@ import (
 	"helios-server/internal/push"
 	"helios-server/internal/solar"
 	"helios-server/internal/sse"
+	"helios-server/internal/web"
 )
 
 type livePayload struct {
@@ -106,6 +108,24 @@ func main() {
 		PriceExport: cfg.PriceExport,
 		Co2PerKwh:   cfg.Co2PerKwh,
 	}
+	// Los precios editados en Ajustes viven en KV y ganan sobre el .env.
+	if database != nil {
+		if v, err := database.KVGet("priceImportEur"); err == nil && v != "" {
+			if f, perr := strconv.ParseFloat(v, 64); perr == nil && f > 0 {
+				prices.PriceImport = f
+			}
+		}
+		if v, err := database.KVGet("priceExportEur"); err == nil && v != "" {
+			if f, perr := strconv.ParseFloat(v, 64); perr == nil && f >= 0 {
+				prices.PriceExport = f
+			}
+		}
+		if v, err := database.KVGet("co2Factor"); err == nil && v != "" {
+			if f, perr := strconv.ParseFloat(v, 64); perr == nil && f > 0 {
+				prices.Co2PerKwh = f
+			}
+		}
+	}
 
 	var haReader solar.HAReader
 	var extHA extensions.HA
@@ -118,6 +138,19 @@ func main() {
 	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices, store, staticDir)
 	srv.Push = pushSvc
 	srv.SSE = hub
+
+	// UI templ (HELIOS_UI=templ). Por defecto sigue la SPA React.
+	if getenv("HELIOS_UI", "react") == "templ" {
+		ui := web.New(a, database, sol, haReader, store, extStore, ext, extHA, prices, hub)
+		ui.RootFiles = srv.Static.ServeFileNoSPA
+		ui.DataDir = cfg.DataDir
+		ui.Push = pushSvc
+		// Las fotos subidas desde el React solo se escalaron: recorta el aire
+		// sobrante una vez para que ocupen el alto de la tarjeta.
+		ui.OptimizeStoredChargerImages()
+		srv.UI = ui
+		log.Printf("[helios] UI templ activada (HELIOS_UI=templ)")
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	log.Printf("helios-server go listening on %s (db=%s)", addr, cfg.DBPath)

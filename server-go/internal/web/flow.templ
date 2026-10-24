@@ -1,0 +1,252 @@
+package web
+
+import "fmt"
+
+// Dashboard bottom sections: energy flow diagram, solar arc and inverter
+// cards (ports of EnergyFlowDiagram, SolarArc and InverterCard).
+
+// flowCard ports the EnergyFlowDiagram card (nodes + SMIL animated dots).
+templ flowCard(d dashboardView, f flowModel) {
+	<section class="anim-in helios-card order-2 col-span-12 flex flex-col p-5 shadow-card dark:shadow-card-dark lg:order-4 lg:col-span-4 xl:col-span-3" aria-label={ T(d.Lang, "flow.aria") }>
+		<div class="mb-2 flex items-center justify-between">
+			<h2 class="text-[15px] font-semibold text-app">{ T(d.Lang, "dashboard.flowTitle") }</h2>
+			<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-bold tracking-wide text-emerald-600 dark:text-emerald-400">
+				<span class="relative flex h-1.5 w-1.5">
+					<span class="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60"></span>
+					<span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+				</span>
+				{ T(d.Lang, "dashboard.live") }
+			</span>
+		</div>
+		<div class="my-auto">
+			@flowSVG(d, f)
+		</div>
+	</section>
+}
+
+templ flowSVG(d dashboardView, f flowModel) {
+	<svg viewBox="0 0 340 345" class="mx-auto w-full max-w-[340px]" role="img" aria-label={ T(d.Lang, "flow.aria") }>
+		for _, e := range f.edges() {
+			if e.Value > 0.05 {
+				<g opacity="1">
+					<path d={ e.Path } fill="none" stroke={ e.Var } stroke-width="2" stroke-opacity="0.35"></path>
+					for _, k := range []int{0, 1, 2, 3} {
+						<circle r="3" fill={ e.Var }>
+							<animateMotion dur="1.6s" begin={ fmt.Sprintf("%.2fs", -float64(k)*0.4) } repeatCount="indefinite">
+								<mpath href={ "#flow-" + e.ID }></mpath>
+							</animateMotion>
+						</circle>
+					}
+					<path id={ "flow-" + e.ID } d={ e.Path } fill="none" stroke="none"></path>
+				</g>
+			} else {
+				<g opacity="0.4">
+					<path d={ e.Path } fill="none" stroke="var(--line)" stroke-width="1.5" stroke-opacity="1"></path>
+				</g>
+			}
+		}
+		{{ fvActive := f.Live != nil && f.Live.Production > 0.1 }}
+		@flowNode(d, flowFvX, flowFvY, T(d.Lang, "flow.fv"), flowValueText(d.ProductionText, "kW"), fvActive, "var(--c-solar)", pickStr(fvActive, "var(--c-solar)", "color-mix(in srgb, var(--line) 55%, var(--text-faint) 45%)"), "top", iconSolarPanel("h-7 w-7"))
+		@flowNodeHome(d, f)
+		@flowNodeBattery(d, f)
+		@flowNodeGrid(d, f)
+	</svg>
+}
+
+// flowNode is one circle node with icon, label and value (FlowNode in React).
+templ flowNode(d dashboardView, x float64, y float64, label string, value string, active bool, glowVar string, iconColor string, textSide string, icon templ.Component) {
+	{{ r := 33.0 }}
+	{{ labelY := y + 50.0 }}
+	{{ valueY := y + 64.0 }}
+	if textSide == "top" {
+		{{ labelY = y - 50.0 }}
+		{{ valueY = y - 64.0 }}
+	}
+	<g>
+		if active {
+			<circle cx={ r2(x) } cy={ r2(y) } r={ r2(r + 4) } fill="none" stroke={ glowVar } stroke-opacity="0.2" stroke-width="3"></circle>
+		}
+		<circle cx={ r2(x) } cy={ r2(y) } r={ r2(r) } fill="var(--surface)" stroke={ pickVar(active, glowVar, "var(--line)") } stroke-width={ pickF(active, 2, 1.5) }></circle>
+		<foreignObject x={ r2(x - 28) } y={ r2(y - 28) } width="56" height="56">
+			<div xmlns="http://www.w3.org/1999/xhtml" style={ "display:flex;width:56px;height:56px;align-items:center;justify-content:center;color: " + iconColor }>
+				@icon
+			</div>
+		</foreignObject>
+		<text x={ r2(x) } y={ r2(labelY) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ label }</text>
+		<text x={ r2(x) } y={ r2(valueY) } text-anchor="middle" style="fill: var(--text); font-size: 12.5px; font-weight: 600;">{ value }</text>
+	</g>
+}
+
+templ flowNodeHome(d dashboardView, f flowModel) {
+	@flowNode(d, flowHomeX, flowHomeY, T(d.Lang, "flow.home"), flowValueText(d.ConsumptionText, "kW"), f.Live != nil && f.Live.Consumption != nil && *f.Live.Consumption > 0.05, f.HomeColor, f.HomeColor, "bottom", iconHouse("h-7 w-7"))
+}
+
+templ flowNodeBattery(d dashboardView, f flowModel) {
+	{{ soc := 0.0 }}
+	if f.Live != nil {
+		{{ soc = f.Live.Soc }}
+	}
+	<g>
+		<circle cx={ r2(flowBatX) } cy={ r2(flowBatY) } r="33" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"></circle>
+		<foreignObject x={ r2(flowBatX - 28) } y={ r2(flowBatY - 30) } width="56" height="62">
+			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:62px;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+				@iconBattery("h-[20px] w-[20px] text-[var(--c-bateria)]", soc, f.Live != nil && f.Live.BatteryPower > 0.05)
+				<span style={ "font: 700 11px Inter, sans-serif; font-variant-numeric: tabular-nums; color: var(--c-bateria); line-height: 1;" }>{ fmtInt(d.Lang, soc) }%</span>
+			</div>
+		</foreignObject>
+		<text x={ r2(flowBatX) } y={ r2(flowBatY + 50) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ T(d.Lang, "common.battery") }</text>
+		<text data-text="$live.batteryText" x={ r2(flowBatX) } y={ r2(flowBatY + 64) } text-anchor="middle" style="fill: var(--text); font-size: 12.5px; font-weight: 600;">{ f.BatteryText }</text>
+	</g>
+}
+
+templ flowNodeGrid(d dashboardView, f flowModel) {
+	{{ gridVar := "var(--c-red-compra)" }}
+	if f.Live != nil && f.Live.Grid != nil && *f.Live.Grid < 0 {
+		{{ gridVar = "var(--c-red-vertido)" }}
+	}
+	<g>
+		<circle cx={ r2(flowGridX) } cy={ r2(flowGridY) } r="33" fill="var(--surface)" stroke={ gridVar } stroke-width="1.5"></circle>
+		<foreignObject x={ r2(flowGridX - 28) } y={ r2(flowGridY - 28) } width="56" height="56">
+			<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;width:56px;height:56px;align-items:center;justify-content:center;">
+				@iconUtilityPole(pickStr(gridVar == "var(--c-red-vertido)", "h-7 w-7 text-[var(--c-red-vertido)]", "h-7 w-7 text-[var(--c-red-compra)]"))
+			</div>
+		</foreignObject>
+		<text x={ r2(flowGridX) } y={ r2(flowGridY + 50) } text-anchor="middle" style="fill: var(--text-faint); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em;">{ T(d.Lang, "common.grid") }</text>
+		<text data-text="$live.gridText" x={ r2(flowGridX) } y={ r2(flowGridY + 64) } text-anchor="middle" style="fill: var(--text); font-size: 12.5px; font-weight: 600;">{ f.GridText }</text>
+	</g>
+}
+
+func flowValueText(text string, unit string) string {
+	if text == "" {
+		return "—"
+	}
+	return text + " " + unit
+}
+
+func pickVar(active bool, activeVar, idleVar string) string {
+	if active {
+		return activeVar
+	}
+	return idleVar
+}
+
+func pickF(active bool, a, b float64) float64 {
+	if active {
+		return a
+	}
+	return b
+}
+
+// solarArcCard ports SolarArc.tsx (sun position on the arc + weather + peak).
+templ solarArcCard(d dashboardView, a arcModel) {
+	<section class="helios-card flex h-full flex-col justify-center p-5 shadow-card dark:shadow-card-dark">
+		<h2 class="mb-3 flex items-baseline gap-2 text-[15px] font-semibold text-app">
+			{ T(d.Lang, "dashboard.sunToday") }
+			if d.Town != "" {
+				<span class="text-xs font-medium text-faint">· { d.Town }</span>
+			}
+		</h2>
+		<svg viewBox="0 0 300 140" class="mx-auto w-full max-w-[320px]" role="img" aria-label={ T(d.Lang, "solar.aria") }>
+			<defs>
+				<linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="#101828" class="hidden dark:block" stop-opacity="0.9"></stop>
+					<stop offset="100%" stop-color="#182338" class="hidden dark:block" stop-opacity="0.4"></stop>
+				</linearGradient>
+			</defs>
+			<path d="M 42 128 A 108 108 0 0 1 258 128" fill="url(#night-sky)" stroke="none" class="hidden dark:block"></path>
+			<g class="hidden dark:block">
+				for _, star := range [][2]float64{{38, 34}, {84, 18}, {150, 30}, {216, 16}, {262, 40}} {
+					<circle cx={ r2(star[0]) } cy={ r2(star[1]) } r="1.4" fill="#FFFFFF" opacity="0.3"></circle>
+				}
+			</g>
+			<path d="M 42 128 A 108 108 0 0 1 258 128" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="3 5"></path>
+			<line x1="20" y1="128" x2="280" y2="128" stroke="var(--line)" stroke-width="2" stroke-linecap="round"></line>
+			<g class="sun-g" style={ fmt.Sprintf("--sun-travel: %.2f%%", a.SunFrac*100) }>
+				<circle r="13" fill="var(--c-solar)" opacity="0.25">
+					<animate attributeName="r" values="13;17;13" dur="5s" repeatCount="indefinite"></animate>
+				</circle>
+				<circle r="7.5" fill={ pickVar(a.Daytime, "var(--c-solar)", "var(--text-faint)") }></circle>
+			</g>
+		</svg>
+		<div class="mt-1 flex items-center justify-between text-xs font-medium text-muted">
+			<span class="inline-flex items-center gap-1.5">
+				@iconSunrise("h-[15px] w-[15px] text-faint") {
+					fmtTime(a.Sunrise) 
+				}
+			</span>
+			<span class="inline-flex items-center gap-1.5">
+				{ fmtTime(a.Sunset) } @iconSunset("h-[15px] w-[15px] text-faint")
+			</span>
+		</div>
+		<div class="mt-3 flex flex-wrap items-center gap-2 border-t border-app pt-3 text-xs text-muted">
+			<span class="inline-flex items-center gap-1.5">
+				@iconCloudSun("h-[15px] w-[15px] text-solar") {
+					a.WeatherLabel 
+				}
+			</span>
+			if a.HasTemp {
+				<span aria-hidden="true">·</span>
+				<span>{ a.TempText } °C</span>
+			}
+			<span class="ml-auto rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-app">{ T(d.Lang, "solar.peak", map[string]string{"kw": a.PeakText, "time": fmtTime(a.PeakAt)}) }</span>
+		</div>
+	</section>
+}
+
+// inverterCardsRow ports the InverterCard pair (links to /inversores).
+templ inverterCardsRow(d dashboardView) {
+	for i, inv := range d.Invs {
+		if i >= 2 {
+			continue
+		}
+		@inverterCard(d, inv, i)
+	}
+}
+
+templ inverterCard(d dashboardView, inv invCardModel, index int) {
+	<a href={ templ.URL("/inversores?inv=" + inv.Key) } class="helios-card group w-full p-5 text-left shadow-card transition-transform hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] dark:shadow-card-dark">
+		<div class="flex items-center gap-3">
+			<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={ "background-color: " + inv.Color + "1F; color: " + inv.Color }>
+				@iconZap("h-[18px] w-[18px]")
+			</span>
+			<div class="min-w-0 flex-1">
+				<p class="truncate text-[15px] font-semibold text-app">{ inv.Name }</p>
+				<p class="text-xs text-faint">{ inv.Model }</p>
+			</div>
+			<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+				<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> { T(d.Lang, "common.online") }
+			</span>
+		</div>
+		<div class="mt-4 flex items-end justify-between gap-4">
+			<div>
+				<p class="font-display text-2xl font-semibold tracking-[-0.01em]" style={ "color: " + inv.Color } aria-live="off">
+					@animNumLive("inv"+inv.Key+"Now", inv.NowKw, 2, d.Lang, "$inv."+inv.Key+".nowKw")
+					<span class="ml-1 text-[0.6em] font-medium text-faint">kW</span>
+				</p>
+				<p class="mt-0.5 text-sm text-muted">
+					{ T(d.Lang, "inverter.today") } <span class="font-semibold text-app">@animNumLive("inv"+inv.Key+"Kwh", inv.Kwh, 1, d.Lang, "$inv."+inv.Key+".kwh") kWh</span>
+				</p>
+			</div>
+			<div class="w-[140px] shrink-0">
+				<svg viewBox={ "0 0 140 48" } class="h-12 w-full" aria-hidden="true">
+					<defs>
+						<linearGradient id={ "spark-" + inv.Key } x1="0" y1="0" x2="0" y2="1">
+							<stop offset="0%" stop-color={ inv.Color } stop-opacity="0.3"></stop>
+							<stop offset="100%" stop-color={ inv.Color } stop-opacity="0"></stop>
+						</linearGradient>
+					</defs>
+					<path d={ inv.SparkPath } fill={ "url(#spark-" + inv.Key + ")" } stroke={ inv.Color } stroke-width="1.8"></path>
+				</svg>
+			</div>
+		</div>
+		<div class="mt-4">
+			<div class="flex items-center justify-between text-[11px] font-medium text-faint">
+				<span>{ T(d.Lang, "inverter.shareToday") }</span>
+				<span class="font-semibold" style={ "color: " + inv.Color }><span data-text={ "$inv." + inv.Key + ".shareText" }>{ inv.ShareText }</span> %</span>
+			</div>
+			<div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-surface-2">
+				<div data-style-width={ "$inv." + inv.Key + ".sharePct + '%'" } class="anim-share h-full rounded-full" style={ "width: " + fmtInt(d.Lang, inv.SharePct) + "%; background-color: " + inv.Color }></div>
+			</div>
+		</div>
+	</a>
+}

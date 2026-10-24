@@ -5,6 +5,63 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.0] - 2026-10-24
+
+### Added
+
+- **Interfaz nueva servida desde el propio backend (templ + Datastar).** Las
+  seis pantallas (panel, inversores, batería, histórico, cargador y ajustes)
+  se renderizan en el servidor, sin JavaScript de aplicación: solo el runtime
+  de Datastar para el tiempo real, un helper estático de gestos (deslizar
+  pestañas) y el service worker. La app React sigue en `app/` y se puede
+  arrancar con `HELIOS_UI=react`, pero producción usa `HELIOS_UI=templ`.
+- **Preferencias de apariencia** en Ajustes: tres estados de tema (sistema,
+  claro, oscuro), acentos, densidad y un interruptor de animaciones, guardados
+  por dispositivo en cookie.
+- **Precios de la energía, nombre y ubicación de la instalación** en Ajustes,
+  guardados en la base de datos. Con ubicación configurada, las horas de sol
+  se calculan en local (SunCalc portado a Go) en vez de depender de Home
+  Assistant, y el autocompletado de municipios funciona sin conexión.
+- **Flujo de energía rediseñado** en el panel: puntos de compra/venta a red,
+  SOC en el nodo de batería, colores semánticos y la casa como fuente
+  dominante, con tests propios.
+- **PWA**: el layout enlaza el manifest y registra el service worker, así que
+  la app se puede instalar y seguir recibiendo notificaciones push.
+
+### Changed
+
+- Las animaciones de las gráficas (barras, áreas, quesitos, arco solar y
+  contadores) son CSS puro y se disparan al cargar la página. Se retiraron las
+  ligadas al scroll: dejaban las gráficas a medio dibujar cuando ya estaban en
+  pantalla, y las barras del histórico se quedaban sin animar al cambiar de
+  periodo.
+- Las gráficas usan la geometría por tarjeta del diseño original, con las
+  mismas alturas y márgenes que la app React.
+
+### Fixed
+
+- **El estado del cargador no se actualizaba.** Las páginas abrían el stream
+  de señales con `data-on-load`, atributo que no existe en Datastar (el plugin
+  es `data-init`), así que ningún valor en vivo se refrescaba hasta recargar.
+  Afectaba al panel, batería, inversores y cargador.
+- **El botón de encender/apagar del cargador respondía tarde.** La acción se
+  ejecuta en Home Assistant en milisegundos, pero la interfaz esperaba al
+  siguiente envío del stream. Ahora la petición espera la confirmación de Home
+  Assistant y devuelve el estado nuevo, con aviso inmediato de "Encendiendo…"
+  o "Apagando…" mientras tanto.
+- Los enlaces `data-attr-*` de Ajustes y Cargador no hacían nada: la sintaxis
+  correcta es `data-attr:<atributo>`. `aria-pressed`, `title`, `class` y
+  `disabled` no se aplicaban nunca.
+- **Fotos del cargador**: las dos tarjetas tienen el mismo alto con cualquier
+  foto y se recorta el borde vacío de las imágenes ya subidas (vertical y
+  horizontal), en lugar de escalarlas y dejar aire.
+- **Cambios de CSS que no se veían**: los estáticos se servían con nombre fijo
+  y cinco minutos de caché, así que un cambio tardaba en aparecer. Ahora las
+  URLs llevan un hash del contenido y se cachean de forma inmutable.
+- El cambio de periodo del histórico reinicia todas las animaciones (antes el
+  morph de Datastar reutilizaba los nodos y las barras nuevas salían ya
+  crecidas) sin mover el scroll de la página.
+
 ## [1.0.0] - 2026-10-22
 
 ### Changed

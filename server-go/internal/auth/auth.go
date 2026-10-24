@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -287,6 +288,24 @@ func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 		if renewed, _ := a.DB.RenewSessionIfDue(s.ID, a.SessionTTL.Milliseconds()); renewed {
 			value := s.ID + "." + mustSign(a, s.ID)
 			setSessionCookie(w, r, value, a.SessionTTL)
+		}
+		ctx := withUserID(r.Context(), s.UserID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// RequireAuthRedirect is the HTML variant of RequireAuth: instead of a 401
+// JSON response it redirects to /login?next=… (page navigation), keeping the
+// same session validation and sliding renewal.
+func (a *Auth) RequireAuthRedirect(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s := a.SessionIDFromCookie(r)
+		if s == nil {
+			http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
+			return
+		}
+		if renewed, _ := a.DB.RenewSessionIfDue(s.ID, a.SessionTTL.Milliseconds()); renewed {
+			setSessionCookie(w, r, s.ID+"."+mustSign(a, s.ID), a.SessionTTL)
 		}
 		ctx := withUserID(r.Context(), s.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))

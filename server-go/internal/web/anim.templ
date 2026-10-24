@@ -1,0 +1,93 @@
+package web
+
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+)
+
+// animNum renders a static number that counts up from zero using a
+// pure-Datastar tween: a numeric signal eased by data-on-interval until it
+// reaches the target. The interval removes its own attribute when done.
+// No application JavaScript: Datastar evaluates the expressions and repaints
+// the text on every signal change.
+//
+// id must be unique per page (the signal namespace). dec is the number of
+// decimals to keep fixed while counting; lang selects the number locale.
+templ animNum(id string, target float64, dec int, lang string) {
+	<span
+		data-signals={ animSignals(id, target) }
+		data-on-interval__duration.40ms={ animTween(id, dec) }
+		data-text={ animText(id, dec, lang, "") }
+	>{ formatNumber(lang, 0, dec) }</span>
+}
+
+// animNumLive is the live variant: s chases a server-owned numeric signal
+// (targetExpr, e.g. "$kpis.batteryKwh") forever, so stream updates glide
+// instead of jumping. The interval never stops (it is a cheap comparison).
+templ animNumLive(id string, initial float64, dec int, lang, targetExpr string) {
+	@animNumLiveS(id, initial, dec, lang, targetExpr, "")
+}
+
+// animNumLiveS is animNumLive with a constant text suffix (e.g. " kWh").
+templ animNumLiveS(id string, initial float64, dec int, lang, targetExpr, suffix string) {
+	<span
+		data-signals={ fmt.Sprintf(`{"%s": {"s": 0}}`, id) }
+		data-on-interval__duration.60ms={ animFollow(id, targetExpr) }
+		data-text={ animText(id, dec, lang, suffix) }
+	>{ formatNumber(lang, 0, dec) + suffix }</span>
+}
+
+// animID turns a label into a safe signal name (no spaces or punctuation).
+func animID(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('_')
+		}
+	}
+	return b.String()
+}
+
+// animSignals declares the tween signals: s = shown value, t = target.
+func animSignals(id string, target float64) string {
+	return fmt.Sprintf(`{"%s": {"s": 0, "t": %s}}`, id, strconv.FormatFloat(target, 'f', -1, 64))
+}
+
+// animTween eases s towards t on every tick. When the target is reached (or
+// under reduce-motion) it snaps to t and drops its own interval attribute;
+// if the removal is not honoured the near-target guard keeps the value stable.
+func animTween(id string, dec int) string {
+	eps := strconv.FormatFloat(math.Pow10(-dec)/2, 'f', -1, 64)
+	return fmt.Sprintf(
+		`if (document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) { $%s.s = $%s.t; evt?.currentTarget?.removeAttribute('data-on-interval__duration.40ms'); } else if (Math.abs($%s.t - $%s.s) < %s) { $%s.s = $%s.t; evt?.currentTarget?.removeAttribute('data-on-interval__duration.40ms'); } else { $%s.s += ($%s.t - $%s.s) * 0.22; }`,
+		id, id, id, id, eps, id, id, id, id, id,
+	)
+}
+
+// animFollow keeps s chasing the live target signal (reduce-motion snaps).
+func animFollow(id, target string) string {
+	return fmt.Sprintf(
+		`if (document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches) { $%s.s = %s; } else { $%s.s += (%s - $%s.s) * 0.18; }`,
+		id, target, id, target, id,
+	)
+}
+
+// animText formats the shown signal with the render locale (fixed decimals).
+func animText(id string, dec int, lang, suffix string) string {
+	return fmt.Sprintf(`$%s.s.toLocaleString(%q, { minimumFractionDigits: %d, maximumFractionDigits: %d }) + %q`,
+		id, lang, dec, dec, suffix)
+}
+
+// animNumLiveT is animNumLiveS for SVG text nodes (tspan instead of span).
+templ animNumLiveT(id string, initial float64, dec int, lang, targetExpr, suffix string) {
+	<tspan
+		data-signals={ fmt.Sprintf(`{"%s": {"s": 0}}`, id) }
+		data-on-interval__duration.60ms={ animFollow(id, targetExpr) }
+		data-text={ animText(id, dec, lang, suffix) }
+	>{ formatNumber(lang, 0, dec) + suffix }</tspan>
+}

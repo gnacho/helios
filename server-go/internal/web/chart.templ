@@ -1,0 +1,107 @@
+package web
+
+import "strings"
+
+// DayChart as server-side SVG (port of DayChart.tsx). Series visibility is
+// toggled client-side with Datastar signals ($chart.total, ...); colors use
+// CSS variables so the chart follows the theme.
+templ dayChartSection(d dashboardView, c DayChartModel) {
+	<section class="helios-card relative overflow-hidden shadow-card dark:shadow-card-dark" aria-label={ T(d.Lang, "chart.aria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ T(d.Lang, "chart.title") }</h2>
+				<p class="text-xs text-faint">{ T(d.Lang, "chart.subtitle") }</p>
+			</div>
+			@chartChip("total", T(d.Lang, "chart.total"), "var(--c-solar)", true)
+			for _, inv := range d.Invs {
+				@chartChip(inv.Key, chipLabel(inv.Name), inv.Color, false)
+			}
+			@chartChip("consumo", T(d.Lang, "chart.consumption"), "var(--c-consumo)", true)
+		</div>
+		@dayChartSVG(c)
+	</section>
+}
+
+// chartChip toggles one series: flips its signal and asks the server for a
+// chart fragment with the new visible set (server-rendered SVG has no client
+// filtering). key is the signal name: total | consumo | <inverter key>.
+// chartChip toggles one series with the existing data-show bindings (no
+// server round-trip). aria-pressed is kept in sync by the click handler.
+templ chartChip(key, label, colorVar string, active bool) {
+	{{ expr := "$chart." + key }}
+	<button
+		data-on:click={ expr + " = !" + expr + "; evt.currentTarget.setAttribute('aria-pressed', " + expr + " ? 'true' : 'false')" }
+		aria-pressed={ boolStr(active) }
+		class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app px-2.5 text-xs font-medium text-app transition-opacity hover:opacity-90"
+	>
+		<span data-style={ "{ opacity: " + expr + " ? 1 : 0.3 }" } class="h-2 w-2 rounded-full" style={ "background-color: " + colorVar + "; opacity: " + pickStr(active, "1", "0.3") }></span>
+		{ label }
+	</button>
+}
+
+// chipLabel drops the " · 4,4 kWp" suffix of the inverter card name.
+func chipLabel(name string) string {
+	if i := strings.Index(name, " · "); i > 0 {
+		return name[:i]
+	}
+	return name
+}
+
+
+templ dayChartSVG(c DayChartModel) {
+	<div id="day-chart" class="overflow-x-auto px-1 pb-1 lg:overflow-visible">
+		@dayChartSVGInner(c)
+	</div>
+}
+
+// dayChartSVGInner renders only the SVG: the SSE and chip patches replace the
+// contents of #day-chart (ModeInner), so the wrapper must not come along.
+templ dayChartSVGInner(c DayChartModel) {
+	<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
+			<defs>
+				<linearGradient id="grad-prod" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="var(--c-solar)" stop-opacity="0.25"></stop>
+					<stop offset="100%" stop-color="var(--c-solar)" stop-opacity="0"></stop>
+				</linearGradient>
+				<linearGradient id="grad-cons" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="var(--c-consumo)" stop-opacity="0.18"></stop>
+					<stop offset="100%" stop-color="var(--c-consumo)" stop-opacity="0"></stop>
+				</linearGradient>
+				<linearGradient id="grad-now" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="#F59E0B"></stop>
+					<stop offset="100%" stop-color="#F97316"></stop>
+				</linearGradient>
+			</defs>
+			for _, t := range c.TicksY[1:] {
+				<line x1={ r2(plotLeft) } x2={ r2(c.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+			}
+			for _, t := range c.TicksY {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+			for i, t := range c.TicksX {
+				if i == len(c.TicksX)-1 {
+					<text x={ r2(c.W) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				} else {
+					<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+				}
+			}
+			<g data-show="$chart.total">
+				<path d={ c.ProdPastPath } fill="url(#grad-prod)"></path>
+				<path d={ c.ProdPastLine } fill="none" stroke="var(--c-solar)" stroke-width="2.5"></path>
+			</g>
+			<g data-show="$chart.total">
+				<path d={ c.ProdFuturePath } fill="none" stroke="var(--c-solar)" stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.5"></path>
+			</g>
+			<g data-show="$chart.consumo">
+				<path d={ c.ConsPath } fill="url(#grad-cons)"></path>
+				<path d={ c.ConsLine } fill="none" stroke="var(--c-consumo)" stroke-width="2"></path>
+			</g>
+			for _, inv := range c.InvPaths {
+				<g data-show={ "$chart." + inv.Key }>
+					<path d={ inv.Path } fill="none" stroke={ inv.Var } stroke-width="1.5"></path>
+				</g>
+			}
+			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(plotTop) } y2={ r2(c.PlotBottomY) } stroke="url(#grad-now)" stroke-width="2"></line>
+			<text x={ r2(c.NowX + 4) } y={ r2(plotTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
+	</svg>
+}

@@ -39,3 +39,6 @@ Kimi_Agent_PanelSolar.zip
 app/test-results/
 app/playwright-report/
 helios-go
+
+# Templ UI tooling (binario standalone de Tailwind, fuera de git)
+tools/

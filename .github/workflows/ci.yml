@@ -13,6 +13,12 @@ jobs:
         with:
           go-version-file: server-go/go.mod
           cache-dependency-path: server-go/go.sum
+      - name: Descarga Tailwind standalone (sin node)
+        run: make tools/tailwindcss
+      - name: Instala templ CLI
+        run: go install github.com/a-h/templ/cmd/templ@v0.3.1070
+      - name: Verifica artefactos web al día (templ + css + i18n)
+        run: make web-check TEMPL="$(go env GOPATH)/bin/templ"
       - run: go vet ./...
         working-directory: server-go
       - run: go test -race ./...

@@ -43,7 +43,8 @@
     "darkActive": "Oscuro activo",
     "lightActive": "Claro activo",
     "toLight": "Cambiar a tema claro",
-    "toDark": "Cambiar a tema oscuro"
+    "toDark": "Cambiar a tema oscuro",
+    "system": "Sistema"
   },
   "connection": {
     "connected": "HAOS · Local",
@@ -193,6 +194,11 @@
     "tabsAria": "Cargadores",
     "powerOn": "Encender",
     "powerOff": "Apagar",
+    "turningOn": "Encendiendo…",
+    "turningOff": "Apagando…",
+    "errorNoSwitch": "Este cargador no tiene interruptor configurado",
+    "errorNoAmp": "Este cargador no tiene control de amperaje",
+    "errorAmps": "Amperaje fuera de rango (6-32 A)",
     "powerToastOn": "{{name}} encendido",
     "powerToastOff": "{{name}} apagado",
     "amps": "Amperaje",
@@ -201,7 +207,8 @@
     "imageEdit": "Cambiar imagen (PNG con transparencia, alto recomendado 460 px; se reescala solo)",
     "imageClear": "Quitar imagen",
     "imageOk": "Imagen actualizada",
-    "imageCleared": "Imagen quitada"
+    "imageCleared": "Imagen quitada",
+    "imageError": "No se pudo guardar la imagen"
   },
   "inversores": {
     "title": "Inversores",
@@ -431,7 +438,8 @@
       "inverters": "inversores",
       "battery": "Batería {{name}} · {{kwh}} kWh",
       "theoretical": "Capacidad teórica",
-      "totalLabel": "Total"
+      "totalLabel": "Total",
+      "batterySize": "{{label}} · {{kwh}} kWh"
     },
     "prices": {
       "buy": "Precio de compra",
@@ -462,7 +470,7 @@
     },
     "health": {
       "alive": "Activo",
-      "down": "Sin datos"
+      "down": "Sin conexión"
     },
     "security": {
       "desc": "Cambia tu contraseña. Al hacerlo se cerrarán tus demás sesiones.",
@@ -606,11 +614,17 @@
       "chargerN": "Cargador {{n}}",
       "chargerAdd": "Añadir cargador",
       "chargerRemove": "Quitar cargador"
+    },
+    "role": {
+      "admin": "Administrador"
     }
   },
   "footer": {
     "line1": "Helios · Monitor Solar {{version}} - datos locales vía Home Assistant",
-    "line2": "Instalación local · datos vía Home Assistant"
+    "line2": "Instalación local · datos vía Home Assistant",
+    "battery": "Batería {{kwh}} kWh",
+    "inverterOne": "1 inversor",
+    "inverterMany": "{{n}} inversores"
   },
   "stub": {
     "title": "No encontrado",
@@ -624,7 +638,8 @@
     "password": "Contraseña",
     "submit": "Entrar",
     "loading": "Entrando…",
-    "error": "Usuario o contraseña incorrectos"
+    "error": "Usuario o contraseña incorrectos",
+    "rateLimited": "Demasiados intentos, espera 5 minutos"
   },
   "admin": {
     "users": {

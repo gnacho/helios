@@ -43,7 +43,8 @@
     "darkActive": "Dark active",
     "lightActive": "Light active",
     "toLight": "Switch to light theme",
-    "toDark": "Switch to dark theme"
+    "toDark": "Switch to dark theme",
+    "system": "System"
   },
   "connection": {
     "connected": "HAOS · Local",
@@ -193,6 +194,11 @@
     "tabsAria": "Chargers",
     "powerOn": "Turn on",
     "powerOff": "Turn off",
+    "turningOn": "Turning on…",
+    "turningOff": "Turning off…",
+    "errorNoSwitch": "This charger has no switch configured",
+    "errorNoAmp": "This charger has no current control",
+    "errorAmps": "Current out of range (6-32 A)",
     "powerToastOn": "{{name}} turned on",
     "powerToastOff": "{{name}} turned off",
     "amps": "Current (A)",
@@ -201,7 +207,8 @@
     "imageEdit": "Change image (transparent PNG, recommended height 460 px; auto-rescaled)",
     "imageClear": "Remove image",
     "imageOk": "Image updated",
-    "imageCleared": "Image removed"
+    "imageCleared": "Image removed",
+    "imageError": "Could not save the image"
   },
   "inversores": {
     "title": "Inverters",
@@ -431,7 +438,8 @@
       "inverters": "inverters",
       "battery": "Battery {{name}} · {{kwh}} kWh",
       "theoretical": "Theoretical capacity",
-      "totalLabel": "Total"
+      "totalLabel": "Total",
+      "batterySize": "{{label}} · {{kwh}} kWh"
     },
     "prices": {
       "buy": "Purchase price",
@@ -462,7 +470,7 @@
     },
     "health": {
       "alive": "Alive",
-      "down": "No data"
+      "down": "Offline"
     },
     "security": {
       "desc": "Change your password. Your other sessions will be signed out.",
@@ -606,11 +614,17 @@
       "chargerN": "Charger {{n}}",
       "chargerAdd": "Add charger",
       "chargerRemove": "Remove charger"
+    },
+    "role": {
+      "admin": "Administrator"
     }
   },
   "footer": {
     "line1": "Helios · Solar Monitor {{version}} - local data via Home Assistant",
-    "line2": "Local installation · data via Home Assistant"
+    "line2": "Local installation · data via Home Assistant",
+    "battery": "Battery {{kwh}} kWh",
+    "inverterOne": "1 inverter",
+    "inverterMany": "{{n}} inverters"
   },
   "stub": {
     "title": "Not found",
@@ -624,7 +638,8 @@
     "password": "Password",
     "submit": "Sign in",
     "loading": "Signing in…",
-    "error": "Incorrect username or password"
+    "error": "Incorrect username or password",
+    "rateLimited": "Too many attempts, wait 5 minutes"
   },
   "admin": {
     "users": {

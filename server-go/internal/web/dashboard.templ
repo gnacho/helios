@@ -1,0 +1,253 @@
+package web
+
+// Dashboard page (chunk 1): LivePowerStrip + KPI row with Datastar signal
+// bindings. The chart, solar arc and inverter cards land in chunk 2.
+
+// dashboardView carries the pre-rendered values (initial HTML, no-JS correct)
+// plus the signals JSON for the reactive bindings.
+type dashboardView struct {
+	pageProps
+	Signals string
+	Palette Palette
+	Chart   DayChartModel
+	Flow    flowModel
+	Arc     arcModel
+	Invs    []invCardModel
+
+	AtText          string
+	Soc             float64
+	Charging        bool
+	ProdIconColor   string // "" means the faint fallback
+	ProductionText  string
+	ConsumptionText string
+	BatteryKwText   string
+	BatteryStatus   string
+	GridKwText      string
+	GridStatus      string
+	GridColor       string
+	GridExporting   bool
+
+	KProduction    string
+	KConsumption   string
+	KBatteryKwh    string
+	KSocSub        string
+	KAutoconsumo   string
+	KGridBalance   string
+	KGridExport    string
+	KGridImport    string
+	AutoconsumoPct float64
+
+	// Numeric twins for the Datastar count-up tween (animNumLive).
+	KProdKwh        float64
+	KConsKwh        float64
+	KBatKwh         float64
+	KGridBalanceKwh float64
+	KGridExportKwh  float64
+	KGridImportKwh  float64
+	LiveProdKw      float64
+	LiveConsKw      float64
+	LiveBatKw       float64
+	GridKw          float64
+}
+
+templ DashboardPage(d dashboardView) {
+	@shellLayout(d.pageProps) {
+		<div
+			data-signals={ d.Signals }
+			data-init={ "@get('/ui/stream')" }
+			class="w-full"
+		>
+			<div class="grid grid-cols-12 gap-4 lg:gap-5">
+				<div class="anim-in order-1 col-span-12">
+					@livePowerStrip(d)
+				</div>
+				@flowCard(d, d.Flow)
+				<div class="order-3 col-span-12 lg:order-2 lg:col-span-8 xl:col-span-9">
+					@dayChartSection(d, d.Chart)
+				</div>
+			</div>
+			<div class="anim-row mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible xl:grid-cols-5" aria-label={ T(d.Lang, "dashboard.kpisLabel") }>
+				@kpiCard(d, T(d.Lang, "dashboard.productionToday"), d.Palette.Solar, "", true,
+					iconSolarPanel("h-[17px] w-[17px]"),
+					"kProd", "$kpis.productionKwh", d.KProdKwh, 1, "kWh")
+				@kpiCard(d, T(d.Lang, "dashboard.consumptionToday"), d.Palette.Consumo, "", false,
+					iconHouse("h-[17px] w-[17px]"),
+					"kCons", "$kpis.consumptionKwh", d.KConsKwh, 1, "kWh")
+				@kpiBattery(d)
+				@kpiAutoconsumo(d)
+				@kpiGrid(d)
+			</div>
+			<section class="mt-4 lg:mt-5">
+				<div class="mb-3 flex items-center justify-between">
+					<h2 class="font-display text-lg font-semibold tracking-[-0.01em] text-app">{ T(d.Lang, "dashboard.yourInverters") }</h2>
+					<a href="/inversores" class="text-xs font-semibold text-amber-500 hover:underline">{ T(d.Lang, "dashboard.viewCompare") }</a>
+				</div>
+				<div class="anim-row grid items-stretch gap-4 lg:grid-cols-3 lg:gap-5">
+					@solarArcCard(d, d.Arc)
+					@inverterCardsRow(d)
+				</div>
+			</section>
+		</div>
+	}
+}
+
+// livePowerStrip ports LivePowerStrip.tsx (4 instant values, reactive text).
+templ livePowerStrip(d dashboardView) {
+	<section class="helios-card shadow-card dark:shadow-card-dark" aria-label={ T(d.Lang, "live.aria") }>
+		<div class="flex items-center gap-2 border-b border-app px-4 py-3 sm:px-5">
+			<span class="relative flex h-2 w-2">
+				<span class="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60"></span>
+				<span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+			</span>
+			<h2 class="text-[15px] font-semibold text-app">{ T(d.Lang, "live.title") }</h2>
+			<span class="text-xs text-faint">· { T(d.Lang, "live.lastReading", map[string]string{"time": d.AtText}) }</span>
+		</div>
+		<div class="grid grid-cols-2 lg:grid-cols-4">
+			@stripValue(d, T(d.Lang, "common.production"), "liveProd", "$live.productionKw", d.LiveProdKw, "kW", "", "",
+				d.Palette.Solar, d.ProdIconColor, "",
+				iconSolarPanel("h-[18px] w-[18px]"))
+			@stripValue(d, T(d.Lang, "common.consumption"), "liveCons", "$live.consumptionKw", d.LiveConsKw, "kW", "", "",
+				d.Palette.Consumo, "", "border-l border-app",
+				iconHouse("h-[18px] w-[18px]"))
+			@stripValue(d, T(d.Lang, "common.battery"), "liveBat", "$live.soc", d.Soc, "%", `$live.batteryStatus`, d.BatteryStatus,
+				d.Palette.Bateria, "", "border-t border-app lg:border-l lg:border-t-0",
+				iconBattery("h-[18px] w-[18px]", d.Soc, d.Charging))
+			@stripGrid(d)
+		</div>
+	</section>
+}
+
+templ stripGrid(d dashboardView) {
+	<div class="flex items-center gap-3 border-l border-t border-app px-4 py-3 sm:px-5 lg:border-t-0">
+		<span
+			data-style-background-color={ "$live.gridColor + '1F'" }
+			data-style-color={ "$live.gridColor" }
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+			style={ "background-color: " + d.GridColor + "1F; color: " + d.GridColor }
+		>
+			<span data-show="$live.gridExporting" class={ templ.KV("hidden", !d.GridExporting) }>@iconArrowUpFromLine("h-[18px] w-[18px]")</span>
+			<span data-show="!$live.gridExporting" class={ templ.KV("hidden", d.GridExporting) }>@iconArrowDownToLine("h-[18px] w-[18px]")</span>
+		</span>
+		<div class="min-w-0">
+			<p class="text-[11px] font-medium uppercase tracking-[0.06em] text-faint">{ T(d.Lang, "common.grid") }</p>
+			<p class="font-display text-[22px] font-semibold leading-tight text-app" aria-live="off">
+				@animNumLive("liveGrid", d.GridKw, 2, d.Lang, "$live.gridKw")<span class="ml-1 text-[0.6em] font-medium text-faint">kW</span>
+			</p>
+			<p data-text="$live.gridStatus" data-style-color={ "$live.gridColor" } class="text-[11px] font-medium" style={ "color: " + d.GridColor }>{ d.GridStatus }</p>
+		</div>
+	</div>
+}
+
+// stripValue is one cell of the live strip (StripValue in LivePowerStrip.tsx).
+// textSignal/statusSignal are Datastar expressions; the inner text is the
+// server-rendered initial value.
+templ stripValue(
+	d dashboardView, label string,
+	animID string, animTarget string, animInit float64, unit string,
+	statusSignal string, statusInit string,
+	color string, iconColor string, extraClass string,
+	icon templ.Component,
+) {
+	<div class={ "flex items-center gap-3 px-4 py-3 sm:px-5", extraClass }>
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+			style={ "background-color: " + color + "1F; color: " + pickColor(iconColor, color) }
+		>
+			@icon
+		</span>
+		<div class="min-w-0">
+			<p class="text-[11px] font-medium uppercase tracking-[0.06em] text-faint">{ label }</p>
+			<p class="font-display text-[22px] font-semibold leading-tight text-app" aria-live="off">
+				@animNumLive(animID, animInit, pickInt(unit == "%", 0, 2), d.Lang, animTarget)
+				<span class="ml-1 text-[0.6em] font-medium text-faint">{ unit }</span>
+			</p>
+			if statusSignal != "" {
+				<p data-text={ statusSignal } class="text-[11px] font-medium" style={ "color: " + color }>{ statusInit }</p>
+			}
+		</div>
+	</div>
+}
+
+func pickColor(iconColor, fallback string) string {
+	if iconColor != "" {
+		return iconColor
+	}
+	return fallback
+}
+
+templ kpiBattery(d dashboardView) {
+	@kpiCard(d, T(d.Lang, "common.battery"), d.Palette.Bateria, "/bateria", false,
+		iconBattery("h-[17px] w-[17px]", d.Soc, d.Charging),
+		"kBat", "$kpis.batteryKwh", d.KBatKwh, 1, "kWh") {
+		<p data-text="$kpis.socSubText" class="mt-1 text-xs font-medium text-muted">{ d.KSocSub }</p>
+	}
+}
+
+templ kpiAutoconsumo(d dashboardView) {
+	@kpiCard(d, T(d.Lang, "common.autoconsumo"), d.Palette.Bateria, "", false,
+		iconLeaf("h-[17px] w-[17px]"),
+		"kAuto", "$kpis.autoconsumoPct", d.AutoconsumoPct, 0, "%") {
+		<div class="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-hover">
+			<div
+				data-style-width={ "$kpis.autoconsumoPct + '%'" }
+				class="anim-share h-full rounded-full"
+				style={ "width: " + fmtInt(d.Lang, d.AutoconsumoPct) + "%; background-color: " + d.Palette.Bateria }
+			></div>
+		</div>
+	}
+}
+
+templ kpiGrid(d dashboardView) {
+	@kpiCard(d, T(d.Lang, "dashboard.gridBalance"), d.Palette.RedVertido, "/historico", false,
+		iconUtilityPole("h-[17px] w-[17px]"),
+		"kGrid", "$kpis.gridBalanceKwh", d.KGridBalanceKwh, 1, "kWh") {
+		<div class="mt-1 flex flex-col gap-0.5 text-[11px] font-medium">
+			<span class="inline-flex items-center gap-1" style={ "color: " + d.Palette.RedVertido }>
+				@iconArrowUpFromLine("h-[11px] w-[11px]") @animNumLive("kExp", d.KGridExportKwh, 1, d.Lang, "$kpis.gridExportKwh") kWh { T(d.Lang, "dashboard.exported") }
+			</span>
+			<span class="inline-flex items-center gap-1" style={ "color: " + d.Palette.RedCompra }>
+				@iconArrowDownToLine("h-[11px] w-[11px]") @animNumLive("kImp", d.KGridImportKwh, 1, d.Lang, "$kpis.gridImportKwh") kWh { T(d.Lang, "dashboard.imported") }
+			</span>
+		</div>
+	}
+}
+
+// kpiCard ports the KpiCard frame: icon chip + label + value + optional extra
+// children. onClick in React becomes a link (href) here.
+templ kpiCard(d dashboardView, label string, accent string, href string, liveDot bool, icon templ.Component, animID string, animTarget string, animInitial float64, animDec int, unit string) {
+	if href != "" {
+		<a href={ templ.URL(href) } class="helios-card flex h-full w-[42%] shrink-0 snap-center cursor-pointer flex-col gap-2 p-3 text-left shadow-card transition-transform hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] dark:shadow-card-dark sm:p-4 lg:w-auto">
+			@kpiInner(d, label, accent, liveDot, icon, animID, animTarget, animInitial, animDec, unit) {
+				{ children... }
+			}
+		</a>
+	} else {
+		<div class="helios-card flex h-full w-[42%] shrink-0 snap-center flex-col gap-2 p-3 text-left shadow-card dark:shadow-card-dark sm:p-4 lg:w-auto">
+			@kpiInner(d, label, accent, liveDot, icon, animID, animTarget, animInitial, animDec, unit) {
+				{ children... }
+			}
+		</div>
+	}
+}
+
+templ kpiInner(d dashboardView, label string, accent string, live bool, icon templ.Component, animID string, animTarget string, animInitial float64, animDec int, unit string) {
+	<div class="flex items-center justify-between">
+		<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + accent + "1F; color: " + accent }>
+			@icon
+		</span>
+		if live {
+			<span class="relative flex h-2 w-2">
+				<span class="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-emerald-500 opacity-60"></span>
+				<span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+			</span>
+		}
+	</div>
+	<div>
+		<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ label }</p>
+		<p class="mt-0.5 font-display text-[22px] font-semibold leading-none tracking-[-0.01em] text-app" aria-live="off">
+			@animNumLive(animID, animInitial, animDec, d.Lang, animTarget)
+			<span class="ml-1 text-[0.6em] font-medium text-faint">{ unit }</span>
+		</p>
+		{ children... }
+	</div>
+}

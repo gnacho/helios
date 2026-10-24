@@ -1,28 +1,25 @@
 # Stack tecnológico Helios — referencia para otras apps
 
 ## Arquitectura
-Single-page app React (Vite) servida por un backend Go ligero en el mismo contenedor,
-sin Docker. Backend lee Home Assistant en local (WebSocket), expone API REST + SSE al
-frontend por el mismo puerto, y NPM (Nginx Proxy Manager) pone SSL delante.
+Un único binario Go sirve la API REST + SSE y las pantallas (HTML renderizado en el
+servidor con templ + Datastar). Lee Home Assistant en local (WebSocket) y NPM pone SSL
+delante. Sin Docker y sin runtime de JavaScript en el servidor.
 
 ## Backend — Go 1.25 (desde v1.0.0), `net/http` + `chi`, binario estático
+- **Servidor HTTP**: `net/http` + `chi`, un solo binario estático (`CGO_ENABLED=0`, sin libc), con la UI embebida (`go:embed`)
+- **WebSocket HAOS**: cliente propio en `internal/ha` (`subscribe_entities`, `recorder/statistics_during_period`), reconexión con backoff, ping de keep-alive y caché de entidades en memoria
+- **SQLite**: `modernc.org/sqlite` (Go puro para que el binario siga estático), WAL, sin ORM y con migraciones incrementales tolerantes
+- **Auth**: cookie de sesión HMAC httpOnly 30d, sesiones en SQLite, rate-limit de login en memoria
+- **SSE**: hub propio con throttle de 1 s que empuja señales Datastar al navegador
+- **UI**: renderizada en el servidor con templ; `HELIOS_UI=react` sirve la SPA antigua como rollback
+- **Despliegue**: systemd (`helios-go.service`) con usuario dedicado + `AmbientCapabilities=CAP_NET_BIND_SERVICE` para :80 sin root, y Litestream replicando la BD por SFTP
 
-> **Nota v1.0.0**: el backend se reescribió en Go manteniendo el mismo contrato de API.
-> Lo que sigue describe el backend vigente (`server-go/`). El antiguo backend Node
-> sigue en `server/` solo como vía de rollback.
-- **Servidor HTTP**: Hono + `@hono/node-server` (≈ Express pero más ligero y con tipado)
-- **WebSocket HAOS**: `ws` + protocolo nativo de Home Assistant (`subscribe_entities`, `recorder/statistics_during_period`). Cliente propio en `ha.ts` con reconexión automática y RPC por id
-- **SQLite**: `better-sqlite3` (síncrono, rapidísimo, prebuilt por plataforma). Sin ORM: queries directas + WAL + migraciones `ALTER TABLE` tolerantes. Retiene el histórico propio para no depender de la purga de HA
-- **Auth**: cookie `id.hmac` httpOnly 30d, sesiones en SQLite, `Secure` condicional por `x-forwarded-proto`, rate-limit de login en memoria
-- **SSE**: `streamSSE` de Hono para push de datos en vivo al frontend, con heartbeat y throttle
-- **Despliegue**: systemd (`helios.service`) con usuario dedicado + `AmbientCapabilities=CAP_NET_BIND_SERVICE` para :80 sin root
-
-## Frontend — React 18, Vite, Tailwind + shadcn/ui (solo componentes)
-- **Build**: `vite build` con sourcemaps y SPA fallback
-- **Componentes**: 40+ de shadcn/ui (dropdown, tabs, accordion, etc.) + `framer-motion` para animaciones + `recharts` para gráficas + `gsap` para el arco solar
-- **Estilo**: Tailwind CSS v3 con tema claro/oscuro gestionado via CSS variables + clase `dark`
-- **Provider de datos**: contrato síncrono (`EnergyDataApi`) con cachés en refs y fetch perezoso. Los componentes consumen getters sin conocer HTTP. Eventos en vivo vía SSE. `suncalc` para amanecer/atardecer local si el usuario elige ubicación en Ajustes
-- **Auth**: `AuthGate` → `Login` (página propia). Evento `helios-unauthorized` para volver al login automáticamente en cualquier 401
+## Frontend — templ + Datastar (desde v1.1.0)
+- **Sin JavaScript de aplicación**: el HTML llega pintado; solo se carga el runtime de Datastar (señales y parches SSE), un helper estático para el gesto de deslizar pestañas y el service worker
+- **Estilo**: Tailwind v4 con el binario standalone (sin Node en el build del CSS) y variables CSS para los temas claro/oscuro/sistema, acentos y densidad
+- **Animaciones**: CSS puro (keyframes, contadores por señales Datastar). Nada de librerías de animación
+- **PWA**: manifest enlazado desde el layout, `sw.js` para notificaciones push y registro del worker en el helper estático
+- **React 19 (rollback)**: la SPA anterior sigue en `app/` (Vite + Tailwind + framer-motion + recharts) y se sirve con `HELIOS_UI=react`
 
 ## Datos (fuentes en Home Assistant)
 - **En vivo**: `subscribe_entities` a los sensores de potencia (Solis, Fox pinza, 3 medidores Tongou, batería, scraper, sun, weather, temperatura exterior)

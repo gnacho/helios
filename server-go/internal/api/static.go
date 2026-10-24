@@ -18,6 +18,28 @@ func NewStaticFiles(dir string) *StaticFiles {
 	return &StaticFiles{Dir: dir, Index: filepath.Join(dir, "index.html")}
 }
 
+// ServeFileNoSPA serves a file from staticDir only if it exists (favicon,
+// manifest, root icons): no index.html fallback. Returns false when there is
+// nothing to serve.
+func (s *StaticFiles) ServeFileNoSPA(w http.ResponseWriter, r *http.Request) bool {
+	path := r.URL.Path
+	if path == "/" || strings.HasPrefix(path, "/api/") || path == "/health" {
+		return false
+	}
+	clean := filepath.Clean(strings.TrimPrefix(path, "/"))
+	if clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return false
+	}
+	full := filepath.Join(s.Dir, clean)
+	info, err := os.Stat(full)
+	if err != nil || info.IsDir() {
+		return false
+	}
+	w.Header().Set("Cache-Control", "no-cache")
+	http.ServeFile(w, r, full)
+	return true
+}
+
 func (s *StaticFiles) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 

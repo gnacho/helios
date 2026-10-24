@@ -1,0 +1,450 @@
+package web
+
+import (
+	"fmt"
+	"strconv"
+)
+
+// /historico page (port of Historico.tsx + PeriodSelector + HistoryChart +
+// YearHeatmap). Navigation is via links (?period=&anchor=); charts are
+// server-side SVG; every bar and heatmap cell is a link (drill-down).
+
+templ HistoricoPage(v historicoView) {
+	@shellLayout(v.pageProps) {
+		@historicoBody(v)
+	}
+}
+
+// historicoBody is the patchable region: /ui/historico replaces it in place
+// (no reload) and the slide direction comes from the previous period.
+templ historicoBody(v historicoView) {
+	<div id="hist-body">
+		<!-- El id de revisión cambia con periodo/ancla: Datastar morphea el
+		     parche y, al no poder emparejar este nodo, lo recrea entero (así
+		     se reinician TODAS las animaciones: barras, areas, donut). -->
+		<div id={ "hist-rev-" + v.Rev } class={ "flex w-full flex-col gap-4 lg:gap-5", v.RevClass }>
+			<header class="flex flex-wrap items-center gap-3">
+				<div class="mr-auto">
+					<h1 class="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{ T(v.Lang, "historico.title") }</h1>
+					<p class="text-sm capitalize text-muted">{ v.Subtitle }</p>
+				</div>
+			</header>
+			<div class="sticky top-14 z-30 -mx-4 bg-[color-mix(in_srgb,var(--bg)_85%,transparent)] px-4 py-2 backdrop-blur-[16px] lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+				@periodSelector(v.Selector)
+			</div>
+			if v.Empty {
+				@historicoEmpty(v)
+			} else {
+				<div class="flex w-full flex-col gap-4 lg:gap-5">
+					<div class="flex snap-x snap-mandatory gap-4 overflow-x-auto no-scrollbar lg:grid lg:grid-cols-3 lg:snap-none lg:overflow-visible xl:grid-cols-5" aria-label={ T(v.Lang, "historico.kpisAria") }>
+						for i, k := range v.Kpis {
+							<div class="w-[42%] shrink-0 snap-center lg:w-auto">
+								@histKpiCard(v, k, i)
+							</div>
+						}
+					</div>
+					<div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+						<div class="lg:col-span-8">
+							@historicoChartCard(v)
+						</div>
+						<div class="lg:col-span-4">
+							@historicoDonutCard(v)
+						</div>
+					</div>
+					if v.HasHeat {
+						@historicoHeatCard(v)
+					}
+					if len(v.Records) > 0 {
+						<div class={ "grid grid-cols-1 gap-4 sm:grid-cols-2", templ.KV("lg:grid-cols-4", len(v.Records) > 3), templ.KV("md:grid-cols-3", len(v.Records) <= 3) }>
+							for _, rc := range v.Records {
+								@recordCardView(v, rc)
+							}
+						</div>
+					}
+				</div>
+			}
+		</div>
+	</div>
+}
+
+// periodSelector ports PeriodSelector.tsx: segmented control + date navigator
+// + chip Hoy, all as links.
+templ periodSelector(s periodSelectorView) {
+	<div class="flex flex-wrap items-center gap-2 sm:gap-3">
+		<div role="tablist" aria-label={ T(s.Lang, "historico.periodAria") } class="flex h-9 items-center rounded-full border border-app bg-surface p-0.5">
+			for _, tb := range s.Tabs {
+				<a
+					href={ templ.URL(tb.URL) }
+					if tb.Patch != "" {
+						data-on:click__prevent={ tb.Patch }
+					}
+					role="tab"
+					aria-selected={ boolStr(tb.Active) }
+					class={ "relative flex h-8 items-center rounded-full px-3 text-[13px] font-medium transition-colors sm:px-3.5", templ.KV("text-app", tb.Active), templ.KV("text-faint hover:text-muted", !tb.Active) }
+				>
+					if tb.Active {
+						<span class="vt-slide-period absolute inset-0 rounded-full bg-surface-2 shadow-inner"></span>
+					}
+					<span class="relative">{ tb.Label }</span>
+				</a>
+			}
+		</div>
+		<div class="flex h-9 items-center gap-0.5 rounded-full border border-app bg-surface p-0.5">
+			<a href={ templ.URL(s.PrevURL) } aria-label={ s.PrevAria } data-on:click__prevent={ s.PatchPrev } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+				@iconChevronLeft("h-4 w-4")
+			</a>
+			<div class="flex h-8 min-w-[92px] items-center justify-center overflow-hidden px-1 sm:min-w-[110px]">
+				<span class="text-[13px] font-semibold tabular-nums text-app">{ s.Label }</span>
+			</div>
+			if s.CanNext {
+				<a href={ templ.URL(s.NextURL) } aria-label={ s.NextAria } data-on:click__prevent={ s.PatchNext } class="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-app">
+					@iconChevronRight("h-4 w-4")
+				</a>
+			} else {
+				<span aria-hidden="true" class="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-full text-faint opacity-50">
+					@iconChevronRight("h-4 w-4")
+				</span>
+			}
+		</div>
+		if s.IsCurrent {
+			<span class="h-9 cursor-not-allowed rounded-full border border-app px-3.5 text-[13px] font-semibold leading-9 text-faint opacity-60">{ T(s.Lang, "common.today") }</span>
+		} else {
+			<a href={ templ.URL(s.TodayURL) } data-on:click__prevent={ s.PatchToday } class="h-9 rounded-full border border-amber-500/40 px-3.5 text-[13px] font-semibold leading-9 text-amber-600 transition-transform hover:bg-amber-500/10 active:scale-95 dark:text-amber-400">
+				{ T(s.Lang, "common.today") }
+			</a>
+		}
+	</div>
+}
+
+// historicoEmpty is the empty state card.
+templ historicoEmpty(v historicoView) {
+	<div class="helios-card flex flex-col items-center gap-4 p-10 text-center shadow-card dark:shadow-card-dark">
+		<img src="/empty-solar.svg" alt="" class="w-full max-w-[300px]"/>
+		<p class="text-sm font-medium text-muted">{ T(v.Lang, "historico.empty") }</p>
+		<p class="max-w-xs text-xs text-faint">{ T(v.Lang, "historico.emptyDetail") }</p>
+		<a href={ templ.URL(v.BackToToday) } class="bg-brand-gradient rounded-full px-5 py-2 text-[13px] font-semibold text-white shadow-md transition-transform hover:scale-[1.03] active:scale-95">
+			{ T(v.Lang, "historico.backToToday") }
+		</a>
+	</div>
+}
+
+// iconForHistKpi maps the 5 KPI cards to their icons.
+func iconForHistKpi(key string, class string) templ.Component {
+	switch key {
+	case "house":
+		return iconHouse(class)
+	case "euro":
+		return iconEuro(class)
+	}
+	return iconSun(class)
+}
+
+templ histKpiCard(v historicoView, k histKpiView, idx int) {
+	<div class="helios-card h-full p-4 shadow-card dark:shadow-card-dark">
+		<div class="flex items-center justify-between">
+			<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + k.Color + "1F; color: " + k.Color }>
+				@iconForHistKpi(k.IconKey, "h-[17px] w-[17px]")
+			</span>
+			if k.HasDelta {
+				if k.DeltaGood {
+					<span class="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+						if k.DeltaUp {
+							@iconArrowUp("h-3 w-3")
+						} else {
+							@iconArrowDownToLine("h-3 w-3")
+						}
+						{ k.DeltaText }
+					</span>
+				} else {
+					<span class="inline-flex w-fit items-center gap-1 rounded-full bg-rose-500/12 px-2 py-0.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+						if k.DeltaUp {
+							@iconArrowUp("h-3 w-3")
+						} else {
+							@iconArrowDownToLine("h-3 w-3")
+						}
+						{ k.DeltaText }
+					</span>
+				}
+			}
+		</div>
+		<div>
+			<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ k.Label }</p>
+			<p class="mt-0.5 font-display text-[22px] font-semibold leading-none tracking-[-0.01em] text-app">
+				@animNum("k"+strconv.Itoa(idx), k.Num, k.Dec, v.Lang)
+				<span class="ml-1 text-[0.6em] font-medium text-faint">{ k.Unit }</span>
+			</p>
+			if k.HasProgress {
+				<div class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={ fmtInt(v.Lang, k.ProgressPct) } aria-valuemin="0" aria-valuemax="100" aria-label={ k.Label }>
+					<div class="anim-share h-full rounded-full" style={ "width: " + fmtInt(v.Lang, k.ProgressPct) + "%; background-color: " + k.Color }></div>
+				</div>
+			}
+			if k.Sub != "" {
+				<p class="mt-1.5 text-[11px] leading-snug text-faint">{ k.Sub }</p>
+			}
+		</div>
+	</div>
+}
+
+// historicoChartCard is the main chart card (day curves or period bars).
+templ historicoChartCard(v historicoView) {
+	<section id="grafico" class="helios-card scroll-mt-24 overflow-hidden shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.chartAria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ v.ChartTitle }</h2>
+				<p class="text-xs capitalize text-faint">
+					if v.IsDay {
+						{ T(v.Lang, "historico.powerCurves") }
+					} else {
+						{ v.Subtitle }
+					}
+				</p>
+			</div>
+			if v.IsBars {
+				<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+					<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Solar }></span>
+					{ T(v.Lang, "common.production") }
+				</span>
+				<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+					<span class="h-2 w-2 rounded-full" style={ "background-color: " + v.Palette.Consumo }></span>
+					{ T(v.Lang, "common.consumption") }
+				</span>
+				<span class="inline-flex items-center gap-1.5 text-xs text-muted">
+					<span class="inline-block h-0 w-4 border-t-2 border-dashed" style={ "border-color: " + v.Palette.Bateria }></span>
+					{ T(v.Lang, "common.autoconsumo") }
+				</span>
+			}
+		</div>
+		<div class="px-1 pb-2">
+			if v.IsDay {
+				@histDaySVG(v.Day)
+			} else {
+				@histBarsSVG(v.Bars)
+			}
+		</div>
+		if v.IsDay && v.Estimated {
+			<p class="px-5 pb-3 text-[11px] font-medium text-amber-600 dark:text-amber-400">{ T(v.Lang, "historico.estimatedNote") }</p>
+		}
+		if !v.IsDay {
+			<p class="px-5 pb-3 text-[11px] text-faint">{ v.DrillHint }</p>
+		}
+	</section>
+}
+
+templ histDaySVG(c histDayChartModel) {
+	<svg viewBox="0 0 767 320" class="anim-draw h-auto w-full min-w-[420px]" role="img" aria-hidden="true">
+		<defs>
+			<linearGradient id="hist-grad-prod" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stop-color={ c.ColorProd } stop-opacity="0.25"></stop>
+				<stop offset="100%" stop-color={ c.ColorProd } stop-opacity="0"></stop>
+			</linearGradient>
+			<linearGradient id="hist-grad-cons" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stop-color={ c.ColorCons } stop-opacity="0.18"></stop>
+				<stop offset="100%" stop-color={ c.ColorCons } stop-opacity="0"></stop>
+			</linearGradient>
+			<linearGradient id="hist-grad-now" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stop-color="#F59E0B"></stop>
+				<stop offset="100%" stop-color="#F97316"></stop>
+			</linearGradient>
+		</defs>
+		for _, t := range c.TicksY[1:] {
+			<line x1={ r2(histSideL) } x2={ r2(c.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+		}
+		for _, t := range c.TicksY {
+			<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+		}
+		for i, t := range c.TicksX {
+			if i == len(c.TicksX)-1 {
+				<text x={ r2(histW) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			} else {
+				<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+			}
+		}
+		<path d={ c.ProdPath } fill="url(#hist-grad-prod)"></path>
+			<path d={ c.ProdLine } fill="none" stroke={ c.ColorProd } stroke-width="2.5"></path>
+		<path d={ c.ConsPath } fill="url(#hist-grad-cons)"></path>
+				<path d={ c.ConsLine } fill="none" stroke={ c.ColorCons } stroke-width="2"></path>
+		if c.HasNow {
+			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(histTop) } y2={ r2(c.PlotBottomY) } stroke="url(#hist-grad-now)" stroke-width="2"></line>
+			<text x={ r2(c.NowX + 4) } y={ r2(histTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
+		}
+	</svg>
+}
+
+templ histBarsSVG(m histBarsModel) {
+	<svg viewBox="0 0 767 320" class="anim-bars h-auto w-full min-w-[420px]" role="img" aria-hidden="true">
+		for _, t := range m.TicksYLeft[1:] {
+			<line x1={ r2(histSideL) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
+		}
+		for _, t := range m.TicksYLeft {
+			<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="end" font-size="12" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+		}
+		for _, t := range m.TicksY {
+			<text x={ r2(t.X) } y={ r2(t.Y) } text-anchor="start" font-size="11" fill="var(--text-faint)" font-family="Inter">{ t.Label }</text>
+		}
+		for _, row := range m.Rows {
+			<a href={ templ.URL(row.Href) }>
+				<rect x={ r2(row.XProd - 1) } y={ r2(histTop) } width={ r2(row.BarW*2 + 5) } height={ r2(m.PlotBottomY - histTop) } fill="transparent"></rect>
+			</a>
+			if row.ProdH > 0 {
+				<a href={ templ.URL(row.Href) } aria-label={ row.Label }>
+					<path class="bar-up" d={ topRoundedBarPath(row.XProd, row.ProdY, row.BarW, row.ProdH, 4) } fill={ m.ColorProd } fill-opacity={ rowOpacity(row.IsToday) }></path>
+				</a>
+			}
+			if row.ConsH > 0 {
+				<a href={ templ.URL(row.Href) } aria-label={ row.Label }>
+					<path class="bar-up" d={ topRoundedBarPath(row.XCons, row.ConsY, row.BarW, row.ConsH, 4) } fill={ m.ColorCons } fill-opacity={ rowOpacity(row.IsToday) }></path>
+				</a>
+			}
+			if row.ShowLabel {
+				<text x={ r2(row.XProd + row.BarW + 1.5) } y={ r2(histH - 6) } text-anchor="middle" font-size="11" fill="var(--text-faint)" font-family="Inter">{ row.Label }</text>
+			}
+		}
+		if m.HasAuto {
+			<path d={ m.AutoPath } fill="none" stroke={ m.ColorAuto } stroke-width="2" stroke-dasharray="5 4"></path>
+			for _, row := range m.Rows {
+				<circle cx={ r2(row.AutoX) } cy={ r2(row.AutoY) } r="2.5" fill={ m.ColorAuto }></circle>
+			}
+		}
+	</svg>
+}
+
+// rowOpacity mirrors the React Cell fillOpacity (today 1, rest 0.7).
+func rowOpacity(isToday bool) string {
+	if isToday {
+		return "1"
+	}
+	return "0.7"
+}
+
+// historicoDonutCard ports the EnergySourceDonut card (shared donut model).
+templ historicoDonutCard(v historicoView) {
+	<section class="helios-card flex h-full flex-col shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.donutAria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.donutTitle") }</h2>
+				<p class="text-xs capitalize text-faint">{ v.Subtitle }</p>
+			</div>
+		</div>
+		<div class="flex flex-1 flex-col justify-center px-4 pb-3 sm:px-5">
+			<div class="relative">
+				<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full max-w-[220px]" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
+					for _, s := range v.Donut.Slices {
+						<path d={ s.Path } fill={ s.Color }></path>
+					}
+				</svg>
+				<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+					<p class="font-display text-2xl font-semibold leading-none text-app">
+						@animNum("donutHistTotal", v.Donut.Total, 1, v.Lang) <span class="text-[0.6em] font-medium text-faint">kWh</span>
+					</p>
+					<p class="mt-1 text-xs text-faint">{ v.Donut.CenterSub }</p>
+				</div>
+			</div>
+			<ul class="mt-4 flex flex-col gap-1.5">
+				for _, s := range v.Donut.Slices {
+					<li class="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-[13px]">
+						<span class="h-2.5 w-2.5 shrink-0 rounded-full" style={ "background-color: " + s.Color }></span>
+						<span class="text-muted">{ s.Label }</span>
+						<span class="ml-auto font-semibold tabular-nums text-app">@animNum("donutHistV"+animID(s.Label), s.Value, 1, v.Lang) kWh</span>
+						<span class="w-10 text-right text-xs tabular-nums text-faint">@animNum("donutHistP"+animID(s.Label), s.Pct, 0, v.Lang) %</span>
+					</li>
+				}
+			</ul>
+		</div>
+	</section>
+}
+
+// historicoHeatCard is the YearHeatmap card (only in the Año period).
+templ historicoHeatCard(v historicoView) {
+	<section class="helios-card overflow-hidden shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.heatmapAria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+			<div class="mr-auto">
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.heatmapTitle") }</h2>
+				<p class="text-xs text-faint">{ T(v.Lang, "historico.heatmapSubtitle") }</p>
+			</div>
+		</div>
+		<div class="overflow-x-auto px-4 pb-2 sm:px-5">
+			@heatSVG(v.Heat)
+		</div>
+		<div class="mt-1 flex items-center justify-end gap-1 px-5 pb-3 pr-1 text-[10px] text-faint">
+			<span class="mr-1">{ T(v.Lang, "historico.less") }</span>
+			for i, op := range v.Heat.LevelOp {
+				<span class="inline-block h-[10px] w-[10px] rounded-[3px]" style={ heatSwatchStyle(v.Heat, i, op) }></span>
+			}
+			<span class="ml-1">{ T(v.Lang, "historico.more") }</span>
+		</div>
+	</section>
+}
+
+func heatSwatchStyle(h heatModel, i int, op float64) string {
+	if i == 0 {
+		return "background-color: var(--surface-2)"
+	}
+	return "background-color: " + h.SolarColor + "; opacity: " + fmt.Sprintf("%.2f", op)
+}
+
+templ heatSVG(h heatModel) {
+	<svg width={ r2(h.Width) } height={ r2(h.Height) } class="block" style={ "min-width: " + fmt.Sprintf("%.0fpx", h.Width) } role="img">
+		for _, m := range h.Months {
+			<text x={ r2(m.X) } y="10" font-size="10" fill="var(--text-faint)" font-family="Inter">{ m.Label }</text>
+		}
+		for _, rl := range h.Rows {
+			<text x="0" y={ r2(rl.Y) } font-size="9" fill="var(--text-faint)" font-family="Inter">{ rl.Label }</text>
+		}
+		for _, c := range h.Cells {
+			<a href={ templ.URL(c.Href) }>
+				<title>{ c.Aria }</title>
+				if c.Level == 0 {
+					<rect x={ r2(c.X) } y={ r2(c.Y) } width={ r2(heatCellPx) } height={ r2(heatCellPx) } rx="3" fill="var(--surface-2)" stroke={ heatStroke(c.IsToday) } stroke-width={ heatStrokeW(c.IsToday) }></rect>
+				} else {
+					<rect x={ r2(c.X) } y={ r2(c.Y) } width={ r2(heatCellPx) } height={ r2(heatCellPx) } rx="3" fill={ h.SolarColor } fill-opacity={ fmt.Sprintf("%.2f", h.LevelOp[c.Level]) } stroke={ heatStroke(c.IsToday) } stroke-width={ heatStrokeW(c.IsToday) }></rect>
+				}
+			</a>
+		}
+	</svg>
+}
+
+func heatStroke(isToday bool) string {
+	if isToday {
+		return "var(--text-faint)"
+	}
+	return "none"
+}
+
+func heatStrokeW(isToday bool) string {
+	if isToday {
+		return "1"
+	}
+	return "0"
+}
+
+// recordCardView ports one "récords y curiosidades" card.
+templ recordCardView(v historicoView, rc recordCard) {
+	<div class="helios-card group flex items-start gap-3.5 p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lg dark:shadow-card-dark">
+		<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={ "background-color: " + rc.Color + "1F; color: " + rc.Color }>
+			@iconForRecord(rc.IconKey, "h-[21px] w-[21px]")
+		</span>
+		<div class="min-w-0">
+			<p class="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">{ rc.Title }</p>
+			<p class="mt-0.5 font-display text-lg font-semibold leading-tight text-app">{ rc.Value }</p>
+			<p class="mt-1 text-xs leading-snug text-muted">{ rc.Text }</p>
+		</div>
+	</div>
+}
+
+func iconForRecord(key string, class string) templ.Component {
+	switch key {
+	case "zap":
+		return iconZap(class)
+	case "arrowUpFromLine":
+		return iconArrowUpFromLine(class)
+	case "moon":
+		return iconMoon(class)
+	case "trophy":
+		return iconTrophy(class)
+	case "flame":
+		return iconFlame(class)
+	case "calendarCheck":
+		return iconCalendarCheck(class)
+	}
+	return iconLeaf(class)
+}

@@ -19,22 +19,57 @@ type client struct {
 }
 
 // Hub gestiona los clientes SSE y el throttle de emisión.
+// Dos pools: `clients` recibe el mensaje SSE plano ya formateado (API React)
+// y `dsClients` recibe el payload CRUDO para endpoints Datastar (UI templ).
 type Hub struct {
-	mu      sync.Mutex
-	clients map[*client]struct{}
-	last    time.Time
+	mu        sync.Mutex
+	clients   map[*client]struct{}
+	dsClients map[*client]struct{}
+	last      time.Time
 	// PayloadFn construye el mensaje live completo.
 	PayloadFn func() []byte
 }
 
 func NewHub(payloadFn func() []byte) *Hub {
-	return &Hub{clients: map[*client]struct{}{}, PayloadFn: payloadFn}
+	return &Hub{
+		clients:   map[*client]struct{}{},
+		dsClients: map[*client]struct{}{},
+		PayloadFn: payloadFn,
+	}
 }
 
 func (h *Hub) count() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	return len(h.clients)
+	return len(h.clients) + len(h.dsClients)
+}
+
+// Count expone el total de clientes conectados (ambas pools).
+func (h *Hub) Count() int { return h.count() }
+
+// SubscribeDatastar registra un receptor del payload crudo (sin prefijo
+// "data: "). Devuelve nil si se alcanzó el máximo de clientes.
+func (h *Hub) SubscribeDatastar() chan []byte {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if len(h.clients)+len(h.dsClients) >= MaxClients {
+		return nil
+	}
+	c := &client{ch: make(chan []byte, 8)}
+	h.dsClients[c] = struct{}{}
+	return c.ch
+}
+
+// UnsubscribeDatastar da de baja un receptor Datastar.
+func (h *Hub) UnsubscribeDatastar(ch chan []byte) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for c := range h.dsClients {
+		if c.ch == ch {
+			delete(h.dsClients, c)
+			return
+		}
+	}
 }
 
 // Broadcast envía a todos los clientes respetando el throttle de 1 s.
@@ -65,6 +100,14 @@ func (h *Hub) Broadcast() {
 		case c.ch <- msg:
 		default:
 			// Cliente lento: se descarta (se limpiará al cerrar).
+		}
+	}
+
+	// Pool Datastar: payload crudo (el endpoint lo convierte en señales).
+	for c := range h.dsClients {
+		select {
+		case c.ch <- payload:
+		default:
 		}
 	}
 }

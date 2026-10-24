@@ -1,0 +1,29 @@
+package web
+
+// StubPage is the placeholder for pages not yet ported (phase 1). It shows
+// the page title and an explicit "under construction" body so the flag can
+// be enabled without pretending a page is done.
+templ StubPage(p pageProps) {
+	@shellLayout(p) {
+		<div class="w-full px-4 py-6 md:px-6">
+			<div class="helios-card p-10 text-center shadow-card dark:shadow-card-dark">
+				<h1 class="font-display text-lg font-semibold text-app">{ p.Title }</h1>
+				<p class="mt-2 text-sm text-muted">{ T(p.Lang, "stub.body") }</p>
+			</div>
+		</div>
+		@footerLine(p)
+	}
+}
+
+// NotFoundPage is served for unknown routes in templ UI mode.
+templ NotFoundPage(p pageProps) {
+	@shellLayout(p) {
+		<div class="w-full px-4 py-6 md:px-6">
+			<div class="helios-card p-10 text-center shadow-card dark:shadow-card-dark">
+				<h1 class="font-display text-lg font-semibold text-app">{ T(p.Lang, "stub.title") }</h1>
+				<p class="mt-2 text-sm text-muted">{ T(p.Lang, "stub.desc") }</p>
+			</div>
+		</div>
+		@footerLine(p)
+	}
+}

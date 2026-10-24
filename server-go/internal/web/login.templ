@@ -1,0 +1,56 @@
+package web
+
+// LoginPage mirrors app/src/pages/Login.tsx (phase 1: no motion, form POST).
+templ LoginPage(p pageProps) {
+	@Layout(p) {
+		<div class="flex min-h-dvh items-center justify-center bg-app p-4">
+			<div class="helios-card w-full max-w-sm p-7 shadow-card dark:shadow-card-dark">
+				<div class="mb-6 flex flex-col items-center gap-2 text-center">
+					@brandLogo("helios-logo-login", "h-16 w-16")
+					<h1 class="font-display text-xl font-semibold tracking-[-0.01em] text-app">{ T(p.Lang, "login.title") }</h1>
+					<p class="text-sm text-muted">{ T(p.Lang, "login.subtitle") }</p>
+				</div>
+				<form method="post" action="/login" class="flex flex-col gap-4">
+					<input type="hidden" name="next" value={ p.Next }/>
+					<div>
+						<label for="login-user" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(p.Lang, "login.username") }</label>
+						<div class="relative">
+							@iconUser("pointer-events-none absolute left-3 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-faint")
+							<input
+								id="login-user"
+								name="username"
+								autocomplete="username"
+								autofocus
+								required
+								class="h-10 w-full rounded-lg border border-app bg-surface pl-9 pr-3 text-sm text-app placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							/>
+						</div>
+					</div>
+					<div>
+						<label for="login-pass" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(p.Lang, "login.password") }</label>
+						<div class="relative">
+							@iconKey("pointer-events-none absolute left-3 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-faint")
+							<input
+								id="login-pass"
+								name="password"
+								type="password"
+								autocomplete="current-password"
+								required
+								class="h-10 w-full rounded-lg border border-app bg-surface pl-9 pr-3 text-sm text-app placeholder:text-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							/>
+						</div>
+					</div>
+					if p.Error != "" {
+						<p role="alert" class="rounded-lg bg-rose-500/10 px-3 py-2 text-center text-[13px] font-medium text-rose-600 dark:text-rose-400">{ p.Error }</p>
+					}
+					<button
+						type="submit"
+						class="bg-brand-gradient mt-1 inline-flex h-10 items-center justify-center rounded-full text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02] active:scale-95"
+					>
+						{ T(p.Lang, "login.submit") }
+					</button>
+				</form>
+			</div>
+		</div>
+	}
+}

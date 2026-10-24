@@ -43,7 +43,8 @@
     "darkActive": "深色已启用",
     "lightActive": "浅色已启用",
     "toLight": "切换到浅色主题",
-    "toDark": "切换到深色主题"
+    "toDark": "切换到深色主题",
+    "system": "系统"
   },
   "connection": {
     "connected": "HAOS · 本地",
@@ -193,6 +194,11 @@
     "tabsAria": "充电桩",
     "powerOn": "开启",
     "powerOff": "关闭",
+    "turningOn": "正在开启…",
+    "turningOff": "正在关闭…",
+    "errorNoSwitch": "此充电器未配置开关",
+    "errorNoAmp": "此充电器没有电流控制",
+    "errorAmps": "电流超出范围 (6-32 A)",
     "powerToastOn": "{{name}} 已开启",
     "powerToastOff": "{{name}} 已关闭",
     "amps": "充电电流",
@@ -201,7 +207,8 @@
     "imageEdit": "更换图片 (透明 PNG，建议高度 460 px；自动缩放)",
     "imageClear": "移除图片",
     "imageOk": "图片已更新",
-    "imageCleared": "图片已移除"
+    "imageCleared": "图片已移除",
+    "imageError": "无法保存图片"
   },
   "inversores": {
     "title": "逆变器",
@@ -428,7 +435,8 @@
       "inverters": "逆变器",
       "battery": "电池 {{name}} · {{kwh}} kWh",
       "theoretical": "理论容量",
-      "totalLabel": "总计"
+      "totalLabel": "总计",
+      "batterySize": "{{label}} · {{kwh}} kWh"
     },
     "prices": {
       "buy": "购电价格",
@@ -458,8 +466,8 @@
       "made": "在家用 ☀ 制作"
     },
     "health": {
-      "alive": "正常",
-      "down": "无数据"
+      "alive": "运行中",
+      "down": "离线"
     },
     "security": {
       "desc": "更改密码，其他会话将被注销。",
@@ -603,11 +611,17 @@
       "chargerN": "充电桩 {{n}}",
       "chargerAdd": "添加充电桩",
       "chargerRemove": "移除充电桩"
+    },
+    "role": {
+      "admin": "管理员"
     }
   },
   "footer": {
     "line1": "Helios · 太阳能监控 {{version}} - 通过 Home Assistant 本地获取数据",
-    "line2": "本地安装 · 通过 Home Assistant 获取数据"
+    "line2": "本地安装 · 通过 Home Assistant 获取数据",
+    "battery": "电池 {{kwh}} kWh",
+    "inverterOne": "1 台逆变器",
+    "inverterMany": "{{n}} 台逆变器"
   },
   "stub": {
     "title": "页面未找到",
@@ -621,7 +635,8 @@
     "password": "密码",
     "submit": "登录",
     "loading": "登录中…",
-    "error": "用户名或密码错误"
+    "error": "用户名或密码错误",
+    "rateLimited": "尝试次数过多，请等待5分钟"
   },
   "admin": {
     "users": {
