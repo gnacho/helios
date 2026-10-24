@@ -18,7 +18,7 @@ templ HistoricoPage(v historicoView) {
 // historicoBody is the patchable region: /ui/historico replaces it in place
 // (no reload) and the slide direction comes from the previous period.
 templ historicoBody(v historicoView) {
-	<div id="hist-body">
+	<div id="hist-body" data-signals={ "{ heatOpen: false, heatX: 0, heatY: 0 }" }>
 		<!-- El id de revisión cambia con periodo/ancla: Datastar morphea el
 		     parche y, al no poder emparejar este nodo, lo recrea entero (así
 		     se reinician TODAS las animaciones: barras, areas, donut). -->
@@ -52,7 +52,7 @@ templ historicoBody(v historicoView) {
 						</div>
 					</div>
 					if v.HasHeat {
-						@historicoHeatCard(v)
+						<div id="heat-slot">@historicoHeatCard(v)</div>
 					}
 					if len(v.Records) > 0 {
 						<div class={ "grid grid-cols-1 gap-4 sm:grid-cols-2", templ.KV("lg:grid-cols-4", len(v.Records) > 3), templ.KV("md:grid-cols-3", len(v.Records) <= 3) }>
@@ -359,12 +359,15 @@ templ historicoDonutCard(v historicoView) {
 
 // historicoHeatCard is the YearHeatmap card (only in the Año period).
 templ historicoHeatCard(v historicoView) {
-	<section class="helios-card overflow-hidden shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.heatmapAria") }>
+	<!-- id con la métrica: al cambiar de filtro el nodo no se puede emparejar y
+	     Datastar lo recrea entero (el morph no siempre refresca los fill del SVG). -->
+	<section id={ "heat-card-" + string(v.Heat.Metric) } class="helios-card relative shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.heatmapAria") }>
 		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
 			<div class="mr-auto">
-				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.heatmapTitle") }</h2>
+				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, v.Heat.Metric.titleKey()) }</h2>
 				<p class="text-xs text-faint">{ T(v.Lang, "historico.heatmapSubtitle") }</p>
 			</div>
+			@heatMetricTabs(v)
 		</div>
 		<div class="overflow-x-auto px-4 pb-2 sm:px-5">
 			@heatSVG(v.Heat)
@@ -376,14 +379,90 @@ templ historicoHeatCard(v historicoView) {
 			}
 			<span class="ml-1">{ T(v.Lang, "historico.more") }</span>
 		</div>
+		<!-- Chip del día: se posiciona con señales y su contenido lo trae /ui/heat-day. -->
+		<div
+			id="heat-pop"
+			class="absolute z-30"
+			data-show="$heatOpen"
+			data-style={ "{ left: $heatX + 'px', top: $heatY + 'px' }" }
+			data-on:click__outside="if (!evt.target.closest('.heat-cell')) $heatOpen = false"
+			data-on:keydown__window="if (evt.key === 'Escape') $heatOpen = false"
+		>
+			@heatPopContent(heatPopView{})
+		</div>
 	</section>
+}
+
+// heatMetricTabs switches the heatmap series (production / consumption / self-consumption).
+templ heatMetricTabs(v historicoView) {
+	<div class="flex items-center gap-0.5 rounded-full bg-surface-2 p-0.5" role="tablist" aria-label={ T(v.Lang, "historico.metricAria") }>
+		for _, m := range []heatMetric{heatProd, heatCons, heatAuto} {
+			{{ active := v.Heat.Metric == m }}
+			<button
+				type="button"
+				role="tab"
+				aria-selected={ boolStr(active) }
+				data-on:click={ "$heatOpen = false; @get('/ui/heat?metric=" + string(m) + "')" }
+				class={ "flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium transition-colors", templ.KV("bg-surface text-app shadow-sm", active), templ.KV("text-muted hover:text-app", !active) }
+			>
+				<span class="h-2 w-2 rounded-full" style={ "background-color: " + m.color(v.Palette) }></span>
+				{ T(v.Lang, m.labelKey()) }
+			</button>
+		}
+	</div>
+}
+
+// heatPopContent is the day chip: split of the day (solar / battery / grid) and
+// the link to the day view.
+templ heatPopContent(v heatPopView) {
+	<div class="w-[236px] rounded-2xl border border-app bg-surface p-3 shadow-lg">
+		<div class="flex items-center gap-2">
+			<p class="mr-auto text-xs font-semibold text-app">{ v.Date }</p>
+			<button
+				type="button"
+				aria-label={ v.Close }
+				title={ v.Close }
+				data-on:click="$heatOpen = false"
+				class="flex h-6 w-6 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-app"
+			>
+				@iconX("h-3.5 w-3.5")
+			</button>
+		</div>
+		if v.HasData {
+			<div class="mt-2 flex items-center gap-3">
+				<svg viewBox="0 0 200 200" class="h-[74px] w-[74px] shrink-0" role="img" aria-label={ v.Date }>
+					for _, sl := range v.Donut.Slices {
+						<path d={ sl.Path } fill={ sl.Color }></path>
+					}
+				</svg>
+				<ul class="flex min-w-0 flex-1 flex-col gap-1">
+					for _, sl := range v.Donut.Slices {
+						<li class="flex items-center gap-1.5 text-[11px]">
+							<span class="h-1.5 w-1.5 shrink-0 rounded-full" style={ "background-color: " + sl.Color }></span>
+							<span class="truncate text-muted">{ sl.Label }</span>
+							<span class="ml-auto shrink-0 font-semibold text-app">{ sl.ValueText }</span>
+						</li>
+					}
+				</ul>
+			</div>
+		} else {
+			<p class="mt-3 text-[11px] text-faint">{ v.NoData }</p>
+		}
+		<a
+			href={ templ.URL(v.GoHref) }
+			class="mt-3 flex h-8 items-center justify-center gap-1.5 rounded-xl bg-surface-2 text-xs font-semibold text-app transition-colors hover:bg-app"
+		>
+			{ v.GoLabel }
+			@iconChevronRight("h-3.5 w-3.5")
+		</a>
+	</div>
 }
 
 func heatSwatchStyle(h heatModel, i int, op float64) string {
 	if i == 0 {
 		return "background-color: var(--surface-2)"
 	}
-	return "background-color: " + h.SolarColor + "; opacity: " + fmt.Sprintf("%.2f", op)
+	return "background-color: " + h.Color + "; opacity: " + fmt.Sprintf("%.2f", op)
 }
 
 templ heatSVG(h heatModel) {
@@ -397,11 +476,11 @@ templ heatSVG(h heatModel) {
 		for _, c := range h.Cells {
 			<!-- Celda + bocadillo: el texto aparece en la banda bajo la rejilla, donde
 			     no hay celdas que lo tapen (en SVG pinta antes quien antes va). -->
-			<a href={ templ.URL(c.Href) } class="heat-cell" aria-label={ c.Aria }>
+			<a href={ templ.URL(c.Href) } class="heat-cell" aria-label={ c.Aria } data-on:click__prevent={ heatCellClick(c.Date) }>
 				if c.Level == 0 {
 					<rect x={ r2(c.X) } y={ r2(c.Y) } width={ r2(heatCellPx) } height={ r2(heatCellPx) } rx="3" fill="var(--surface-2)" stroke={ heatStroke(c.IsToday) } stroke-width={ heatStrokeW(c.IsToday) }></rect>
 				} else {
-					<rect x={ r2(c.X) } y={ r2(c.Y) } width={ r2(heatCellPx) } height={ r2(heatCellPx) } rx="3" fill={ h.SolarColor } fill-opacity={ fmt.Sprintf("%.2f", h.LevelOp[c.Level]) } stroke={ heatStroke(c.IsToday) } stroke-width={ heatStrokeW(c.IsToday) }></rect>
+					<rect x={ r2(c.X) } y={ r2(c.Y) } width={ r2(heatCellPx) } height={ r2(heatCellPx) } rx="3" fill={ h.Color } fill-opacity={ fmt.Sprintf("%.2f", h.LevelOp[c.Level]) } stroke={ heatStroke(c.IsToday) } stroke-width={ heatStrokeW(c.IsToday) }></rect>
 				}
 				<g class="heat-tip" aria-hidden="true">
 					<rect x={ r2(c.TipX) } y={ r2(h.TipY) } width={ r2(c.TipW) } height={ r2(h.TipH) } rx="6" fill="var(--surface)" stroke="var(--line)" stroke-width="1"></rect>

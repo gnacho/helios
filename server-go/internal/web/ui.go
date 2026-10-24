@@ -47,10 +47,11 @@ var assetVersion = func() string {
 }()
 
 const (
-	themeCookie   = "helios_theme"
-	accentCookie  = "helios_accent"
-	densityCookie = "helios_density"
-	motionCookie  = "helios_motion"
+	themeCookie      = "helios_theme"
+	heatMetricCookie = "helios_heat_metric"
+	accentCookie     = "helios_accent"
+	densityCookie    = "helios_density"
+	motionCookie     = "helios_motion"
 )
 
 type navItem struct {
@@ -273,6 +274,8 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/", u.handleDashboard)
 		r.Get("/ui/stream", u.handleStream)
 		r.Get("/ui/historico", u.handleHistoricoPatch)
+		r.Get("/ui/heat", u.handleHeatMetric)
+		r.Get("/ui/heat-day", u.handleHeatDay)
 		r.Get("/ui/nav", navLog(http.HandlerFunc(u.handleNavPatch)).ServeHTTP)
 		r.Get("/ui/municipios", u.handleMunicipios)
 

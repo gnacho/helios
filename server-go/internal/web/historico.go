@@ -278,6 +278,7 @@ func buildHistoryBars(lang string, p Period, today time.Time, days []db.DailyRow
 // ── Year heatmap (YearHeatmap.tsx) ──────────────────────────────────────
 
 type heatCell struct {
+	Date    string // YYYY-MM-DD, for the day chip
 	X, Y    float64
 	Level   int // 0..4
 	IsToday bool
@@ -301,13 +302,14 @@ type heatRowLabel struct {
 }
 
 type heatModel struct {
-	Cells      []heatCell
-	Months     []heatMonthLabel
-	Rows       []heatRowLabel
-	Width      float64
-	Height     float64
-	SolarColor string
-	LevelOp    [5]float64
+	Cells   []heatCell
+	Months  []heatMonthLabel
+	Rows    []heatRowLabel
+	Width   float64
+	Height  float64
+	Color   string
+	Metric  heatMetric
+	LevelOp [5]float64
 	// Banda del bocadillo bajo la rejilla (0 = sin bocadillo).
 	TipY     float64
 	TipH     float64
@@ -317,12 +319,13 @@ type heatModel struct {
 // buildYearHeatmap ports YearHeatmap.tsx: GitHub-style 53x7 grid of the last
 // 365 days. Level = min(4, max(1, ceil(kwh/max*4))), like the TS: zero days
 // render at the faintest amber, never empty.
-func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Palette) heatModel {
+func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Palette, metric heatMetric) heatModel {
 	m := heatModel{
-		Width:      heatLeft + heatCols*heatPitch,
-		Height:     heatTop + 7*heatPitch - heatGap + 4 + heatTipH + 2,
-		SolarColor: pal.Solar,
-		LevelOp:    [5]float64{0, 0.28, 0.48, 0.72, 1},
+		Width:   heatLeft + heatCols*heatPitch,
+		Height:  heatTop + 7*heatPitch - heatGap + 4 + heatTipH + 2,
+		Color:   metric.color(pal),
+		Metric:  metric,
+		LevelOp: [5]float64{0, 0.28, 0.48, 0.72, 1},
 		// Banda de 22 px bajo la rejilla para el bocadillo de hover: ahí no
 		// hay celdas, así que nada lo tapa (en SVG pinta antes quien va antes).
 		TipH:     heatTipH,
@@ -348,7 +351,7 @@ func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Pale
 
 	max := 1.0
 	for _, d := range days {
-		if v := derefF(d.ProductionKwh); v > max {
+		if v := metric.value(d); v > max {
 			max = v
 		}
 	}
@@ -369,7 +372,7 @@ func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Pale
 			col = heatCols - 1
 		}
 		row := (int(dt.Weekday()) + 6) % 7
-		kwh := derefF(d.ProductionKwh)
+		kwh := metric.value(d)
 		level := int(math.Ceil(kwh / max * 4))
 		if level < 1 {
 			level = 1
@@ -387,12 +390,13 @@ func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Pale
 			tipX = maxX
 		}
 		m.Cells = append(m.Cells, heatCell{
+			Date:     d.Date,
 			X:        heatLeft + float64(col)*heatPitch,
 			Y:        heatTop + float64(row)*heatPitch,
 			Level:    level,
 			IsToday:  sameDay(dt, today),
 			Href:     histURL(PeriodDia, dt),
-			Aria:     T(lang, "historico.cellAria", map[string]string{"date": fmtDayMonthLong(lang, dt), "kwh": fmtEnergy(lang, kwh)}),
+			Aria:     T(lang, metric.ariaKey(), map[string]string{"date": fmtDayMonthLong(lang, dt), "kwh": fmtEnergy(lang, kwh)}),
 			Tip:      tip,
 			TipX:     tipX,
 			TipW:     tipW,
@@ -920,7 +924,7 @@ func (u *UI) buildHistoricoView(r *http.Request) historicoView {
 
 	// Heatmap anual (solo periodo Año).
 	if period == PeriodAno {
-		v.Heat = buildYearHeatmap(lang, hist, today, pal)
+		v.Heat = buildYearHeatmap(lang, hist, today, pal, parseHeatMetric(heatMetricOf(r)))
 		v.HasHeat = true
 	}
 
@@ -990,4 +994,179 @@ func histSourceSplit(p Period, totals PeriodTotals, dayKpis solar.DayKpis, hasDa
 	}
 	bateria := nonRed * batteryRatio
 	return sourceSplit{Solar: nonRed - bateria, Bateria: bateria, Red: red}
+}
+
+// heatMetric is the series the yearly heatmap paints.
+type heatMetric string
+
+const (
+	heatProd heatMetric = "prod"
+	heatCons heatMetric = "cons"
+	heatAuto heatMetric = "auto"
+)
+
+// heatMetricOf returns the metric requested with ?hm= or remembered in the
+// device cookie, so the filter survives a period change.
+func heatMetricOf(r *http.Request) string {
+	if raw := r.URL.Query().Get("hm"); raw != "" {
+		return raw
+	}
+	if c, err := r.Cookie(heatMetricCookie); err == nil {
+		return c.Value
+	}
+	return string(heatProd)
+}
+
+func parseHeatMetric(raw string) heatMetric {
+	switch heatMetric(raw) {
+	case heatCons:
+		return heatCons
+	case heatAuto:
+		return heatAuto
+	}
+	return heatProd
+}
+
+// value is the day's kWh for the metric.
+func (m heatMetric) value(d db.DailyRow) float64 {
+	switch m {
+	case heatCons:
+		return derefF(d.ConsumptionKwh)
+	case heatAuto:
+		return math.Max(0, derefF(d.ProductionKwh)-derefF(d.GridExportKwh))
+	}
+	return derefF(d.ProductionKwh)
+}
+
+func (m heatMetric) color(pal Palette) string {
+	switch m {
+	case heatCons:
+		return pal.Consumo
+	case heatAuto:
+		return pal.Autoconsumo
+	}
+	return pal.Solar
+}
+
+func (m heatMetric) titleKey() string {
+	switch m {
+	case heatCons:
+		return "historico.heatmapTitleCons"
+	case heatAuto:
+		return "historico.heatmapTitleAuto"
+	}
+	return "historico.heatmapTitle"
+}
+
+func (m heatMetric) labelKey() string {
+	switch m {
+	case heatCons:
+		return "historico.metricCons"
+	case heatAuto:
+		return "historico.metricAuto"
+	}
+	return "historico.metricProd"
+}
+
+func (m heatMetric) ariaKey() string {
+	switch m {
+	case heatCons:
+		return "historico.cellAriaCons"
+	case heatAuto:
+		return "historico.cellAriaAuto"
+	}
+	return "historico.cellAria"
+}
+
+// heatCellClick places the day popover over the card and loads its content.
+// The chip never leaves the card: left is clamped to the card width and top to
+// the card bottom, so the panel is always fully visible.
+func heatCellClick(date string) string {
+	return "var r = evt.currentTarget.getBoundingClientRect();" +
+		" var s = evt.currentTarget.closest('section').getBoundingClientRect();" +
+		" var w = 236; var h = 132;" +
+		// Keyboard activation (Enter/space) has detail 0: keep it going straight
+		// to the day, the chip's "go" target, instead of opening a popover the
+		// keyboard cannot reach.
+		" if (evt.detail === 0) { location.href = evt.currentTarget.getAttribute('href'); return; }" +
+		" $heatX = Math.round(Math.max(6, Math.min(r.left - s.left + r.width/2 - w/2, s.width - w - 6)));" +
+		" $heatY = Math.round(Math.max(6, Math.min(r.bottom - s.top + 8, s.height - h - 6)));" +
+		" $heatOpen = true;" +
+		" @get('/ui/heat-day?date=" + date + "')"
+}
+
+// heatPopView is the day chip content (split + link to the day).
+type heatPopView struct {
+	Lang    string
+	Date    string
+	HasData bool
+	NoData  string
+	Donut   donutModel
+	GoLabel string
+	GoHref  string
+	Close   string
+}
+
+// buildHeatPop resolves the day split the same way the day view does, so the
+// chip and the day page always agree.
+func (u *UI) buildHeatPop(lang string, pal Palette, dt time.Time) heatPopView {
+	v := heatPopView{
+		Lang:    lang,
+		Date:    fmtDayMonthLong(lang, dt),
+		NoData:  T(lang, "historico.cellNoData"),
+		GoLabel: T(lang, "historico.goToDay"),
+		GoHref:  histURL(PeriodDia, dt),
+		Close:   T(lang, "common.close"),
+	}
+	if u.Solar == nil || u.HA == nil {
+		return v
+	}
+	k, err := u.Solar.GetKpis(u.HA, dt.Format("2006-01-02"), u.Prices)
+	if err != nil {
+		return v
+	}
+	totals := dayTotalsFromSolar(k, u.Prices)
+	if totals.ConsumptionKwh <= 0 {
+		return v
+	}
+	split := histSourceSplit(PeriodDia, totals, k, true)
+	v.Donut = buildDonut(lang, []donutSliceIn{
+		{Label: T(lang, "historico.solarDirect"), Value: split.Solar, Color: pal.Solar},
+		{Label: T(lang, "common.battery"), Value: split.Bateria, Color: pal.Bateria},
+		{Label: T(lang, "common.grid"), Value: split.Red, Color: pal.RedCompra},
+	}, 2)
+	v.HasData = true
+	return v
+}
+
+// handleHeatMetric repaints the yearly heatmap with another series and remembers
+// the choice in a cookie (the period tabs rebuild their own URL).
+func (u *UI) handleHeatMetric(w http.ResponseWriter, r *http.Request) {
+	metric := parseHeatMetric(r.URL.Query().Get("metric"))
+	http.SetCookie(w, &http.Cookie{
+		Name: heatMetricCookie, Value: string(metric), Path: "/",
+		MaxAge: 365 * 24 * 3600, SameSite: http.SameSiteLaxMode,
+	})
+	q := r.URL.Query()
+	q.Set("hm", string(metric))
+	q.Set("period", string(PeriodAno))
+	r2 := r.Clone(r.Context())
+	r2.URL.RawQuery = q.Encode()
+	v := u.buildHistoricoView(r2)
+	gen := datastar.NewSSE(w, r)
+	_ = gen.PatchElementTempl(historicoHeatCard(v), datastar.WithSelectorID("heat-slot"), datastar.WithModeInner())
+}
+
+// handleHeatDay fills the day chip.
+func (u *UI) handleHeatDay(w http.ResponseWriter, r *http.Request) {
+	dt, err := time.ParseInLocation("2006-01-02", r.URL.Query().Get("date"), time.Local)
+	if err != nil {
+		http.Error(w, "bad date", http.StatusBadRequest)
+		return
+	}
+	userID, _ := auth.UserIDFrom(r.Context())
+	lang := u.userLang(userID)
+	pop := u.buildHeatPop(lang, newPalette(themeFrom(r) == "dark"), startOfDay(dt))
+	gen := datastar.NewSSE(w, r)
+	_ = gen.PatchElementTempl(heatPopContent(pop), datastar.WithSelectorID("heat-pop"), datastar.WithModeInner())
 }

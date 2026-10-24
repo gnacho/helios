@@ -324,7 +324,17 @@
       "streakText": "Producing {{threshold}} kWh or more",
       "bestMonthTitle": "Best month",
       "bestMonthText": "The month with the most production of the year"
-    }
+    },
+    "heatmapTitleCons": "Full year · daily consumption",
+    "heatmapTitleAuto": "Full year · daily self-consumption",
+    "metricProd": "Production",
+    "metricCons": "Consumption",
+    "metricAuto": "Self-consumption",
+    "metricAria": "Heatmap metric",
+    "cellAriaCons": "{{date}}: {{kwh}} kWh consumed",
+    "cellAriaAuto": "{{date}}: {{kwh}} kWh self-consumed",
+    "cellNoData": "No split data for this day",
+    "goToDay": "Go to day"
   },
   "ajustes": {
     "title": "Settings",

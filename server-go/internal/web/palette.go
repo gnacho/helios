@@ -6,13 +6,14 @@ package web
 type shade struct{ Light, Dark string }
 
 var energyColors = map[string]shade{
-	"solar":      {"#F59E0B", "#FBBF24"},
-	"consumo":    {"#3B82F6", "#60A5FA"},
-	"bateria":    {"#10B981", "#34D399"},
-	"redCompra":  {"#F43F5E", "#FB7185"},
-	"redVertido": {"#06B6D4", "#22D3EE"},
-	"solis":      {"#0EA5E9", "#38BDF8"},
-	"fox":        {"#8B5CF6", "#A78BFA"},
+	"solar":       {"#F59E0B", "#FBBF24"},
+	"consumo":     {"#3B82F6", "#60A5FA"},
+	"bateria":     {"#10B981", "#34D399"},
+	"autoconsumo": {"#10B981", "#34D399"},
+	"redCompra":   {"#F43F5E", "#FB7185"},
+	"redVertido":  {"#06B6D4", "#22D3EE"},
+	"solis":       {"#0EA5E9", "#38BDF8"},
+	"fox":         {"#8B5CF6", "#A78BFA"},
 }
 
 // extraInverterColors is the cyclic palette for inverters beyond solis/fox.
@@ -30,6 +31,7 @@ type Palette struct {
 	Dark                              bool
 	Solar, Consumo, Bateria           string
 	RedCompra, RedVertido, Solis, Fox string
+	Autoconsumo                       string
 }
 
 func newPalette(dark bool) Palette {
@@ -41,14 +43,15 @@ func newPalette(dark bool) Palette {
 		return s.Light
 	}
 	return Palette{
-		Dark:       dark,
-		Solar:      pick("solar"),
-		Consumo:    pick("consumo"),
-		Bateria:    pick("bateria"),
-		RedCompra:  pick("redCompra"),
-		RedVertido: pick("redVertido"),
-		Solis:      pick("solis"),
-		Fox:        pick("fox"),
+		Dark:        dark,
+		Solar:       pick("solar"),
+		Consumo:     pick("consumo"),
+		Bateria:     pick("bateria"),
+		RedCompra:   pick("redCompra"),
+		RedVertido:  pick("redVertido"),
+		Solis:       pick("solis"),
+		Fox:         pick("fox"),
+		Autoconsumo: pick("autoconsumo"),
 	}
 }
 

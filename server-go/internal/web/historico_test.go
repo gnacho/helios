@@ -125,7 +125,7 @@ func TestYearHeatmapGeometry(t *testing.T) {
 	rows[10].ProductionKwh = f64Ptr(0)
 	rows[20].ProductionKwh = f64Ptr(20)
 
-	h := buildYearHeatmap("es", rows, today, newPalette(false))
+	h := buildYearHeatmap("es", rows, today, newPalette(false), heatProd)
 	if len(h.Cells) != 40 {
 		t.Fatalf("celdas = %d (esperado 40)", len(h.Cells))
 	}
@@ -157,8 +157,58 @@ func TestYearHeatmapGeometry(t *testing.T) {
 	}
 }
 
+// TestHeatMetricValues: el filtro cambia el valor de cada día y el color de la
+// rejilla, y el nivel se escala contra el máximo de esa misma métrica.
+func TestHeatMetricValues(t *testing.T) {
+	today := time.Date(2026, 10, 23, 0, 0, 0, 0, time.Local)
+	day := db.DailyRow{
+		Date:           today.Format("2006-01-02"),
+		ProductionKwh:  f64Ptr(40),
+		ConsumptionKwh: f64Ptr(50),
+		GridExportKwh:  f64Ptr(10),
+	}
+	rows := []db.DailyRow{day}
+	if got := heatProd.value(day); got != 40 {
+		t.Fatalf("prod = %v (esperado 40)", got)
+	}
+	if got := heatCons.value(day); got != 50 {
+		t.Fatalf("cons = %v (esperado 50)", got)
+	}
+	// Autoconsumo = producción - vertido.
+	if got := heatAuto.value(day); got != 30 {
+		t.Fatalf("auto = %v (esperado 30)", got)
+	}
+	// Verter más de lo producido no da autoconsumo negativo.
+	neg := db.DailyRow{Date: day.Date, ProductionKwh: f64Ptr(5), GridExportKwh: f64Ptr(9)}
+	if got := heatAuto.value(neg); got != 0 {
+		t.Fatalf("auto negativo = %v (esperado 0)", got)
+	}
+	if heatProd.color(newPalette(false)) != newPalette(false).Solar {
+		t.Fatal("producción debe usar el color solar")
+	}
+	if heatCons.color(newPalette(false)) != newPalette(false).Consumo {
+		t.Fatal("consumo debe usar el color de consumo")
+	}
+	if heatAuto.color(newPalette(false)) != newPalette(false).Autoconsumo {
+		t.Fatal("autoconsumo debe usar su color propio")
+	}
+	// Con una sola fila y el valor de cada métrica, el nivel es el máximo.
+	for _, m := range []heatMetric{heatProd, heatCons, heatAuto} {
+		h := buildYearHeatmap("es", rows, today, newPalette(false), m)
+		if h.Metric != m {
+			t.Fatalf("metric = %q", h.Metric)
+		}
+		if len(h.Cells) != 1 || h.Cells[0].Level != 4 {
+			t.Fatalf("%s: nivel = %d (esperado 4)", m, h.Cells[0].Level)
+		}
+		if h.Cells[0].Date != day.Date {
+			t.Fatalf("%s: date = %q", m, h.Cells[0].Date)
+		}
+	}
+}
+
 func TestYearHeatmapEmpty(t *testing.T) {
-	h := buildYearHeatmap("es", nil, time.Date(2026, 10, 23, 0, 0, 0, 0, time.Local), newPalette(false))
+	h := buildYearHeatmap("es", nil, time.Date(2026, 10, 23, 0, 0, 0, 0, time.Local), newPalette(false), heatProd)
 	if len(h.Cells) != 0 {
 		t.Fatal("sin filas no hay celdas")
 	}

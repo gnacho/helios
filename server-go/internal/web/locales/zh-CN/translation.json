@@ -322,7 +322,17 @@
       "streakText": "每天发电 {{threshold}} kWh 或以上",
       "bestMonthTitle": "最佳月份",
       "bestMonthText": "全年发电量最高的月份"
-    }
+    },
+    "heatmapTitleCons": "全年 · 每日用电量",
+    "heatmapTitleAuto": "全年 · 每日自用量",
+    "metricProd": "发电",
+    "metricCons": "用电",
+    "metricAuto": "自用",
+    "metricAria": "热力图指标",
+    "cellAriaCons": "{{date}}：用电 {{kwh}} kWh",
+    "cellAriaAuto": "{{date}}：自用 {{kwh}} kWh",
+    "cellNoData": "该日没有分配数据",
+    "goToDay": "查看当天"
   },
   "ajustes": {
     "title": "设置",
