@@ -5,6 +5,15 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.7] - 2026-10-24
+
+### Changed
+
+- **La línea de autoconsumo del histórico se dibuja.** En las gráficas de
+  semana, mes y año el trazo discontinuo verde se traza de izquierda a derecha
+  con la misma animación que las barras, y los puntos aparecen a su paso.
+  Respeta el interruptor de animaciones y se reinicia al cambiar de periodo.
+
 ## [1.1.6] - 2026-10-24
 
 ### Changed
