@@ -665,9 +665,9 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 
 	// Vista del cargador activo.
 	sv := &chgSingleView{
-		Key:    charger.Key,
-		Name:   charger.Name,
-		Lang:   lang,
+		Key:  charger.Key,
+		Name: charger.Name,
+		Lang: lang,
 		Pal:  pal,
 	}
 	var live extensions.LiveCharger
