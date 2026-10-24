@@ -362,7 +362,8 @@ templ historicoHeatCard(v historicoView) {
 	<!-- id con la métrica: al cambiar de filtro el nodo no se puede emparejar y
 	     Datastar lo recrea entero (el morph no siempre refresca los fill del SVG). -->
 	<section id={ "heat-card-" + string(v.Heat.Metric) } class="@container helios-card relative shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.heatmapAria") }>
-		<div class="flex flex-wrap items-center gap-2 px-4 pb-2 pt-4 sm:px-5">
+		<!-- pb-8: same air under the subtitle as between the grid and the legend. -->
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-8 pt-4 sm:px-5">
 			<div class="mr-auto">
 				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, v.Heat.Metric.titleKey()) }</h2>
 				<p class="text-xs text-faint">{ T(v.Lang, "historico.heatmapSubtitle") }</p>

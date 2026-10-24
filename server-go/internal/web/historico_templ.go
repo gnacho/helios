@@ -2416,14 +2416,14 @@ func historicoHeatCard(v historicoView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 205, "\"><div class=\"flex flex-wrap items-center gap-2 px-4 pb-2 pt-4 sm:px-5\"><div class=\"mr-auto\"><h2 class=\"text-[15px] font-semibold text-app\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 205, "\"><!-- pb-8: same air under the subtitle as between the grid and the legend. --><div class=\"flex flex-wrap items-center gap-2 px-4 pb-8 pt-4 sm:px-5\"><div class=\"mr-auto\"><h2 class=\"text-[15px] font-semibold text-app\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var138 string
 		templ_7745c5c3_Var138, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, v.Heat.Metric.titleKey()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 367, Col: 88}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 368, Col: 88}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var138))
 		if templ_7745c5c3_Err != nil {
@@ -2436,7 +2436,7 @@ func historicoHeatCard(v historicoView) templ.Component {
 		var templ_7745c5c3_Var139 string
 		templ_7745c5c3_Var139, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, "historico.heatmapSubtitle"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 368, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 369, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var139))
 		if templ_7745c5c3_Err != nil {
@@ -2465,7 +2465,7 @@ func historicoHeatCard(v historicoView) templ.Component {
 		var templ_7745c5c3_Var140 string
 		templ_7745c5c3_Var140, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, "historico.less"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 376, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 377, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var140))
 		if templ_7745c5c3_Err != nil {
@@ -2483,7 +2483,7 @@ func historicoHeatCard(v historicoView) templ.Component {
 			var templ_7745c5c3_Var141 string
 			templ_7745c5c3_Var141, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(heatSwatchStyle(v.Heat, i, op))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 378, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 379, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var141))
 			if templ_7745c5c3_Err != nil {
@@ -2501,7 +2501,7 @@ func historicoHeatCard(v historicoView) templ.Component {
 		var templ_7745c5c3_Var142 string
 		templ_7745c5c3_Var142, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, "historico.more"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 380, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 381, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var142))
 		if templ_7745c5c3_Err != nil {
@@ -2514,7 +2514,7 @@ func historicoHeatCard(v historicoView) templ.Component {
 		var templ_7745c5c3_Var143 string
 		templ_7745c5c3_Var143, templ_7745c5c3_Err = templ.ResolveAttributeValue("{ left: $heatX + 'px', top: $heatY + 'px' }")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 387, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 388, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var143)
 		if templ_7745c5c3_Err != nil {
@@ -2565,7 +2565,7 @@ func heatMetricTabs(v historicoView) templ.Component {
 		var templ_7745c5c3_Var145 string
 		templ_7745c5c3_Var145, templ_7745c5c3_Err = templ.ResolveAttributeValue(T(v.Lang, "historico.metricAria"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 398, Col: 133}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 399, Col: 133}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var145)
 		if templ_7745c5c3_Err != nil {
@@ -2589,7 +2589,7 @@ func heatMetricTabs(v historicoView) templ.Component {
 			var templ_7745c5c3_Var147 string
 			templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.ResolveAttributeValue(boolStr(active))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 404, Col: 35}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 405, Col: 35}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var147)
 			if templ_7745c5c3_Err != nil {
@@ -2602,7 +2602,7 @@ func heatMetricTabs(v historicoView) templ.Component {
 			var templ_7745c5c3_Var148 string
 			templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.ResolveAttributeValue("$heatOpen = false; @get('/ui/heat?metric=" + string(m) + "')")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 405, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 406, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var148)
 			if templ_7745c5c3_Err != nil {
@@ -2628,7 +2628,7 @@ func heatMetricTabs(v historicoView) templ.Component {
 			var templ_7745c5c3_Var150 string
 			templ_7745c5c3_Var150, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + m.color(v.Palette))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 408, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 409, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var150))
 			if templ_7745c5c3_Err != nil {
@@ -2641,7 +2641,7 @@ func heatMetricTabs(v historicoView) templ.Component {
 			var templ_7745c5c3_Var151 string
 			templ_7745c5c3_Var151, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, m.labelKey()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 409, Col: 29}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 410, Col: 29}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var151))
 			if templ_7745c5c3_Err != nil {
@@ -2690,7 +2690,7 @@ func heatPopContent(v heatPopView) templ.Component {
 		var templ_7745c5c3_Var153 string
 		templ_7745c5c3_Var153, templ_7745c5c3_Err = templ.JoinStringErrs(v.Date)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 420, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 421, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var153))
 		if templ_7745c5c3_Err != nil {
@@ -2703,7 +2703,7 @@ func heatPopContent(v heatPopView) templ.Component {
 		var templ_7745c5c3_Var154 string
 		templ_7745c5c3_Var154, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Close)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 423, Col: 24}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 424, Col: 24}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var154)
 		if templ_7745c5c3_Err != nil {
@@ -2716,7 +2716,7 @@ func heatPopContent(v heatPopView) templ.Component {
 		var templ_7745c5c3_Var155 string
 		templ_7745c5c3_Var155, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Close)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 424, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 425, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var155)
 		if templ_7745c5c3_Err != nil {
@@ -2742,7 +2742,7 @@ func heatPopContent(v heatPopView) templ.Component {
 			var templ_7745c5c3_Var156 string
 			templ_7745c5c3_Var156, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Date)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 433, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 434, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var156)
 			if templ_7745c5c3_Err != nil {
@@ -2760,7 +2760,7 @@ func heatPopContent(v heatPopView) templ.Component {
 				var templ_7745c5c3_Var157 string
 				templ_7745c5c3_Var157, templ_7745c5c3_Err = templ.ResolveAttributeValue(sl.Path)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 435, Col: 23}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 436, Col: 23}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var157)
 				if templ_7745c5c3_Err != nil {
@@ -2773,7 +2773,7 @@ func heatPopContent(v heatPopView) templ.Component {
 				var templ_7745c5c3_Var158 string
 				templ_7745c5c3_Var158, templ_7745c5c3_Err = templ.ResolveAttributeValue(sl.Color)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 435, Col: 41}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 436, Col: 41}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var158)
 				if templ_7745c5c3_Err != nil {
@@ -2796,7 +2796,7 @@ func heatPopContent(v heatPopView) templ.Component {
 				var templ_7745c5c3_Var159 string
 				templ_7745c5c3_Var159, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + sl.Color)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 441, Col: 94}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 442, Col: 94}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var159))
 				if templ_7745c5c3_Err != nil {
@@ -2809,7 +2809,7 @@ func heatPopContent(v heatPopView) templ.Component {
 				var templ_7745c5c3_Var160 string
 				templ_7745c5c3_Var160, templ_7745c5c3_Err = templ.JoinStringErrs(sl.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 442, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 443, Col: 51}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var160))
 				if templ_7745c5c3_Err != nil {
@@ -2822,7 +2822,7 @@ func heatPopContent(v heatPopView) templ.Component {
 				var templ_7745c5c3_Var161 string
 				templ_7745c5c3_Var161, templ_7745c5c3_Err = templ.JoinStringErrs(sl.ValueText)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 443, Col: 75}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 444, Col: 75}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var161))
 				if templ_7745c5c3_Err != nil {
@@ -2845,7 +2845,7 @@ func heatPopContent(v heatPopView) templ.Component {
 			var templ_7745c5c3_Var162 string
 			templ_7745c5c3_Var162, templ_7745c5c3_Err = templ.JoinStringErrs(v.NoData)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 449, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 450, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var162))
 			if templ_7745c5c3_Err != nil {
@@ -2863,7 +2863,7 @@ func heatPopContent(v heatPopView) templ.Component {
 		var templ_7745c5c3_Var163 templ.SafeURL
 		templ_7745c5c3_Var163, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(v.GoHref))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 452, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 453, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var163))
 		if templ_7745c5c3_Err != nil {
@@ -2876,7 +2876,7 @@ func heatPopContent(v heatPopView) templ.Component {
 		var templ_7745c5c3_Var164 string
 		templ_7745c5c3_Var164, templ_7745c5c3_Err = templ.JoinStringErrs(v.GoLabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 455, Col: 14}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 456, Col: 14}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var164))
 		if templ_7745c5c3_Err != nil {
@@ -2938,7 +2938,7 @@ func heatSVG(h heatModel) templ.Component {
 		var templ_7745c5c3_Var166 string
 		templ_7745c5c3_Var166, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(h.Width))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 480, Col: 25}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 481, Col: 25}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var166)
 		if templ_7745c5c3_Err != nil {
@@ -2951,7 +2951,7 @@ func heatSVG(h heatModel) templ.Component {
 		var templ_7745c5c3_Var167 string
 		templ_7745c5c3_Var167, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(h.Height))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 480, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 481, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var167)
 		if templ_7745c5c3_Err != nil {
@@ -2964,7 +2964,7 @@ func heatSVG(h heatModel) templ.Component {
 		var templ_7745c5c3_Var168 string
 		templ_7745c5c3_Var168, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("0 0 %.0f %.0f", h.Width, h.Height))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 480, Col: 109}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 481, Col: 109}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var168)
 		if templ_7745c5c3_Err != nil {
@@ -2977,7 +2977,7 @@ func heatSVG(h heatModel) templ.Component {
 		var templ_7745c5c3_Var169 string
 		templ_7745c5c3_Var169, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("min-width: " + fmt.Sprintf("%.0fpx", h.Width) + "; max-width: calc(100% - 60px)")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 480, Col: 273}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 481, Col: 273}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var169))
 		if templ_7745c5c3_Err != nil {
@@ -2995,7 +2995,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var170 string
 			templ_7745c5c3_Var170, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(m.X))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 482, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 483, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var170)
 			if templ_7745c5c3_Err != nil {
@@ -3008,7 +3008,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var171 string
 			templ_7745c5c3_Var171, templ_7745c5c3_Err = templ.JoinStringErrs(m.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 482, Col: 99}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 483, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var171))
 			if templ_7745c5c3_Err != nil {
@@ -3027,7 +3027,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var172 string
 			templ_7745c5c3_Var172, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(rl.Y))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 485, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 486, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var172)
 			if templ_7745c5c3_Err != nil {
@@ -3040,7 +3040,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var173 string
 			templ_7745c5c3_Var173, templ_7745c5c3_Err = templ.JoinStringErrs(rl.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 485, Col: 99}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 486, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var173))
 			if templ_7745c5c3_Err != nil {
@@ -3059,7 +3059,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var174 templ.SafeURL
 			templ_7745c5c3_Var174, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(c.Href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 490, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 491, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var174))
 			if templ_7745c5c3_Err != nil {
@@ -3072,7 +3072,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var175 string
 			templ_7745c5c3_Var175, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.Aria)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 490, Col: 70}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 491, Col: 70}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var175)
 			if templ_7745c5c3_Err != nil {
@@ -3085,7 +3085,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var176 string
 			templ_7745c5c3_Var176, templ_7745c5c3_Err = templ.ResolveAttributeValue(heatCellClick(c.Date))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 490, Col: 119}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 491, Col: 119}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var176)
 			if templ_7745c5c3_Err != nil {
@@ -3103,7 +3103,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var177 string
 				templ_7745c5c3_Var177, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.X))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 492, Col: 22}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 493, Col: 22}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var177)
 				if templ_7745c5c3_Err != nil {
@@ -3116,7 +3116,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var178 string
 				templ_7745c5c3_Var178, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.Y))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 492, Col: 36}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 493, Col: 36}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var178)
 				if templ_7745c5c3_Err != nil {
@@ -3129,7 +3129,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var179 string
 				templ_7745c5c3_Var179, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(heatCellPx))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 492, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 493, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var179)
 				if templ_7745c5c3_Err != nil {
@@ -3142,7 +3142,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var180 string
 				templ_7745c5c3_Var180, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(heatCellPx))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 492, Col: 87}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 493, Col: 87}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var180)
 				if templ_7745c5c3_Err != nil {
@@ -3155,7 +3155,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var181 string
 				templ_7745c5c3_Var181, templ_7745c5c3_Err = templ.ResolveAttributeValue(heatStroke(c.IsToday))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 492, Col: 151}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 493, Col: 151}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var181)
 				if templ_7745c5c3_Err != nil {
@@ -3168,7 +3168,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var182 string
 				templ_7745c5c3_Var182, templ_7745c5c3_Err = templ.ResolveAttributeValue(heatStrokeW(c.IsToday))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 492, Col: 191}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 493, Col: 191}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var182)
 				if templ_7745c5c3_Err != nil {
@@ -3186,7 +3186,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var183 string
 				templ_7745c5c3_Var183, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.X))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 22}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 22}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var183)
 				if templ_7745c5c3_Err != nil {
@@ -3199,7 +3199,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var184 string
 				templ_7745c5c3_Var184, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.Y))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 36}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 36}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var184)
 				if templ_7745c5c3_Err != nil {
@@ -3212,7 +3212,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var185 string
 				templ_7745c5c3_Var185, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(heatCellPx))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var185)
 				if templ_7745c5c3_Err != nil {
@@ -3225,7 +3225,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var186 string
 				templ_7745c5c3_Var186, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(heatCellPx))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 87}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 87}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var186)
 				if templ_7745c5c3_Err != nil {
@@ -3238,7 +3238,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var187 string
 				templ_7745c5c3_Var187, templ_7745c5c3_Err = templ.ResolveAttributeValue(h.Color)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 111}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 111}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var187)
 				if templ_7745c5c3_Err != nil {
@@ -3251,7 +3251,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var188 string
 				templ_7745c5c3_Var188, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("%.2f", h.LevelOp[c.Level]))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 168}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 168}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var188)
 				if templ_7745c5c3_Err != nil {
@@ -3264,7 +3264,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var189 string
 				templ_7745c5c3_Var189, templ_7745c5c3_Err = templ.ResolveAttributeValue(heatStroke(c.IsToday))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 201}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 201}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var189)
 				if templ_7745c5c3_Err != nil {
@@ -3277,7 +3277,7 @@ func heatSVG(h heatModel) templ.Component {
 				var templ_7745c5c3_Var190 string
 				templ_7745c5c3_Var190, templ_7745c5c3_Err = templ.ResolveAttributeValue(heatStrokeW(c.IsToday))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 494, Col: 241}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 495, Col: 241}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var190)
 				if templ_7745c5c3_Err != nil {
@@ -3295,7 +3295,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var191 string
 			templ_7745c5c3_Var191, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.TipX))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 497, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var191)
 			if templ_7745c5c3_Err != nil {
@@ -3308,7 +3308,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var192 string
 			templ_7745c5c3_Var192, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(h.TipY))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 497, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var192)
 			if templ_7745c5c3_Err != nil {
@@ -3321,7 +3321,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var193 string
 			templ_7745c5c3_Var193, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.TipW))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 497, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var193)
 			if templ_7745c5c3_Err != nil {
@@ -3334,7 +3334,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var194 string
 			templ_7745c5c3_Var194, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(h.TipH))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 497, Col: 85}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 85}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var194)
 			if templ_7745c5c3_Err != nil {
@@ -3347,7 +3347,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var195 string
 			templ_7745c5c3_Var195, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.TipTextX))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 29}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 499, Col: 29}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var195)
 			if templ_7745c5c3_Err != nil {
@@ -3360,7 +3360,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var196 string
 			templ_7745c5c3_Var196, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(h.TipTextY))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 499, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var196)
 			if templ_7745c5c3_Err != nil {
@@ -3373,7 +3373,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var197 string
 			templ_7745c5c3_Var197, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.TipW - heatTipPad))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 161}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 499, Col: 161}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var197)
 			if templ_7745c5c3_Err != nil {
@@ -3386,7 +3386,7 @@ func heatSVG(h heatModel) templ.Component {
 			var templ_7745c5c3_Var198 string
 			templ_7745c5c3_Var198, templ_7745c5c3_Err = templ.JoinStringErrs(c.Tip)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 498, Col: 194}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 499, Col: 194}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var198))
 			if templ_7745c5c3_Err != nil {
@@ -3448,7 +3448,7 @@ func recordCardView(v historicoView, rc recordCard) templ.Component {
 		var templ_7745c5c3_Var200 string
 		templ_7745c5c3_Var200, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + rc.Color + "1F; color: " + rc.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 522, Col: 146}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 523, Col: 146}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var200))
 		if templ_7745c5c3_Err != nil {
@@ -3469,7 +3469,7 @@ func recordCardView(v historicoView, rc recordCard) templ.Component {
 		var templ_7745c5c3_Var201 string
 		templ_7745c5c3_Var201, templ_7745c5c3_Err = templ.JoinStringErrs(rc.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 526, Col: 87}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 527, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var201))
 		if templ_7745c5c3_Err != nil {
@@ -3482,7 +3482,7 @@ func recordCardView(v historicoView, rc recordCard) templ.Component {
 		var templ_7745c5c3_Var202 string
 		templ_7745c5c3_Var202, templ_7745c5c3_Err = templ.JoinStringErrs(rc.Value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 527, Col: 89}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 528, Col: 89}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var202))
 		if templ_7745c5c3_Err != nil {
@@ -3495,7 +3495,7 @@ func recordCardView(v historicoView, rc recordCard) templ.Component {
 		var templ_7745c5c3_Var203 string
 		templ_7745c5c3_Var203, templ_7745c5c3_Err = templ.JoinStringErrs(rc.Text)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 528, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 529, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var203))
 		if templ_7745c5c3_Err != nil {
