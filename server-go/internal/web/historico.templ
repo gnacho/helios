@@ -332,17 +332,20 @@ templ historicoDonutCard(v historicoView) {
 			</div>
 		</div>
 		<div class="flex flex-1 flex-col justify-center px-4 pb-3 sm:px-5">
-			<div class="relative">
+			<div class="relative mx-auto w-full max-w-[220px]" data-signals={ "{ donutTip: -1 }" }>
 				<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full max-w-[220px]" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
-					for _, s := range v.Donut.Slices {
-						<path d={ s.Path } fill={ s.Color }></path>
+					for i, s := range v.Donut.Slices {
+						<path d={ s.Path } fill={ s.Color } data-on:mouseenter={ "$donutTip = " + strconv.Itoa(i) } data-on:mouseleave="$donutTip = -1"></path>
 					}
 				</svg>
 				<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-					<p class="font-display text-2xl font-semibold leading-none text-app">
-						@animNum("donutHistTotal", v.Donut.Total, 1, v.Lang) <span class="text-[0.6em] font-medium text-faint">kWh</span>
-					</p>
-					<p class="mt-1 text-xs text-faint">{ v.Donut.CenterSub }</p>
+					<div data-show="$donutTip === -1" class="flex flex-col items-center">
+						<p class="font-display text-2xl font-semibold leading-none text-app">
+							@animNum("donutHistTotal", v.Donut.Total, 1, v.Lang) <span class="text-[0.6em] font-medium text-faint">kWh</span>
+						</p>
+						<p class="mt-1 text-xs text-faint">{ v.Donut.CenterSub }</p>
+					</div>
+					@donutHoverSlices(v.Donut)
 				</div>
 			</div>
 			<ul class="mt-4 flex flex-col gap-1.5">

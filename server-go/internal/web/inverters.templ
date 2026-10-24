@@ -441,15 +441,18 @@ templ invShareCard(v inversoresView, c *invCompareView) {
 			</button>
 		</div>
 		<div class="mt-4 flex min-h-[200px] flex-1 flex-col justify-center">
-			<div data-show="$share.mode == 'donut'" class="relative">
+			<div data-show="$share.mode == 'donut'" class="relative mx-auto w-full max-w-[220px]" data-signals={ "{ donutTip: -1 }" }>
 				<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full max-w-[220px]" role="img" aria-label={ T(v.Lang, "inversores.shareAria") }>
-					for _, s := range c.Share.Slices {
-						<path d={ s.Path } fill={ s.Color }></path>
+					for i, s := range c.Share.Slices {
+						<path d={ s.Path } fill={ s.Color } data-on:mouseenter={ "$donutTip = " + strconv.Itoa(i) } data-on:mouseleave="$donutTip = -1"></path>
 					}
 				</svg>
 				<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-					<p class="font-display text-xl font-semibold text-app">{ c.Share.TotalText }</p>
-					<p class="text-[11px] font-medium text-faint">{ c.Share.CenterSub }</p>
+					<div data-show="$donutTip === -1" class="flex flex-col items-center">
+						<p class="font-display text-xl font-semibold text-app">{ c.Share.TotalText }</p>
+						<p class="text-[11px] font-medium text-faint">{ c.Share.CenterSub }</p>
+					</div>
+					@donutHoverSlices(c.Share)
 				</div>
 				<div class="mt-1 flex flex-wrap justify-center gap-4">
 					for _, s := range c.Share.Slices {

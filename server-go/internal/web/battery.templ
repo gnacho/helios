@@ -1,5 +1,7 @@
 package web
 
+import "strconv"
+
 // /bateria page (port of Bateria.tsx + SocHeroGauge, SocDayChart,
 // BatteryPowerChart and the energy-source donut). Static render; live texts
 // bind to the $live.* signals patched by /ui/stream.
@@ -34,17 +36,20 @@ templ BateriaPage(v bateriaView) {
 						<div class="hidden @[1100px]:block @[1100px]:w-px @[1100px]:shrink-0 @[1100px]:self-stretch" style="background-color: var(--line)"></div>
 						if len(v.Donut.Slices) > 0 {
 							<div class="flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1100px]:w-[461px] @[1100px]:shrink-0">
-									<div class="relative w-[233px] shrink-0">
+									<div class="relative w-[233px] shrink-0" data-signals={ "{ donutTip: -1 }" }>
 										<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
-											for _, sl := range v.Donut.Slices {
-												<path d={ sl.Path } fill={ sl.Color }></path>
+											for i, sl := range v.Donut.Slices {
+												<path d={ sl.Path } fill={ sl.Color } data-on:mouseenter={ "$donutTip = " + strconv.Itoa(i) } data-on:mouseleave="$donutTip = -1"></path>
 											}
 										</svg>
 										<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-											<p class="font-display text-lg font-semibold leading-none text-app">
-												@animNum("donutBatTotal", v.Donut.Total, 1, v.Lang)
-											</p>
-											<p class="mt-0.5 text-[10px] text-faint">kWh · { v.Donut.CenterSub }</p>
+											<div data-show="$donutTip === -1" class="flex flex-col items-center">
+												<p class="font-display text-lg font-semibold leading-none text-app">
+													@animNum("donutBatTotal", v.Donut.Total, 1, v.Lang)
+												</p>
+												<p class="mt-0.5 text-[10px] text-faint">kWh · { v.Donut.CenterSub }</p>
+											</div>
+											@donutHoverSlices(v.Donut)
 										</div>
 									</div>
 									<div class="flex min-w-0 flex-1 flex-col gap-1.5">

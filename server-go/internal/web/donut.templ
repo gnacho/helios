@@ -1,0 +1,18 @@
+package web
+
+import "strconv"
+
+// donutHoverSlices renders the centre of a donut while one of its sectors is
+// hovered (signal donutTip = slice index): label, energy and share. It lives in
+// the hole, so it never overflows the card nor covers the drawing.
+templ donutHoverSlices(d donutModel) {
+	for i, s := range d.Slices {
+		<div data-show={ "$donutTip === " + strconv.Itoa(i) } class="flex flex-col items-center text-center">
+			<p class="text-[10px] font-medium text-muted">{ s.Label }</p>
+			<p class="font-display text-base font-semibold leading-none text-app">
+				{ s.ValueText } <span class="text-[0.62em] font-medium text-faint">kWh</span>
+			</p>
+			<p class="mt-0.5 text-[10px] text-faint">{ s.PctText } %</p>
+		</div>
+	}
+}
