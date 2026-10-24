@@ -552,6 +552,9 @@
   .h-\[190px\] {
     height: 190px;
   }
+  .h-\[210px\] {
+    height: 210px;
+  }
   .h-\[220px\] {
     height: 220px;
   }
@@ -684,14 +687,14 @@
   .w-\[140px\] {
     width: 140px;
   }
-  .w-\[148px\] {
-    width: 148px;
-  }
   .w-\[160px\] {
     width: 160px;
   }
   .w-\[200px\] {
     width: 200px;
+  }
+  .w-\[210px\] {
+    width: 210px;
   }
   .w-\[232px\] {
     width: 232px;
@@ -1195,6 +1198,9 @@
   }
   .px-1 {
     padding-inline: var(--spacing);
+  }
+  .px-1\.5 {
+    padding-inline: calc(var(--spacing) * 1.5);
   }
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
@@ -1907,6 +1913,9 @@
     .sm\:w-\[46\%\] {
       width: 46%;
     }
+    .sm\:w-\[184px\] {
+      width: 184px;
+    }
     .sm\:min-w-\[110px\] {
       min-width: 110px;
     }
@@ -2031,11 +2040,14 @@
     .lg\:w-\[42\%\] {
       width: 42%;
     }
-    .lg\:w-\[200px\] {
-      width: 200px;
+    .lg\:w-\[210px\] {
+      width: 210px;
     }
     .lg\:w-\[400px\] {
       width: 400px;
+    }
+    .lg\:w-\[420px\] {
+      width: 420px;
     }
     .lg\:w-auto {
       width: auto;
@@ -2100,8 +2112,8 @@
     .lg\:p-0 {
       padding: 0px;
     }
-    .lg\:pr-7 {
-      padding-right: calc(var(--spacing) * 7);
+    .lg\:pr-6 {
+      padding-right: calc(var(--spacing) * 6);
     }
     .lg\:backdrop-blur-none {
       --tw-backdrop-blur:  ;

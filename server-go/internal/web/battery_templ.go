@@ -83,7 +83,7 @@ func BateriaPage(v bateriaView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><div class=\"flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-7\"><!-- Una sola banda: el SOC, sus datos y el reparto a la misma altura. --><div class=\"flex shrink-0 flex-col items-center gap-3 lg:w-[200px]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><div class=\"flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-7\"><!-- Una sola banda: el SOC, sus datos y el reparto a la misma altura. --><div class=\"flex shrink-0 flex-col items-center gap-3 lg:w-[210px]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -122,12 +122,12 @@ func BateriaPage(v bateriaView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span></div><div class=\"grid min-w-0 flex-1 grid-cols-1 gap-x-5 gap-y-0.5 sm:grid-cols-2 lg:border-r lg:border-app lg:pr-7\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span></div><div class=\"grid min-w-0 grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2 lg:w-[400px] lg:border-r lg:border-app lg:pr-6\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, st := range v.Stats {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"flex items-center gap-2 rounded-lg px-2 py-[7px] hover:bg-surface-2\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"flex items-center gap-1.5 rounded-lg px-1.5 py-[7px] hover:bg-surface-2\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -171,7 +171,7 @@ func BateriaPage(v bateriaView) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if len(v.Donut.Slices) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 items-center gap-4 lg:w-[400px]\"><div class=\"relative w-[148px] shrink-0\"><svg viewBox=\"0 0 200 200\" class=\"anim-pie mx-auto w-full\" role=\"img\" aria-label=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 flex-col items-center gap-4 sm:flex-row lg:w-[420px]\"><div class=\"relative w-[160px] shrink-0 sm:w-[184px]\"><svg viewBox=\"0 0 200 200\" class=\"anim-pie mx-auto w-full\" role=\"img\" aria-label=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -254,12 +254,12 @@ func BateriaPage(v bateriaView) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</h2><ul class=\"flex flex-col gap-1.5\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</h2><ul class=\"flex flex-col gap-1\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, sl := range v.Donut.Slices {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<li class=\"flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-[13px]\"><span class=\"h-2.5 w-2.5 shrink-0 rounded-full\" style=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<li class=\"flex w-full items-center gap-1.5 rounded-lg px-1 py-0.5 text-left text-[13px]\"><span class=\"h-2.5 w-2.5 shrink-0 rounded-full\" style=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -293,7 +293,7 @@ func BateriaPage(v bateriaView) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, " kWh</span> <span class=\"w-10 text-right text-xs tabular-nums text-faint\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, " kWh</span> <span class=\"w-8 text-right text-xs tabular-nums text-faint\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -626,7 +626,7 @@ func socGaugeSVG(v bateriaView, g socGaugeModel) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\"><svg width=\"230\" height=\"212\" viewBox=\"0 0 260 240\" fill=\"none\"><path d=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\"><svg viewBox=\"0 0 260 240\" class=\"block h-[210px] w-[210px]\" fill=\"none\"><path d=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
