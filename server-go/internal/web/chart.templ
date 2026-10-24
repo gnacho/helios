@@ -12,11 +12,11 @@ templ dayChartSection(d dashboardView, c DayChartModel) {
 				<h2 class="text-[15px] font-semibold text-app">{ T(d.Lang, "chart.title") }</h2>
 				<p class="text-xs text-faint">{ T(d.Lang, "chart.subtitle") }</p>
 			</div>
-			@chartChip("total", T(d.Lang, "chart.total"), "var(--c-solar)")
+			@chartChip("total", T(d.Lang, "chart.total"), "var(--c-solar)", true)
 			for _, inv := range d.Invs {
-				@chartChip(inv.Key, chipLabel(inv.Name), inv.Color)
+				@chartChip(inv.Key, chipLabel(inv.Name), inv.Color, false)
 			}
-			@chartChip("consumo", T(d.Lang, "chart.consumption"), "var(--c-consumo)")
+			@chartChip("consumo", T(d.Lang, "chart.consumption"), "var(--c-consumo)", true)
 		</div>
 		@dayChartSVG(c)
 	</section>
@@ -27,14 +27,14 @@ templ dayChartSection(d dashboardView, c DayChartModel) {
 // filtering). key is the signal name: total | consumo | <inverter key>.
 // chartChip toggles one series with the existing data-show bindings (no
 // server round-trip). aria-pressed is kept in sync by the click handler.
-templ chartChip(key, label, colorVar string) {
+templ chartChip(key, label, colorVar string, active bool) {
 	{{ expr := "$chart." + key }}
 	<button
 		data-on:click={ expr + " = !" + expr + "; evt.currentTarget.setAttribute('aria-pressed', " + expr + " ? 'true' : 'false')" }
-		aria-pressed="true"
+		aria-pressed={ boolStr(active) }
 		class="inline-flex h-7 items-center gap-1.5 rounded-full border border-app px-2.5 text-xs font-medium text-app transition-opacity hover:opacity-90"
 	>
-		<span data-style={ "{ opacity: " + expr + " ? 1 : 0.3 }" } class="h-2 w-2 rounded-full" style={ "background-color: " + colorVar }></span>
+		<span data-style={ "{ opacity: " + expr + " ? 1 : 0.3 }" } class="h-2 w-2 rounded-full" style={ "background-color: " + colorVar + "; opacity: " + pickStr(active, "1", "0.3") }></span>
 		{ label }
 	</button>
 }

@@ -139,9 +139,26 @@ func pickF(active bool, a, b float64) float64 {
 
 // solarArcCard ports SolarArc.tsx (sun position on the arc + weather + peak).
 templ solarArcCard(d dashboardView, a arcModel) {
-	<section class="helios-card p-5 shadow-card dark:shadow-card-dark">
-		<h2 class="mb-2 text-[15px] font-semibold text-app">{ T(d.Lang, "dashboard.sunToday") }</h2>
+	<section class="helios-card flex h-full flex-col justify-center p-5 shadow-card dark:shadow-card-dark">
+		<h2 class="mb-3 flex items-baseline gap-2 text-[15px] font-semibold text-app">
+			{ T(d.Lang, "dashboard.sunToday") }
+			if d.Town != "" {
+				<span class="text-xs font-medium text-faint">· { d.Town }</span>
+			}
+		</h2>
 		<svg viewBox="0 0 300 140" class="mx-auto w-full max-w-[320px]" role="img" aria-label={ T(d.Lang, "solar.aria") }>
+			<defs>
+				<linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="#101828" class="hidden dark:block" stop-opacity="0.9"></stop>
+					<stop offset="100%" stop-color="#182338" class="hidden dark:block" stop-opacity="0.4"></stop>
+				</linearGradient>
+			</defs>
+			<path d="M 42 128 A 108 108 0 0 1 258 128" fill="url(#night-sky)" stroke="none" class="hidden dark:block"></path>
+			<g class="hidden dark:block">
+				for _, star := range [][2]float64{{38, 34}, {84, 18}, {150, 30}, {216, 16}, {262, 40}} {
+					<circle cx={ r2(star[0]) } cy={ r2(star[1]) } r="1.4" fill="#FFFFFF" opacity="0.3"></circle>
+				}
+			</g>
 			<path d="M 42 128 A 108 108 0 0 1 258 128" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="3 5"></path>
 			<line x1="20" y1="128" x2="280" y2="128" stroke="var(--line)" stroke-width="2" stroke-linecap="round"></line>
 			<g class="sun-g" style={ fmt.Sprintf("--sun-travel: %.2f%%", a.SunFrac*100) }>

@@ -206,8 +206,8 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 
 	// Señales de visibilidad del chart (port de los chips de DayChart).
 	chart := map[string]any{"total": true, "consumo": true}
-	for i, in := range m.Invs {
-		chart[in.Key] = i < 2 // inversores ocultos por defecto, como en React
+	for _, in := range m.Invs {
+		chart[in.Key] = false // por defecto solo Total + Consumo
 	}
 	signals["chart"] = chart
 	return signals

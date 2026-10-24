@@ -208,7 +208,7 @@ func DashboardPage(d dashboardView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</a></div><div class=\"anim-row grid gap-4 lg:grid-cols-3 lg:gap-5\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</a></div><div class=\"anim-row grid items-stretch gap-4 lg:grid-cols-3 lg:gap-5\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

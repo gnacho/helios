@@ -65,6 +65,7 @@ type pageProps struct {
 	DateText   string
 	InvCount   []string
 	BatKwh     float64 // installed battery capacity (0 = no battery)
+	Town       string  // install location without the province
 	NavDir     string  // "up" | "down": where the selected item comes from
 	Alerts     []solar.LiveAlert
 	AlertLevel string // "critical" | "warning" | "info" | ""
@@ -554,9 +555,27 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 	}
 	p.Alerts, p.AlertLevel = u.alertsSnapshot()
 	p.AlertCount = len(p.Alerts)
+	if loc, _ := u.townFromKV(); loc != "" {
+		p.Town = loc
+	}
 	p.DateText = weekdayDate(p.Lang, time.Now())
 	p.NavDir, p.NavShift = navDirFrom(p, r)
 	return p
+}
+
+// townFromKV is the configured location without the "(Provincia de ...)" part.
+func (u *UI) townFromKV() (string, string) {
+	if u.DB == nil {
+		return "", ""
+	}
+	loc, _ := u.DB.KVGet("installLocation")
+	if loc == "" {
+		return "", ""
+	}
+	if i := strings.Index(loc, " ("); i > 0 {
+		return loc[:i], loc
+	}
+	return loc, loc
 }
 
 // configuredSunTimes prefers the configured location (Ajustes -> Ubicación,

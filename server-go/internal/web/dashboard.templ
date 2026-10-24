@@ -82,7 +82,7 @@ templ DashboardPage(d dashboardView) {
 					<h2 class="font-display text-lg font-semibold tracking-[-0.01em] text-app">{ T(d.Lang, "dashboard.yourInverters") }</h2>
 					<a href="/inversores" class="text-xs font-semibold text-amber-500 hover:underline">{ T(d.Lang, "dashboard.viewCompare") }</a>
 				</div>
-				<div class="anim-row grid gap-4 lg:grid-cols-3 lg:gap-5">
+				<div class="anim-row grid items-stretch gap-4 lg:grid-cols-3 lg:gap-5">
 					@solarArcCard(d, d.Arc)
 					@inverterCardsRow(d)
 				</div>
