@@ -11,7 +11,7 @@ templ BateriaPage(v bateriaView) {
 				     mitad izquierda el SOC con sus datos, mitad derecha el reparto. -->
 				<section class="helios-card col-span-12 p-5 shadow-card dark:shadow-card-dark sm:p-6" aria-label={ T(v.Lang, "bateria.gaugeAria", map[string]string{"pct": v.Gauge.SocText}) }>
 					<div class="flex flex-col gap-7 lg:flex-row lg:items-stretch lg:gap-8">
-						<div class="flex min-w-0 flex-col items-center gap-4 lg:w-1/2 lg:border-r lg:border-app lg:pr-8">
+						<div class="flex min-w-0 flex-col items-center gap-4 lg:w-[55%] lg:border-r lg:border-app lg:pr-8">
 							@socGaugeSVG(v, v.Gauge)
 							<span class={ "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold", v.Chip.Cls }>{ v.Chip.Text }</span>
 							<div class="mt-1 grid w-full grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
@@ -25,7 +25,7 @@ templ BateriaPage(v bateriaView) {
 							</div>
 						</div>
 						if len(v.Donut.Slices) > 0 {
-							<div class="flex min-w-0 flex-col gap-3 lg:w-1/2">
+							<div class="flex min-w-0 flex-col gap-3 lg:w-[45%]">
 								<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.donutTitle") }</h2>
 								<div class="flex flex-1 flex-col items-center gap-4 sm:flex-row sm:items-center">
 									<div class="relative w-full max-w-[190px] shrink-0">

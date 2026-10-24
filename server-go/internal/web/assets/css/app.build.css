@@ -2028,11 +2028,14 @@
     .lg\:h-\[274px\] {
       height: 274px;
     }
-    .lg\:w-1\/2 {
-      width: calc(1 / 2 * 100%);
-    }
     .lg\:w-\[42\%\] {
       width: 42%;
+    }
+    .lg\:w-\[45\%\] {
+      width: 45%;
+    }
+    .lg\:w-\[55\%\] {
+      width: 55%;
     }
     .lg\:w-auto {
       width: auto;

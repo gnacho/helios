@@ -83,7 +83,7 @@ func BateriaPage(v bateriaView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><div class=\"flex flex-col gap-7 lg:flex-row lg:items-stretch lg:gap-8\"><div class=\"flex min-w-0 flex-col items-center gap-4 lg:w-1/2 lg:border-r lg:border-app lg:pr-8\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><div class=\"flex flex-col gap-7 lg:flex-row lg:items-stretch lg:gap-8\"><div class=\"flex min-w-0 flex-col items-center gap-4 lg:w-[55%] lg:border-r lg:border-app lg:pr-8\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -171,7 +171,7 @@ func BateriaPage(v bateriaView) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if len(v.Donut.Slices) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 flex-col gap-3 lg:w-1/2\"><h2 class=\"text-[15px] font-semibold text-app\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 flex-col gap-3 lg:w-[45%]\"><h2 class=\"text-[15px] font-semibold text-app\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
