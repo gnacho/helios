@@ -2467,8 +2467,10 @@ html.reduce-motion::view-transition-old(*), html.reduce-motion::view-transition-
     animation: none !important;
   }
 }
-@view-transition {
-  navigation: auto;
+@media (max-width: 767.98px) {
+  @view-transition {
+    navigation: auto;
+  }
 }
 .nav-in-down {
   animation: nav-item-down 0.24s cubic-bezier(0.25, 1, 0.5, 1) both;
