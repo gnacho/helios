@@ -5,6 +5,18 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.6] - 2026-10-24
+
+### Changed
+
+- **Cambiar de sección ya no recarga la página.** Los enlaces del menú piden
+  solo el contenido de la sección destino y se parchean el contenido, el
+  encabezado y el estado del menú; el armazón (logo, barra lateral, cabecera) y
+  la conexión en vivo se mantienen. En acceso remoto cada recarga costaba una
+  ida y vuelta completa (114 ms de TTFB medidos al dominio) y Firefox dejaba el
+  viewport vacío durante la espera: ese era el parpadeo al cambiar de menú.
+  Atrás y adelante del navegador siguen funcionando.
+
 ## [1.1.5] - 2026-10-24
 
 ### Fixed
