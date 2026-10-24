@@ -717,11 +717,11 @@
   .max-w-\[120px\] {
     max-width: 120px;
   }
+  .max-w-\[190px\] {
+    max-width: 190px;
+  }
   .max-w-\[220px\] {
     max-width: 220px;
-  }
-  .max-w-\[240px\] {
-    max-width: 240px;
   }
   .max-w-\[300px\] {
     max-width: 300px;
@@ -890,6 +890,9 @@
   }
   .gap-6 {
     gap: calc(var(--spacing) * 6);
+  }
+  .gap-7 {
+    gap: calc(var(--spacing) * 7);
   }
   :where(.space-y-1 > :not(:last-child)) {
     --tw-space-y-reverse: 0;
@@ -1919,6 +1922,9 @@
     .sm\:flex-row {
       flex-direction: row;
     }
+    .sm\:items-center {
+      align-items: center;
+    }
     .sm\:gap-3 {
       gap: calc(var(--spacing) * 3);
     }
@@ -2025,9 +2031,6 @@
     .lg\:w-1\/2 {
       width: calc(1 / 2 * 100%);
     }
-    .lg\:w-\[38\%\] {
-      width: 38%;
-    }
     .lg\:w-\[42\%\] {
       width: 42%;
     }
@@ -2061,14 +2064,14 @@
     .lg\:flex-row {
       flex-direction: row;
     }
-    .lg\:items-center {
-      align-items: center;
-    }
     .lg\:items-stretch {
       align-items: stretch;
     }
     .lg\:gap-5 {
       gap: calc(var(--spacing) * 5);
+    }
+    .lg\:gap-8 {
+      gap: calc(var(--spacing) * 8);
     }
     .lg\:overflow-visible {
       overflow: visible;
@@ -2076,6 +2079,10 @@
     .lg\:border-t-0 {
       border-top-style: var(--tw-border-style);
       border-top-width: 0px;
+    }
+    .lg\:border-r {
+      border-right-style: var(--tw-border-style);
+      border-right-width: 1px;
     }
     .lg\:border-l {
       border-left-style: var(--tw-border-style);
@@ -2087,8 +2094,8 @@
     .lg\:p-0 {
       padding: 0px;
     }
-    .lg\:pl-6 {
-      padding-left: calc(var(--spacing) * 6);
+    .lg\:pr-8 {
+      padding-right: calc(var(--spacing) * 8);
     }
     .lg\:backdrop-blur-none {
       --tw-backdrop-blur:  ;
