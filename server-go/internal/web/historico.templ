@@ -466,7 +466,9 @@ func heatSwatchStyle(h heatModel, i int, op float64) string {
 }
 
 templ heatSVG(h heatModel) {
-	<svg width={ r2(h.Width) } height={ r2(h.Height) } class="block" style={ "min-width: " + fmt.Sprintf("%.0fpx", h.Width) } role="img">
+	<!-- viewBox + w-full: la rejilla escala para llenar la tarjeta (centrada);
+	     el min-width conserva el scroll horizontal en móvil. -->
+	<svg width={ r2(h.Width) } height={ r2(h.Height) } viewBox={ fmt.Sprintf("0 0 %.0f %.0f", h.Width, h.Height) } preserveAspectRatio="xMidYMid meet" class="mx-auto block h-auto w-full" style={ "min-width: " + fmt.Sprintf("%.0fpx", h.Width) } role="img">
 		for _, m := range h.Months {
 			<text x={ r2(m.X) } y="10" font-size="10" fill="var(--text-faint)" font-family="Inter">{ m.Label }</text>
 		}

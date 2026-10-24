@@ -1084,7 +1084,7 @@ func (m heatMetric) ariaKey() string {
 func heatCellClick(date string) string {
 	return "var r = evt.currentTarget.getBoundingClientRect();" +
 		" var s = evt.currentTarget.closest('section').getBoundingClientRect();" +
-		" var w = 236; var h = 132;" +
+		" var w = 236; var h = 184;" +
 		// Keyboard activation (Enter/space) has detail 0: keep it going straight
 		// to the day, the chip's "go" target, instead of opening a popover the
 		// keyboard cannot reach.
