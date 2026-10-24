@@ -5,6 +5,16 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.2] - 2026-10-24
+
+### Fixed
+
+- **Parpadeo de las zonas comunes al cambiar de menú en escritorio.** La
+  transición de navegación entre páginas capturaba la página entera, así que el
+  sidebar (logo, menú, ajustes) se fundía junto con el contenido aunque no
+  cambiara. Ahora esa transición solo se aplica en móvil, donde está diseñada,
+  y en escritorio el único cambio es la entrada del ítem activo.
+
 ## [1.1.1] - 2026-10-24
 
 Auditoría de la 1.1 (staticcheck, govulncheck, `go test -race` y revisión de las
