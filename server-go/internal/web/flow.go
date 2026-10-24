@@ -212,8 +212,7 @@ type arcModel struct {
 	HasTemp      bool
 }
 
-func buildArc(lang string, live *solar.LiveData, k DayKpis) arcModel {
-	sunrise, sunset := sunMinutes(live)
+func buildArc(lang string, live *solar.LiveData, k DayKpis, sunrise, sunset int) arcModel {
 	atMin := 0
 	if live != nil {
 		atMin = live.At

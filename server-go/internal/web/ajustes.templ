@@ -183,7 +183,8 @@ templ ajustesInstall(v ajustesView) {
 					<label for="install-location" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.location") }</label>
 					<div class="relative">
 						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconMapPin("h-[15px] w-[15px]")</span>
-						<input id="install-location" type="text" name="install_location" value={ v.InstallLocation } placeholder={ T(v.Lang, "ajustes.install.locationPlaceholder") } class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
+						<input id="install-location" type="text" name="install_location" value={ v.InstallLocation } list="municipios" autocomplete="off" placeholder={ T(v.Lang, "ajustes.install.locationPlaceholder") } data-on:input__debounce.250ms="@get('/ui/municipios?q=' + encodeURIComponent(evt.target.value))" class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
+						<datalist id="municipios">@municipiosDatalist(searchMunicipios(v.InstallLocation, 8))</datalist>
 					</div>
 				</div>
 			</div>
@@ -738,6 +739,13 @@ templ ajustesExtensions(v ajustesView) {
 				}
 			</div>
 		}
+	}
+}
+
+// municipiosDatalist renders the <option> list of the location autocomplete.
+templ municipiosDatalist(items []municipio) {
+	for _, m := range items {
+		<option value={ m.Display }></option>
 	}
 }
 

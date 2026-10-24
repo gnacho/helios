@@ -655,7 +655,7 @@ func (u *UI) buildAjustes(r *http.Request, userID string) ajustesView {
 		v.InstallLocation, _ = u.DB.KVGet("installLocation")
 	}
 	if u.Solar != nil && u.HA != nil {
-		sr, ss := u.sunTimesCached()
+		sr, ss := u.installSunTimes()
 		v.SunNote = T(v.Lang, "ajustes.install.sunTodayHa", map[string]string{
 			"sunrise": fmtTime(sr),
 			"sunset":  fmtTime(ss),
@@ -1255,9 +1255,23 @@ func (u *UI) handleAjustesInstall(w http.ResponseWriter, r *http.Request) {
 	}
 	name := strings.TrimSpace(r.PostFormValue("install_name"))
 	location := strings.TrimSpace(r.PostFormValue("install_location"))
+	var lat, lon float64
+	hasCoords := false
+	if location != "" {
+		if m, ok := findMunicipio(location); ok {
+			lat, lon, hasCoords = m.Lat, m.Lon, true
+		}
+	}
 	if u.DB != nil {
 		u.DB.KVSet("installName", name)
 		u.DB.KVSet("installLocation", location)
+		if hasCoords {
+			u.DB.KVSet("installLat", strconv.FormatFloat(lat, 'f', 6, 64))
+			u.DB.KVSet("installLon", strconv.FormatFloat(lon, 'f', 6, 64))
+		} else {
+			u.DB.KVSet("installLat", "")
+			u.DB.KVSet("installLon", "")
+		}
 		u.DB.Audit(username, userID, "install.update", map[string]string{"name": name, "location": location})
 	}
 	ajustesRedirectFlag(w, r, "saved", "install")

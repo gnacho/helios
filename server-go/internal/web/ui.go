@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
@@ -136,6 +137,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/", u.handleDashboard)
 		r.Get("/ui/stream", u.handleStream)
 		r.Get("/ui/historico", u.handleHistoricoPatch)
+		r.Get("/ui/municipios", u.handleMunicipios)
 
 		r.Get("/inversores", u.handleInversores)
 		r.Get("/bateria", u.handleBateria)
@@ -188,7 +190,7 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	invKeys, invNames := chartInvKeys(m)
 	flow := buildFlow(lang, m.Live)
-	sunrise, sunset := sunMinutes(m.Live)
+	sunrise, sunset := u.configuredSunTimes(m.Live)
 	_ = sunrise
 	_ = sunset
 	d := dashboardView{
@@ -216,7 +218,7 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		KGridExportKwh:  m.Kpis.GridExportKwh,
 		KGridImportKwh:  m.Kpis.GridImportKwh,
 		Flow:            flow,
-		Arc:             buildArc(lang, m.Live, m.Kpis),
+		Arc:             buildArc(lang, m.Live, m.Kpis, sunrise, sunset),
 		Invs:            buildInvCards(lang, m, m.Series.Points, pal),
 	}
 	if m.Live != nil {
@@ -557,6 +559,48 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 	return p
 }
 
+// configuredSunTimes prefers the configured location (Ajustes -> Ubicación,
+// calculated with SunCalc like the React app) and falls back to Home
+// Assistant's sun entity.
+func (u *UI) configuredSunTimes(live *solar.LiveData) (int, int) {
+	if u.DB != nil {
+		latS, _ := u.DB.KVGet("installLat")
+		lonS, _ := u.DB.KVGet("installLon")
+		if latS != "" && lonS != "" {
+			lat, e1 := strconv.ParseFloat(latS, 64)
+			lon, e2 := strconv.ParseFloat(lonS, 64)
+			if e1 == nil && e2 == nil {
+				if rise, set, ok := SunTimes(time.Now(), lat, lon); ok {
+					return rise, set
+				}
+			}
+		}
+	}
+	return sunMinutes(live)
+}
+
+// installSunTimes returns the sunrise/sunset for Ajustes: configured location
+// when set, otherwise Home Assistant's cached sun times.
+func (u *UI) installSunTimes() (int, int) {
+	if u.DB != nil {
+		latS, _ := u.DB.KVGet("installLat")
+		lonS, _ := u.DB.KVGet("installLon")
+		if latS != "" && lonS != "" {
+			lat, e1 := strconv.ParseFloat(latS, 64)
+			lon, e2 := strconv.ParseFloat(lonS, 64)
+			if e1 == nil && e2 == nil {
+				if rise, set, ok := SunTimes(time.Now(), lat, lon); ok {
+					return rise, set
+				}
+			}
+		}
+	}
+	if u.Solar == nil || u.HA == nil {
+		return 6*60 + 50, 21*60 + 40
+	}
+	return u.sunTimesCached()
+}
+
 // alertsSnapshot returns the live alerts (same list the React bell shows) with
 // a short cache so every page render does not hit HA again.
 var alertsCache struct {
@@ -734,4 +778,12 @@ func themeStateName(theme string) string {
 		return "dark"
 	}
 	return "auto"
+}
+
+
+// handleMunicipios patches the location datalist with the matches for ?q.
+func (u *UI) handleMunicipios(w http.ResponseWriter, r *http.Request) {
+	items := searchMunicipios(r.URL.Query().Get("q"), 8)
+	gen := datastar.NewSSE(w, r)
+	_ = gen.PatchElementTempl(municipiosDatalist(items), datastar.WithSelectorID("municipios"), datastar.WithModeInner())
 }
