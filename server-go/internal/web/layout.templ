@@ -122,11 +122,13 @@ templ shellLayout(p pageProps) {
 		@rail(p)
 		@topbarDesktop(p)
 		@headerMobile(p)
-		<main class={ "w-auto max-w-[1440px] px-4 pb-24 pt-4 md:ml-16 md:px-6 md:pb-6 md:pt-6", templ.KV("lg:ml-16", p.Collapsed), templ.KV("lg:ml-[232px]", !p.Collapsed) }>
+		<main id="page" class={ "w-auto max-w-[1440px] px-4 pb-24 pt-4 md:ml-16 md:px-6 md:pb-6 md:pt-6", templ.KV("lg:ml-16", p.Collapsed), templ.KV("lg:ml-[232px]", !p.Collapsed) }>
+			<!--#page-->
 			{ children... }
 			<div class="hidden lg:block">
 				@footerLine(p)
 			</div>
+			<!--/#page-->
 		</main>
 		@bottomNav(p)
 	}
@@ -135,7 +137,8 @@ templ shellLayout(p pageProps) {
 // sidebar: 232px expanded or 64px collapsed rail (≥lg only).
 templ sidebar(p pageProps, collapsed bool) {
 	if collapsed {
-		<aside data-nav="side-rail" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 lg:flex">
+		<aside data-nav="side-rail" id="nav-primary" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 lg:flex">
+			<!--#nav-primary-->
 			@logo(p, true)
 			<nav class="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={ T(p.Lang, "nav.dashboard") }>
 				for _, item := range navEntriesFor(p.ChargerOn) {
@@ -146,9 +149,11 @@ templ sidebar(p pageProps, collapsed bool) {
 				@settingsIconLink(p, "bg-brand/15 text-brand", "border border-app bg-surface text-muted hover:text-app")
 				@sidebarToggle(p, true)
 			</div>
+			<!--/#nav-primary-->
 		</aside>
 	} else {
-		<aside data-nav="side" class="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-app bg-surface lg:flex">
+		<aside data-nav="side" id="nav-primary" class="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-app bg-surface lg:flex">
+			<!--#nav-primary-->
 			@logo(p, false)
 			<nav class="flex-1 space-y-1 overflow-y-auto p-3" aria-label={ T(p.Lang, "nav.dashboard") }>
 				for _, item := range navEntriesFor(p.ChargerOn) {
@@ -157,20 +162,21 @@ templ sidebar(p pageProps, collapsed bool) {
 			</nav>
 			<div class="border-t border-app p-3">
 				<div class="flex items-center gap-2">
-					<a href="/ajustes" class={ "flex h-9 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors", templ.KV("bg-brand/15 text-brand", navIsActive(p.Path, "/ajustes")), templ.KV("bg-brand/8 text-brand hover:bg-brand/15", !navIsActive(p.Path, "/ajustes")) }>
+					<a href="/ajustes" data-on:click__prevent={ navPatchExpr("/ajustes") } class={ "flex h-9 flex-1 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors", templ.KV("bg-brand/15 text-brand", navIsActive(p.Path, "/ajustes")), templ.KV("bg-brand/8 text-brand hover:bg-brand/15", !navIsActive(p.Path, "/ajustes")) }>
 						@iconSettings("h-[18px] w-[18px]")
 						{ T(p.Lang, "nav.ajustes") }
 					</a>
 					@sidebarToggle(p, false)
 				</div>
 			</div>
+			<!--/#nav-primary-->
 		</aside>
 	}
 }
 
 templ navSideLink(p pageProps, item navEntry) {
 	{{ label := navLabel(p, item.Key) }}
-	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
+	<a href={ templ.URL(item.Path) } data-on:click__prevent={ navPatchExpr(item.Path) } aria-label={ label } class={ "group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
 		@iconForNav(item.IconKey, "h-[18px] w-[18px] shrink-0")
 		<span class="flex-1">{ label }</span>
 		if navIsActive(p.Path, item.Path) {
@@ -181,14 +187,14 @@ templ navSideLink(p pageProps, item navEntry) {
 
 templ iconNavLink(p pageProps, item navEntry) {
 	{{ label := navLabel(p, item.Key) }}
-	<a href={ templ.URL(item.Path) } aria-label={ label } class={ "group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
+	<a href={ templ.URL(item.Path) } data-on:click__prevent={ navPatchExpr(item.Path) } aria-label={ label } class={ "group relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors", templ.KV("bg-surface-2 text-brand", navIsActive(p.Path, item.Path)), templ.KV("text-muted hover:bg-surface-2/50 hover:text-app", !navIsActive(p.Path, item.Path)), templ.KV("vt-slide", navIsActive(p.Path, item.Path)), templ.KV("nav-in-down", navIsActive(p.Path, item.Path) && p.NavDir == "down"), templ.KV("nav-in-up", navIsActive(p.Path, item.Path) && p.NavDir == "up") }>
 		@iconForNav(item.IconKey, "h-[18px] w-[18px]")
 		<span class="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-md border border-app bg-surface px-2 py-1 text-xs text-app group-hover:block">{ label }</span>
 	</a>
 }
 
 templ settingsIconLink(p pageProps, activeClass string, idleClass string) {
-	<a href="/ajustes" aria-label={ T(p.Lang, "nav.ajustes") } class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors", templ.KV(activeClass, navIsActive(p.Path, "/ajustes")), templ.KV(idleClass, !navIsActive(p.Path, "/ajustes")) }>
+	<a href="/ajustes" data-on:click__prevent={ navPatchExpr("/ajustes") } aria-label={ T(p.Lang, "nav.ajustes") } class={ "flex h-9 w-9 items-center justify-center rounded-lg transition-colors", templ.KV(activeClass, navIsActive(p.Path, "/ajustes")), templ.KV(idleClass, !navIsActive(p.Path, "/ajustes")) }>
 		@iconSettings("h-4 w-4")
 	</a>
 }
@@ -211,7 +217,8 @@ templ sidebarToggle(p pageProps, collapsed bool) {
 
 // rail: 64px icon-only sidebar for md (tablet).
 templ rail(p pageProps) {
-	<aside data-nav="rail" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
+	<aside data-nav="rail" id="nav-rail" class="fixed inset-y-0 left-0 z-40 hidden w-16 flex-col items-center border-r border-app bg-surface py-3 md:flex lg:hidden">
+		<!--#nav-rail-->
 		@logo(p, true)
 		<nav class="mt-4 flex flex-1 flex-col items-center gap-1" aria-label={ T(p.Lang, "nav.dashboard") }>
 			for _, item := range navEntriesFor(p.ChargerOn) {
@@ -221,15 +228,18 @@ templ rail(p pageProps) {
 		<div class="flex flex-col items-center gap-2">
 			@settingsIconLink(p, "bg-brand/15 text-brand", "border border-app bg-surface text-muted hover:text-app")
 		</div>
+		<!--/#nav-rail-->
 	</aside>
 }
 
 // topbarDesktop: title + date on the left, user on the right (md+).
 templ topbarDesktop(p pageProps) {
 	<header class={ "sticky top-0 z-30 hidden h-14 items-center justify-between border-b border-app bg-app/80 px-6 backdrop-blur-[16px] md:flex md:ml-16", templ.KV("lg:ml-16", p.Collapsed), templ.KV("lg:ml-[232px]", !p.Collapsed) }>
-		<div class="min-w-0">
+		<div class="min-w-0" id="page-head">
+			<!--#page-head-->
 			<h1 class="font-display text-lg font-semibold leading-tight tracking-[-0.01em] text-app">{ navLabel(p, titleKeyFor(p.Path)) }</h1>
 			<p class="text-[11px] capitalize leading-tight text-faint">{ p.DateText }</p>
+			<!--/#page-head-->
 		</div>
 		<div class="flex items-center gap-2">
 			@alertsBell(p)
@@ -242,7 +252,7 @@ templ topbarDesktop(p pageProps) {
 // headerMobile: logo + actions (<md).
 templ headerMobile(p pageProps) {
 	<header class="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-app bg-app/85 px-4 backdrop-blur-[16px] md:hidden [view-transition-name:helios-header]">
-		<a href="/" aria-label={ T(p.Lang, "nav.dashboard") } class="flex items-center gap-2">
+		<a href="/" data-on:click__prevent={ navPatchExpr("/") } aria-label={ T(p.Lang, "nav.dashboard") } class="flex items-center gap-2">
 			@brandLogo("helios-logo-header", "h-8 w-8")
 			<span class="font-display text-base font-semibold text-app">Helios</span>
 		</a>
@@ -256,12 +266,14 @@ templ headerMobile(p pageProps) {
 
 // bottomNav: scrollable icon row (<md).
 templ bottomNav(p pageProps) {
-	<nav data-nav="bottom" class="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden [view-transition-name:helios-nav]" aria-label={ T(p.Lang, "nav.dashboard") }>
+	<nav data-nav="bottom" id="nav-bottom" class="fixed bottom-0 left-0 right-0 z-50 border-t border-app bg-surface/85 pb-safe backdrop-blur-[16px] md:hidden [view-transition-name:helios-nav]" aria-label={ T(p.Lang, "nav.dashboard") }>
+		<!--#nav-bottom-->
 		<div class="flex h-16 overflow-x-auto no-scrollbar">
 			for _, item := range navEntriesFor(p.ChargerOn) {
 				@bottomNavItem(p, item)
 			}
 		</div>
+		<!--/#nav-bottom-->
 	</nav>
 }
 
@@ -271,6 +283,7 @@ templ bottomNavItem(p pageProps, item navEntry) {
 	if active {
 		<a
 			href={ templ.URL(item.Path) }
+			data-on:click__prevent={ navPatchExpr(item.Path) }
 			data-active="true"
 			aria-label={ label }
 			class={ "vt-slide relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1", templ.KV("nav-in-down", p.NavDir == "down"), templ.KV("nav-in-up", p.NavDir == "up") }
@@ -280,6 +293,7 @@ templ bottomNavItem(p pageProps, item navEntry) {
 	} else {
 		<a
 			href={ templ.URL(item.Path) }
+			data-on:click__prevent={ navPatchExpr(item.Path) }
 			aria-label={ label }
 			class="relative flex min-w-[64px] flex-1 flex-col items-center justify-center gap-1"
 		>
@@ -300,7 +314,7 @@ templ bottomNavItemInner(item navEntry, active bool, label string) {
 
 // userChip: avatar + username, links to Ajustes (webapp-shell canon).
 templ userChip(p pageProps) {
-	<a href="/ajustes" aria-label={ T(p.Lang, "nav.ajustes") } title={ T(p.Lang, "nav.ajustes") } class="flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-2.5 transition-colors hover:text-app">
+	<a href="/ajustes" data-on:click__prevent={ navPatchExpr("/ajustes") } aria-label={ T(p.Lang, "nav.ajustes") } title={ T(p.Lang, "nav.ajustes") } class="flex h-9 items-center gap-2 rounded-lg border border-app bg-surface px-2.5 transition-colors hover:text-app">
 		<span class="flex h-6 w-6 items-center justify-center rounded-full bg-brand/12 text-brand">
 			@iconUser("h-3.5 w-3.5")
 		</span>
@@ -311,7 +325,7 @@ templ userChip(p pageProps) {
 }
 
 templ logo(p pageProps, collapsed bool) {
-	<a href="/" aria-label={ T(p.Lang, "nav.dashboard") } class={ "flex h-16 shrink-0 items-center gap-2.5 rounded-xl px-4 transition-opacity hover:opacity-80", templ.KV("justify-center px-0", collapsed) }>
+	<a href="/" data-on:click__prevent={ navPatchExpr("/") } aria-label={ T(p.Lang, "nav.dashboard") } class={ "flex h-16 shrink-0 items-center gap-2.5 rounded-xl px-4 transition-opacity hover:opacity-80", templ.KV("justify-center px-0", collapsed) }>
 		@brandLogo("helios-logo-side", "h-9 w-9 shrink-0")
 		if !collapsed {
 			<div class="min-w-0">

@@ -333,3 +333,52 @@ func TestPeriodPatchBumpsRevision(t *testing.T) {
 		t.Fatal("revClass no alterna")
 	}
 }
+
+// TestNavPatchRendersFragments: la navegación sin recargar pide los fragmentos
+// (contenido, cabecera y estado del menú) en un solo SSE.
+func TestNavPatchRendersFragments(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "nav.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+	_, router := buildChargerUI(t, d, extensions.NewStore(), extensions.New(extensions.NewStore(), d, nil))
+	cookie := sessionCookie(t, doLogin(t, router, "nacho", "password1"))
+
+	req := httptest.NewRequest("GET", "/ui/nav?path=%2Fajustes", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"selector #page", "selector #page-head", "selector #nav-primary", "selector #nav-rail", "selector #nav-bottom", "Ajustes"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta %q en el parche de navegación", want)
+		}
+	}
+	// El ítem activo tiene que ser Ajustes, no Hoy.
+	if !strings.Contains(body, "bg-brand/15 text-brand") {
+		t.Fatal("el menú no marca Ajustes como activo")
+	}
+}
+
+// TestNavPatchUnknownPath: una ruta que no es del menú se rechaza (el cliente
+// cae a recarga completa).
+func TestNavPatchUnknownPath(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "nav2.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+	_, router := buildChargerUI(t, d, extensions.NewStore(), extensions.New(extensions.NewStore(), d, nil))
+	cookie := sessionCookie(t, doLogin(t, router, "nacho", "password1"))
+	req := httptest.NewRequest("GET", "/ui/nav?path=%2Fno-existe", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, quería 400", rec.Code)
+	}
+}

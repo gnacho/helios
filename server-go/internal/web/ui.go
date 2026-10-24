@@ -6,13 +6,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 	"github.com/starfederation/datastar-go/datastar"
 
@@ -139,8 +143,123 @@ func New(a *auth.Auth, database *db.DB, sol *solar.Solar, ha solar.HAReader, ins
 
 // Mount registers the page routes on the API router. JSON routes already
 // registered keep working: this only adds HTML routes.
+// navLog registra cada peticion de la UI (ruta, estado, duracion, agente y si
+// el navegador revalida) cuando HELIOS_NAV_LOG esta activo. Sirve para
+// diagnosticar problemas de pintado en un navegador concreto desde el servidor.
+func navLog(next http.Handler) http.Handler {
+	if os.Getenv("HELIOS_NAV_LOG") == "" {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		if r.Method == http.MethodGet {
+			ua := r.UserAgent()
+			if i := strings.Index(ua, ")"); i > 0 && i < 60 {
+				ua = ua[:i+1]
+			}
+			log.Printf("[nav] %s %d %s mode=%s inm=%t ua=%q",
+				r.URL.Path, rec.status, time.Since(start).Round(time.Millisecond),
+				r.Header.Get("Sec-Fetch-Mode"), r.Header.Get("If-None-Match") != "", ua)
+		}
+	})
+}
+
+// statusRecorder guarda el codigo de estado para el log de navegacion.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+// navPatchExpr is the Datastar expression that navigates without reloading the
+// document: it updates the URL, scrolls to the top and asks for the fragments
+// (content, page head and menu state). Over the network a full navigation waits
+// a round trip with a blank viewport in Firefox (measured: 114 ms TTFB to the
+// public domain); patching removes that wait and keeps the shell untouched.
+func navPatchExpr(path string) string {
+	// El pushState solo si la URL cambia: al volver con atras/adelante la ruta
+	// ya es la destino y un pushState ahi romperia la historia del navegador.
+	return "if (location.pathname !== '" + path + "') { history.pushState({}, '', '" + path +
+		"'); } window.scrollTo(0, 0); @get('/ui/nav?path=" + url.QueryEscape(path) + "')"
+}
+
+// pageHandlers maps the navigable paths to the handler that renders the page.
+func (u *UI) pageHandler(path string) http.HandlerFunc {
+	switch path {
+	case "/":
+		return u.handleDashboard
+	case "/inversores":
+		return u.handleInversores
+	case "/bateria":
+		return u.handleBateria
+	case "/historico":
+		return u.handleHistorico
+	case "/cargador":
+		return u.handleCargador
+	case "/ajustes":
+		return u.handleAjustes
+	}
+	return nil
+}
+
+// fragment returns the HTML between two markers of a rendered page.
+func fragment(html, name string) string {
+	open := "<!--#" + name + "-->"
+	close := "<!--/#" + name + "-->"
+	i := strings.Index(html, open)
+	if i < 0 {
+		return ""
+	}
+	j := strings.Index(html[i:], close)
+	if j < 0 {
+		return ""
+	}
+	return html[i+len(open) : i+j]
+}
+
+// handleNavPatch renders the target page and patches only the regions that
+// change: the content, the page head and the menu state. The shell (logo,
+// sidebar frame, top bar) is never re-created.
+func (u *UI) handleNavPatch(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("path")
+	handler := u.pageHandler(target)
+	if handler == nil {
+		http.Error(w, "ruta desconocida", http.StatusBadRequest)
+		return
+	}
+	// La pagina se renderiza con su propia ruta: de ahi salen el titulo y el
+	// elemento activo del menu.
+	r2 := r.Clone(r.Context())
+	r2.URL.Path = target
+	r2.URL.RawQuery = ""
+	rec := httptest.NewRecorder()
+	handler(rec, r2)
+	if rec.Code != http.StatusOK {
+		http.Error(w, "error al renderizar", http.StatusInternalServerError)
+		return
+	}
+	html := rec.Body.String()
+
+	gen := datastar.NewSSE(w, r)
+	for _, region := range []string{"page", "page-head", "nav-primary", "nav-rail", "nav-bottom"} {
+		body := fragment(html, region)
+		if body == "" {
+			continue
+		}
+		if err := gen.PatchElementTempl(templ.Raw(body), datastar.WithSelectorID(region), datastar.WithModeInner()); err != nil {
+			return
+		}
+	}
+}
+
 func (u *UI) Mount(r chi.Router) {
-	r.Get("/assets/*", u.handleAssets)
+	r.Get("/assets/*", navLog(http.HandlerFunc(u.handleAssets)).ServeHTTP)
 
 	r.Get("/login", u.handleLoginPage)
 	r.Post("/login", u.handleLoginSubmit)
@@ -154,6 +273,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/", u.handleDashboard)
 		r.Get("/ui/stream", u.handleStream)
 		r.Get("/ui/historico", u.handleHistoricoPatch)
+		r.Get("/ui/nav", navLog(http.HandlerFunc(u.handleNavPatch)).ServeHTTP)
 		r.Get("/ui/municipios", u.handleMunicipios)
 
 		r.Get("/inversores", u.handleInversores)

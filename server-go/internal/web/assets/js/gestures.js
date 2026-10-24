@@ -59,3 +59,19 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(function () {});
   });
 }
+
+// Navegacion sin recargar: al cambiar de menu se parchea el contenido y se
+// actualiza la URL con pushState, asi que atras/adelante deben volver a pedir
+// el fragmento. Si la ruta no es del menu (p.ej. un enlace con parametros), se
+// recarga la pagina entera.
+window.addEventListener("popstate", function () {
+  var path = window.location.pathname;
+  var enlaces = document.querySelectorAll('a[href="' + path + '"]');
+  for (var i = 0; i < enlaces.length; i++) {
+    if (enlaces[i].hasAttribute("data-on:click__prevent")) {
+      enlaces[i].click();
+      return;
+    }
+  }
+  window.location.reload();
+});
