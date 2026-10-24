@@ -14,6 +14,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp"
@@ -59,7 +62,10 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = kind
-	dst := resizeToHeight(src, chargerImageMaxHeight)
+	// Photos exported with a lot of empty canvas (transparent padding, or a
+	// plain white background) looked small inside the card: crop the border
+	// first so the car uses the full height, then cap the height.
+	dst := resizeToHeight(trimEmptyMargins(src), chargerImageMaxHeight)
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, dst); err != nil {
 		http.Redirect(w, r, fail, http.StatusSeeOther)
@@ -75,6 +81,164 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 		u.DB.Audit(username, userID, "charger.image", map[string]string{"charger": key})
 	}
 	http.Redirect(w, r, back, http.StatusSeeOther)
+}
+
+// bgTolerance is how far a pixel may stray from the border colour and still
+// count as empty background (0-255 per channel).
+const bgTolerance = 12
+
+// trimEmptyMargins crops the uniform border around the subject: transparent
+// pixels when the image has alpha, otherwise a plain colour taken from the
+// corners (the usual car photo on white). It keeps 2% of padding and leaves
+// the image untouched when the border is not even or when the crop would eat
+// most of the picture.
+func trimEmptyMargins(src image.Image) image.Image {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w < 16 || h < 16 {
+		return src
+	}
+	n := image.NewNRGBA(image.Rect(0, 0, w, h))
+	draw.Draw(n, n.Bounds(), src, b.Min, draw.Src)
+
+	// Alpha present anywhere means the padding (if any) is transparent.
+	transparent := false
+	for y := 0; y < h && !transparent; y++ {
+		row := n.Pix[y*n.Stride:]
+		for x := 0; x < w; x++ {
+			if row[x*4+3] < 250 {
+				transparent = true
+				break
+			}
+		}
+	}
+
+	var bg [3]byte
+	if !transparent {
+		corners := [4][2]int{{0, 0}, {w - 1, 0}, {0, h - 1}, {w - 1, h - 1}}
+		i := corners[0][1]*n.Stride + corners[0][0]*4
+		bg = [3]byte{n.Pix[i], n.Pix[i+1], n.Pix[i+2]}
+		for _, c := range corners[1:] {
+			j := c[1]*n.Stride + c[0]*4
+			if !closeTo(n.Pix[j:j+3], bg) {
+				return src // not a plain border, do not guess
+			}
+		}
+	}
+
+	inside := func(x, y int) bool {
+		i := y*n.Stride + x*4
+		if transparent {
+			return n.Pix[i+3] > 8
+		}
+		return !closeTo(n.Pix[i:i+3], bg)
+	}
+
+	minX, minY, maxX, maxY := w, h, -1, -1
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if !inside(x, y) {
+				continue
+			}
+			if x < minX {
+				minX = x
+			}
+			if x > maxX {
+				maxX = x
+			}
+			if y < minY {
+				minY = y
+			}
+			if y > maxY {
+				maxY = y
+			}
+		}
+	}
+	if maxX < 0 {
+		return src // nothing but border: leave it alone
+	}
+
+	cw, ch := maxX-minX+1, maxY-minY+1
+	if cw < w/4 || ch < h/4 {
+		return src // suspiciously small subject, keep the original
+	}
+	if cw >= w-2 && ch >= h-2 {
+		return src // nothing to trim
+	}
+
+	// Only crop when there is real air around the subject (4% of the side, at
+	// least 3 px). This also keeps the pass idempotent: the padding left by a
+	// previous crop (2%) never triggers another crop.
+	thX, thY := max(3, w/25), max(3, h/25)
+	left, right := minX, w-1-maxX
+	top, bottom := minY, h-1-maxY
+	if left < thX && right < thX && top < thY && bottom < thY {
+		return src
+	}
+
+	padX, padY := max(2, cw/50), max(2, ch/50)
+	rect := image.Rect(minX-padX, minY-padY, maxX+1+padX, maxY+1+padY).Intersect(b)
+	return n.SubImage(rect)
+}
+
+// closeTo reports whether an RGB pixel is within bgTolerance of the background.
+func closeTo(pix []byte, bg [3]byte) bool {
+	for i := 0; i < 3; i++ {
+		d := int(pix[i]) - int(bg[i])
+		if d < 0 {
+			d = -d
+		}
+		if d > bgTolerance {
+			return false
+		}
+	}
+	return true
+}
+
+// OptimizeStoredChargerImages re-crops the pictures already on disk. Uploads
+// made from the React app were only scaled in the canvas, so they keep a lot
+// of empty border and look small next to the actions. The crop is idempotent
+// (trimEmptyMargins leaves images that already fit alone) and it never
+// upscales, so running it on every start only touches the first time.
+func (u *UI) OptimizeStoredChargerImages() {
+	if u.DataDir == "" {
+		return
+	}
+	dir := filepath.Join(u.DataDir, "charger-images")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || strings.ToLower(filepath.Ext(entry.Name())) != ".png" {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		f, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		src, _, err := image.Decode(f)
+		f.Close()
+		if err != nil {
+			continue
+		}
+		dst := resizeToHeight(trimEmptyMargins(src), chargerImageMaxHeight)
+		if dst.Bounds().Size() == src.Bounds().Size() {
+			continue
+		}
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, dst); err != nil {
+			log.Printf("[charger-image] optimize %s: %v", entry.Name(), err)
+			continue
+		}
+		if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+			log.Printf("[charger-image] optimize %s: %v", entry.Name(), err)
+			continue
+		}
+		log.Printf("[charger-image] %s optimized %dx%d -> %dx%d", entry.Name(),
+			src.Bounds().Dx(), src.Bounds().Dy(), dst.Bounds().Dx(), dst.Bounds().Dy())
+	}
 }
 
 // resizeToHeight scales img down to at most h pixels of height (never up).

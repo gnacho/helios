@@ -145,6 +145,9 @@ func main() {
 		ui.RootFiles = srv.Static.ServeFileNoSPA
 		ui.DataDir = cfg.DataDir
 		ui.Push = pushSvc
+		// Las fotos subidas desde el React solo se escalaron: recorta el aire
+		// sobrante una vez para que ocupen el alto de la tarjeta.
+		ui.OptimizeStoredChargerImages()
 		srv.UI = ui
 		log.Printf("[helios] UI templ activada (HELIOS_UI=templ)")
 	}
