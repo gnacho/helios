@@ -78,6 +78,7 @@ type histDayChartModel struct {
 	HasNow      bool
 	ColorProd   string
 	ColorCons   string
+	Hover       []hoverCol
 }
 
 func buildHistoryDayChart(lang string, points []solar.DayPoint, nowMin int, hasNow bool, pal Palette) histDayChartModel {
@@ -105,6 +106,12 @@ func buildHistoryDayChart(lang string, points []solar.DayPoint, nowMin int, hasN
 	m.ProdLine = monotoneLine(prod)
 	m.ConsPath = areaPath(cons, baseline)
 	m.ConsLine = monotoneLine(cons)
+	m.Hover = dayHoverColumns(points, histX, hoverBox{histSideL, histW - histSideR, histTop, histH - histBottom}, func(p solar.DayPoint) []hoverRow {
+		return []hoverRow{
+			{Color: pal.Solar, Label: T(lang, "common.production"), Value: fmtKwVal(lang, p.Production) + " kW"},
+			{Color: pal.Consumo, Label: T(lang, "common.consumption"), Value: fmtKwVal(lang, p.Consumption) + " kW"},
+		}
+	})
 	return m
 }
 
@@ -138,6 +145,7 @@ type histBarsModel struct {
 	ColorProd   string
 	ColorCons   string
 	ColorAuto   string
+	Hover       []hoverCol
 }
 
 func histBarY(v, max float64) float64 {
@@ -271,6 +279,32 @@ func buildHistoryBars(lang string, p Period, today time.Time, days []db.DailyRow
 	if len(autoPts) > 1 {
 		m.AutoPath = monotoneLine(autoPts)
 		m.HasAuto = true
+	}
+	// Hover: una columna por grupo con producción, consumo y autoconsumo. La
+	// banda lleva el enlace del grupo, así el drill-down sigue funcionando.
+	var samplesB []hoverSample
+	for i, g := range groups {
+		if i >= len(m.Rows) {
+			break
+		}
+		auto := 0.0
+		if g.prod > 0 {
+			auto = g.autoSum / g.prod
+		}
+		rowsB := []hoverRow{
+			{Color: m.ColorProd, Label: T(lang, "common.production"), Value: fmtEnergy(lang, g.prod) + " kWh"},
+			{Color: m.ColorCons, Label: T(lang, "common.consumption"), Value: fmtEnergy(lang, g.cons) + " kWh"},
+		}
+		if auto > 0 {
+			rowsB = append(rowsB, hoverRow{Color: m.ColorAuto, Label: T(lang, "common.autoconsumo"), Value: fmtInt(lang, auto) + " %"})
+		}
+		samplesB = append(samplesB, hoverSample{X: m.Rows[i].AutoX, W: slot, Title: g.label, Rows: rowsB})
+	}
+	m.Hover = buildHoverCols(samplesB, hoverBox{histSideL, histW - histSideR, histTop, m.PlotBottomY})
+	for i := range m.Hover {
+		if i < len(m.Rows) {
+			m.Hover[i].Href = m.Rows[i].Href
+		}
 	}
 	return m
 }

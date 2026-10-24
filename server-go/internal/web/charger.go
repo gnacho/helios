@@ -76,6 +76,7 @@ type chgCurveModel struct {
 	TicksY      []chartTick
 	PlotRightX  float64
 	PlotBottomY float64
+	Hover       []hoverCol
 }
 
 type chgHistRow struct {
@@ -96,6 +97,7 @@ type chgHistModel struct {
 	PlotBottomY float64
 	ColorSolar  string
 	ColorGrid   string
+	Hover       []hoverCol
 }
 
 type chgChip struct {
@@ -314,6 +316,22 @@ func chgDayCurveChart(lang string, points []extensions.CurvePoint, color string)
 	}
 	m.AreaPath = areaPath(pts, chgCurveY(0, float64(m.YMax)))
 	m.LinePath = monotoneLine(pts)
+	// Hover: una columna por punto de la curva (potencia de ese instante).
+	stepC := (m.PlotRightX - 34) / 96
+	var samplesC []hoverSample
+	for _, p := range points {
+		samplesC = append(samplesC, hoverSample{
+			X:     chartXin(float64(p.T), chgCurveW),
+			W:     stepC,
+			Title: fmtTime(p.T),
+			Rows: []hoverRow{{
+				Color: color,
+				Label: T(lang, "cargador.currentPower"),
+				Value: fmtKwVal(lang, p.Kw) + " kW",
+			}},
+		})
+	}
+	m.Hover = buildHoverCols(samplesC, hoverBox{34, m.PlotRightX, 10, m.PlotBottomY})
 	return m
 }
 
@@ -383,6 +401,7 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 
 	yMaxF := 1.0
 	out := make([]chgHistRow, 0, len(rows))
+	var vals [][2]float64 // kWh totales y kWh solares por barra
 	for _, rw := range rows {
 		var kwh, pv, prod float64
 		for d := rw.from; !d.After(rw.to) && !d.After(today); d = d.AddDate(0, 0, 1) {
@@ -402,6 +421,7 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 			yMaxF = kwh
 		}
 		out = append(out, row)
+		vals = append(vals, [2]float64{kwh, pv})
 	}
 	m.YMax = int(math.Ceil(yMaxF))
 	m.TicksY = nil
@@ -445,6 +465,22 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 		}
 	}
 	m.Rows = out
+	// Hover: una columna por barra con lo solar y el resto (red y batería).
+	var samplesH []hoverSample
+	for i := range out {
+		if i >= len(vals) {
+			break
+		}
+		var rowsH []hoverRow
+		if vals[i][1] > 0 {
+			rowsH = append(rowsH, hoverRow{Color: m.ColorSolar, Label: T(lang, "cargador.fromSolar"), Value: fmtEnergy(lang, vals[i][1]) + " kWh"})
+		}
+		if rest := vals[i][0] - vals[i][1]; rest > 0 {
+			rowsH = append(rowsH, hoverRow{Color: m.ColorGrid, Label: T(lang, "cargador.fromGrid"), Value: fmtEnergy(lang, rest) + " kWh"})
+		}
+		samplesH = append(samplesH, hoverSample{X: out[i].X + out[i].BarW/2, W: slot, Title: out[i].Label, Rows: rowsH})
+	}
+	m.Hover = buildHoverCols(samplesH, hoverBox{34, chgHistW - 12, 10, m.PlotBottomY})
 	return m, true
 }
 

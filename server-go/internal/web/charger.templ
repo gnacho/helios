@@ -367,6 +367,7 @@ templ chgCurveSVG(c chgCurveModel) {
 				<path d={ c.AreaPath } fill="url(#chg-curve)"></path>
 				<path d={ c.LinePath } fill="none" stroke={ c.Color } stroke-width="2"></path>
 			}
+			@chartHoverLayer(c.Hover)
 		</svg>
 	</div>
 }
@@ -395,6 +396,7 @@ templ chgHistSVG(m chgHistModel) {
 				<text x={ r2(row.X + row.BarW/2) } y={ r2(chgCurveH - 2) } text-anchor="middle" font-size="11" fill="var(--text-faint)" font-family="Inter">{ row.Label }</text>
 			}
 		}
+		@chartHoverLayer(m.Hover)
 	</svg>
 }
 

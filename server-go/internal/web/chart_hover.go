@@ -50,6 +50,8 @@ type hoverCol struct {
 	TitleY       float64
 	Title        string
 	Rows         []hoverColRow
+	// Href makes the hover band the click area too (charts with drill-down).
+	Href string
 }
 
 // hoverSample is one tooltip's content before the layout is computed.

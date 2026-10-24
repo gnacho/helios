@@ -412,6 +412,7 @@ type last14Model struct {
 	Color       string
 	Bars        []last14Bar
 	PlotBottomY float64
+	Hover       []hoverCol
 }
 
 // topRoundedBarPath is a bar with rounded top corners (recharts radius [4,4,0,0]).
@@ -491,6 +492,15 @@ func buildLast14(lang string, rows []db.DailyRow, share float64, colorHex string
 			ShowLabel: i%2 == 1,
 		})
 	}
+	// Hover: una columna por día con lo producido por este inversor.
+	var samples14 []hoverSample
+	for _, bar := range m.Bars {
+		samples14 = append(samples14, hoverSample{
+			X: bar.X + bar.W/2, W: slot, Title: bar.Label,
+			Rows: []hoverRow{{Color: colorHex, Label: T(lang, "common.production"), Value: bar.KwhText + " kWh"}},
+		})
+	}
+	m.Hover = buildHoverCols(samples14, hoverBox{last14SideL, last14W - last14SideR, last14Top, m.PlotBottomY})
 	return m
 }
 

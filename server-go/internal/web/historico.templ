@@ -267,6 +267,7 @@ templ histDaySVG(c histDayChartModel) {
 			<line x1={ r2(c.NowX) } x2={ r2(c.NowX) } y1={ r2(histTop) } y2={ r2(c.PlotBottomY) } stroke="url(#hist-grad-now)" stroke-width="2"></line>
 			<text x={ r2(c.NowX + 4) } y={ r2(histTop + 10) } font-size="10" font-weight="700" fill="#F59E0B" font-family="Inter">{ T(c.Lang, "chart.now") }</text>
 		}
+		@chartHoverLayer(c.Hover)
 	</svg>
 }
 
@@ -309,6 +310,7 @@ templ histBarsSVG(m histBarsModel) {
 				}
 			</g>
 		}
+		@chartHoverLayer(m.Hover)
 	</svg>
 }
 

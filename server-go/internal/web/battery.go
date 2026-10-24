@@ -343,6 +343,7 @@ type weekDayBar struct {
 type weekBalanceModel struct {
 	Lang           string
 	Days           []weekDayBar
+	Hover          []hoverCol
 	TicksY         []chartTick
 	PlotBottomY    float64
 	ColorCharge    string
@@ -383,6 +384,27 @@ func buildWeekBalance(lang string, rows []db.DailyRow, pal Palette) weekBalanceM
 		}
 		m.Days = append(m.Days, bar)
 	}
+	// Hover: una columna por día con lo cargado y lo descargado.
+	var samples []hoverSample
+	for i, bar := range m.Days {
+		if i >= len(days) {
+			break
+		}
+		r := days[i]
+		title := bar.Label
+		if tt, ok := parseDayDate(r.Date); ok {
+			title = fmtDayMonth(lang, tt)
+		}
+		var rows []hoverRow
+		if c := derefF(r.BatteryChargedKwh); c > 0 {
+			rows = append(rows, hoverRow{Color: m.ColorCharge, Label: T(lang, "bateria.charge"), Value: fmtEnergy(lang, c) + " kWh"})
+		}
+		if d := derefF(r.BatteryDischargedKwh); d > 0 {
+			rows = append(rows, hoverRow{Color: m.ColorDischarge, Label: T(lang, "bateria.discharge"), Value: fmtEnergy(lang, d) + " kWh"})
+		}
+		samples = append(samples, hoverSample{X: bar.X + bar.BarW, W: slot, Title: title, Rows: rows})
+	}
+	m.Hover = buildHoverCols(samples, hoverBox{weekSideL, weekW - weekSideR, weekTop, m.PlotBottomY})
 	return m
 }
 

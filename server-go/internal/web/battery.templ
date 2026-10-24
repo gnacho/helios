@@ -287,6 +287,7 @@ templ weekBarsSVG(m weekBalanceModel) {
 				}
 				<text x={ r2(d.X + d.BarW + 1) } y={ r2(weekH - 6) } text-anchor="middle" font-size="12" fill="var(--text-faint)" font-family="Inter">{ d.Label }</text>
 			}
+			@chartHoverLayer(m.Hover)
 		</svg>
 	</div>
 }

@@ -110,11 +110,9 @@ templ dayChartSVGInner(c DayChartModel) {
 // chartHoverLayer renders the tooltip of every column: a transparent band that
 // reveals a dashed cursor and a pill with the values at that time (CSS :hover,
 // no client JS). It goes last so the pills paint over the series.
-templ chartHoverLayer(cols []hoverCol) {
-	for _, c := range cols {
-		<g class="cc-hover">
-			<rect class="cc-hit" x={ r2(c.BandX) } y="0" width={ r2(c.BandW) } height="100%"></rect>
-			<g class="cc-tip">
+// chartHoverTip is the cursor line plus the tooltip box of one hover column.
+templ chartHoverTip(c hoverCol) {
+	<g class="cc-tip">
 				<line x1={ r2(c.CursorX) } y1="0" x2={ r2(c.CursorX) } y2="100%" stroke="var(--text-faint)" stroke-width="1" stroke-dasharray="3 3" stroke-opacity="0.5"></line>
 				<rect x={ r2(c.TipX) } y={ r2(c.TipY) } width={ r2(c.TipW) } height={ r2(c.TipH) } rx="8" fill="var(--surface)" stroke="var(--line)"></rect>
 				<text x={ r2(c.TitleX) } y={ r2(c.TitleY) } font-size="11" font-weight="600" fill="var(--text)" font-family="Inter">{ c.Title }</text>
@@ -123,7 +121,24 @@ templ chartHoverLayer(cols []hoverCol) {
 					<text x={ r2(rw.LabelX) } y={ r2(rw.TextY) } font-size="11" fill="var(--text-muted)" font-family="Inter">{ rw.Label }</text>
 					<text x={ r2(rw.ValueX) } y={ r2(rw.TextY) } font-size="11" font-weight="600" fill="var(--text)" font-family="Inter" text-anchor="end">{ rw.Value }</text>
 				}
+	</g>
+}
+
+// chartHoverLayer is the hover overlay: one invisible band per column. When the
+// column carries an Href the band is a link, so the drill-down keeps working
+// (a plain band would swallow the click of the bar underneath).
+templ chartHoverLayer(cols []hoverCol) {
+	for _, c := range cols {
+		if c.Href != "" {
+			<a href={ templ.URL(c.Href) } class="cc-hover">
+				<rect class="cc-hit" x={ r2(c.BandX) } y="0" width={ r2(c.BandW) } height="100%"></rect>
+				@chartHoverTip(c)
+			</a>
+		} else {
+			<g class="cc-hover">
+				<rect class="cc-hit" x={ r2(c.BandX) } y="0" width={ r2(c.BandW) } height="100%"></rect>
+				@chartHoverTip(c)
 			</g>
-		</g>
+		}
 	}
 }
