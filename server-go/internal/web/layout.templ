@@ -18,6 +18,17 @@ templ head(p pageProps) {
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F6FA"/>
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#080D1A"/>
+	<!-- Primer pintado: la hoja externa bloquea el render, asi que Firefox
+	     pinta el documento nuevo antes de aplicarla y se veia un fogonazo del
+	     color equivocado al navegar (medido con la hoja retrasada: lienzo
+	     #F4F6FA en tema oscuro). En linea, ya con prefers-color-scheme. -->
+	<style>
+		html { background-color: #F4F6FA; color-scheme: light; }
+		html.dark { background-color: #080D1A; color-scheme: dark; }
+		@media (prefers-color-scheme: dark) {
+			html:not(.light) { background-color: #080D1A; color-scheme: dark; }
+		}
+	</style>
 	<link rel="preconnect" href="https://fonts.googleapis.com"/>
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"/>
@@ -32,6 +43,9 @@ templ head(p pageProps) {
 			var el = document.documentElement;
 			el.classList.toggle("dark", dark);
 			el.classList.toggle("light", !!m && !dark);
+			// Primer pintado sin fogonazo: el fondo y el color-scheme tambien
+			// en linea (con tema "auto" no lo puede poner el servidor).
+
 		})();
 	</script>
 	<script type="module" src={ templ.URL("/assets/js/datastar.js?v=" + p.AssetVer) }></script>

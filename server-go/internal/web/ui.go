@@ -480,6 +480,8 @@ func (u *UI) handleAppearance(w http.ResponseWriter, r *http.Request) {
 }
 
 // rootStyle renders the html style attr for density + accent overrides.
+// El fondo del primer pintado va en un <style> del head (ver layout.templ):
+// aqui no se puede expresar prefers-color-scheme.
 func rootStyle(p pageProps) string {
 	var b strings.Builder
 	if p.Density == "compact" {
