@@ -29,9 +29,9 @@ templ head(p pageProps) {
 			html:not(.light) { background-color: #080D1A; color-scheme: dark; }
 		}
 	</style>
-	<link rel="preconnect" href="https://fonts.googleapis.com"/>
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap"/>
+	<!-- Fuentes propias (autoalojadas): sin hoja de terceros que bloquee el render. -->
+	<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/Inter-latin.woff2" crossorigin="anonymous"/>
+	<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/SpaceGrotesk-latin.woff2" crossorigin="anonymous"/>
 	<link rel="stylesheet" href={ templ.URL("/assets/css/app.build.css?v=" + p.AssetVer) }/>
 	<script src={ templ.URL("/assets/js/gestures.js?v=" + p.AssetVer) } defer></script>
 	<script>

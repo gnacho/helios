@@ -2348,6 +2348,20 @@
     background-color: rgb(245 158 11 / 0.25);
   }
 }
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/assets/fonts/Inter-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/assets/fonts/SpaceGrotesk-latin.woff2") format("woff2");
+}
 @layer utilities {
   .bg-app {
     background-color: var(--bg);
