@@ -5,6 +5,18 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.3] - 2026-10-24
+
+### Fixed
+
+- **Fogonazo al cambiar de menú (visto en Firefox, tema oscuro).** Firefox pinta
+  el documento nuevo antes de aplicar la hoja de estilos externa, y el color de
+  fondo solo estaba en esa hoja: se veía un instante en blanco. Ahora el fondo y
+  el `color-scheme` van en un `<style>` en línea en el `head`, con
+  `prefers-color-scheme` para el tema automático. Medido retrasando la hoja 400
+  ms: el fotograma del primer pintado pasa de brillo 255 (blanco) a 13 (fondo
+  oscuro) en tema oscuro.
+
 ## [1.1.2] - 2026-10-24
 
 ### Fixed
