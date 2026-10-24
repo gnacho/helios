@@ -149,3 +149,50 @@ func TestMaxClientsRejected(t *testing.T) {
 		t.Fatalf("status = %d (esperado 429)", resp.StatusCode)
 	}
 }
+
+// TestBroadcastReachesDatastar: la UI templ solo suscribe en el pool Datastar,
+// sin clientes legacy. Broadcast salía antes de recorrer esa pool (early
+// return si h.clients estaba vacío), así que el stream se quedaba congelado en
+// el snapshot inicial y la página no se actualizaba nunca.
+func TestBroadcastReachesDatastar(t *testing.T) {
+	h := NewHub(func() []byte { return []byte(`{"n":1}`) })
+	ch := h.SubscribeDatastar()
+	if ch == nil {
+		t.Fatal("sin suscripción Datastar")
+	}
+	defer h.UnsubscribeDatastar(ch)
+
+	h.Broadcast()
+	select {
+	case payload := <-ch:
+		if string(payload) != `{"n":1}` {
+			t.Fatalf("payload = %q", payload)
+		}
+	case <-time.After(300 * time.Millisecond):
+		t.Fatal("el pool Datastar no recibió el broadcast")
+	}
+}
+
+// TestBroadcastDatastarConcurrentSubscribe: el broadcast no debe iterar el mapa
+// fuera del lock (carrera con subscribe/unsubscribe).
+func TestBroadcastDatastarConcurrentSubscribe(t *testing.T) {
+	h := NewHub(func() []byte { return []byte(`{}`) })
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 200; i++ {
+			ch := h.SubscribeDatastar()
+			if ch != nil {
+				h.UnsubscribeDatastar(ch)
+			}
+		}
+	}()
+	for i := 0; i < 200; i++ {
+		// Sin throttle: cada vuelta recorre las dos pools.
+		h.mu.Lock()
+		h.last = time.Time{}
+		h.mu.Unlock()
+		h.Broadcast()
+	}
+	<-done
+}

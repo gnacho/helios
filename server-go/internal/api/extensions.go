@@ -290,12 +290,3 @@ func (s *Server) handleDeleteChargerImage(w http.ResponseWriter, r *http.Request
 	s.DB.Audit(username, userID, "charger.image.clear", map[string]any{"charger": key})
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
-
-func indexOf(s string, b byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return i
-		}
-	}
-	return -1
-}

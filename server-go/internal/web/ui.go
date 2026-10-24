@@ -803,9 +803,11 @@ func loginURL(next string) string {
 	return "/login?next=" + url.QueryEscape(n)
 }
 
-// safeNext only allows local paths (no open redirects).
+// safeNext only allows local paths (no open redirects). The browser treats a
+// backslash as a slash, so "/\\evil.com" becomes "//evil.com": reject any
+// backslash, not just a leading "//".
 func safeNext(next string) string {
-	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
+	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") || strings.Contains(next, `\`) {
 		return "/"
 	}
 	return next

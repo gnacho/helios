@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"regexp"
 	"runtime"
@@ -1076,17 +1077,19 @@ func (u *UI) handleAjustesUserCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 // targetUserOf extracts {id} and enforces the admin guard like the API
-// handlers (same error shape via PRG).
-func (u *UI) targetUserOf(r *http.Request) (adminID, targetID string, ok bool) {
-	adminID, _, isAdmin := u.currentUserActor(r)
+// handlers (same error shape via PRG). Devuelve usuario E id del actor: el
+// guard de "no sobre uno mismo" comparaba el username con el id del objetivo y
+// nunca casaba, asi que un admin podia cambiarse el rol o borrarse a si mismo.
+func (u *UI) targetUserOf(r *http.Request) (adminUser, adminID, targetID string, ok bool) {
+	adminUser, adminID, isAdmin := u.currentUserActor(r)
 	targetID = chi.URLParam(r, "id")
-	return adminID, targetID, isAdmin && targetID != ""
+	return adminUser, adminID, targetID, isAdmin && targetID != ""
 }
 
 // handleAjustesUserSave applies language + role + optional password of one
 // user (wrappers of PUT /api/auth/users/{id}/language|role|password).
 func (u *UI) handleAjustesUserSave(w http.ResponseWriter, r *http.Request) {
-	admin, target, ok := u.targetUserOf(r)
+	adminUser, adminID, target, ok := u.targetUserOf(r)
 	if !ok {
 		ajustesRedirectFlag(w, r, "err", "forbidden")
 		return
@@ -1095,73 +1098,73 @@ func (u *UI) handleAjustesUserSave(w http.ResponseWriter, r *http.Request) {
 		ajustesRedirectFlag(w, r, "err", "users")
 		return
 	}
-	if admin == target {
+	if adminID == target {
 		// Sobre uno mismo: la API no permite role; password/language sí.
 		if pwd := r.PostFormValue("password"); pwd != "" {
 			if len(pwd) < 6 {
 				ajustesRedirectFlag(w, r, "err", "users")
 				return
 			}
-			u.adminSetUserPassword(admin, target, pwd)
+			u.adminSetUserPassword(adminUser, adminID, target, pwd)
 		}
 		if lang := r.PostFormValue("language"); lang != "" && validLangCode(lang) {
-			u.adminSetUserLanguage(admin, target, lang)
+			u.adminSetUserLanguage(adminUser, adminID, target, lang)
 		}
 		ajustesRedirectFlag(w, r, "saved", "users")
 		return
 	}
 	if lang := r.PostFormValue("language"); lang != "" && validLangCode(lang) {
-		u.adminSetUserLanguage(admin, target, lang)
+		u.adminSetUserLanguage(adminUser, adminID, target, lang)
 	}
 	if role := r.PostFormValue("role"); role == "user" || role == "admin" {
-		u.adminSetUserRole(admin, target, role)
+		u.adminSetUserRole(adminUser, adminID, target, role)
 	}
 	if pwd := r.PostFormValue("password"); pwd != "" {
 		if len(pwd) < 6 {
 			ajustesRedirectFlag(w, r, "err", "users")
 			return
 		}
-		u.adminSetUserPassword(admin, target, pwd)
+		u.adminSetUserPassword(adminUser, adminID, target, pwd)
 	}
 	ajustesRedirectFlag(w, r, "saved", "users")
 }
 
 // Same statements and audit actions as the API admin handlers.
-func (u *UI) adminSetUserPassword(admin, target, password string) {
+func (u *UI) adminSetUserPassword(adminUser, adminID, target, password string) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
 		return
 	}
 	if _, err := u.DB.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, string(hash), target); err == nil {
-		u.DB.Audit(admin, admin, "user.password.admin", map[string]string{"target": target})
+		u.DB.Audit(adminUser, adminID, "user.password.admin", map[string]string{"target": target})
 	}
 }
 
-func (u *UI) adminSetUserLanguage(admin, target, language string) {
+func (u *UI) adminSetUserLanguage(adminUser, adminID, target, language string) {
 	if _, err := u.DB.Exec(`UPDATE users SET language = ? WHERE id = ?`, language, target); err == nil {
-		u.DB.Audit(admin, admin, "user.language.admin", map[string]string{"target": target})
+		u.DB.Audit(adminUser, adminID, "user.language.admin", map[string]string{"target": target})
 	}
 }
 
-func (u *UI) adminSetUserRole(admin, target, role string) {
+func (u *UI) adminSetUserRole(adminUser, adminID, target, role string) {
 	if _, err := u.DB.Exec(`UPDATE users SET role = ? WHERE id = ?`, role, target); err == nil {
-		u.DB.Audit(admin, admin, "user.role.admin", map[string]string{"target": target, "role": role})
+		u.DB.Audit(adminUser, adminID, "user.role.admin", map[string]string{"target": target, "role": role})
 	}
 }
 
 // handleAjustesUserDelete deletes a user (wrapper of DELETE /api/auth/users/{id}).
 func (u *UI) handleAjustesUserDelete(w http.ResponseWriter, r *http.Request) {
-	admin, target, ok := u.targetUserOf(r)
+	adminUser, adminID, target, ok := u.targetUserOf(r)
 	if !ok {
 		ajustesRedirectFlag(w, r, "err", "forbidden")
 		return
 	}
-	if admin == target {
+	if adminID == target {
 		ajustesRedirectFlag(w, r, "err", "users")
 		return
 	}
 	if _, err := u.DB.Exec(`DELETE FROM users WHERE id = ?`, target); err == nil {
-		u.DB.Audit(admin, admin, "user.delete", map[string]string{"target": target})
+		u.DB.Audit(adminUser, adminID, "user.delete", map[string]string{"target": target})
 	}
 	ajustesRedirectFlag(w, r, "saved", "users")
 }
@@ -1213,7 +1216,9 @@ func (u *UI) handleAjustesPrices(w http.ResponseWriter, r *http.Request) {
 	parse := func(name string) (float64, bool) {
 		raw := strings.TrimSpace(strings.ReplaceAll(r.PostFormValue(name), ",", "."))
 		v, err := strconv.ParseFloat(raw, 64)
-		if err != nil || v < 0 || v > 10 {
+		// ParseFloat acepta "NaN" e "Inf": una comparación de rango normal es
+		// falsa para NaN y dejaba pasar el valor.
+		if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v < 0 || v > 10 {
 			return 0, false
 		}
 		return v, true

@@ -11,6 +11,7 @@ import (
 	"image"
 	_ "image/jpeg" // decode support for the upload accept list
 	"image/png"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -24,7 +25,16 @@ import (
 	"helios-server/internal/extensions"
 )
 
-const chargerImageMaxHeight = 460
+const (
+	chargerImageMaxHeight = 460
+	// Cota real de la subida. Va en el MaxBytesReader ANTES de leer nada:
+	// PostFormValue dispara ParseMultipartForm y consume el cuerpo entero, asi
+	// que poner el limite despues no limitaba nada.
+	chargerImageMaxBytes = 8 << 20
+	// Tope de pixeles: image.Decode reserva w*h*4 a partir de la cabecera, de
+	// modo que un PNG de 300 bytes con IHDR de 30000x30000 pide 3,6 GB.
+	chargerImageMaxPixels = 40_000_000
+)
 
 // handleChargerImageUpload stores a custom charger picture (multipart form).
 func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +44,12 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username, userID, _ := u.currentUserActor(r)
+	// El tope va antes de tocar el cuerpo: PostFormValue ya parsea el multipart.
+	r.Body = http.MaxBytesReader(w, r.Body, chargerImageMaxBytes)
+	if err := r.ParseMultipartForm(chargerImageMaxBytes); err != nil {
+		ajustesRedirectFlag(w, r, "err", "charger-image")
+		return
+	}
 	key := r.PostFormValue("charger")
 	if !extensions.SanitizeImageKey(key) {
 		http.Redirect(w, r, "/cargador", http.StatusSeeOther)
@@ -43,11 +59,6 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 	// back to the first charger).
 	back := "/cargador?tab=" + url.QueryEscape(key)
 	fail := back + "&imgerr=1"
-	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
-	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		ajustesRedirectFlag(w, r, "err", "charger-image")
-		return
-	}
 	f, _, err := r.FormFile("image")
 	if err != nil {
 		http.Redirect(w, r, fail, http.StatusSeeOther)
@@ -55,13 +66,23 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	src, kind, err := image.Decode(f)
+	raw, err := io.ReadAll(io.LimitReader(f, chargerImageMaxBytes+1))
+	if err != nil || len(raw) > chargerImageMaxBytes {
+		log.Printf("[charger-image] fichero demasiado grande o ilegible")
+		http.Redirect(w, r, fail, http.StatusSeeOther)
+		return
+	}
+	if !imageSizeOK(raw) {
+		log.Printf("[charger-image] imagen con demasiados pixeles, descartada")
+		http.Redirect(w, r, fail, http.StatusSeeOther)
+		return
+	}
+	src, _, err := image.Decode(bytes.NewReader(raw))
 	if err != nil {
 		log.Printf("[charger-image] decode %v", err)
 		http.Redirect(w, r, fail, http.StatusSeeOther)
 		return
 	}
-	_ = kind
 	// Photos exported with a lot of empty canvas (transparent padding, or a
 	// plain white background) looked small inside the card: crop the border
 	// first so the car uses the full height, then cap the height.
@@ -195,6 +216,16 @@ func closeTo(pix []byte, bg [3]byte) bool {
 	return true
 }
 
+// imageSizeOK reads only the header and rejects decompression bombs before the
+// decoder allocates width*height pixels.
+func imageSizeOK(raw []byte) bool {
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		return false
+	}
+	return cfg.Width > 0 && cfg.Height > 0 && cfg.Width*cfg.Height <= chargerImageMaxPixels
+}
+
 // OptimizeStoredChargerImages re-crops the pictures already on disk. Uploads
 // made from the React app were only scaled in the canvas, so they keep a lot
 // of empty border and look small next to the actions. The crop is idempotent
@@ -216,6 +247,15 @@ func (u *UI) OptimizeStoredChargerImages() {
 		path := filepath.Join(dir, entry.Name())
 		f, err := os.Open(path)
 		if err != nil {
+			continue
+		}
+		cfg, _, cerr := image.DecodeConfig(f)
+		if cerr != nil || cfg.Width*cfg.Height > chargerImageMaxPixels {
+			f.Close()
+			continue
+		}
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			f.Close()
 			continue
 		}
 		src, _, err := image.Decode(f)

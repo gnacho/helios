@@ -325,3 +325,40 @@ func TestAjustesUserCreateAndDelete(t *testing.T) {
 		t.Fatalf("delete sin admin debe dar forbidden, Location = %q", loc)
 	}
 }
+
+// TestAdminCannotChangeOwnRoleOrDeleteSelf: el guard comparaba username con id
+// del objetivo y nunca casaba, así que el POST manual (role=user) o un DELETE
+// sobre tu propio id se aplicaban.
+func TestAdminCannotChangeOwnRoleOrDeleteSelf(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "users.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+	_, router := buildChargerUI(t, d, extensions.NewStore(), extensions.New(extensions.NewStore(), d, nil))
+
+	me, err := d.GetUserByUsername("nacho")
+	if err != nil || me == nil {
+		t.Fatalf("usuario: %v", err)
+	}
+	cookie := sessionCookie(t, doLogin(t, router, "nacho", "password1"))
+
+	// Cambio de rol sobre uno mismo: se ignora.
+	req := httptest.NewRequest("POST", "/ajustes/users/"+me.ID, strings.NewReader("role=user"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if after, _ := d.GetUserByID(me.ID); after == nil || after.Role != "admin" {
+		t.Fatalf("se cambió el rol a uno mismo: %+v", after)
+	}
+
+	// Borrado sobre uno mismo: rechazado.
+	req = httptest.NewRequest("POST", "/ajustes/users/"+me.ID+"/delete", nil)
+	req.AddCookie(cookie)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if after, _ := d.GetUserByID(me.ID); after == nil {
+		t.Fatal("se borró a sí mismo")
+	}
+}

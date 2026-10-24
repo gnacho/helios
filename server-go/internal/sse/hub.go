@@ -75,7 +75,10 @@ func (h *Hub) UnsubscribeDatastar(ch chan []byte) {
 // Broadcast envía a todos los clientes respetando el throttle de 1 s.
 func (h *Hub) Broadcast() {
 	h.mu.Lock()
-	if len(h.clients) == 0 {
+	// Las dos pools cuentan: la UI templ solo usa dsClients, así que salir
+	// cuando no hay clientes legacy dejaba el stream de la UI congelado en el
+	// snapshot inicial (bug real: la página no se actualizaba nunca).
+	if len(h.clients) == 0 && len(h.dsClients) == 0 {
 		h.mu.Unlock()
 		return
 	}
@@ -88,6 +91,12 @@ func (h *Hub) Broadcast() {
 	clients := make([]*client, 0, len(h.clients))
 	for c := range h.clients {
 		clients = append(clients, c)
+	}
+	// Copia de la pool Datastar bajo el mismo lock: iterar el mapa fuera de él
+	// es una carrera con Subscribe/Unsubscribe (fatal error, no recuperable).
+	dsClients := make([]*client, 0, len(h.dsClients))
+	for c := range h.dsClients {
+		dsClients = append(dsClients, c)
 	}
 	h.mu.Unlock()
 
@@ -104,7 +113,7 @@ func (h *Hub) Broadcast() {
 	}
 
 	// Pool Datastar: payload crudo (el endpoint lo convierte en señales).
-	for c := range h.dsClients {
+	for _, c := range dsClients {
 		select {
 		case c.ch <- payload:
 		default:

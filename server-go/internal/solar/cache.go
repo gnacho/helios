@@ -1,6 +1,7 @@
 package solar
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -86,12 +87,24 @@ func (c *seriesCache) do(key string, ttl time.Duration, fn func() (DaySeries, er
 	c.inflight[key] = call
 	c.mu.Unlock()
 
-	call.val, call.err = fn()
+	// La liberación va en un defer: si fn entra en panic, sin esto la entrada
+	// se queda para siempre en inflight y todo el que pida esa clave se bloquea
+	// en <-call.done (servicio colgado hasta reiniciar).
+	defer func() {
+		p := recover()
+		if p != nil {
+			call.err = fmt.Errorf("cache %s: panic: %v", key, p)
+		}
+		c.mu.Lock()
+		delete(c.inflight, key)
+		c.mu.Unlock()
+		close(call.done)
+		if p != nil {
+			panic(p)
+		}
+	}()
 
-	c.mu.Lock()
-	delete(c.inflight, key)
-	c.mu.Unlock()
-	close(call.done)
+	call.val, call.err = fn()
 
 	if call.err == nil && len(call.val.Points) > 0 {
 		c.put(key, call.val, ttl)

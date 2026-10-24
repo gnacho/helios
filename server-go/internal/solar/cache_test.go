@@ -85,3 +85,26 @@ func (s *slowHA) StatisticsDuringPeriod(start, end string, ids []string, period 
 	time.Sleep(s.delay)
 	return s.fakeHA.StatisticsDuringPeriod(start, end, ids, period, types)
 }
+
+// TestCachePanicDoesNotPoisonKey: un panic dentro de fn no debe dejar la clave
+// bloqueada para siempre (los waiters se quedaban en <-call.done).
+func TestCachePanicDoesNotPoisonKey(t *testing.T) {
+	c := newSeriesCache()
+	func() {
+		defer func() { _ = recover() }()
+		_, _ = c.do("k", time.Minute, func() (DaySeries, error) { panic("boom") })
+	}()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if _, err := c.do("k", time.Minute, func() (DaySeries, error) { return DaySeries{}, nil }); err != nil {
+			t.Errorf("segunda llamada: %v", err)
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("la clave quedó bloqueada tras el panic")
+	}
+}

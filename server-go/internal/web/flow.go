@@ -8,16 +8,6 @@ import (
 	"helios-server/internal/solar"
 )
 
-// timeParseISO parses HA ISO timestamps (with or without fractional seconds).
-func timeParseISO(s string) (time.Time, error) {
-	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04:05.000000", "2006-01-02 15:04:05"} {
-		if t, err := time.ParseInLocation(layout, s, time.Local); err == nil {
-			return t, nil
-		}
-	}
-	return time.Time{}, fmt.Errorf("unparseable iso: %s", s)
-}
-
 // Flow diagram + sparkline geometry ported from EnergyFlowDiagram.tsx and
 // Sparkline.tsx.
 
@@ -161,15 +151,6 @@ func sunMinutes(live *solar.LiveData) (sunrise, sunset int) {
 	sunrise = pick(live.Sun.NextRising, sunrise)
 	sunset = pick(live.Sun.NextSetting, sunset)
 	return sunrise, sunset
-}
-
-// isoToMinutes parses an HA ISO timestamp into minutes-of-day (local time).
-func isoToMinutes(s string) (int, error) {
-	t, err := timeParseISO(s)
-	if err != nil {
-		return 0, err
-	}
-	return t.Hour()*60 + t.Minute(), nil
 }
 
 // sparklinePath builds a filled area path (0..max Y) for the given values,

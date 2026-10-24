@@ -336,9 +336,8 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 	}
 
 	type periodRow struct {
-		label         string
-		from, to      time.Time
-		kwh, pv, prod float64
+		label    string
+		from, to time.Time
 	}
 	var rows []periodRow
 	switch p {

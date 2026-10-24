@@ -35,12 +35,7 @@ var (
 	geomDashboard = chartGeom{855, 380}  // Dashboard DayChart (col-span-8 card, height 380)
 	geomInvDay    = chartGeom{757, 300}  // InverterDayChart in its col-span-8 card
 	geomCompare   = chartGeom{1160, 340} // CompareChart (height 340)
-	geomLast14    = chartGeom{1160, 240} // Last14 bars card
-	geomHist      = chartGeom{767, 320}  // HistoryChart in its col-span-8 card
-	geomBatPower  = chartGeom{570, 260}  // BatteryPowerChart (height 260)
 	geomBatSoc    = chartGeom{570, 280}  // SocDayChart (height 280)
-	geomBatWeek   = chartGeom{767, 240}  // battery weekly bars (height 240)
-	geomCharger   = chartGeom{1160, 220} // charger history chart (height 220)
 )
 
 func (g chartGeom) x(t float64) float64 {
