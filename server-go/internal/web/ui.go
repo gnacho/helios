@@ -344,7 +344,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/ui/inv", u.handleInvPatch)
 		r.Get("/ui/heat", u.handleHeatMetric)
 		r.Get("/ui/heat-day", u.handleHeatDay)
-	r.Post("/ui/alerts/dismiss", u.handleAlertDismiss)
+		r.Post("/ui/alerts/dismiss", u.handleAlertDismiss)
 		r.Get("/ui/nav", navLog(http.HandlerFunc(u.handleNavPatch)).ServeHTTP)
 		r.Get("/ui/municipios", u.handleMunicipios)
 
