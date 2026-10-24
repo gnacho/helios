@@ -282,16 +282,18 @@ templ invCompareHeroCard(v inversoresView, c *invCompareView) {
 	<section class="helios-card relative overflow-hidden shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "inversores.compareAria") }>
 		<div class="grid sm:grid-cols-2 lg:grid-cols-2">
 			for i, h := range c.Heroes {
-				<div class={ "flex flex-col gap-1 p-5 sm:p-6", templ.KV("border-t border-app lg:border-t-0 lg:border-l", i > 0) }>
-					<p class="flex items-center gap-2 text-sm font-semibold text-app">
+				<!-- Nombre, potencia y produccion de hoy en una sola fila centrada
+				     en la mitad; si no cabe (movil) se envuelve manteniendo el centro. -->
+				<div class={ "flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 p-5 text-center sm:p-6", templ.KV("border-t border-app lg:border-t-0 lg:border-l", i > 0) }>
+					<p class="flex items-center gap-2 whitespace-nowrap text-sm font-semibold text-app">
 						<span class="h-2.5 w-2.5 rounded-full" style={ "background-color: " + h.Color }></span>
 						{ h.Name } <span class="text-xs font-normal text-faint">{ h.KwpText }</span>
 					</p>
-					<p class="font-display text-[32px] font-semibold leading-tight tracking-[-0.01em]" style={ "color: " + h.Color } aria-live="off">
+					<p class="font-display text-[35px] font-semibold leading-none tracking-[-0.01em]" style={ "color: " + h.Color } aria-live="off">
 						<span data-text={ h.NowSignal }>{ h.NowText }</span>
 						<span class="text-[0.55em] font-medium text-faint">kW</span>
 					</p>
-					<p class="text-sm text-muted">
+					<p class="whitespace-nowrap text-sm text-muted">
 						{ h.TodayLabel } <span class="font-semibold text-app">{ h.KwhText } kWh</span>
 					</p>
 				</div>
