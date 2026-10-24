@@ -425,8 +425,14 @@ html.reduce-motion::view-transition-new(*) {
 
 /* Transiciones entre páginas (cross-document view transitions).
  * Degradación elegante: sin soporte, navegación normal. */
-@view-transition {
-  navigation: auto;
+/* Transicion de navegacion SOLO en movil. En escritorio el cross-fade
+ * capturaba la pagina entera (sidebar incluido: logo, menu, ajustes) y se veia
+ * un parpadeo en las zonas comunes que no cambian. Medido con screencast: las
+ * zonas estaticas cambiaban de pixeles entre 265 y 480 ms tras el clic. */
+@media (max-width: 767.98px) {
+  @view-transition {
+    navigation: auto;
+  }
 }
 
 /* El item activo entra desde la dirección del menú de donde venimos (fallback
