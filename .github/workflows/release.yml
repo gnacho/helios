@@ -68,7 +68,7 @@ jobs:
           REF="${{ github.ref_name }}"
           VERSION="${REF#v}"
           [ "${{ github.ref_type }}" = "tag" ] || VERSION="0.0.0-SNAPSHOT-${GITHUB_SHA::7}"
-          go build -trimpath -ldflags="-s -w -X main.appVersion=${VERSION}" \
+          go build -trimpath -ldflags="-s -w -X helios-server/internal/version.Version=${VERSION}" \
             -o "../helios_${VERSION}_linux_${{ matrix.arch }}" ./cmd/server
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
