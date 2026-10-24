@@ -2826,10 +2826,12 @@ html.reduce-motion .chg-photo {
   opacity: 1;
 }
 .anim-pie path {
-  transition: opacity .12s ease;
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  transition: transform 0.18s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .anim-pie path:hover {
-  opacity: .82;
+  transform: scale(1.06);
 }
 @property --tw-translate-x {
   syntax: "*";

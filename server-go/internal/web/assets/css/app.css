@@ -710,7 +710,15 @@ html.reduce-motion .chg-photo {
 .cc-tip { opacity: 0; pointer-events: none; transition: opacity .12s ease; }
 .cc-hover:hover .cc-tip { opacity: 1; }
 
-/* Donuts: el sector bajo el ratón se resalta (equivalente al activeIndex del
-   React en "¿De dónde vino tu energía?"). */
-.anim-pie path { transition: opacity .12s ease; }
-.anim-pie path:hover { opacity: .82; }
+/* Donuts: el sector bajo el ratón se agranda un poco (el React cambiaba el
+   activeShape por un radio exterior +6). El zoom escala alrededor del centro
+   del viewBox (100,100), que es el centro del donut, asi que el quesito crece
+   hacia fuera en todas las direcciones. */
+.anim-pie path {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  transition: transform 0.18s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.anim-pie path:hover {
+  transform: scale(1.06);
+}
