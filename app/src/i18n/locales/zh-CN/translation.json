@@ -194,6 +194,8 @@
     "tabsAria": "充电桩",
     "powerOn": "开启",
     "powerOff": "关闭",
+    "turningOn": "正在开启…",
+    "turningOff": "正在关闭…",
     "powerToastOn": "{{name}} 已开启",
     "powerToastOff": "{{name}} 已关闭",
     "amps": "充电电流",

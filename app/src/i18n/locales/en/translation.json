@@ -194,6 +194,8 @@
     "tabsAria": "Chargers",
     "powerOn": "Turn on",
     "powerOff": "Turn off",
+    "turningOn": "Turning on…",
+    "turningOff": "Turning off…",
     "powerToastOn": "{{name}} turned on",
     "powerToastOff": "{{name}} turned off",
     "amps": "Current (A)",

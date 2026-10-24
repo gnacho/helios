@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"strings"
+
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
 	"helios-server/internal/extensions"
@@ -23,6 +25,20 @@ import (
 
 // AMP_STEPS are the preset currents (IEC 61851 min 6 A).
 var AMP_STEPS = []int{6, 8, 10, 13, 16, 20, 25, 32}
+
+// Clases del boton de encendido en cada estado: van dentro de una expresion
+// Datastar (data-attr-class), asi que el color cambia sin esperar al servidor.
+// Los mismos literales aparecen en charger.templ (Tailwind los ve alli).
+const (
+	chgPowerOnClass  = "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50 bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
+	chgPowerOffClass = "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50 bg-brand text-white hover:opacity-90"
+)
+
+// jsQuote escapes a label so it can live inside a single-quoted JS string in a
+// Datastar attribute.
+func jsQuote(s string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(s, `\`, `\\`), "'", `\'`)
+}
 
 const chgCurveW = 1160.0 // charger day curve card is full width
 const chgHistW = 757.0   // charger history card is lg:col-span-8
@@ -109,6 +125,16 @@ type chgSingleView struct {
 	PowerLabel string
 	PowerTitle string
 	PowerClick string // Datastar expression
+	// Live expressions: la etiqueta, el title y el color siguen a la señal
+	// (asi el boton responde al instante y se corrige solo cuando HA confirma).
+	LabelExpr   string
+	TitleExpr   string
+	ClassExpr   string
+	PendingExpr string
+	PendingText string
+	// PendingClearExpr quita el estado "Encendiendo/Apagando" cuando HA ya
+	// refleja lo pedido, o tras 12 s si nunca llega.
+	PendingClearExpr string
 	// aria-pressed expressions
 	PressedExpr string
 
@@ -500,7 +526,8 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	if chg := u.chargerSignals(lang); chg != nil {
 		signals["chg"] = chg
 	}
-	signals["ui"] = map[string]any{"busy": false, "error": "", "charger": charger.Key, "action": "", "amps": nil}
+	signals["ui"] = map[string]any{"busy": false, "error": "", "charger": charger.Key, "action": "", "amps": nil,
+		"pending": "", "pendingAt": 0}
 	sigJSON, err := json.Marshal(signals)
 	if err != nil {
 		sigJSON = []byte("{}")
@@ -536,8 +563,21 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 		sv.ImageURL = charger.ImageURL
 	}
 
-	sv.PressedExpr = "$chg." + charger.Key + ".switchOn ? 'true' : 'false'"
-	sv.PowerClick = "$charger = '" + charger.Key + "'; $action = $chg." + charger.Key + ".switchOn ? 'off' : 'on'; $ui.error = ''; @post('/api/charger/action')"
+	key := charger.Key
+	sw := "$chg." + key + ".switchOn"
+	sv.PressedExpr = sw + " ? 'true' : 'false'"
+	// Feedback inmediato: al pulsar se marca el estado pedido ($ui.pending) y el
+	// boton se pinta como "Encendiendo/Apagando" hasta que HA confirma. Si el
+	// estado no llega (o falla), el intervalo del boton limpia pending.
+	sv.PowerClick = "$charger = '" + key + "'; $action = " + sw + " ? 'off' : 'on'; $ui.error = ''; " +
+		"$ui.pending = $action; $ui.pendingAt = Date.now(); @post('/api/charger/action')"
+	sv.LabelExpr = sw + " ? '" + jsQuote(T(lang, "cargador.powerOff")) + "' : '" + jsQuote(T(lang, "cargador.powerOn")) + "'"
+	sv.TitleExpr = sv.LabelExpr
+	sv.ClassExpr = sw + " ? '" + chgPowerOnClass + "' : '" + chgPowerOffClass + "'"
+	sv.PendingExpr = "$ui.pending == 'on' ? '" + jsQuote(T(lang, "cargador.turningOn")) + "' : '" + jsQuote(T(lang, "cargador.turningOff")) + "'"
+	sv.PendingText = T(lang, "cargador.turningOn")
+	sv.PendingClearExpr = "if ($ui.pending != '' && ((($ui.pending == 'on') == " + sw +
+		") || Date.now() - $ui.pendingAt > 12000)) { $ui.pending = '' }"
 	sv.PowerLabel = T(lang, "cargador.powerOn")
 	sv.PowerTitle = T(lang, "cargador.powerOn")
 	if hasLive && live.SwitchOn != nil {

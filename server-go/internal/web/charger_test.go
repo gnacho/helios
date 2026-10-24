@@ -14,6 +14,7 @@ import (
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
 	"helios-server/internal/extensions"
+	"helios-server/internal/ha"
 	"helios-server/internal/solar"
 )
 
@@ -119,6 +120,13 @@ func TestChargerAmpChipsAndPowerDisabled(t *testing.T) {
 	// las comillas simples del atributo: el navegador las decodifica).
 	if !strings.Contains(body, "@post") || !strings.Contains(body, "charger/action") {
 		t.Fatal("falta el @post al endpoint JSON")
+	}
+	// Live: la pagina abre el stream de senales (data-init es el plugin real
+	// de Datastar; data-on-load no existe y no hacia nada).
+	for _, want := range []string{"data-init=", "/ui/stream"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta %q en la pagina del cargador", want)
+		}
 	}
 	// Un solo cargador → sin tabs.
 	if strings.Contains(body, "Portátil") {
@@ -231,4 +239,82 @@ func buildChargerUI(t *testing.T, d *db.DB, extStore *extensions.Store, ext *ext
 	u.Mount(r)
 	r.NotFound(u.NotFound)
 	return u, r
+}
+
+// stubChargerHA devuelve estados fijos para el cargador (sin tocar HA real).
+type stubChargerHA struct{ states map[string]ha.EntityState }
+
+func (s stubChargerHA) GetState(id string) (ha.EntityState, bool) {
+	v, ok := s.states[id]
+	return v, ok
+}
+func (s stubChargerHA) IsConnected() bool { return true }
+func (s stubChargerHA) StatisticsDuringPeriod(string, string, []string, string, []string) (ha.Stats, error) {
+	return ha.Stats{}, nil
+}
+func (s stubChargerHA) HistoryDuringPeriod(string, string, string) ([]ha.HistoryRow, error) {
+	return nil, nil
+}
+func (s stubChargerHA) CallService(string, string, map[string]any) error { return nil }
+
+// TestChargerPowerButtonBindsSignals: con el switch conocido el boton se ata a
+// las senales con la sintaxis REAL de Datastar. data-attr-<name> (con guion) no
+// existe en esta version: el plugin es data-attr:<name>; con guion los enlaces
+// quedaban inertes (aria-pressed, title y color no cambiaban nunca).
+func TestChargerPowerButtonBindsSignals(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgbind.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "main", Name: "Pared", PowerID: "sensor.p",
+		EnergyTotalID: "sensor.et", AmpID: "number.amp", SwitchID: "switch.pared",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "password1", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"switch.pared": {State: "on", Attributes: map[string]any{}},
+		"sensor.p":     {State: "1.5", Attributes: map[string]any{}},
+		"sensor.et":    {State: "10", Attributes: map[string]any{}},
+		"number.amp":   {State: "10", Attributes: map[string]any{}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	u.RootFiles = func(w http.ResponseWriter, r *http.Request) bool { return false }
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	body := rec.Body.String()
+
+	for _, want := range []string{
+		"data-attr:disabled", "data-attr:aria-pressed", "data-attr:title", "data-attr:class",
+		"data-attr-class", // no debe quedar la sintaxis inerte
+		"$ui.pending", "data-on-interval__duration.500ms",
+	} {
+		got := strings.Contains(body, want)
+		if strings.HasPrefix(want, "data-attr-class") {
+			if got {
+				t.Fatalf("%q no existe en Datastar v1 (usa data-attr:<name>)", want)
+			}
+			continue
+		}
+		if !got {
+			t.Fatalf("falta %q en el boton de encendido", want)
+		}
+	}
 }

@@ -194,6 +194,8 @@
     "tabsAria": "Cargadores",
     "powerOn": "Encender",
     "powerOff": "Apagar",
+    "turningOn": "Encendiendo…",
+    "turningOff": "Apagando…",
     "powerToastOn": "{{name}} encendido",
     "powerToastOff": "{{name}} apagado",
     "amps": "Amperaje",

@@ -54,7 +54,7 @@ templ DashboardPage(d dashboardView) {
 	@shellLayout(d.pageProps) {
 		<div
 			data-signals={ d.Signals }
-			data-on-load={ "@get('/ui/stream')" }
+			data-init={ "@get('/ui/stream')" }
 			class="w-full"
 		>
 			<div class="grid grid-cols-12 gap-4 lg:gap-5">

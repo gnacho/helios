@@ -12,7 +12,7 @@ import (
 
 templ ChargerPage(v chargerView) {
 	@shellLayout(v.pageProps) {
-		<div data-signals={ v.Signals } class="w-full">
+		<div data-signals={ v.Signals } data-init={ "@get('/ui/stream')" } class="w-full">
 			<div class="flex flex-col gap-4 lg:gap-5">
 				if len(v.Tabs) > 1 {
 					@chgTabs(v)
@@ -200,17 +200,29 @@ templ chgHero(v chargerView, s *chgSingleView) {
 			</div>
 			<div class="flex min-w-0 flex-1 flex-col justify-center gap-5">
 				if s.PowerKnown {
+					<!-- El estado, el color y la etiqueta siguen a la señal: al
+					     pulsar cambia al instante y muestra "Encendiendo…" hasta
+					     que HA confirma (o 12 s sin noticias). -->
 					<button
 						type="button"
 						data-on:click={ s.PowerClick }
 						data-indicator="$ui.busy"
-						data-attr-disabled="$ui.busy"
-						data-attr-aria-pressed={ s.PressedExpr }
+						data-on-interval__duration.500ms={ s.PendingClearExpr }
+						data-attr:disabled={ "$ui.busy || $ui.pending != ''" }
+						data-attr:aria-pressed={ s.PressedExpr }
+						data-attr:title={ s.TitleExpr }
+						data-attr:class={ s.ClassExpr }
 						title={ s.PowerTitle }
 						class={ "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50", templ.KV("bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400", s.PowerOn), templ.KV("bg-brand text-white hover:opacity-90", !s.PowerOn) }
 					>
-						@iconPower("h-5 w-5")
-						{ s.PowerLabel }
+						<span class="contents" data-show="$ui.pending == ''">
+							@iconPower("h-5 w-5")
+							<span data-text={ s.LabelExpr }>{ s.PowerLabel }</span>
+						</span>
+						<span class="contents" data-show="$ui.pending != ''">
+							@iconLoaderCircle("h-5 w-5 animate-spin")
+							<span data-text={ s.PendingExpr }>{ s.PendingText }</span>
+						</span>
 					</button>
 				} else {
 					<button
@@ -235,7 +247,7 @@ templ chgHero(v chargerView, s *chgSingleView) {
 									aria-pressed="true"
 									data-on:click={ chip.ClickExpr }
 									data-indicator="$ui.busy"
-									data-attr-disabled={ "$ui.busy" }
+									data-attr:disabled={ "$ui.busy" }
 									class="inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-brand bg-brand/10 px-2 text-xs font-semibold tabular-nums text-brand transition-colors disabled:opacity-50"
 								>
 									{ chip.AmpsText }
@@ -246,7 +258,7 @@ templ chgHero(v chargerView, s *chgSingleView) {
 									aria-pressed="false"
 									data-on:click={ chip.ClickExpr }
 									data-indicator="$ui.busy"
-									data-attr-disabled={ "$ui.busy" }
+									data-attr:disabled={ "$ui.busy" }
 									class="inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-app bg-surface px-2 text-xs font-semibold tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
 								>
 									{ chip.AmpsText }

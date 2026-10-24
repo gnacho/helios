@@ -157,7 +157,7 @@ func TestDashboardPageRenders(t *testing.T) {
 	body := rec.Body.String()
 	for _, want := range []string{
 		`data-signals=`,
-		`data-on-load=`,
+		`data-init=`,
 		`ui/stream`,
 		`$kpis.productionKwh`,
 		`$live.productionKw`,
