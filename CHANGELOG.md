@@ -5,6 +5,37 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.1] - 2026-10-24
+
+Auditoría de la 1.1 (staticcheck, govulncheck, `go test -race` y revisión de las
+fronteras de entrada).
+
+### Fixed
+
+- **La interfaz no se actualizaba sola.** El hub de SSE salía del broadcast
+  cuando no había clientes de la API antigua, y la UI nueva suscribe en otra
+  pool: el stream solo entregaba el estado inicial. Además esa segunda pool se
+  recorría fuera del mutex, con riesgo de `fatal error: concurrent map
+  iteration and map write`.
+- **El límite de 8 MB de la foto del cargador no existía.** Se instalaba
+  después de leer el formulario, que ya había consumido la petición entera.
+  Ahora el tope va antes y además se rechazan las imágenes con más de 40
+  megapíxeles antes de decodificarlas (un PNG de 300 bytes podía pedir 3,6 GB).
+- Tres vulnerabilidades en `golang.org/x/image` (decodificación WebP/VP8L)
+  corregidas subiendo a v0.47.0.
+- El caché de series podía quedarse bloqueado para siempre si una consulta
+  entraba en pánico: la liberación del single-flight no estaba en un `defer`.
+- Un administrador podía cambiarse el rol o borrar su propia cuenta: el guard
+  de "no sobre uno mismo" comparaba el nombre de usuario con el id del
+  objetivo. De paso, el `user_id` de esas entradas de auditoría ya es el id.
+- Precios con `NaN`/`Inf` pasaban la validación de rango.
+- Redirección abierta por barra invertida (`/\host`) en los endpoints sin
+  sesión.
+
+### Changed
+
+- Limpieza del código muerto que marcaba `staticcheck`.
+
 ## [1.1.0] - 2026-10-24
 
 ### Added
