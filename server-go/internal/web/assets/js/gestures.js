@@ -42,3 +42,12 @@
     location.assign(url.pathname + url.search);
   }, { passive: true });
 })();
+
+// Autosubmit de inputs de fichero (picker de foto del cargador): sin esto el
+// navegador no envía nada hasta pulsar un botón y el gesto queda a medias.
+document.addEventListener("change", function (e) {
+  var el = e.target;
+  if (el && el.matches && el.matches("input[data-autosubmit]") && el.form) {
+    el.form.requestSubmit();
+  }
+});

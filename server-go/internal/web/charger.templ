@@ -175,16 +175,13 @@ templ chgHero(v chargerView, s *chgSingleView) {
 				{ s.Chip.Text }
 			</span>
 			if v.IsAdmin {
-				<form method="post" action="/cargador/charger-image" enctype="multipart/form-data" class="ml-auto flex items-center gap-1.5">
+				<!-- Como el React: solo el icono; al elegir la foto se sube sola. -->
+				<form method="post" action="/cargador/charger-image" enctype="multipart/form-data" class="ml-auto">
 					<input type="hidden" name="charger" value={ s.Key }/>
-					<label class="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app bg-surface px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app" title={ T(v.Lang, "cargador.imageEdit") }>
-						@iconImagePlus("h-[14px] w-[14px]")
-						<span class="hidden sm:inline">{ T(v.Lang, "cargador.imageEdit") }</span>
-						<input type="file" name="image" accept="image/png,image/jpeg,image/webp" class="sr-only" required/>
+					<label class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app" title={ T(v.Lang, "cargador.imageEdit") } aria-label={ T(v.Lang, "cargador.imageEdit") }>
+						@iconImagePlus("h-[15px] w-[15px]")
+						<input type="file" name="image" accept="image/png,image/jpeg,image/webp" class="sr-only" required data-autosubmit/>
 					</label>
-					<button type="submit" class="inline-flex h-8 items-center justify-center rounded-lg border border-app bg-surface px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-app">
-						{ T(v.Lang, "common.save") }
-					</button>
 				</form>
 			}
 		</div>
