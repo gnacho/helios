@@ -780,7 +780,6 @@ func themeStateName(theme string) string {
 	return "auto"
 }
 
-
 // handleMunicipios patches the location datalist with the matches for ?q.
 func (u *UI) handleMunicipios(w http.ResponseWriter, r *http.Request) {
 	items := searchMunicipios(r.URL.Query().Get("q"), 8)

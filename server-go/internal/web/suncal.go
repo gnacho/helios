@@ -10,12 +10,12 @@ import (
 // minutes match the original to the minute.
 
 const (
-	sunRad    = math.Pi / 180
-	sunJ0     = 0.0009
-	sunJ1970  = 2440588.0
-	sunJ2000  = 2451545.0
-	sunDayMs  = 86400000.0
-	sunOblq   = 23.4397 // obliquity of the Earth
+	sunRad   = math.Pi / 180
+	sunJ0    = 0.0009
+	sunJ1970 = 2440588.0
+	sunJ2000 = 2451545.0
+	sunDayMs = 86400000.0
+	sunOblq  = 23.4397 // obliquity of the Earth
 )
 
 // sunToDays is SunCalc's toDays(): days since J2000.
@@ -63,7 +63,7 @@ func SunTimes(t time.Time, lat, lon float64) (sunrise, sunset int, ok bool) {
 		return 0, 0, false
 	}
 	w := math.Acos(cosW)
-	jSet := sunJ2000 + (sunJ0+(w+lw)/(2*math.Pi)+n) + 0.0053*math.Sin(m) - 0.0069*math.Sin(2*l)
+	jSet := sunJ2000 + (sunJ0 + (w+lw)/(2*math.Pi) + n) + 0.0053*math.Sin(m) - 0.0069*math.Sin(2*l)
 	jRise := jNoon - (jSet - jNoon)
 
 	rise := sunFromJulian(jRise).In(t.Location())
