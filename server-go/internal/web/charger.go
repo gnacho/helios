@@ -645,7 +645,7 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	// Selector del cargador: mismas pestañas que el React (semana/mes/año, sin
 	// día) y TODAS las URLs apuntan a /cargador conservando el cargador activo
 	// (antes solo la de semana lo hacía y el resto saltaba al Histórico).
-	sv.Sel = buildPeriodSelector(lang, period, anchor, today)
+	sv.Sel = buildPeriodSelector(lang, period, anchor, today, 0)
 	tabKey := charger.Key
 	chgTabAnchor := func(p Period) time.Time {
 		if p == PeriodSemana {

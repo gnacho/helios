@@ -588,7 +588,7 @@ type periodSelectorView struct {
 	PatchToday string
 }
 
-func buildPeriodSelector(lang string, period Period, anchor, today time.Time) periodSelectorView {
+func buildPeriodSelector(lang string, period Period, anchor, today time.Time, rev int) periodSelectorView {
 	v := periodSelectorView{
 		Lang:      lang,
 		PrevURL:   histURL(period, shiftAnchor(period, anchor, -1)),
@@ -600,7 +600,10 @@ func buildPeriodSelector(lang string, period Period, anchor, today time.Time) pe
 		PrevAria:  T(lang, "historico.prevAria"),
 		NextAria:  T(lang, "historico.nextAria"),
 	}
-	cur := ""
+	// Cada parche lleva la revisión siguiente: al alternar rev-a/rev-b cambia
+	// el nombre de la animación y el navegador la reinicia aunque Datastar
+	// reutilice los nodos (si no, las barras nuevas salen ya crecidas).
+	cur := "&rev=" + strconv.Itoa(rev+1)
 	for _, p := range []Period{PeriodDia, PeriodSemana, PeriodMes, PeriodAno} {
 		a := initialAnchor(p, today)
 		v.Tabs = append(v.Tabs, periodTabView{
@@ -615,6 +618,15 @@ func buildPeriodSelector(lang string, period Period, anchor, today time.Time) pe
 	v.PatchNext = historicoPatchExpr(period, shiftAnchor(period, anchor, 1), cur)
 	v.PatchToday = historicoPatchExpr(period, initialAnchor(period, today), cur)
 	return v
+}
+
+// revClass alternates the two animation-name sets so a Datastar patch restarts
+// every chart animation even when the morph reuses the nodes.
+func revClass(rev int) string {
+	if rev%2 == 0 {
+		return "rev-a"
+	}
+	return "rev-b"
 }
 
 // historicoPatchExpr is the Datastar call that swaps the body in place (no page
@@ -710,6 +722,8 @@ type historicoView struct {
 
 	Selector periodSelectorView
 	Rev      string // revisión (periodo+ancla): fuerza recrear el DOM parcheado
+	RevClass string // rev-a / rev-b: reinicia las animaciones al parchear
+	RevNum   int    // contador de parches (se pasa al siguiente en los enlaces)
 	Kpis     []histKpiView
 
 	Day    histDayChartModel
@@ -734,6 +748,10 @@ func (u *UI) handleHistorico(w http.ResponseWriter, r *http.Request) {
 // handleHistoricoPatch answers the Datastar period navigation: it swaps
 // #hist-body in place so the page scroll never moves, with a horizontal slide
 // towards the direction of the new period.
+//
+// Mode outer (morph) keeps the nodes, so the scroll anchoring does not jump
+// when the year view adds its heatmap. The chart animations still restart
+// because every patch flips the rev-a/rev-b class (see revClass).
 func (u *UI) handleHistoricoPatch(w http.ResponseWriter, r *http.Request) {
 	v := u.buildHistoricoView(r)
 	gen := datastar.NewSSE(w, r)
@@ -753,6 +771,7 @@ func (u *UI) buildHistoricoView(r *http.Request) historicoView {
 	if ps, ok := periodOf(r.URL.Query().Get("period")); ok {
 		period = ps
 	}
+	revNum, _ := strconv.Atoi(r.URL.Query().Get("rev"))
 	anchor := initialAnchor(period, today)
 	if a, err := time.ParseInLocation("2006-01-02", r.URL.Query().Get("anchor"), time.Local); err == nil {
 		anchor = startOfDay(a)
@@ -764,9 +783,11 @@ func (u *UI) buildHistoricoView(r *http.Request) historicoView {
 		Period:      period,
 		Subtitle:    periodSubtitle(period, anchor, lang),
 		IsDay:       period == PeriodDia,
-		Selector:    buildPeriodSelector(lang, period, anchor, today),
+		Selector:    buildPeriodSelector(lang, period, anchor, today, revNum),
 		BackToToday: histURL(period, initialAnchor(period, today)),
 		Rev:         string(period) + "-" + anchor.Format("2006-01-02"),
+		RevNum:      revNum,
+		RevClass:    revClass(revNum),
 	}
 
 	var hist []db.DailyRow

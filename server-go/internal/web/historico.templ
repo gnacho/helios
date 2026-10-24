@@ -22,7 +22,7 @@ templ historicoBody(v historicoView) {
 		<!-- El id de revisión cambia con periodo/ancla: Datastar morphea el
 		     parche y, al no poder emparejar este nodo, lo recrea entero (así
 		     se reinician TODAS las animaciones: barras, areas, donut). -->
-		<div id={ "hist-rev-" + v.Rev } class="flex w-full flex-col gap-4 lg:gap-5">
+		<div id={ "hist-rev-" + v.Rev } class={ "flex w-full flex-col gap-4 lg:gap-5", v.RevClass }>
 			<header class="flex flex-wrap items-center gap-3">
 				<div class="mr-auto">
 					<h1 class="font-display text-2xl font-semibold tracking-[-0.01em] text-app">{ T(v.Lang, "historico.title") }</h1>

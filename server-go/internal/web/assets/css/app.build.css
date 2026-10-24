@@ -2586,6 +2586,52 @@ html:not(.reduce-motion) .gauge-sweep {
 html:not(.reduce-motion) .sun-g {
   animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
 }
+html:not(.reduce-motion) .rev-b svg.anim-bars .bar-up, html:not(.reduce-motion) .rev-b svg.anim-bars .bar-down {
+  animation-name: bar-grow-b;
+}
+html:not(.reduce-motion) .rev-b svg.anim-pie {
+  animation-name: pie-in-b;
+}
+html:not(.reduce-motion) .rev-b svg.anim-draw {
+  animation-name: chart-reveal-b;
+}
+html:not(.reduce-motion) .rev-b .anim-share {
+  animation-name: share-grow-b;
+}
+@keyframes chart-reveal-b {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes bar-grow-b {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes pie-in-b {
+  from {
+    transform: scale(0.55) rotate(-30deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+@keyframes share-grow-b {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
 @property --sun-travel {
   syntax: "<percentage>";
   inherits: false;

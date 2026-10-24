@@ -312,3 +312,24 @@ func historicoTestUI(t *testing.T) (*UI, *chi.Mux) {
 	r.NotFound(u.NotFound)
 	return u, r
 }
+
+// TestPeriodPatchBumpsRevision: cada parche lleva la revisión siguiente para
+// que el bloque alterno de clase (rev-a/rev-b) y las animaciones se reinicien.
+func TestPeriodPatchBumpsRevision(t *testing.T) {
+	today := startOfDay(time.Now())
+	sel := buildPeriodSelector("es", PeriodMes, today, today, 3)
+	if len(sel.Tabs) != 4 {
+		t.Fatalf("tabs = %d", len(sel.Tabs))
+	}
+	for _, tab := range sel.Tabs {
+		if !strings.Contains(tab.Patch, "rev=4") {
+			t.Fatalf("el parche de %s no lleva rev=4: %s", tab.Key, tab.Patch)
+		}
+	}
+	if !strings.Contains(sel.PatchPrev, "rev=4") || !strings.Contains(sel.PatchToday, "rev=4") {
+		t.Fatalf("flechas/hoy sin revisión: %q %q", sel.PatchPrev, sel.PatchToday)
+	}
+	if revClass(0) != "rev-a" || revClass(1) != "rev-b" || revClass(2) != "rev-a" {
+		t.Fatal("revClass no alterna")
+	}
+}
