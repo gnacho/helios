@@ -13,6 +13,7 @@ import (
 	"image/png"
 	"log"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp"
@@ -32,9 +33,13 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 	username, userID, _ := u.currentUserActor(r)
 	key := r.PostFormValue("charger")
 	if !extensions.SanitizeImageKey(key) {
-		http.Redirect(w, r, "/cargador?imgerr=1", http.StatusSeeOther)
+		http.Redirect(w, r, "/cargador", http.StatusSeeOther)
 		return
 	}
+	// PRG back to the SAME charger tab (a photo upload from c2 used to jump
+	// back to the first charger).
+	back := "/cargador?tab=" + url.QueryEscape(key)
+	fail := back + "&imgerr=1"
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
 		ajustesRedirectFlag(w, r, "err", "charger-image")
@@ -42,7 +47,7 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	f, _, err := r.FormFile("image")
 	if err != nil {
-		http.Redirect(w, r, "/cargador?imgerr=1", http.StatusSeeOther)
+		http.Redirect(w, r, fail, http.StatusSeeOther)
 		return
 	}
 	defer f.Close()
@@ -50,26 +55,26 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 	src, kind, err := image.Decode(f)
 	if err != nil {
 		log.Printf("[charger-image] decode %v", err)
-		http.Redirect(w, r, "/cargador?imgerr=1", http.StatusSeeOther)
+		http.Redirect(w, r, fail, http.StatusSeeOther)
 		return
 	}
 	_ = kind
 	dst := resizeToHeight(src, chargerImageMaxHeight)
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, dst); err != nil {
-		http.Redirect(w, r, "/cargador?imgerr=1", http.StatusSeeOther)
+		http.Redirect(w, r, fail, http.StatusSeeOther)
 		return
 	}
 	dataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
 	if ok, msg := u.Ext.SaveChargerImage(u.DataDir, key, dataURL); !ok {
 		log.Printf("[charger-image] save: %s", msg)
-		http.Redirect(w, r, "/cargador?imgerr=1", http.StatusSeeOther)
+		http.Redirect(w, r, fail, http.StatusSeeOther)
 		return
 	}
 	if u.DB != nil {
 		u.DB.Audit(username, userID, "charger.image", map[string]string{"charger": key})
 	}
-	http.Redirect(w, r, "/cargador", http.StatusSeeOther)
+	http.Redirect(w, r, back, http.StatusSeeOther)
 }
 
 // resizeToHeight scales img down to at most h pixels of height (never up).
