@@ -1898,6 +1898,9 @@
     .sm\:mx-5 {
       margin-inline: calc(var(--spacing) * 5);
     }
+    .sm\:mx-auto {
+      margin-inline: auto;
+    }
     .sm\:block {
       display: block;
     }
@@ -1915,6 +1918,9 @@
     }
     .sm\:w-\[184px\] {
       width: 184px;
+    }
+    .sm\:max-w-\[430px\] {
+      max-width: 430px;
     }
     .sm\:min-w-\[110px\] {
       min-width: 110px;
@@ -2040,20 +2046,11 @@
     .lg\:w-\[42\%\] {
       width: 42%;
     }
-    .lg\:w-\[210px\] {
-      width: 210px;
-    }
-    .lg\:w-\[420px\] {
-      width: 420px;
-    }
     .lg\:w-auto {
       width: auto;
     }
     .lg\:w-fit {
       width: fit-content;
-    }
-    .lg\:flex-1 {
-      flex: 1;
     }
     .lg\:flex-none {
       flex: none;
@@ -2079,9 +2076,6 @@
     .lg\:flex-row {
       flex-direction: row;
     }
-    .lg\:items-center {
-      align-items: center;
-    }
     .lg\:items-stretch {
       align-items: stretch;
     }
@@ -2095,10 +2089,6 @@
       border-top-style: var(--tw-border-style);
       border-top-width: 0px;
     }
-    .lg\:border-r {
-      border-right-style: var(--tw-border-style);
-      border-right-width: 1px;
-    }
     .lg\:border-l {
       border-left-style: var(--tw-border-style);
       border-left-width: 1px;
@@ -2108,9 +2098,6 @@
     }
     .lg\:p-0 {
       padding: 0px;
-    }
-    .lg\:pr-6 {
-      padding-right: calc(var(--spacing) * 6);
     }
     .lg\:backdrop-blur-none {
       --tw-backdrop-blur:  ;
@@ -2133,6 +2120,48 @@
     }
     .xl\:grid-cols-5 {
       grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+  @container (width >= 1070px) {
+    .\@\[1070px\]\:-mx-6 {
+      margin-inline: calc(var(--spacing) * -6);
+    }
+    .\@\[1070px\]\:mx-0 {
+      margin-inline: 0px;
+    }
+    .\@\[1070px\]\:w-\[210px\] {
+      width: 210px;
+    }
+    .\@\[1070px\]\:w-\[412px\] {
+      width: 412px;
+    }
+    .\@\[1070px\]\:w-\[414px\] {
+      width: 414px;
+    }
+    .\@\[1070px\]\:max-w-none {
+      max-width: none;
+    }
+    .\@\[1070px\]\:shrink-0 {
+      flex-shrink: 0;
+    }
+    .\@\[1070px\]\:flex-row {
+      flex-direction: row;
+    }
+    .\@\[1070px\]\:items-center {
+      align-items: center;
+    }
+    .\@\[1070px\]\:justify-evenly {
+      justify-content: space-evenly;
+    }
+    .\@\[1070px\]\:gap-0 {
+      gap: 0px;
+    }
+    .\@\[1070px\]\:border-r {
+      border-right-style: var(--tw-border-style);
+      border-right-width: 1px;
+    }
+    .\@\[1070px\]\:pr-6 {
+      padding-right: calc(var(--spacing) * 6);
     }
   }
   .dark\:block:is(.dark *) {
