@@ -657,3 +657,36 @@ html:not(.reduce-motion) .rev-b .anim-share { animation-name: share-grow-b; }
   from { offset-distance: 0%; }
   to { offset-distance: var(--sun-travel); }
 }
+
+/* ── Heatmap anual: hover (CSS puro, sin JS) ─────────────────────────────
+ * La celda se agranda y se marca con el color de texto; su bocadillo
+ * ("12 jul · 42,8 kWh") aparece en la banda bajo la rejilla, alineado con la
+ * columna del día. Va ahi y no flotando sobre la celda porque en SVG pinta
+ * antes quien antes va en el DOM: un bocadillo encima quedaria tapado por las
+ * celdas de columnas posteriores.
+ */
+/* Child combinator on purpose: the tooltip pill is a rect nested in the
+   .heat-tip group and must not inherit the hover transform. */
+.heat-cell > rect {
+  transition: transform 0.12s ease, stroke 0.12s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.heat-cell .heat-tip {
+  opacity: 0;
+  transition: opacity 0.1s ease 0.05s;
+  pointer-events: none;
+}
+.heat-cell:hover > rect,
+.heat-cell:focus-visible > rect {
+  transform: scale(1.25);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+.heat-cell:hover .heat-tip,
+.heat-cell:focus-visible .heat-tip {
+  opacity: 1;
+}
+.heat-cell:focus {
+  outline: none;
+}

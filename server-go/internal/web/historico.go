@@ -36,6 +36,11 @@ const (
 	heatTop    = 18.0
 	heatCols   = 53
 	heatDays   = 365 // heatmap window: last 365 days ending today
+	// Bocadillo de hover: alto del pill y estimación de ancho del texto a 11 px.
+	heatTipH     = 18.0
+	heatTipPad   = 14.0
+	heatTipCharW = 6.1 // ancho medio por carácter latino a 11 px
+	heatTipCJKW  = 11.0
 )
 
 // histTicksX is the 3-hour X axis using the history box (its own side pads).
@@ -278,6 +283,11 @@ type heatCell struct {
 	IsToday bool
 	Href    string
 	Aria    string
+	// Bocadillo de hover: texto y geometría (banda bajo la rejilla).
+	Tip      string
+	TipX     float64
+	TipW     float64
+	TipTextX float64
 }
 
 type heatMonthLabel struct {
@@ -298,6 +308,10 @@ type heatModel struct {
 	Height     float64
 	SolarColor string
 	LevelOp    [5]float64
+	// Banda del bocadillo bajo la rejilla (0 = sin bocadillo).
+	TipY     float64
+	TipH     float64
+	TipTextY float64
 }
 
 // buildYearHeatmap ports YearHeatmap.tsx: GitHub-style 53x7 grid of the last
@@ -306,9 +320,14 @@ type heatModel struct {
 func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Palette) heatModel {
 	m := heatModel{
 		Width:      heatLeft + heatCols*heatPitch,
-		Height:     heatTop + 7*heatPitch - heatGap,
+		Height:     heatTop + 7*heatPitch - heatGap + 4 + heatTipH + 2,
 		SolarColor: pal.Solar,
 		LevelOp:    [5]float64{0, 0.28, 0.48, 0.72, 1},
+		// Banda de 22 px bajo la rejilla para el bocadillo de hover: ahí no
+		// hay celdas, así que nada lo tapa (en SVG pinta antes quien va antes).
+		TipH:     heatTipH,
+		TipY:     heatTop + 7*heatPitch - heatGap + 4,
+		TipTextY: heatTop + 7*heatPitch - heatGap + 4 + heatTipH - 6,
 	}
 	for _, rl := range []struct {
 		row int
@@ -358,13 +377,26 @@ func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Pale
 		if level > 4 {
 			level = 4
 		}
+		tip := fmtDayMonth(lang, dt) + " · " + fmtEnergy(lang, kwh) + " kWh"
+		tipW := heatTipPad + heatTipWidth(tip)
+		tipX := heatLeft + float64(col)*heatPitch + heatCellPx/2 - tipW/2
+		if tipX < 0 {
+			tipX = 0
+		}
+		if maxX := m.Width - tipW; tipX > maxX {
+			tipX = maxX
+		}
 		m.Cells = append(m.Cells, heatCell{
-			X:       heatLeft + float64(col)*heatPitch,
-			Y:       heatTop + float64(row)*heatPitch,
-			Level:   level,
-			IsToday: sameDay(dt, today),
-			Href:    histURL(PeriodDia, dt),
-			Aria:    T(lang, "historico.cellAria", map[string]string{"date": fmtDayMonthLong(lang, dt), "kwh": fmtEnergy(lang, kwh)}),
+			X:        heatLeft + float64(col)*heatPitch,
+			Y:        heatTop + float64(row)*heatPitch,
+			Level:    level,
+			IsToday:  sameDay(dt, today),
+			Href:     histURL(PeriodDia, dt),
+			Aria:     T(lang, "historico.cellAria", map[string]string{"date": fmtDayMonthLong(lang, dt), "kwh": fmtEnergy(lang, kwh)}),
+			Tip:      tip,
+			TipX:     tipX,
+			TipW:     tipW,
+			TipTextX: tipX + heatTipPad/2,
 		})
 		if int(monday.Month()) != prevMonth {
 			m.Months = append(m.Months, heatMonthLabel{
@@ -375,6 +407,20 @@ func buildYearHeatmap(lang string, rows []db.DailyRow, today time.Time, pal Pale
 		}
 	}
 	return m
+}
+
+// heatTipWidth estimates the label width at 11 px (CJK glyphs are double wide)
+// so the pill hugs the text; textLength="spacing" absorbs the small error.
+func heatTipWidth(s string) float64 {
+	w := 0.0
+	for _, r := range s {
+		if r > 0x2E80 {
+			w += heatTipCJKW
+		} else {
+			w += heatTipCharW
+		}
+	}
+	return w
 }
 
 // mondayOf returns the monday of the week containing t (weeks start monday).

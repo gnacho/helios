@@ -395,13 +395,18 @@ templ heatSVG(h heatModel) {
 			<text x="0" y={ r2(rl.Y) } font-size="9" fill="var(--text-faint)" font-family="Inter">{ rl.Label }</text>
 		}
 		for _, c := range h.Cells {
-			<a href={ templ.URL(c.Href) }>
-				<title>{ c.Aria }</title>
+			<!-- Celda + bocadillo: el texto aparece en la banda bajo la rejilla, donde
+			     no hay celdas que lo tapen (en SVG pinta antes quien antes va). -->
+			<a href={ templ.URL(c.Href) } class="heat-cell" aria-label={ c.Aria }>
 				if c.Level == 0 {
 					<rect x={ r2(c.X) } y={ r2(c.Y) } width={ r2(heatCellPx) } height={ r2(heatCellPx) } rx="3" fill="var(--surface-2)" stroke={ heatStroke(c.IsToday) } stroke-width={ heatStrokeW(c.IsToday) }></rect>
 				} else {
 					<rect x={ r2(c.X) } y={ r2(c.Y) } width={ r2(heatCellPx) } height={ r2(heatCellPx) } rx="3" fill={ h.SolarColor } fill-opacity={ fmt.Sprintf("%.2f", h.LevelOp[c.Level]) } stroke={ heatStroke(c.IsToday) } stroke-width={ heatStrokeW(c.IsToday) }></rect>
 				}
+				<g class="heat-tip" aria-hidden="true">
+					<rect x={ r2(c.TipX) } y={ r2(h.TipY) } width={ r2(c.TipW) } height={ r2(h.TipH) } rx="6" fill="var(--surface)" stroke="var(--line)" stroke-width="1"></rect>
+					<text x={ r2(c.TipTextX) } y={ r2(h.TipTextY) } font-size="11" font-weight="600" fill="var(--text)" font-family="Inter" textLength={ r2(c.TipW - heatTipPad) } lengthAdjust="spacing">{ c.Tip }</text>
+				</g>
 			</a>
 		}
 	</svg>

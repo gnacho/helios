@@ -2713,6 +2713,27 @@ html:not(.reduce-motion) .rev-b .anim-share {
     offset-distance: var(--sun-travel);
   }
 }
+.heat-cell > rect {
+  transition: transform 0.12s ease, stroke 0.12s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.heat-cell .heat-tip {
+  opacity: 0;
+  transition: opacity 0.1s ease 0.05s;
+  pointer-events: none;
+}
+.heat-cell:hover > rect, .heat-cell:focus-visible > rect {
+  transform: scale(1.25);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+.heat-cell:hover .heat-tip, .heat-cell:focus-visible .heat-tip {
+  opacity: 1;
+}
+.heat-cell:focus {
+  outline: none;
+}
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
