@@ -215,14 +215,10 @@ templ chgHero(v chargerView, s *chgSingleView) {
 						title={ s.PowerTitle }
 						class={ "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50", templ.KV("bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400", s.PowerOn), templ.KV("bg-brand text-white hover:opacity-90", !s.PowerOn) }
 					>
-						<span class="contents" data-show="$ui.pending == ''">
-							@iconPower("h-5 w-5")
-							<span data-text={ s.LabelExpr }>{ s.PowerLabel }</span>
-						</span>
-						<span class="contents" data-show="$ui.pending != ''">
-							@iconLoaderCircle("h-5 w-5 animate-spin")
-							<span data-text={ s.PendingExpr }>{ s.PendingText }</span>
-						</span>
+						<span data-show="$ui.pending == ''">@iconPower("h-5 w-5")</span>
+						<span data-show="$ui.pending == ''" data-text={ s.LabelExpr }>{ s.PowerLabel }</span>
+						<span data-show="$ui.pending != ''">@iconLoaderCircle("h-5 w-5 animate-spin")</span>
+						<span data-show="$ui.pending != ''" data-text={ s.PendingExpr }>{ s.PendingText }</span>
 					</button>
 				} else {
 					<button
