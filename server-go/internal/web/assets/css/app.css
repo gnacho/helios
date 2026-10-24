@@ -558,27 +558,12 @@ html:not(.reduce-motion) .gauge-sweep {
 html:not(.reduce-motion) .sun-g {
   animation: sun-travel 1.4s cubic-bezier(0.45, 0, 0.55, 1) both;
 }
-/* Animaciones ligadas al SCROLL cuando el navegador lo soporta: la gráfica se
- * dibuja al entrar en pantalla (equivalente al whileInView del React), no al
- * cargar la página. Sin soporte se queda la animación temporal de arriba. */
-@supports (animation-timeline: view()) {
-  html:not(.reduce-motion) svg.anim-bars .bar-up,
-  html:not(.reduce-motion) svg.anim-bars .bar-down {
-    animation-timeline: view();
-    animation-range: cover 22% cover 58%;
-    animation-timing-function: linear;
-    animation-delay: 0s;
-  }
-  html:not(.reduce-motion) svg.anim-draw,
-  html:not(.reduce-motion) svg.anim-pie,
-  html:not(.reduce-motion) .anim-share,
-  html:not(.reduce-motion) .gauge-sweep {
-    animation-timeline: view();
-    animation-range: cover 25% cover 60%;
-    animation-timing-function: linear;
-    animation-delay: 0s;
-  }
-}
+/* OJO: aqui hubo animaciones ligadas al scroll (animation-timeline: view()).
+ * Se retiraron: si la grafica ya estaba en pantalla al cargar, su progreso se
+ * quedaba congelado a medias (barras a medio crecer, quesitos invisibles) y
+ * solo avanzaba al hacer scroll. Las de arriba son temporales y siempre
+ * terminan; las que estan por debajo del pliegue se animan sin que se vean.
+ */
 
 @property --sun-travel {
   syntax: "<percentage>";
