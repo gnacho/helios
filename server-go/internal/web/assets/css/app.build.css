@@ -552,11 +552,11 @@
   .h-\[190px\] {
     height: 190px;
   }
-  .h-\[210px\] {
-    height: 210px;
-  }
   .h-\[220px\] {
     height: 220px;
+  }
+  .h-\[242px\] {
+    height: 242px;
   }
   .h-\[calc\(100\%-1\.5rem\)\] {
     height: calc(100% - 1.5rem);
@@ -693,14 +693,14 @@
   .w-\[200px\] {
     width: 200px;
   }
-  .w-\[210px\] {
-    width: 210px;
-  }
   .w-\[232px\] {
     width: 232px;
   }
   .w-\[236px\] {
     width: 236px;
+  }
+  .w-\[242px\] {
+    width: 242px;
   }
   .w-\[calc\(100\%-1\.5rem\)\] {
     width: calc(100% - 1.5rem);
@@ -1916,8 +1916,8 @@
     .sm\:w-\[46\%\] {
       width: 46%;
     }
-    .sm\:w-\[184px\] {
-      width: 184px;
+    .sm\:w-\[212px\] {
+      width: 212px;
     }
     .sm\:max-w-\[430px\] {
       max-width: 430px;
@@ -2122,45 +2122,45 @@
       grid-template-columns: repeat(5, minmax(0, 1fr));
     }
   }
-  @container (width >= 1070px) {
-    .\@\[1070px\]\:-mx-6 {
+  @container (width >= 1100px) {
+    .\@\[1100px\]\:-mx-6 {
       margin-inline: calc(var(--spacing) * -6);
     }
-    .\@\[1070px\]\:mx-0 {
+    .\@\[1100px\]\:mx-0 {
       margin-inline: 0px;
     }
-    .\@\[1070px\]\:w-\[210px\] {
-      width: 210px;
+    .\@\[1100px\]\:w-\[242px\] {
+      width: 242px;
     }
-    .\@\[1070px\]\:w-\[412px\] {
-      width: 412px;
-    }
-    .\@\[1070px\]\:w-\[414px\] {
+    .\@\[1100px\]\:w-\[414px\] {
       width: 414px;
     }
-    .\@\[1070px\]\:max-w-none {
+    .\@\[1100px\]\:w-\[440px\] {
+      width: 440px;
+    }
+    .\@\[1100px\]\:max-w-none {
       max-width: none;
     }
-    .\@\[1070px\]\:shrink-0 {
+    .\@\[1100px\]\:shrink-0 {
       flex-shrink: 0;
     }
-    .\@\[1070px\]\:flex-row {
+    .\@\[1100px\]\:flex-row {
       flex-direction: row;
     }
-    .\@\[1070px\]\:items-center {
+    .\@\[1100px\]\:items-center {
       align-items: center;
     }
-    .\@\[1070px\]\:justify-evenly {
+    .\@\[1100px\]\:justify-evenly {
       justify-content: space-evenly;
     }
-    .\@\[1070px\]\:gap-0 {
+    .\@\[1100px\]\:gap-0 {
       gap: 0px;
     }
-    .\@\[1070px\]\:border-r {
+    .\@\[1100px\]\:border-r {
       border-right-style: var(--tw-border-style);
       border-right-width: 1px;
     }
-    .\@\[1070px\]\:pr-6 {
+    .\@\[1100px\]\:pr-6 {
       padding-right: calc(var(--spacing) * 6);
     }
   }

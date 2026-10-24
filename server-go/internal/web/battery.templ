@@ -14,13 +14,13 @@ templ BateriaPage(v bateriaView) {
 					     así que etiqueta y valor quedan juntos) y el sobrante se reparte a partes
 					     iguales antes del gauge, a los lados de la línea y al final. El container
 					     query evita el desbordamiento en tarjetas estrechas (se apila). -->
-					<div class="flex flex-col gap-6 @[1070px]:-mx-6 @[1070px]:flex-row @[1070px]:items-center @[1070px]:gap-0 @[1070px]:justify-evenly">
+					<div class="flex flex-col gap-6 @[1100px]:-mx-6 @[1100px]:flex-row @[1100px]:items-center @[1100px]:gap-0 @[1100px]:justify-evenly">
 						<!-- Una sola banda: el SOC, sus datos y el reparto a la misma altura. -->
-						<div class="flex shrink-0 flex-col items-center gap-3 @[1070px]:w-[210px]">
+						<div class="flex shrink-0 flex-col items-center gap-3 @[1100px]:w-[242px]">
 							@socGaugeSVG(v, v.Gauge)
 							<span class={ "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold", v.Chip.Cls }>{ v.Chip.Text }</span>
 						</div>
-						<div class="grid min-w-0 grid-cols-1 gap-x-4 gap-y-0.5 sm:mx-auto sm:max-w-[430px] sm:grid-cols-2 @[1070px]:mx-0 @[1070px]:w-[414px] @[1070px]:max-w-none @[1070px]:shrink-0 @[1070px]:border-r @[1070px]:border-app @[1070px]:pr-6">
+						<div class="grid min-w-0 grid-cols-1 gap-x-4 gap-y-0.5 sm:mx-auto sm:max-w-[430px] sm:grid-cols-2 @[1100px]:mx-0 @[1100px]:w-[414px] @[1100px]:max-w-none @[1100px]:shrink-0 @[1100px]:border-r @[1100px]:border-app @[1100px]:pr-6">
 							for _, st := range v.Stats {
 								<div class="flex items-center gap-1.5 rounded-lg px-1.5 py-[7px] hover:bg-surface-2">
 									@iconForStat(st.IconKey, "h-[15px] w-[15px] shrink-0 text-faint")
@@ -30,8 +30,8 @@ templ BateriaPage(v bateriaView) {
 							}
 						</div>
 						if len(v.Donut.Slices) > 0 {
-							<div class="flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1070px]:w-[412px] @[1070px]:shrink-0">
-									<div class="relative w-[160px] shrink-0 sm:w-[184px]">
+							<div class="flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1100px]:w-[440px] @[1100px]:shrink-0">
+									<div class="relative w-[160px] shrink-0 sm:w-[212px]">
 										<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
 											for _, sl := range v.Donut.Slices {
 												<path d={ sl.Path } fill={ sl.Color }></path>
@@ -120,7 +120,7 @@ templ BateriaPage(v bateriaView) {
 // socGaugeSVG ports SocHeroGauge (static arc; the GSAP sweep is not ported).
 templ socGaugeSVG(v bateriaView, g socGaugeModel) {
 	<div class="flex justify-center" role="img" aria-label={ g.Aria }>
-		<svg viewBox="0 0 260 240" class="block h-[210px] w-[210px]" fill="none">
+		<svg viewBox="0 0 260 240" class="block h-[242px] w-[242px]" fill="none">
 			<path d={ g.TrackPath } stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"></path>
 			if g.ValuePath != "" {
 				<path d={ g.ValuePath } pathLength="1" class="gauge-sweep" stroke={ g.Color } stroke-width="16" stroke-linecap="round"></path>

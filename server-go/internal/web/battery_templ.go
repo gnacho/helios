@@ -83,7 +83,7 @@ func BateriaPage(v bateriaView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><!-- Aire homogéneo: cada zona va a su ancho real (los datos no se estiran,\n\t\t\t\t\t     así que etiqueta y valor quedan juntos) y el sobrante se reparte a partes\n\t\t\t\t\t     iguales antes del gauge, a los lados de la línea y al final. El container\n\t\t\t\t\t     query evita el desbordamiento en tarjetas estrechas (se apila). --><div class=\"flex flex-col gap-6 @[1070px]:-mx-6 @[1070px]:flex-row @[1070px]:items-center @[1070px]:gap-0 @[1070px]:justify-evenly\"><!-- Una sola banda: el SOC, sus datos y el reparto a la misma altura. --><div class=\"flex shrink-0 flex-col items-center gap-3 @[1070px]:w-[210px]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><!-- Aire homogéneo: cada zona va a su ancho real (los datos no se estiran,\n\t\t\t\t\t     así que etiqueta y valor quedan juntos) y el sobrante se reparte a partes\n\t\t\t\t\t     iguales antes del gauge, a los lados de la línea y al final. El container\n\t\t\t\t\t     query evita el desbordamiento en tarjetas estrechas (se apila). --><div class=\"flex flex-col gap-6 @[1100px]:-mx-6 @[1100px]:flex-row @[1100px]:items-center @[1100px]:gap-0 @[1100px]:justify-evenly\"><!-- Una sola banda: el SOC, sus datos y el reparto a la misma altura. --><div class=\"flex shrink-0 flex-col items-center gap-3 @[1100px]:w-[242px]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -122,7 +122,7 @@ func BateriaPage(v bateriaView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span></div><div class=\"grid min-w-0 grid-cols-1 gap-x-4 gap-y-0.5 sm:mx-auto sm:max-w-[430px] sm:grid-cols-2 @[1070px]:mx-0 @[1070px]:w-[414px] @[1070px]:max-w-none @[1070px]:shrink-0 @[1070px]:border-r @[1070px]:border-app @[1070px]:pr-6\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span></div><div class=\"grid min-w-0 grid-cols-1 gap-x-4 gap-y-0.5 sm:mx-auto sm:max-w-[430px] sm:grid-cols-2 @[1100px]:mx-0 @[1100px]:w-[414px] @[1100px]:max-w-none @[1100px]:shrink-0 @[1100px]:border-r @[1100px]:border-app @[1100px]:pr-6\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -171,7 +171,7 @@ func BateriaPage(v bateriaView) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if len(v.Donut.Slices) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1070px]:w-[412px] @[1070px]:shrink-0\"><div class=\"relative w-[160px] shrink-0 sm:w-[184px]\"><svg viewBox=\"0 0 200 200\" class=\"anim-pie mx-auto w-full\" role=\"img\" aria-label=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex min-w-0 flex-col items-center gap-4 sm:flex-row @[1100px]:w-[440px] @[1100px]:shrink-0\"><div class=\"relative w-[160px] shrink-0 sm:w-[212px]\"><svg viewBox=\"0 0 200 200\" class=\"anim-pie mx-auto w-full\" role=\"img\" aria-label=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -626,7 +626,7 @@ func socGaugeSVG(v bateriaView, g socGaugeModel) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\"><svg viewBox=\"0 0 260 240\" class=\"block h-[210px] w-[210px]\" fill=\"none\"><path d=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\"><svg viewBox=\"0 0 260 240\" class=\"block h-[242px] w-[242px]\" fill=\"none\"><path d=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
