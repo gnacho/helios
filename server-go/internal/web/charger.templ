@@ -189,14 +189,14 @@ templ chgHero(v chargerView, s *chgSingleView) {
 			<p class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">{ T(v.Lang, "cargador.imageError") }</p>
 		}
 		<div class="flex flex-col gap-5 lg:flex-row lg:items-stretch">
-			<div class="flex shrink-0 flex-col gap-2 self-stretch lg:w-[42%]">
-				<div class="flex min-h-44 flex-1 items-center justify-center rounded-3xl bg-white p-3 dark:bg-transparent">
-					if s.HasImage {
-						<img src={ templ.URL(s.ImageURL) } alt={ s.Name } draggable="false" class="h-full max-h-full w-full object-contain select-none"/>
-					} else {
-						@iconCarFront("h-[72px] w-[72px]")
-					}
-				</div>
+			<!-- La foto no participa en el flujo: si lo hiciera, su tamaño intrínseco
+			     estiraría la tarjeta y cada cargador tendría un alto distinto. -->
+			<div class="relative flex h-[190px] shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-white p-3 lg:h-[274px] lg:w-[42%] dark:bg-transparent">
+				if s.HasImage {
+					<img src={ templ.URL(s.ImageURL) } alt={ s.Name } draggable="false" class="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain select-none"/>
+				} else {
+					@iconCarFront("h-[72px] w-[72px]")
+				}
 			</div>
 			<div class="flex min-w-0 flex-1 flex-col justify-center gap-5">
 				if s.PowerKnown {
