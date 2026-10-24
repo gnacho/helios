@@ -344,6 +344,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/ui/inv", u.handleInvPatch)
 		r.Get("/ui/heat", u.handleHeatMetric)
 		r.Get("/ui/heat-day", u.handleHeatDay)
+	r.Post("/ui/alerts/dismiss", u.handleAlertDismiss)
 		r.Get("/ui/nav", navLog(http.HandlerFunc(u.handleNavPatch)).ServeHTTP)
 		r.Get("/ui/municipios", u.handleMunicipios)
 
@@ -768,7 +769,7 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 		cfg := u.ExtStore.Get()
 		p.ChargerOn = cfg.Enabled && cfg.CarCharger.Enabled
 	}
-	p.Alerts, p.AlertLevel = u.alertsSnapshot()
+	p.Alerts, p.AlertLevel = u.liveAlerts(userID)
 	p.AlertCount = len(p.Alerts)
 	if loc, _ := u.townFromKV(); loc != "" {
 		p.Town = loc

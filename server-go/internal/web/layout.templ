@@ -3,6 +3,8 @@ package web
 import (
 	"strconv"
 	"strings"
+
+	"helios-server/internal/solar"
 )
 
 // head shared by every page. Fonts and tokens mirror app/index.html so the
@@ -242,7 +244,7 @@ templ topbarDesktop(p pageProps) {
 			<!--/#page-head-->
 		</div>
 		<div class="flex items-center gap-2">
-			@alertsBell(p)
+			@alertsBell(p, "desk")
 			@themeToggle(p)
 			@userChip(p)
 		</div>
@@ -257,7 +259,7 @@ templ headerMobile(p pageProps) {
 			<span class="font-display text-base font-semibold text-app">Helios</span>
 		</a>
 		<div class="flex items-center gap-2">
-			@alertsBell(p)
+			@alertsBell(p, "mob")
 			@themeToggle(p)
 			@userChip(p)
 		</div>
@@ -440,39 +442,39 @@ templ themeOption(p pageProps, key, label string) {
 
 // alertsBell is the header bell (AlertsBell in the React shell): live alerts
 // from HA with a severity dot and a details dropdown, no JS.
-templ alertsBell(p pageProps) {
-	{{ dot := "" }}
-	if p.AlertLevel == "critical" {
-		{{ dot = "bg-rose-500" }}
-	} else if p.AlertLevel == "warning" {
-		{{ dot = "bg-amber-500" }}
-	} else if p.AlertLevel == "info" {
-		{{ dot = "bg-sky-500" }}
-	}
+templ alertsBell(p pageProps, slot string) {
 	<details class="relative shrink-0">
 		<summary aria-label={ T(p.Lang, "alerts.label", map[string]string{"count": strconv.Itoa(p.AlertCount)}) } title={ T(p.Lang, "alerts.label", map[string]string{"count": strconv.Itoa(p.AlertCount)}) } class="relative flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:text-app">
 			@iconBell("h-4 w-4")
-			if dot != "" {
-				<span class={ "absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full " + dot }></span>
-			}
+			@alertsDot(p.AlertLevel, slot)
 		</summary>
 		<div class="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-app bg-surface shadow-lg">
-			if len(p.Alerts) == 0 {
-				<p class="px-3 py-2.5 text-xs text-muted">{ T(p.Lang, "alerts.empty") }</p>
-			} else {
-				for _, a := range p.Alerts {
-					{{ ac := "bg-sky-500" }}
-					if a.Severity == "critical" {
-						{{ ac = "bg-rose-500" }}
-					} else if a.Severity == "warning" {
-						{{ ac = "bg-amber-500" }}
-					}
-					<div class="flex items-start gap-2 px-3 py-2">
-						<span class={ "mt-1 h-2 w-2 shrink-0 rounded-full " + ac }></span>
-						<span class="text-xs leading-snug text-app">{ a.Text }</span>
-					</div>
-				}
-			}
+			@alertsList(p.Lang, p.Alerts, slot)
 		</div>
 	</details>
+}
+
+// alertsDot is the severity dot of the bell: always rendered (empty when there
+// is nothing live) so the dismissal can patch it in place.
+templ alertsDot(level string, slot string) {
+	<span id={ "alerts-dot-" + slot } class={ "absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full", alertsDotClass(level), templ.KV("hidden", level == "") }></span>
+}
+
+// alertsList is the bell panel: every alert carries a check that clears it.
+templ alertsList(lang string, alerts []solar.LiveAlert, slot string) {
+	<div id={ "alerts-list-" + slot }>
+		if len(alerts) == 0 {
+			<p class="px-3 py-2.5 text-xs text-muted">{ T(lang, "alerts.empty") }</p>
+		} else {
+			for _, a := range alerts {
+				<div class="flex items-start gap-2 px-3 py-2">
+					<span class={ "mt-1 h-2 w-2 shrink-0 rounded-full", alertsSeverityClass(a.Severity) }></span>
+					<span class="min-w-0 flex-1 text-xs leading-snug text-app">{ a.Text }</span>
+					<button type="button" data-on:click__prevent={ dismissAlertClick(a.ID) } title={ T(lang, "alerts.clear") } aria-label={ T(lang, "alerts.clear") } class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-app text-muted transition-colors hover:bg-surface-2 hover:text-app">
+						@iconCheck("h-3.5 w-3.5")
+					</button>
+				</div>
+			}
+		}
+	</div>
 }

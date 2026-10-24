@@ -56,6 +56,7 @@
     "title": "Home Assistant 连接状态"
   },
   "alerts": {
+    "clear": "标记为已读",
     "label": "通知 · {{count}} 条提醒",
     "empty": "一切正常 · 无提醒"
   },
