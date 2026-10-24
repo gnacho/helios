@@ -7,7 +7,9 @@ import "strconv"
 templ InversoresPage(v inversoresView) {
 	@shellLayout(v.pageProps) {
 		<div data-signals={ v.Signals } data-init={ "@get('/ui/stream')" } class="w-full">
-			<div class="flex flex-col gap-4 lg:gap-5">
+			<!-- Panel activo (inversor o comparativa): /ui/inv parchea solo esto. -->
+			<div id="inv-body" class="flex flex-col gap-4 lg:gap-5">
+				<!--#inv-body-->
 				if len(v.Tabs) > 1 {
 					@invTabs(v)
 				}
@@ -21,6 +23,7 @@ templ InversoresPage(v inversoresView) {
 					@iconActivity("h-3 w-3")
 					{ v.Note }
 				</p>
+				<!--/#inv-body-->
 			</div>
 		</div>
 	}
@@ -33,6 +36,7 @@ templ invTabs(v inversoresView) {
 			for _, tb := range v.Tabs {
 				<a
 					href={ templ.URL("/inversores?inv=" + tb.Key) }
+					data-on:click__prevent={ invTabSwapClick(tb.Key) }
 					role="tab"
 					aria-selected={ boolStr(tb.Active) }
 					class={ "relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none", templ.KV("text-faint hover:text-muted", !tb.Active) }
@@ -87,10 +91,10 @@ templ invSingle(v inversoresView, s *invSingleView) {
 				@invKpiCard(v, k, i)
 			}
 		</div>
-		<div class="lg:col-span-8">
+		<div id={ "inv-day-" + s.Chart.Key } class="lg:col-span-8">
 			@invDayChart(v, s.Chart)
 		</div>
-		<div class="lg:col-span-4">
+		<div id={ "inv-last14-" + s.Chart.Key } class="lg:col-span-4">
 			@last14Card(v, s.Last14)
 		</div>
 	</div>

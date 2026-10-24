@@ -259,6 +259,52 @@ func (u *UI) handleNavPatch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// patchPanel re-renders a page with its own query and patches one marked
+// region of it: the shell and everything that does not change stay untouched.
+func (u *UI) patchPanel(w http.ResponseWriter, r *http.Request, path, marker string, handler http.HandlerFunc) {
+	r2 := r.Clone(r.Context())
+	r2.URL.Path = path
+	rec := httptest.NewRecorder()
+	handler(rec, r2)
+	if rec.Code != http.StatusOK {
+		http.Error(w, "error al renderizar", http.StatusInternalServerError)
+		return
+	}
+	body := fragment(rec.Body.String(), marker)
+	if body == "" {
+		http.Error(w, "panel desconocido", http.StatusInternalServerError)
+		return
+	}
+	gen := datastar.NewSSE(w, r)
+	_ = gen.PatchElementTempl(templ.Raw(body), datastar.WithSelectorID(marker), datastar.WithModeInner())
+}
+
+// handleChgPatch swaps the active charger without reloading the page.
+func (u *UI) handleChgPatch(w http.ResponseWriter, r *http.Request) {
+	u.patchPanel(w, r, "/cargador", "chg-body", u.handleCargador)
+}
+
+// handleInvPatch swaps the active inverter (or the comparison) in place.
+func (u *UI) handleInvPatch(w http.ResponseWriter, r *http.Request) {
+	u.patchPanel(w, r, "/inversores", "inv-body", u.handleInversores)
+}
+
+// clickTab is the click expression of the "clone" tabs: it updates the URL and
+// patches the panel instead of navigating. Enter on a link fires a click with
+// detail 0, so keyboard activation keeps the plain navigation.
+func clickTab(url, patch string) string {
+	return "if (evt.detail === 0) { location.href = '" + jsQuote(url) + "'; return; } " +
+		"history.pushState({}, '', '" + jsQuote(url) + "'); " + patch
+}
+
+func chgTabSwapClick(key string) string {
+	return clickTab("/cargador?tab="+url.QueryEscape(key), "@get('/ui/chg?tab="+jsQuote(key)+"')")
+}
+
+func invTabSwapClick(key string) string {
+	return clickTab("/inversores?inv="+url.QueryEscape(key), "@get('/ui/inv?inv="+jsQuote(key)+"')")
+}
+
 func (u *UI) Mount(r chi.Router) {
 	r.Get("/assets/*", navLog(http.HandlerFunc(u.handleAssets)).ServeHTTP)
 
@@ -274,6 +320,8 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/", u.handleDashboard)
 		r.Get("/ui/stream", u.handleStream)
 		r.Get("/ui/historico", u.handleHistoricoPatch)
+		r.Get("/ui/chg", u.handleChgPatch)
+		r.Get("/ui/inv", u.handleInvPatch)
 		r.Get("/ui/heat", u.handleHeatMetric)
 		r.Get("/ui/heat-day", u.handleHeatDay)
 		r.Get("/ui/nav", navLog(http.HandlerFunc(u.handleNavPatch)).ServeHTTP)

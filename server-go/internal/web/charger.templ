@@ -13,13 +13,16 @@ import (
 templ ChargerPage(v chargerView) {
 	@shellLayout(v.pageProps) {
 		<div data-signals={ v.Signals } data-init={ "@get('/ui/stream')" } class="w-full">
-			<div class="flex flex-col gap-4 lg:gap-5">
+			<!-- Panel de la pestaña activa: /ui/chg parchea solo esto al cambiar de cargador. -->
+			<div id="chg-body" class="flex flex-col gap-4 lg:gap-5">
+				<!--#chg-body-->
 				if len(v.Tabs) > 1 {
 					@chgTabs(v)
 				}
 				if v.Active != nil {
 					@chgSingle(v, v.Active)
 				}
+				<!--/#chg-body-->
 			</div>
 		</div>
 	}
@@ -32,6 +35,7 @@ templ chgTabs(v chargerView) {
 			for _, tb := range v.Tabs {
 				<a
 					href={ templ.URL("/cargador?tab=" + tb.Key) }
+					data-on:click__prevent={ chgTabSwapClick(tb.Key) }
 					role="tab"
 					aria-selected={ boolStr(tb.Active) }
 					class={ "relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none", templ.KV("text-app", tb.Active), templ.KV("text-faint hover:text-muted", !tb.Active) }
@@ -80,7 +84,9 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 					</span>
 				}
 			</div>
-			@chgCurveSVG(s.Curve)
+			<div id={ "chg-curve-" + s.Key }>
+				@chgCurveSVG(s.Curve)
+			</div>
 		</section>
 		<section id="historial-carga" class="helios-card col-span-12 scroll-mt-24 shadow-card dark:shadow-card-dark lg:col-span-8" aria-label={ T(v.Lang, "cargador.historyAria") }>
 			<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
@@ -107,7 +113,9 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 						{ T(v.Lang, "cargador.noHistory") }
 					</div>
 				} else {
-					@chgHistSVG(s.Hist)
+					<div id={ "chg-hist-" + s.Key } class="w-full">
+						@chgHistSVG(s.Hist)
+					</div>
 				}
 			</div>
 		</section>
