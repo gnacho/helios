@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/starfederation/datastar-go/datastar"
+
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
 	"helios-server/internal/extensions"
@@ -1250,11 +1252,23 @@ func (u *UI) handleAjustesPrices(w http.ResponseWriter, r *http.Request) {
 func (u *UI) handleAjustesInstall(w http.ResponseWriter, r *http.Request) {
 	username, userID, isAdmin := u.currentUserActor(r)
 	if !isAdmin {
-		ajustesRedirectFlag(w, r, "err", "forbidden")
+		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	name := strings.TrimSpace(r.PostFormValue("install_name"))
-	location := strings.TrimSpace(r.PostFormValue("install_location"))
+	name, location := "", ""
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		// Datastar @post sends the bound signals as JSON: save on the fly.
+		var body struct {
+			InstallName     string `json:"installName"`
+			InstallLocation string `json:"installLocation"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			name, location = strings.TrimSpace(body.InstallName), strings.TrimSpace(body.InstallLocation)
+		}
+	} else {
+		name = strings.TrimSpace(r.PostFormValue("install_name"))
+		location = strings.TrimSpace(r.PostFormValue("install_location"))
+	}
 	var lat, lon float64
 	hasCoords := false
 	if location != "" {
@@ -1274,5 +1288,12 @@ func (u *UI) handleAjustesInstall(w http.ResponseWriter, r *http.Request) {
 		}
 		u.DB.Audit(username, userID, "install.update", map[string]string{"name": name, "location": location})
 	}
-	ajustesRedirectFlag(w, r, "saved", "install")
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		// Autosave: refresh the sun line in place (the page does not reload).
+		lang := u.userLang(userID)
+		gen := datastar.NewSSE(w, r)
+		_ = gen.PatchElementTempl(ajustesSunNote(u.installSunNote(lang, location)), datastar.WithSelectorID("sun-note"), datastar.WithModeOuter())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -601,6 +601,25 @@ func (u *UI) installSunTimes() (int, int) {
 	return u.sunTimesCached()
 }
 
+// installSunNote is the "Sol hoy en X" line under the location field.
+func (u *UI) installSunNote(lang, location string) string {
+	if u.Solar == nil || u.HA == nil {
+		return ""
+	}
+	sr, ss := u.installSunTimes()
+	if location != "" {
+		return T(lang, "ajustes.install.sunTodayAt", map[string]string{
+			"location": location,
+			"sunrise":  fmtTime(sr),
+			"sunset":   fmtTime(ss),
+		})
+	}
+	return T(lang, "ajustes.install.sunTodayHa", map[string]string{
+		"sunrise": fmtTime(sr),
+		"sunset":  fmtTime(ss),
+	})
+}
+
 // alertsSnapshot returns the live alerts (same list the React bell shows) with
 // a short cache so every page render does not hit HA again.
 var alertsCache struct {
@@ -784,5 +803,5 @@ func themeStateName(theme string) string {
 func (u *UI) handleMunicipios(w http.ResponseWriter, r *http.Request) {
 	items := searchMunicipios(r.URL.Query().Get("q"), 8)
 	gen := datastar.NewSSE(w, r)
-	_ = gen.PatchElementTempl(municipiosDatalist(items), datastar.WithSelectorID("municipios"), datastar.WithModeInner())
+	_ = gen.PatchElementTempl(municipiosPanel(items), datastar.WithSelectorID("municipios-panel"), datastar.WithModeInner())
 }

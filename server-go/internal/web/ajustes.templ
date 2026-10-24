@@ -61,6 +61,9 @@ func ajustesSignals(v ajustesView) string {
 		"station":    "",
 		"bydBusy":    false,
 		"chgSel":     v.ChargerSel,
+		"installName":     v.InstallName,
+		"installLocation": v.InstallLocation,
+		"locOpen":         false,
 	}
 	if raw, err := json.Marshal(sig); err == nil {
 		return string(raw)
@@ -170,31 +173,25 @@ templ ajustesInstall(v ajustesView) {
 				@ajustesInvCard(v, c)
 			}
 		</div>
-		<form method="post" action="/ajustes/install" class="mt-4 flex flex-col gap-3 border-t border-app pt-4">
-			<div class="grid gap-4 sm:grid-cols-2">
-				<div>
-					<label for="install-name" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.name") }</label>
-					<div class="relative">
-						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconHouse("h-[15px] w-[15px]")</span>
-						<input id="install-name" type="text" name="install_name" value={ v.InstallName } class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
-					</div>
-				</div>
-				<div>
-					<label for="install-location" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.location") }</label>
-					<div class="relative">
-						<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconMapPin("h-[15px] w-[15px]")</span>
-						<input id="install-location" type="text" name="install_location" value={ v.InstallLocation } list="municipios" autocomplete="off" placeholder={ T(v.Lang, "ajustes.install.locationPlaceholder") } data-on:input__debounce.250ms="@get('/ui/municipios?q=' + encodeURIComponent(evt.target.value))" class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
-						<datalist id="municipios">@municipiosDatalist(searchMunicipios(v.InstallLocation, 8))</datalist>
-					</div>
+		<form method="post" action="/ajustes/install" data-on:change="@post('/ajustes/install')" class="mt-4 grid gap-4 border-t border-app pt-4 sm:grid-cols-2">
+			<div>
+				<label for="install-name" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.name") }</label>
+				<div class="relative">
+					<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconHouse("h-[15px] w-[15px]")</span>
+					<input id="install-name" type="text" name="install_name" data-bind="installName" value={ v.InstallName } class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
 				</div>
 			</div>
-			<div class="flex flex-wrap items-center gap-3">
-				<button type="submit" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
-					{ T(v.Lang, "common.save") }
-				</button>
-				if v.SunNote != "" {
-					<p class="text-xs text-faint">{ v.SunNote }</p>
-				}
+			<div>
+				<label for="install-location" class="mb-1.5 block text-[13px] font-medium text-muted">{ T(v.Lang, "ajustes.install.location") }</label>
+				<div class="relative">
+					<span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">@iconMapPin("h-[15px] w-[15px]")</span>
+					<input id="install-location" type="text" name="install_location" data-bind="installLocation" value={ v.InstallLocation } autocomplete="off" placeholder={ T(v.Lang, "ajustes.install.locationPlaceholder") } data-on:input__debounce.250ms="$locOpen = true; @get('/ui/municipios?q=' + encodeURIComponent($installLocation))" data-on:focus="$locOpen = true" class="h-9 w-full rounded-xl border border-app bg-surface-2 pl-9 pr-3 text-sm text-app outline-none focus:border-brand"/>
+					<!-- Combobox propio (respeta el tema): el panel lo patchea /ui/municipios. -->
+					<div id="municipios-panel" data-show="$locOpen" class="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-xl border border-app bg-surface p-1 shadow-lg">
+						@municipiosPanel(searchMunicipios(v.InstallLocation, 8))
+					</div>
+				</div>
+				@ajustesSunNote(v.SunNote)
 			</div>
 		</form>
 	}
@@ -742,10 +739,35 @@ templ ajustesExtensions(v ajustesView) {
 	}
 }
 
-// municipiosDatalist renders the <option> list of the location autocomplete.
-templ municipiosDatalist(items []municipio) {
+// profileLangLabel shows the current profile language (flag + name).
+templ profileLangLabel(v ajustesView) {
+	for _, l := range v.Languages {
+		if l.Code == v.ProfileLang {
+			<span>{ l.Flag }</span>
+			<span class="hidden sm:inline">{ l.Name }</span>
+		}
+	}
+}
+
+// ajustesSunNote is the sun line under the location (patched on autosave).
+templ ajustesSunNote(note string) {
+	<p id="sun-note" class={ "mt-1 text-right text-xs text-faint", templ.KV("hidden", note == "") }>{ note }</p>
+}
+
+// municipiosPanel renders the custom autocomplete options: picking one sets
+// the signal, closes the panel and saves in place (no page reload).
+templ municipiosPanel(items []municipio) {
+	if len(items) == 0 {
+		<p class="px-2 py-1.5 text-xs text-faint">—</p>
+	}
 	for _, m := range items {
-		<option value={ m.Display }></option>
+		<button
+			type="button"
+			data-on:click__prevent={ "$installLocation = \"" + m.Display + "\"; $locOpen = false; @post('/ajustes/install')" }
+			class="block w-full truncate rounded-lg px-2 py-1.5 text-left text-sm text-app transition-colors hover:bg-surface-2"
+		>
+			{ m.Display }
+		</button>
 	}
 }
 
@@ -833,23 +855,29 @@ templ ajustesProfile(v ajustesView) {
 							@iconX("h-4 w-4")
 						</label>
 					</form>
-					<!-- Idioma con su propio check -->
-					<form method="post" action="/ajustes/profile" class="flex items-center gap-1">
-						<input type="hidden" name="display_name" value={ v.DisplayName }/>
-						<input type="hidden" name="email" value={ v.Email }/>
-						<select name="language" aria-label={ T(v.Lang, "ajustes.sections.idioma") } class="h-9 w-[118px] rounded-xl border border-app bg-surface-2 px-2 text-sm text-app outline-none focus:border-brand">
+					<!-- Idioma: desplegable propio (respeta el tema), guarda al elegir. -->
+					<details class="relative">
+						<summary aria-label={ T(v.Lang, "ajustes.sections.idioma") } class="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-app bg-surface-2 px-2.5 text-sm text-app transition-colors hover:bg-surface">
+							@profileLangLabel(v)
+							@iconChevronDown("h-3.5 w-3.5 text-faint")
+						</summary>
+						<div class="absolute right-0 z-40 mt-1 w-48 rounded-xl border border-app bg-surface p-1 shadow-lg">
 							for _, l := range v.Languages {
-								if l.Code == v.ProfileLang {
-									<option value={ l.Code } selected>{ l.Flag } { l.Name }</option>
-								} else {
-									<option value={ l.Code }>{ l.Flag } { l.Name }</option>
-								}
+								{{ active := l.Code == v.ProfileLang }}
+								<form method="post" action="/ajustes/profile">
+									<input type="hidden" name="display_name" value={ v.DisplayName }/>
+									<input type="hidden" name="email" value={ v.Email }/>
+									<input type="hidden" name="language" value={ l.Code }/>
+									<button type="submit" class={ "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface-2", templ.KV("font-semibold text-app", active), templ.KV("text-muted", !active) }>
+										<span>{ l.Flag } { l.Name }</span>
+										if active {
+											<span class="ml-auto text-brand">@iconCheck("h-3.5 w-3.5")</span>
+										}
+									</button>
+								</form>
 							}
-						</select>
-						<button type="submit" aria-label={ T(v.Lang, "common.save") } title={ T(v.Lang, "common.save") } class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
-							@iconCheck("h-4 w-4")
-						</button>
-					</form>
+						</div>
+					</details>
 					<label for="perfil-pwd" title={ T(v.Lang, "ajustes.security.change") } class="flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-app bg-surface px-2.5 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-app group-has-[#perfil-pwd:checked]:border-brand group-has-[#perfil-pwd:checked]:bg-brand/10 group-has-[#perfil-pwd:checked]:text-brand">
 						@iconKeyRound("h-4 w-4")
 						<span class="hidden xl:inline">{ T(v.Lang, "common.password") }</span>
