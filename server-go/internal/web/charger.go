@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -530,9 +531,13 @@ func (u *UI) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 		u.DB.Audit(username, userID, "charger.action", detail)
 	}
 
+	start := time.Now()
 	_, err := extensions.ApplyAction(u.ExtHA, *charger, body.Action, body.Amps)
 	if err == nil {
-		u.waitChargerState(*charger, body.Action, body.Amps)
+		confirmed := u.waitChargerState(*charger, body.Action, body.Amps)
+		log.Printf("[chg-action] %s %s confirmed=%v in %s", charger.Key, body.Action, confirmed, time.Since(start).Round(time.Millisecond))
+	} else {
+		log.Printf("[chg-action] %s %s error=%v", charger.Key, body.Action, err)
 	}
 
 	patch := map[string]any{"ui": map[string]any{"pending": "", "error": ""}}
@@ -547,9 +552,9 @@ func (u *UI) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 
 // waitChargerState blocks (bounded) until Home Assistant reports the requested
 // state, so the answer carries the new state instead of the old one.
-func (u *UI) waitChargerState(charger extensions.Charger, action string, amps *float64) {
+func (u *UI) waitChargerState(charger extensions.Charger, action string, amps *float64) bool {
 	if u.ExtHA == nil {
-		return
+		return false
 	}
 	entity := charger.SwitchID
 	if action == "amp" {
@@ -558,10 +563,10 @@ func (u *UI) waitChargerState(charger extensions.Charger, action string, amps *f
 	deadline := time.Now().Add(1500 * time.Millisecond)
 	for {
 		if st, ok := u.ExtHA.GetState(entity); ok && stateMatches(st.State, action, amps) {
-			return
+			return true
 		}
 		if time.Now().After(deadline) {
-			return
+			return false
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
