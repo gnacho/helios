@@ -12,6 +12,9 @@ templ head(p pageProps) {
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<title>{ p.Title }</title>
 	<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+	<!-- PWA: mismo manifest y mismo start_url que la SPA (las paginas templ se
+	     sirven desde /, asi que la app instalada sigue apuntando ahi). -->
+	<link rel="manifest" href="/manifest.webmanifest"/>
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 	<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F6FA"/>
 	<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#080D1A"/>

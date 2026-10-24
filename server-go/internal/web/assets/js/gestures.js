@@ -51,3 +51,11 @@ document.addEventListener("change", function (e) {
     el.form.requestSubmit();
   }
 });
+
+// Service worker: la PWA (manifest + push) la sirve el backend; aqui solo se
+// registra. Sin esto las notificaciones push dejaban de llegar en la UI templ.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("/sw.js").catch(function () {});
+  });
+}
