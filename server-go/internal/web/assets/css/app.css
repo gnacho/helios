@@ -690,3 +690,16 @@ html:not(.reduce-motion) .rev-b .anim-share { animation-name: share-grow-b; }
 .heat-cell:focus {
   outline: none;
 }
+
+/* Foto del cargador: entra con un fundido. Antes, el PNG de ~380 KB se pintaba
+   por franjas de arriba abajo mientras el navegador lo decodificaba. */
+.chg-photo {
+  animation: chg-photo-in .45s ease both;
+}
+@keyframes chg-photo-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+html.reduce-motion .chg-photo {
+  animation: none;
+}

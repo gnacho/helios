@@ -957,7 +957,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "\" draggable=\"false\" class=\"absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain select-none\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "\" draggable=\"false\" class=\"chg-photo absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain select-none\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

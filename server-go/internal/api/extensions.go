@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -235,6 +236,18 @@ func (s *Server) handleGetChargerImage(w http.ResponseWriter, r *http.Request) {
 	if path == "" {
 		w.WriteHeader(404)
 		return
+	}
+	// El ETag evita revalidar con la foto entera en cada navegación (la UI
+	// templ es MPA) y cambia solo cuando se sube otra imagen.
+	st, statErr := os.Stat(path)
+	if statErr == nil {
+		etag := fmt.Sprintf(`"%x-%x"`, st.Size(), st.ModTime().UnixNano())
+		w.Header().Set("ETag", etag)
+		w.Header().Set("Cache-Control", "no-cache")
+		if r.Header.Get("If-None-Match") == etag {
+			w.WriteHeader(304)
+			return
+		}
 	}
 	buf, err := os.ReadFile(path)
 	if err != nil {

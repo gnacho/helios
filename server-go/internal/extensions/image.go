@@ -3,6 +3,7 @@ package extensions
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -59,6 +60,34 @@ func (e *Ext) SetChargerImageURL(key, url string) {
 	}
 }
 
+// WriteChargerImageFile escribe el data URL como <key>.<ext> y borra las demás
+// extensiones de esa clave. No toca la configuración del KV.
+func WriteChargerImageFile(dataDir, key, dataURL string) error {
+	m := imageDataRe.FindStringSubmatch(dataURL)
+	if m == nil {
+		return errors.New("formato de imagen invalido")
+	}
+	buf, err := base64.StdEncoding.DecodeString(m[2])
+	if err != nil || len(buf) == 0 {
+		return errors.New("imagen vacia")
+	}
+	ext := "png"
+	switch m[1] {
+	case "jpeg":
+		ext = "jpg"
+	case "webp":
+		ext = "webp"
+	}
+	dir := ChargerImageDir(dataDir)
+	for _, e := range imageExts {
+		f := filepath.Join(dir, key+"."+e)
+		if _, err := os.Stat(f); err == nil {
+			os.Remove(f)
+		}
+	}
+	return os.WriteFile(filepath.Join(dir, key+"."+ext), buf, 0o644)
+}
+
 // SaveChargerImage guarda la imagen (data URL) y apunta imageUrl al endpoint.
 func (e *Ext) SaveChargerImage(dataDir, key, dataURL string) (bool, string) {
 	m := imageDataRe.FindStringSubmatch(dataURL)
@@ -72,24 +101,7 @@ func (e *Ext) SaveChargerImage(dataDir, key, dataURL string) (bool, string) {
 	if len(buf) > chargerImageMax {
 		return false, "imagen demasiado grande (max 4 MB)"
 	}
-
-	dir := ChargerImageDir(dataDir)
-	for _, ext := range imageExts {
-		f := filepath.Join(dir, key+"."+ext)
-		if _, err := os.Stat(f); err == nil {
-			os.Remove(f)
-		}
-	}
-
-	ext := "png"
-	switch m[1] {
-	case "jpeg":
-		ext = "jpg"
-	case "webp":
-		ext = "webp"
-	}
-
-	if err := os.WriteFile(filepath.Join(dir, key+"."+ext), buf, 0o644); err != nil {
+	if err := WriteChargerImageFile(dataDir, key, dataURL); err != nil {
 		return false, "no se pudo guardar la imagen"
 	}
 	e.SetChargerImageURL(key, "/api/charger/image/"+key)

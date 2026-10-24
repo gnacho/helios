@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"image"
-	_ "image/jpeg" // decode support for the upload accept list
+	"image/jpeg" // encode photos; decoding is implied by the import
 	"image/png"
 	"io"
 	"log"
@@ -35,6 +35,54 @@ const (
 	// modo que un PNG de 300 bytes con IHDR de 30000x30000 pide 3,6 GB.
 	chargerImageMaxPixels = 40_000_000
 )
+
+// hasAlpha reports whether the picture keeps any transparency. Car cut-outs
+// must stay PNG; a plain photo can go to JPEG, which is 4-5x smaller.
+func hasAlpha(img image.Image) bool {
+	b := img.Bounds()
+	scan := func(pix []byte, stride, w, h int) bool {
+		for y := 0; y < h; y++ {
+			row := pix[y*stride:]
+			for x := 0; x < w; x++ {
+				if row[x*4+3] < 250 {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	switch m := img.(type) {
+	case *image.NRGBA:
+		return scan(m.Pix, m.Stride, b.Dx(), b.Dy())
+	case *image.RGBA:
+		return scan(m.Pix, m.Stride, b.Dx(), b.Dy())
+	}
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if _, _, _, a := img.At(x, y).RGBA(); a < 0xFA00 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// encodeForStore returns the data URL to persist. PNG photos weighed ~380 KB
+// and the browser paints them top to bottom while decoding, which looked like
+// a wipe-down animation; JPEG keeps them under ~80 KB.
+func encodeForStore(img image.Image) (string, error) {
+	var buf bytes.Buffer
+	if !hasAlpha(img) {
+		if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
+			return "", err
+		}
+		return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+	}
+	if err := png.Encode(&buf, img); err != nil {
+		return "", err
+	}
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+}
 
 // handleChargerImageUpload stores a custom charger picture (multipart form).
 func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
@@ -87,12 +135,12 @@ func (u *UI) handleChargerImageUpload(w http.ResponseWriter, r *http.Request) {
 	// plain white background) looked small inside the card: crop the border
 	// first so the car uses the full height, then cap the height.
 	dst := resizeToHeight(trimEmptyMargins(src), chargerImageMaxHeight)
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, dst); err != nil {
+	dataURL, err := encodeForStore(dst)
+	if err != nil {
+		log.Printf("[charger-image] encode %v", err)
 		http.Redirect(w, r, fail, http.StatusSeeOther)
 		return
 	}
-	dataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
 	if ok, msg := u.Ext.SaveChargerImage(u.DataDir, key, dataURL); !ok {
 		log.Printf("[charger-image] save: %s", msg)
 		http.Redirect(w, r, fail, http.StatusSeeOther)
@@ -264,15 +312,20 @@ func (u *UI) OptimizeStoredChargerImages() {
 			continue
 		}
 		dst := resizeToHeight(trimEmptyMargins(src), chargerImageMaxHeight)
-		if dst.Bounds().Size() == src.Bounds().Size() {
+		// Nothing to gain when the picture already fits and has transparency
+		// (PNG is then the only option).
+		if dst.Bounds().Size() == src.Bounds().Size() && hasAlpha(dst) {
 			continue
 		}
-		var buf bytes.Buffer
-		if err := png.Encode(&buf, dst); err != nil {
+		dataURL, err := encodeForStore(dst)
+		if err != nil {
 			log.Printf("[charger-image] optimize %s: %v", entry.Name(), err)
 			continue
 		}
-		if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		key := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		// File write only: the imageUrl in the KV already points here and Ext
+		// can be nil in tests.
+		if err := extensions.WriteChargerImageFile(u.DataDir, key, dataURL); err != nil {
 			log.Printf("[charger-image] optimize %s: %v", entry.Name(), err)
 			continue
 		}

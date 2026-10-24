@@ -2747,6 +2747,20 @@ html:not(.reduce-motion) .rev-b .anim-share {
 .heat-cell:focus {
   outline: none;
 }
+.chg-photo {
+  animation: chg-photo-in .45s ease both;
+}
+@keyframes chg-photo-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+html.reduce-motion .chg-photo {
+  animation: none;
+}
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
