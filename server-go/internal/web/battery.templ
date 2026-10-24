@@ -73,8 +73,8 @@ templ BateriaPage(v bateriaView) {
 						</div>
 						<p class="mt-1.5 text-sm text-muted">{ T(v.Lang, "bateria.minReserveDesc", map[string]string{"kwh": "1,0"}) }</p>
 					</div>
-					<div class="border-t border-app pt-5">
-						<p class="text-xs text-faint">{ T(v.Lang, "bateria.readOnly") }</p>
+					<div class="border-t border-app pt-6">
+						<p class="mt-1 text-xs text-faint">{ T(v.Lang, "bateria.readOnly") }</p>
 					</div>
 				</section>
 				if len(v.Donut.Slices) > 0 {
