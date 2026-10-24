@@ -854,7 +854,9 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 
 	st := chgStats(lang, period, anchor, today, hist, solarRows)
 	sv.Hist, _ = chgHistoryChart(lang, period, anchor, today, hist, solarRows, pal)
-	sv.HistHasData = st.Kwh > 0 || st.Prod > 0
+	// Only the energy actually charged counts: st.Prod is the whole-house solar
+	// production, which is always > 0 and would hide the empty state forever.
+	sv.HistHasData = st.Kwh > 0
 
 	sv.TotalKwh = st.Kwh
 	sv.TotalKwhText = fmtEnergy(lang, st.Kwh)
