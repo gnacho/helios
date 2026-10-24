@@ -188,7 +188,7 @@ templ histKpiCard(v historicoView, k histKpiView, idx int) {
 // historicoChartCard is the main chart card (day curves or period bars).
 templ historicoChartCard(v historicoView) {
 	<section id="grafico" class="helios-card scroll-mt-24 overflow-hidden shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.chartAria") }>
-		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-2 pt-4 sm:px-5">
 			<div class="mr-auto">
 				<h2 class="text-[15px] font-semibold text-app">{ v.ChartTitle }</h2>
 				<p class="text-xs capitalize text-faint">
@@ -323,7 +323,7 @@ func rowOpacity(isToday bool) string {
 // historicoDonutCard ports the EnergySourceDonut card (shared donut model).
 templ historicoDonutCard(v historicoView) {
 	<section class="helios-card flex h-full flex-col shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.donutAria") }>
-		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-2 pt-4 sm:px-5">
 			<div class="mr-auto">
 				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.donutTitle") }</h2>
 				<p class="text-xs capitalize text-faint">{ v.Subtitle }</p>
@@ -361,21 +361,21 @@ templ historicoDonutCard(v historicoView) {
 templ historicoHeatCard(v historicoView) {
 	<!-- id con la métrica: al cambiar de filtro el nodo no se puede emparejar y
 	     Datastar lo recrea entero (el morph no siempre refresca los fill del SVG). -->
-	<section id={ "heat-card-" + string(v.Heat.Metric) } class="helios-card relative shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.heatmapAria") }>
-		<div class="flex flex-wrap items-center gap-2 px-4 pb-1 pt-4 sm:px-5">
+	<section id={ "heat-card-" + string(v.Heat.Metric) } class="@container helios-card relative shadow-card dark:shadow-card-dark" aria-label={ T(v.Lang, "historico.heatmapAria") }>
+		<div class="flex flex-wrap items-center gap-2 px-4 pb-2 pt-4 sm:px-5">
 			<div class="mr-auto">
 				<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, v.Heat.Metric.titleKey()) }</h2>
 				<p class="text-xs text-faint">{ T(v.Lang, "historico.heatmapSubtitle") }</p>
 			</div>
 			@heatMetricTabs(v)
 		</div>
-		<div class="overflow-x-auto px-4 pb-2 sm:px-5">
+		<div class="overflow-x-auto px-4 pb-0 sm:px-5">
 			@heatSVG(v.Heat)
 		</div>
-		<div class="mt-1 flex items-center justify-end gap-1 px-5 pb-3 pr-1 text-[10px] text-faint">
+		<div class="flex items-center justify-end gap-1 px-5 pb-3 pr-1 text-[10px] text-faint">
 			<span class="mr-1">{ T(v.Lang, "historico.less") }</span>
 			for i, op := range v.Heat.LevelOp {
-				<span class="inline-block h-[10px] w-[10px] rounded-[3px]" style={ heatSwatchStyle(v.Heat, i, op) }></span>
+				<span class="inline-block" style={ heatSwatchStyle(v.Heat, i, op) }></span>
 			}
 			<span class="ml-1">{ T(v.Lang, "historico.more") }</span>
 		</div>
@@ -440,7 +440,7 @@ templ heatPopContent(v heatPopView) {
 						<li class="flex items-center gap-1.5 text-[11px]">
 							<span class="h-1.5 w-1.5 shrink-0 rounded-full" style={ "background-color: " + sl.Color }></span>
 							<span class="truncate text-muted">{ sl.Label }</span>
-							<span class="ml-auto shrink-0 font-semibold text-app">{ sl.ValueText }</span>
+							<span class="ml-auto shrink-0 font-semibold text-app">{ sl.ValueText } kWh</span>
 						</li>
 					}
 				</ul>
@@ -458,11 +458,20 @@ templ heatPopContent(v heatPopView) {
 	</div>
 }
 
+// heatSwatchSize/heatSwatchRadius follow the scaled cell size (12 px of the
+// 817-wide grid drawn inside the @container card) so the legend swatches match
+// the cells at any width.
+const (
+	heatSwatchSize   = "max(12px, calc((100cqw - 100px) * 0.0146876))"
+	heatSwatchRadius = "max(3px, calc((100cqw - 100px) * 0.0036719))"
+)
+
 func heatSwatchStyle(h heatModel, i int, op float64) string {
+	box := "width: " + heatSwatchSize + "; height: " + heatSwatchSize + "; border-radius: " + heatSwatchRadius
 	if i == 0 {
-		return "background-color: var(--surface-2)"
+		return box + "; background-color: var(--surface-2)"
 	}
-	return "background-color: " + h.Color + "; opacity: " + fmt.Sprintf("%.2f", op)
+	return box + "; background-color: " + h.Color + "; opacity: " + fmt.Sprintf("%.2f", op)
 }
 
 templ heatSVG(h heatModel) {

@@ -214,6 +214,9 @@
   }
 }
 @layer utilities {
+  .\@container {
+    container-type: inline-size;
+  }
   .pointer-events-none {
     pointer-events: none;
   }
@@ -510,9 +513,6 @@
   .h-\[3px\] {
     height: 3px;
   }
-  .h-\[10px\] {
-    height: 10px;
-  }
   .h-\[11px\] {
     height: 11px;
   }
@@ -644,9 +644,6 @@
   }
   .w-\[3px\] {
     width: 3px;
-  }
-  .w-\[10px\] {
-    width: 10px;
   }
   .w-\[11px\] {
     width: 11px;
@@ -939,9 +936,6 @@
   }
   .rounded-3xl {
     border-radius: var(--radius-3xl);
-  }
-  .rounded-\[3px\] {
-    border-radius: 3px;
   }
   .rounded-full {
     border-radius: calc(infinity * 1px);
@@ -1261,6 +1255,9 @@
   }
   .pr-4 {
     padding-right: calc(var(--spacing) * 4);
+  }
+  .pb-0 {
+    padding-bottom: 0px;
   }
   .pb-1 {
     padding-bottom: var(--spacing);
