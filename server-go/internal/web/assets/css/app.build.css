@@ -2043,9 +2043,6 @@
     .lg\:w-\[210px\] {
       width: 210px;
     }
-    .lg\:w-\[400px\] {
-      width: 400px;
-    }
     .lg\:w-\[420px\] {
       width: 420px;
     }
@@ -2054,6 +2051,9 @@
     }
     .lg\:w-fit {
       width: fit-content;
+    }
+    .lg\:flex-1 {
+      flex: 1;
     }
     .lg\:flex-none {
       flex: none;
@@ -2087,9 +2087,6 @@
     }
     .lg\:gap-5 {
       gap: calc(var(--spacing) * 5);
-    }
-    .lg\:gap-7 {
-      gap: calc(var(--spacing) * 7);
     }
     .lg\:overflow-visible {
       overflow: visible;
