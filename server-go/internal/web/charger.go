@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"net/http"
 	"net/url"
@@ -11,6 +12,8 @@ import (
 
 	"strings"
 
+	"github.com/starfederation/datastar-go/datastar"
+
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
 	"helios-server/internal/extensions"
@@ -18,10 +21,11 @@ import (
 )
 
 // /cargador page (port of app/src/pages/Cargador.tsx). Tabs are links
-// (?tab=key); power and amperage actions call the EXISTING JSON API
-// (POST /api/charger/action) through Datastar @post: the action logic is not
-// duplicated server-side. The image upload button (client-side canvas
-// resize) is not ported; the configured image is rendered when present.
+// (?tab=key); power and amperage actions go through Datastar to
+// POST /ui/charger/action, which shares extensions.ApplyAction with the JSON
+// API and answers with the fresh signals (the state does not wait for the hub
+// broadcast, which lags up to a second). The image upload button (client-side
+// canvas resize) is not ported; the configured image is rendered when present.
 
 // AMP_STEPS are the preset currents (IEC 61851 min 6 A).
 var AMP_STEPS = []int{6, 8, 10, 13, 16, 20, 25, 32}
@@ -483,6 +487,116 @@ func chgStats(lang string, p Period, anchor, today time.Time, hist []extensions.
 	return st
 }
 
+// handleChargerAction runs a power/amperage action from the templ UI and
+// answers with the FRESH charger signals. The JSON API already answers in
+// ~10 ms, but the new state only reached the page on the next hub broadcast
+// (throttled to 1 s and dependent on HA emitting), so the button looked slow.
+// Here the handler waits for HA to report the requested state and patches the
+// signals in the same response: the button confirms at once.
+func (u *UI) handleChargerAction(w http.ResponseWriter, r *http.Request) {
+	username, userID, isAdmin := u.currentUserActor(r)
+	lang := u.userLang(userID)
+
+	// El cuerpo se lee ANTES de crear el generador SSE: datastar.NewSSE
+	// consume y cierra el Body, y despues ya no se puede decodificar.
+	var body struct {
+		Charger string   `json:"charger"`
+		Action  string   `json:"action"`
+		Amps    *float64 `json:"amps"`
+	}
+	decodeErr := json.NewDecoder(r.Body).Decode(&body)
+
+	gen := datastar.NewSSE(w, r)
+	fail := func(msg string) {
+		_ = gen.MarshalAndPatchSignals(map[string]any{"ui": map[string]any{"pending": "", "error": msg}})
+	}
+	if !isAdmin || decodeErr != nil {
+		fail(T(lang, "common.error"))
+		return
+	}
+	if body.Charger == "" {
+		body.Charger = "main"
+	}
+	charger := extensions.GetChargerByKey(u.ExtStore.Get(), body.Charger)
+	if charger == nil {
+		fail(T(lang, "common.error"))
+		return
+	}
+	if u.DB != nil {
+		detail := map[string]any{"charger": charger.Key, "action": body.Action}
+		if body.Amps != nil {
+			detail["amps"] = *body.Amps
+		}
+		u.DB.Audit(username, userID, "charger.action", detail)
+	}
+
+	_, err := extensions.ApplyAction(u.ExtHA, *charger, body.Action, body.Amps)
+	if err == nil {
+		u.waitChargerState(*charger, body.Action, body.Amps)
+	}
+
+	patch := map[string]any{"ui": map[string]any{"pending": "", "error": ""}}
+	if chg := u.chargerSignals(lang); chg != nil {
+		patch["chg"] = chg
+	}
+	if err != nil {
+		patch["ui"] = map[string]any{"pending": "", "error": chargerActionError(lang, err)}
+	}
+	_ = gen.MarshalAndPatchSignals(patch)
+}
+
+// waitChargerState blocks (bounded) until Home Assistant reports the requested
+// state, so the answer carries the new state instead of the old one.
+func (u *UI) waitChargerState(charger extensions.Charger, action string, amps *float64) {
+	if u.ExtHA == nil {
+		return
+	}
+	entity := charger.SwitchID
+	if action == "amp" {
+		entity = charger.AmpID
+	}
+	deadline := time.Now().Add(1500 * time.Millisecond)
+	for {
+		if st, ok := u.ExtHA.GetState(entity); ok && stateMatches(st.State, action, amps) {
+			return
+		}
+		if time.Now().After(deadline) {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// stateMatches tells whether a HA state already reflects the requested action.
+func stateMatches(state, action string, amps *float64) bool {
+	switch action {
+	case "on":
+		return state == "on"
+	case "off":
+		return state == "off"
+	case "amp":
+		if amps == nil {
+			return true
+		}
+		v, err := strconv.ParseFloat(state, 64)
+		return err == nil && math.Abs(v-*amps) < 0.05
+	}
+	return true
+}
+
+// chargerActionError turns a validation/HA error into a short message.
+func chargerActionError(lang string, err error) string {
+	switch {
+	case errors.Is(err, extensions.ErrChargerNoSwitch):
+		return T(lang, "cargador.errorNoSwitch")
+	case errors.Is(err, extensions.ErrChargerNoAmp):
+		return T(lang, "cargador.errorNoAmp")
+	case errors.Is(err, extensions.ErrChargerAmps):
+		return T(lang, "cargador.errorAmps")
+	}
+	return T(lang, "common.error")
+}
+
 func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	userID, _ := auth.UserIDFrom(r.Context())
 	lang := u.userLang(userID)
@@ -570,7 +684,7 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	// boton se pinta como "Encendiendo/Apagando" hasta que HA confirma. Si el
 	// estado no llega (o falla), el intervalo del boton limpia pending.
 	sv.PowerClick = "$charger = '" + key + "'; $action = " + sw + " ? 'off' : 'on'; $ui.error = ''; " +
-		"$ui.pending = $action; $ui.pendingAt = Date.now(); @post('/api/charger/action')"
+		"$ui.pending = $action; $ui.pendingAt = Date.now(); @post('/ui/charger/action')"
 	sv.LabelExpr = sw + " ? '" + jsQuote(T(lang, "cargador.powerOff")) + "' : '" + jsQuote(T(lang, "cargador.powerOn")) + "'"
 	sv.TitleExpr = sv.LabelExpr
 	sv.ClassExpr = sw + " ? '" + chgPowerOnClass + "' : '" + chgPowerOffClass + "'"
@@ -609,7 +723,7 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 			sv.AmpChips = append(sv.AmpChips, ampChipView{
 				AmpsText:  ampsText,
 				Active:    active,
-				ClickExpr: "$charger = '" + charger.Key + "'; $action = 'amp'; $amps = " + ampsText + "; $ui.error = ''; @post('/api/charger/action')",
+				ClickExpr: "$charger = '" + charger.Key + "'; $action = 'amp'; $amps = " + ampsText + "; $ui.error = ''; @post('/ui/charger/action')",
 			})
 		}
 		if hasLive && live.Amps != nil {

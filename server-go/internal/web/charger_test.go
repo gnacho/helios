@@ -318,3 +318,80 @@ func TestChargerPowerButtonBindsSignals(t *testing.T) {
 		}
 	}
 }
+
+// flakyChargerHA cambia el estado tras N lecturas, como HA cuando aplica la
+// accion de forma asincrona.
+type flakyChargerHA struct {
+	stubChargerHA
+	pending string
+	reads   int
+	after   int
+}
+
+func (f *flakyChargerHA) GetState(id string) (ha.EntityState, bool) {
+	if f.pending != "" {
+		f.reads++
+		if f.reads > f.after {
+			f.states[id] = ha.EntityState{State: f.pending, Attributes: map[string]any{}}
+			f.pending = ""
+		}
+	}
+	return f.stubChargerHA.GetState(id)
+}
+
+// TestWaitChargerStateWaitsForHA: la respuesta de la accion espera a que HA
+// reporte el estado pedido, para no devolver el viejo (el boton se quedaba con
+// el estado anterior y parecia no responder).
+func TestWaitChargerStateWaitsForHA(t *testing.T) {
+	fa := &flakyChargerHA{stubChargerHA: stubChargerHA{states: map[string]ha.EntityState{
+		"switch.pared": {State: "off", Attributes: map[string]any{}},
+	}}, pending: "on", after: 2}
+	u := &UI{ExtHA: fa}
+	charger := extensions.Charger{Key: "main", SwitchID: "switch.pared"}
+
+	start := time.Now()
+	u.waitChargerState(charger, "on", nil)
+	elapsed := time.Since(start)
+
+	if st, _ := fa.GetState("switch.pared"); st.State != "on" {
+		t.Fatalf("no esperó al estado nuevo: %q", st.State)
+	}
+	if elapsed < 150*time.Millisecond {
+		t.Fatalf("no esperó lo suficiente: %v", elapsed)
+	}
+}
+
+// TestWaitChargerStateGivesUp: sin confirmacion no se queda colgado.
+func TestWaitChargerStateGivesUp(t *testing.T) {
+	fa := &stubChargerHA{states: map[string]ha.EntityState{
+		"switch.pared": {State: "off", Attributes: map[string]any{}},
+	}}
+	u := &UI{ExtHA: fa}
+	start := time.Now()
+	u.waitChargerState(extensions.Charger{Key: "main", SwitchID: "switch.pared"}, "on", nil)
+	if elapsed := time.Since(start); elapsed > 2500*time.Millisecond {
+		t.Fatalf("tardó demasiado en desistir: %v", elapsed)
+	}
+}
+
+// TestStateMatches cubre los tres tipos de acción.
+func TestStateMatches(t *testing.T) {
+	amps := 10.0
+	cases := []struct {
+		state, action string
+		amps          *float64
+		want          bool
+	}{
+		{"on", "on", nil, true},
+		{"off", "on", nil, false},
+		{"off", "off", nil, true},
+		{"10", "amp", &amps, true},
+		{"9.4", "amp", &amps, false},
+		{"unavailable", "amp", &amps, false},
+	}
+	for _, c := range cases {
+		if got := stateMatches(c.state, c.action, c.amps); got != c.want {
+			t.Fatalf("stateMatches(%q,%q) = %v, quería %v", c.state, c.action, got, c.want)
+		}
+	}
+}

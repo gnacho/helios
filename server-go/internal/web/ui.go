@@ -161,6 +161,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/historico", u.handleHistorico)
 		r.Get("/cargador", u.handleCargador)
 		r.Post("/cargador/charger-image", u.handleChargerImageUpload)
+		r.Post("/ui/charger/action", u.handleChargerAction)
 		r.Get("/ajustes", u.handleAjustes)
 
 		// Ajustes form wrappers (PRG): llaman a los mismos servicios en

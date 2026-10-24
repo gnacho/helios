@@ -15,8 +15,8 @@ import (
 // /cargador page (port of Cargador.tsx). Tabs are links (?tab=key). The power
 // and amperage buttons call the EXISTING JSON API (POST /api/charger/action)
 // through Datastar: $charger/$action/$amps signals travel in the @post body
-// (the API ignores unknown keys) and $ui.busy/$ui.error carry the loading and
-// error states. The image upload button (client-side canvas) is not ported.
+// (the handler ignores unknown keys) and $ui.busy/$ui.error carry the loading
+// and error states. The image upload button (client-side canvas) is not ported.
 func ChargerPage(v chargerView) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
