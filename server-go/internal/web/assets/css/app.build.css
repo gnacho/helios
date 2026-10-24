@@ -684,6 +684,9 @@
   .w-\[140px\] {
     width: 140px;
   }
+  .w-\[148px\] {
+    width: 148px;
+  }
   .w-\[160px\] {
     width: 160px;
   }
@@ -716,9 +719,6 @@
   }
   .max-w-\[120px\] {
     max-width: 120px;
-  }
-  .max-w-\[190px\] {
-    max-width: 190px;
   }
   .max-w-\[220px\] {
     max-width: 220px;
@@ -891,9 +891,6 @@
   .gap-6 {
     gap: calc(var(--spacing) * 6);
   }
-  .gap-7 {
-    gap: calc(var(--spacing) * 7);
-  }
   :where(.space-y-1 > :not(:last-child)) {
     --tw-space-y-reverse: 0;
     margin-block-start: calc(var(--spacing) * var(--tw-space-y-reverse));
@@ -904,6 +901,9 @@
   }
   .gap-x-5 {
     column-gap: calc(var(--spacing) * 5);
+  }
+  .gap-y-0\.5 {
+    row-gap: calc(var(--spacing) * 0.5);
   }
   .gap-y-1 {
     row-gap: var(--spacing);
@@ -1237,6 +1237,9 @@
   }
   .py-6 {
     padding-block: calc(var(--spacing) * 6);
+  }
+  .py-\[7px\] {
+    padding-block: 7px;
   }
   .pt-3 {
     padding-top: calc(var(--spacing) * 3);
@@ -1922,9 +1925,6 @@
     .sm\:flex-row {
       flex-direction: row;
     }
-    .sm\:items-center {
-      align-items: center;
-    }
     .sm\:gap-3 {
       gap: calc(var(--spacing) * 3);
     }
@@ -2031,11 +2031,11 @@
     .lg\:w-\[42\%\] {
       width: 42%;
     }
-    .lg\:w-\[45\%\] {
-      width: 45%;
+    .lg\:w-\[200px\] {
+      width: 200px;
     }
-    .lg\:w-\[55\%\] {
-      width: 55%;
+    .lg\:w-\[400px\] {
+      width: 400px;
     }
     .lg\:w-auto {
       width: auto;
@@ -2067,14 +2067,17 @@
     .lg\:flex-row {
       flex-direction: row;
     }
+    .lg\:items-center {
+      align-items: center;
+    }
     .lg\:items-stretch {
       align-items: stretch;
     }
     .lg\:gap-5 {
       gap: calc(var(--spacing) * 5);
     }
-    .lg\:gap-8 {
-      gap: calc(var(--spacing) * 8);
+    .lg\:gap-7 {
+      gap: calc(var(--spacing) * 7);
     }
     .lg\:overflow-visible {
       overflow: visible;
@@ -2097,8 +2100,8 @@
     .lg\:p-0 {
       padding: 0px;
     }
-    .lg\:pr-8 {
-      padding-right: calc(var(--spacing) * 8);
+    .lg\:pr-7 {
+      padding-right: calc(var(--spacing) * 7);
     }
     .lg\:backdrop-blur-none {
       --tw-backdrop-blur:  ;

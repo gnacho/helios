@@ -10,38 +10,39 @@ templ BateriaPage(v bateriaView) {
 				<!-- Estado de la batería y origen de la energía en la misma tarjeta:
 				     mitad izquierda el SOC con sus datos, mitad derecha el reparto. -->
 				<section class="helios-card col-span-12 p-5 shadow-card dark:shadow-card-dark sm:p-6" aria-label={ T(v.Lang, "bateria.gaugeAria", map[string]string{"pct": v.Gauge.SocText}) }>
-					<div class="flex flex-col gap-7 lg:flex-row lg:items-stretch lg:gap-8">
-						<div class="flex min-w-0 flex-col items-center gap-4 lg:w-[55%] lg:border-r lg:border-app lg:pr-8">
+					<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-7">
+						<!-- Una sola banda: el SOC, sus datos y el reparto a la misma altura. -->
+						<div class="flex shrink-0 flex-col items-center gap-3 lg:w-[200px]">
 							@socGaugeSVG(v, v.Gauge)
 							<span class={ "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold", v.Chip.Cls }>{ v.Chip.Text }</span>
-							<div class="mt-1 grid w-full grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-								for _, st := range v.Stats {
-									<div class="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-surface-2">
-										@iconForStat(st.IconKey, "h-[15px] w-[15px] shrink-0 text-faint")
-										<span class="text-[13px] text-muted">{ st.Label }</span>
-										<span class="ml-auto text-[15px] font-semibold tabular-nums text-app">{ st.Value }</span>
-									</div>
-								}
-							</div>
+						</div>
+						<div class="grid min-w-0 flex-1 grid-cols-1 gap-x-5 gap-y-0.5 sm:grid-cols-2 lg:border-r lg:border-app lg:pr-7">
+							for _, st := range v.Stats {
+								<div class="flex items-center gap-2 rounded-lg px-2 py-[7px] hover:bg-surface-2">
+									@iconForStat(st.IconKey, "h-[15px] w-[15px] shrink-0 text-faint")
+									<span class="whitespace-nowrap text-[13px] text-muted">{ st.Label }</span>
+									<span class="ml-auto whitespace-nowrap text-[15px] font-semibold tabular-nums text-app">{ st.Value }</span>
+								</div>
+							}
 						</div>
 						if len(v.Donut.Slices) > 0 {
-							<div class="flex min-w-0 flex-col gap-3 lg:w-[45%]">
-								<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.donutTitle") }</h2>
-								<div class="flex flex-1 flex-col items-center gap-4 sm:flex-row sm:items-center">
-									<div class="relative w-full max-w-[190px] shrink-0">
+							<div class="flex min-w-0 items-center gap-4 lg:w-[400px]">
+									<div class="relative w-[148px] shrink-0">
 										<svg viewBox="0 0 200 200" class="anim-pie mx-auto w-full" role="img" aria-label={ T(v.Lang, "historico.donutAria") }>
 											for _, sl := range v.Donut.Slices {
 												<path d={ sl.Path } fill={ sl.Color }></path>
 											}
 										</svg>
 										<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-											<p class="font-display text-xl font-semibold leading-none text-app">
+											<p class="font-display text-lg font-semibold leading-none text-app">
 												@animNum("donutBatTotal", v.Donut.Total, 1, v.Lang)
 											</p>
-											<p class="mt-1 text-[11px] text-faint">kWh · { v.Donut.CenterSub }</p>
+											<p class="mt-0.5 text-[10px] text-faint">kWh · { v.Donut.CenterSub }</p>
 										</div>
 									</div>
-									<ul class="flex w-full flex-col gap-1.5">
+									<div class="flex min-w-0 flex-1 flex-col gap-1.5">
+									<h2 class="text-[15px] font-semibold text-app">{ T(v.Lang, "historico.donutTitle") }</h2>
+									<ul class="flex flex-col gap-1.5">
 										for _, sl := range v.Donut.Slices {
 											<li class="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-[13px]">
 												<span class="h-2.5 w-2.5 shrink-0 rounded-full" style={ "background-color: " + sl.Color }></span>
@@ -51,7 +52,7 @@ templ BateriaPage(v bateriaView) {
 											</li>
 										}
 									</ul>
-								</div>
+									</div>
 							</div>
 						}
 					</div>
