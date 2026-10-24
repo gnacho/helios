@@ -669,7 +669,6 @@ templ ajustesExtensions(v ajustesView) {
 			} else if !v.ChargerEnabled {
 				<p class="text-sm text-muted">{ T(v.Lang, "ajustes.extensions.carChargerOffHint") }</p>
 			} else {
-				<p class="text-sm text-muted">{ T(v.Lang, "ajustes.extensions.carChargerDesc") }</p>
 				<div id="ext-charger-config" class="hidden flex-col gap-3 group-has-[#chg-config:checked]:flex">
 					<div class="flex flex-wrap items-center gap-2" role="tablist" aria-label={ T(v.Lang, "ajustes.extensions.chargerSelect") }>
 						for _, c := range v.Chargers {
@@ -677,18 +676,11 @@ templ ajustesExtensions(v ajustesView) {
 								{ c.Name }
 							</button>
 						}
-						<form method="post" action="/ajustes/extensions">
-							<input type="hidden" name="action" value="add-charger"/>
-							<button type="submit" aria-label={ T(v.Lang, "ajustes.extensions.chargerAdd") } title={ T(v.Lang, "ajustes.extensions.chargerAdd") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
-								@iconPlus("h-3.5 w-3.5")
-							</button>
-						</form>
+						<button type="submit" form="ext-add" aria-label={ T(v.Lang, "ajustes.extensions.chargerAdd") } title={ T(v.Lang, "ajustes.extensions.chargerAdd") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-app">
+							@iconPlus("h-3.5 w-3.5")
+						</button>
 						if len(v.Chargers) > 1 {
 							for _, c := range v.Chargers {
-								<form method="post" action="/ajustes/extensions" id={ "ext-remove-" + strconv.Itoa(c.Idx) }>
-									<input type="hidden" name="action" value="remove-charger"/>
-									<input type="hidden" name="remove" value={ strconv.Itoa(c.Idx) }/>
-								</form>
 								<button type="submit" form={ "ext-remove-" + strconv.Itoa(c.Idx) } title={ T(v.Lang, "ajustes.extensions.chargerRemove") } aria-label={ T(v.Lang, "ajustes.extensions.chargerRemove") } class="flex h-7 w-7 items-center justify-center rounded-full border border-app bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-rose-500">
 									@iconTrash2("h-3.5 w-3.5")
 								</button>
@@ -700,6 +692,9 @@ templ ajustesExtensions(v ajustesView) {
 							@ajChargerFields(v, c)
 						</div>
 					}
+					<button type="submit" class="inline-flex h-9 w-fit items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+						{ T(v.Lang, "ajustes.extensions.save") }
+					</button>
 				</div>
 				<input type="hidden" name="chg.count" value={ strconv.Itoa(len(v.Chargers)) }/>
 			}
@@ -712,14 +707,21 @@ templ ajustesExtensions(v ajustesView) {
 						}
 					</div>
 				</div>
-			</div>
-			<div class="flex items-center gap-3">
-				<button type="submit" class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
+				<button type="submit" class="inline-flex h-9 w-fit items-center gap-2 rounded-lg bg-brand-gradient px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90">
 					{ T(v.Lang, "ajustes.extensions.save") }
 				</button>
-				<p class="text-xs text-faint">{ T(v.Lang, "ajustes.extensions.entitiesHint") }</p>
 			</div>
 		</form>
+		<!-- Forms de add/remove fuera del form principal (no se pueden anidar). -->
+		<form method="post" action="/ajustes/extensions" id="ext-add" class="hidden">
+			<input type="hidden" name="action" value="add-charger"/>
+		</form>
+		for _, c := range v.Chargers {
+			<form method="post" action="/ajustes/extensions" id={ "ext-remove-" + strconv.Itoa(c.Idx) } class="hidden">
+				<input type="hidden" name="action" value="remove-charger"/>
+				<input type="hidden" name="remove" value={ strconv.Itoa(c.Idx) }/>
+			</form>
+		}
 		if len(v.BydActions) > 0 {
 			<div class="flex flex-wrap items-center gap-2" role="group" aria-label="BYD">
 				<span class="text-xs font-medium text-faint">Acciones BYD</span>
