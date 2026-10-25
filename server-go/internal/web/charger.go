@@ -62,8 +62,14 @@ type chgTabView struct {
 type ampChipView struct {
 	AmpsText string
 	Active   bool
+	// Aria es el valor inicial de aria-pressed del chip (true si activo).
+	Aria string
 	// ClickExpr is the Datastar expression of the chip action.
 	ClickExpr string
+	// AriaExpr and ClassExpr keep aria-pressed and styling in sync with the
+	// live amps signal so the pressed chip updates without a page reload.
+	AriaExpr  string
+	ClassExpr string
 }
 
 type chgCurveModel struct {
@@ -581,8 +587,9 @@ func (u *UI) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 	_, err := extensions.ApplyAction(u.ExtHA, *charger, body.Action, body.Amps)
+	confirmed := false
 	if err == nil {
-		confirmed := u.waitChargerState(*charger, body.Action, body.Amps)
+		confirmed = u.waitChargerState(*charger, body.Action, body.Amps)
 		log.Printf("[chg-action] %s %s confirmed=%v in %s", charger.Key, body.Action, confirmed, time.Since(start).Round(time.Millisecond))
 	} else {
 		log.Printf("[chg-action] %s %s error=%v", charger.Key, body.Action, err)
@@ -594,6 +601,10 @@ func (u *UI) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		patch["ui"] = map[string]any{"pending": "", "error": chargerActionError(lang, err)}
+	} else if !confirmed {
+		// The command went through but the charger never reported the new
+		// state: tell the user instead of failing silently.
+		patch["ui"] = map[string]any{"pending": "", "error": T(lang, "cargador.errorNotConfirmed")}
 	}
 	_ = gen.MarshalAndPatchSignals(patch)
 }
@@ -721,14 +732,38 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 				opts = append(opts, float64(a))
 			}
 		}
+		// Clamp the chips to the real range of the amp entity (a number
+		// entity exposes its min/max as attributes): out-of-range chips
+		// would always fail validation on set.
+		if hasLive && (live.AmpMin != nil || live.AmpMax != nil) {
+			filtered := make([]float64, 0, len(opts))
+			for _, a := range opts {
+				if live.AmpMin != nil && a < *live.AmpMin {
+					continue
+				}
+				if live.AmpMax != nil && a > *live.AmpMax {
+					continue
+				}
+				filtered = append(filtered, a)
+			}
+			if len(filtered) > 0 {
+				opts = filtered
+			}
+		}
 		sort.Float64s(opts)
+		ampClassOn := "inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-brand bg-brand/10 px-2 text-xs font-semibold tabular-nums text-brand transition-colors disabled:opacity-50"
+		ampClassOff := "inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-app bg-surface px-2 text-xs font-semibold tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
+		ampsSignal := "$chg." + charger.Key + ".amps"
 		for _, a := range opts {
 			active := hasLive && live.Amps != nil && *live.Amps == a
 			ampsText := strconv.FormatFloat(a, 'f', -1, 64)
 			sv.AmpChips = append(sv.AmpChips, ampChipView{
 				AmpsText:  ampsText,
 				Active:    active,
+				Aria:      map[bool]string{true: "true", false: "false"}[active],
 				ClickExpr: "$charger = '" + charger.Key + "'; $action = 'amp'; $amps = " + ampsText + "; $ui.error = ''; @post('/ui/charger/action')",
+				AriaExpr:  "(" + ampsSignal + " == " + ampsText + ") ? 'true' : 'false'",
+				ClassExpr: "(" + ampsSignal + " == " + ampsText + ") ? '" + ampClassOn + "' : '" + ampClassOff + "'",
 			})
 		}
 		if hasLive && live.Amps != nil {

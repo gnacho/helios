@@ -33,6 +33,8 @@ type LiveCharger struct {
 	SwitchOn   *bool     `json:"switchOn,omitempty"`
 	Amps       *float64  `json:"amps,omitempty"`
 	AmpOptions []float64 `json:"ampOptions,omitempty"`
+	AmpMin     *float64  `json:"ampMin,omitempty"`
+	AmpMax     *float64  `json:"ampMax,omitempty"`
 }
 
 func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
@@ -107,6 +109,7 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 	sw := entityStateOrUndefined(h, c.SwitchID)
 
 	var ampOptions []float64
+	var ampMin, ampMax *float64
 	if c.AmpID != "" {
 		if ent, ok := h.GetState(c.AmpID); ok && ent.Attributes != nil {
 			if opts, ok := ent.Attributes["options"].([]any); ok {
@@ -117,6 +120,8 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 				}
 				sort.Float64s(ampOptions)
 			}
+			ampMin = toFloat(ent.Attributes["min"])
+			ampMax = toFloat(ent.Attributes["max"])
 		}
 	}
 
@@ -131,6 +136,8 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 		TempC:      entityNumOrUndefined(h, c.TempID),
 		Amps:       entityNumOrUndefined(h, c.AmpID),
 		AmpOptions: ampOptions,
+		AmpMin:     ampMin,
+		AmpMax:     ampMax,
 	}
 	if powerKw != nil {
 		out.PowerKw = *powerKw

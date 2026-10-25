@@ -317,6 +317,67 @@ func TestChargerPowerButtonBindsSignals(t *testing.T) {
 	}
 }
 
+// TestChargerAmpChipsFilteredByRange: los atributos min/max del number de
+// amperaje recortan los chips al rango real de la entidad (regresion: un
+// number 8-32 no debe ofrecer el chip 6, un 6-16 no debe ofrecer 20/25/32).
+func TestChargerAmpChipsFilteredByRange(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgrange.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "main", Name: "Pared", PowerID: "sensor.p",
+		EnergyTotalID: "sensor.et", AmpID: "number.amp", SwitchID: "switch.pared",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "range-pass-1", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"switch.pared": {State: "off", Attributes: map[string]any{}},
+		"sensor.p":     {State: "0.0", Attributes: map[string]any{}},
+		"sensor.et":    {State: "10", Attributes: map[string]any{}},
+		"number.amp":   {State: "13", Attributes: map[string]any{"min": 8.0, "max": 32.0}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "range-pass-1"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	// Dentro de rango 8-32: presentes.
+	for _, want := range []string{">8<", ">10<", ">13<", ">16<", ">32<"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta el chip %s (rango 8-32)", want)
+		}
+	}
+	// Fuera de rango: el 6 no debe pintarse.
+	if strings.Contains(body, ">6<") {
+		t.Fatal("el chip 6 deberia filtrarse con min 8")
+	}
+	// El chip activo (13) va marcado y el aria-pressed es reactivo al signal.
+	if !strings.Contains(body, "aria-pressed=\"true\"") {
+		t.Fatal("falta el chip activo con aria-pressed=true")
+	}
+}
+
 // flakyChargerHA cambia el estado tras N lecturas, como HA cuando aplica la
 // accion de forma asincrona.
 type flakyChargerHA struct {

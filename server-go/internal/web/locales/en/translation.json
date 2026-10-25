@@ -200,6 +200,7 @@
     "turningOff": "Turning off…",
     "errorNoSwitch": "This charger has no switch configured",
     "errorNoAmp": "This charger has no current control",
+    "errorNotConfirmed": "The charger did not confirm the change: check that the vehicle has charging demand",
     "errorAmps": "Current out of range (6-32 A)",
     "powerToastOn": "{{name}} turned on",
     "powerToastOff": "{{name}} turned off",
