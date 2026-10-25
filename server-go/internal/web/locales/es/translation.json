@@ -200,6 +200,7 @@
     "turningOff": "Apagando…",
     "errorNoSwitch": "Este cargador no tiene interruptor configurado",
     "errorNoAmp": "Este cargador no tiene control de amperaje",
+    "errorNotConfirmed": "El cargador no ha confirmado el cambio: comprueba que el vehículo tenga demanda de carga",
     "errorAmps": "Amperaje fuera de rango (6-32 A)",
     "powerToastOn": "{{name}} encendido",
     "powerToastOff": "{{name}} apagado",

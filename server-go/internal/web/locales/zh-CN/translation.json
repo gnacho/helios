@@ -200,6 +200,7 @@
     "turningOff": "正在关闭…",
     "errorNoSwitch": "此充电器未配置开关",
     "errorNoAmp": "此充电器没有电流控制",
+    "errorNotConfirmed": "充电器未确认更改：请确认车辆有充电需求",
     "errorAmps": "电流超出范围 (6-32 A)",
     "powerToastOn": "{{name}} 已开启",
     "powerToastOff": "{{name}} 已关闭",

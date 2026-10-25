@@ -258,29 +258,18 @@ templ chgHero(v chargerView, s *chgSingleView) {
 					<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label={ s.AmpsAria }>
 						<span class="mr-1 text-xs text-faint">{ s.AmpsLabel }</span>
 						for _, chip := range s.AmpChips {
-							if chip.Active {
-								<button
-									type="button"
-									aria-pressed="true"
-									data-on:click={ chip.ClickExpr }
-									data-indicator="$ui.busy"
-									data-attr:disabled={ "$ui.busy" }
-									class="inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-brand bg-brand/10 px-2 text-xs font-semibold tabular-nums text-brand transition-colors disabled:opacity-50"
-								>
-									{ chip.AmpsText }
-								</button>
-							} else {
-								<button
-									type="button"
-									aria-pressed="false"
-									data-on:click={ chip.ClickExpr }
-									data-indicator="$ui.busy"
-									data-attr:disabled={ "$ui.busy" }
-									class="inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-app bg-surface px-2 text-xs font-semibold tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
-								>
-									{ chip.AmpsText }
-								</button>
-							}
+							<button
+								type="button"
+								aria-pressed={ chip.Aria }
+								data-on:click={ chip.ClickExpr }
+								data-indicator="$ui.busy"
+								data-attr:disabled={ "$ui.busy" }
+								data-attr:aria-pressed={ chip.AriaExpr }
+								data-attr:class={ chip.ClassExpr }
+								class={ ampClass(chip.Active) }
+							>
+								{ chip.AmpsText }
+							</button>
 						}
 					</div>
 				}
@@ -296,6 +285,14 @@ templ chgHero(v chargerView, s *chgSingleView) {
 			</div>
 		</div>
 	</section>
+}
+
+// ampClass devuelve las clases del chip segun su estado activo.
+func ampClass(active bool) string {
+	if active {
+		return "inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-brand bg-brand/10 px-2 text-xs font-semibold tabular-nums text-brand transition-colors disabled:opacity-50"
+	}
+	return "inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-app bg-surface px-2 text-xs font-semibold tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
 }
 
 func iconForChgState(state string, class string) templ.Component {
