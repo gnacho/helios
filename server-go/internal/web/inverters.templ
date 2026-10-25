@@ -13,10 +13,25 @@ templ InversoresPage(v inversoresView) {
 				if len(v.Tabs) > 1 {
 					@invTabs(v)
 				}
-				if v.Single != nil {
+				<!-- Track de los paneles: en movil se desliza con el dedo y ya
+				     tiene pintada la vecina; en escritorio solo se ve la activa. -->
+				if len(v.Panels) > 1 {
+					<div class="overflow-hidden lg:overflow-visible" data-pager data-param="inv" data-active={ strconv.Itoa(v.ActiveIndex) }>
+						<div class="flex w-full items-start will-change-transform" data-pager-track style={ pagerStyle(v.ActiveIndex) }>
+							for _, pnl := range v.Panels {
+								<div class={ "w-full shrink-0", templ.KV("lg:hidden", !pnl.Active) } data-panel={ pnl.Key }>
+									if pnl.IsCompare() {
+										@invCompare(v, pnl.Compare)
+									} else {
+										@invSingle(v, pnl.Single)
+									}
+								</div>
+							}
+						</div>
+					</div>
+				} else if v.Single != nil {
 					@invSingle(v, v.Single)
-				}
-				if v.Compare != nil {
+				} else if v.Compare != nil {
 					@invCompare(v, v.Compare)
 				}
 				<p class="flex items-center gap-1.5 text-xs text-faint">
@@ -41,6 +56,7 @@ templ invTabs(v inversoresView) {
 					aria-selected={ boolStr(tb.Active) }
 					class={ "relative flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors lg:flex-none", templ.KV("text-faint hover:text-muted", !tb.Active) }
 					style={ tabColor(tb) }
+					data-tab-color={ tb.Color }
 				>
 					if tb.Active {
 						<span class="vt-slide-tab absolute inset-0 rounded-full bg-surface-2 shadow-inner"></span>
@@ -49,7 +65,7 @@ templ invTabs(v inversoresView) {
 						if tb.IsCompare {
 							@iconArrowLeftRight("h-3.5 w-3.5")
 						} else {
-							<span class="h-2 w-2 rounded-full" style={ "background-color: " + tb.Color + "; opacity: " + tabDotOpacity(tb) }></span>
+							<span data-tab-dot class="h-2 w-2 rounded-full" style={ "background-color: " + tb.Color + "; opacity: " + tabDotOpacity(tb) }></span>
 						}
 						{ tb.Label }
 					</span>

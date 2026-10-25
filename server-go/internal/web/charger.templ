@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // /cargador page (port of Cargador.tsx). Tabs are links (?tab=key). The power
@@ -19,7 +20,19 @@ templ ChargerPage(v chargerView) {
 				if len(v.Tabs) > 1 {
 					@chgTabs(v)
 				}
-				if v.Active != nil {
+				<!-- Track de los paneles: en movil se desliza con el dedo y ya
+				     tiene pintada la vecina; en escritorio solo se ve la activa. -->
+				if len(v.Panels) > 1 {
+					<div class="overflow-hidden lg:overflow-visible" data-pager data-param="tab" data-active={ strconv.Itoa(v.ActiveIndex) }>
+						<div class="flex w-full items-start will-change-transform" data-pager-track style={ pagerStyle(v.ActiveIndex) }>
+							for _, pnl := range v.Panels {
+								<div class={ "w-full shrink-0", templ.KV("lg:hidden", pnl.Key != v.Active.Key) } data-panel={ pnl.Key }>
+									@chgSingle(v, pnl)
+								</div>
+							}
+						</div>
+					</div>
+				} else if v.Active != nil {
 					@chgSingle(v, v.Active)
 				}
 				<!--/#chg-body-->

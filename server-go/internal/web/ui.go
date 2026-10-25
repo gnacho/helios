@@ -289,6 +289,15 @@ func (u *UI) handleInvPatch(w http.ResponseWriter, r *http.Request) {
 	u.patchPanel(w, r, "/inversores", "inv-body", u.handleInversores)
 }
 
+// pagerStyle places the mobile track on the i-th panel without JS: the panels
+// are w-full, so translating -i*100% of the track width lands on panel i.
+func pagerStyle(i int) string {
+	if i <= 0 {
+		return "transform: translate3d(0, 0, 0)"
+	}
+	return "transform: translate3d(-" + strconv.Itoa(i*100) + "%, 0, 0)"
+}
+
 // clickTab is the click expression of the "clone" tabs: it updates the URL and
 // patches the panel instead of navigating. Enter on a link fires a click with
 // detail 0, so keyboard activation keeps the plain navigation.
@@ -313,8 +322,24 @@ func panelSwapClick(pageURL, endpoint string) string {
 }
 
 // chgPeriodSwapClick changes the charger history period without reloading.
+// On a phone the swipe changes the charger without a render, so the tab is read
+// from the address bar at click time: the href still carries the one that was
+// active when the page was painted.
 func chgPeriodSwapClick(u string) string {
-	return panelSwapClick(u, "/ui/chg")
+	pu, err := url.Parse(u)
+	if err != nil {
+		return panelSwapClick(u, "/ui/chg")
+	}
+	q := pu.Query()
+	q.Del("tab")
+	prefix := ""
+	if enc := q.Encode(); enc != "" {
+		prefix = enc + "&"
+	}
+	prefix += "tab="
+	return "var tab = new URLSearchParams(location.search).get('tab') || '';" +
+		" history.pushState({}, '', '" + jsQuote(pu.Path+"?"+prefix) + "' + tab);" +
+		" @get('/ui/chg?" + jsQuote(prefix) + "' + tab)"
 }
 
 func chgTabSwapClick(key string) string {

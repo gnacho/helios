@@ -189,12 +189,14 @@ type chgSingleView struct {
 
 type chargerView struct {
 	pageProps
-	Signals string
-	Palette Palette
-	Tabs    []chgTabView
-	Active  *chgSingleView
-	IsAdmin bool
-	ImgErr  bool
+	Signals     string
+	Palette     Palette
+	Tabs        []chgTabView
+	Panels      []*chgSingleView // one per charger, for the mobile swipe track
+	Active      *chgSingleView
+	ActiveIndex int
+	IsAdmin     bool
+	ImgErr      bool
 }
 
 // chargerSignals builds the $chg subtree for every charger: server-formatted
@@ -648,58 +650,10 @@ func chargerActionError(lang string, err error) string {
 	return T(lang, "common.error")
 }
 
-func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
-	userID, _ := auth.UserIDFrom(r.Context())
-	lang := u.userLang(userID)
-	p := u.baseProps(r, userID, "/cargador", "")
-	p.Title = T(lang, "nav.cargador")
-
-	if u.ExtStore == nil {
-		http.Redirect(w, r, "/", http.StatusFound)
-		return
-	}
-	cfg := u.ExtStore.Get()
-	if !extensions.ChargerActive(cfg) || len(cfg.CarCharger.Chargers) == 0 {
-		// Extensión desactivada: vuelta al inicio (como el Navigate de React).
-		http.Redirect(w, r, "/", http.StatusFound)
-		return
-	}
-	pal := newPalette(p.Theme == "dark")
-	today := startOfDay(time.Now())
-
-	// Tab activa: ?tab=key (el primero por defecto).
-	activeKey := r.URL.Query().Get("tab")
-	charger := extensions.GetChargerByKey(cfg, activeKey)
-	if charger == nil {
-		charger = &cfg.CarCharger.Chargers[0]
-	}
-
-	_, _, isAdmin := u.currentUserActor(r)
-	v := chargerView{pageProps: p, Palette: pal, IsAdmin: isAdmin, ImgErr: r.URL.Query().Get("imgerr") == "1"}
-	for i := range cfg.CarCharger.Chargers {
-		c := &cfg.CarCharger.Chargers[i]
-		charging := false
-		if u.ExtHA != nil {
-			live := extensions.ComputeOneChargerLive(u.ExtHA, *c)
-			charging = live.Charging
-		}
-		v.Tabs = append(v.Tabs, chgTabView{Key: c.Key, Name: c.Name, Active: c.Key == charger.Key, Charging: charging})
-	}
-
-	// Señales: estado por cargador + ui de acción.
-	signals := map[string]any{}
-	if chg := u.chargerSignals(lang); chg != nil {
-		signals["chg"] = chg
-	}
-	signals["ui"] = map[string]any{"busy": false, "error": "", "charger": charger.Key, "action": "", "amps": nil,
-		"pending": "", "pendingAt": 0}
-	sigJSON, err := json.Marshal(signals)
-	if err != nil {
-		sigJSON = []byte("{}")
-	}
-	v.Signals = string(sigJSON)
-
-	// Vista del cargador activo.
+// buildChgSingle builds one charger panel: hero, live stats, today curve and
+// history. The page paints every charger so the mobile track can show the
+// neighbour while the finger drags.
+func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today time.Time, charger *extensions.Charger) *chgSingleView {
 	sv := &chgSingleView{
 		Key:  charger.Key,
 		Name: charger.Name,
@@ -916,8 +870,72 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 		avgDay = st.Kwh / float64(st.ActiveDays)
 	}
 	sv.AvgDayText = fmtEnergy(lang, avgDay)
+	return sv
+}
 
-	v.Active = sv
+func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
+	userID, _ := auth.UserIDFrom(r.Context())
+	lang := u.userLang(userID)
+	p := u.baseProps(r, userID, "/cargador", "")
+	p.Title = T(lang, "nav.cargador")
+
+	if u.ExtStore == nil {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	cfg := u.ExtStore.Get()
+	if !extensions.ChargerActive(cfg) || len(cfg.CarCharger.Chargers) == 0 {
+		// Extensión desactivada: vuelta al inicio (como el Navigate de React).
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	pal := newPalette(p.Theme == "dark")
+	today := startOfDay(time.Now())
+
+	// Tab activa: ?tab=key (el primero por defecto).
+	activeKey := r.URL.Query().Get("tab")
+	charger := extensions.GetChargerByKey(cfg, activeKey)
+	if charger == nil {
+		charger = &cfg.CarCharger.Chargers[0]
+	}
+
+	_, _, isAdmin := u.currentUserActor(r)
+	v := chargerView{pageProps: p, Palette: pal, IsAdmin: isAdmin, ImgErr: r.URL.Query().Get("imgerr") == "1"}
+	for i := range cfg.CarCharger.Chargers {
+		c := &cfg.CarCharger.Chargers[i]
+		charging := false
+		if u.ExtHA != nil {
+			live := extensions.ComputeOneChargerLive(u.ExtHA, *c)
+			charging = live.Charging
+		}
+		v.Tabs = append(v.Tabs, chgTabView{Key: c.Key, Name: c.Name, Active: c.Key == charger.Key, Charging: charging})
+	}
+
+	// Señales: estado por cargador + ui de acción.
+	signals := map[string]any{}
+	if chg := u.chargerSignals(lang); chg != nil {
+		signals["chg"] = chg
+	}
+	signals["ui"] = map[string]any{"busy": false, "error": "", "charger": charger.Key, "action": "", "amps": nil,
+		"pending": "", "pendingAt": 0}
+	sigJSON, err := json.Marshal(signals)
+	if err != nil {
+		sigJSON = []byte("{}")
+	}
+	v.Signals = string(sigJSON)
+
+	// Paneles de TODOS los cargadores: en movil el track se desliza con el dedo
+	// y necesita la vecina ya pintada (React la montaba en memoria).
+	activeIndex := 0
+	for i := range cfg.CarCharger.Chargers {
+		c := &cfg.CarCharger.Chargers[i]
+		if c.Key == charger.Key {
+			activeIndex = i
+		}
+		v.Panels = append(v.Panels, u.buildChgSingle(r, lang, pal, today, c))
+	}
+	v.ActiveIndex = activeIndex
+	v.Active = v.Panels[activeIndex]
 	_ = ChargerPage(v).Render(r.Context(), w)
 }
 

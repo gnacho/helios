@@ -141,13 +141,26 @@ type peakAt struct {
 // inversoresView carries everything InversoresPage renders.
 type inversoresView struct {
 	pageProps
-	Signals string
-	Palette Palette
-	Tabs    []invTabView
-	Single  *invSingleView
-	Compare *invCompareView
-	Note    string
+	Signals     string
+	Palette     Palette
+	Tabs        []invTabView
+	Panels      []invPanelView // one per tab, for the mobile swipe track
+	ActiveIndex int
+	Single      *invSingleView
+	Compare     *invCompareView
+	Note        string
 }
+
+// invPanelView is one tab of the inverters page as painted inside the track.
+type invPanelView struct {
+	Key     string
+	Active  bool
+	Compare *invCompareView
+	Single  *invSingleView
+}
+
+// IsCompare reports whether the panel is the side-by-side comparison.
+func (p invPanelView) IsCompare() bool { return p.Compare != nil }
 
 type invSingleView struct {
 	Hero   invHeroModel
@@ -237,11 +250,26 @@ func (u *UI) handleInversores(w http.ResponseWriter, r *http.Request) {
 		v.Tabs = append(v.Tabs, invTabView{Key: k, Label: label, Color: color, Active: k == active, IsCompare: isCompare})
 	}
 
-	if active == "compare" && len(metas) >= 2 {
-		norm := r.URL.Query().Get("norm") == "1"
-		v.Compare = buildCompareView(lang, pal, m, metas, keys, names, norm)
-	} else if active != "compare" {
-		v.Single = buildSingleView(lang, pal, m, metas, keys, active, hist)
+	// Todas las pestanas se pintan: en movil el track desliza y ensena la
+	// vecina sin pedir nada al servidor (React las tenia en memoria).
+	norm := r.URL.Query().Get("norm") == "1"
+	for _, k := range tabKeys {
+		if k == "compare" {
+			if len(metas) >= 2 {
+				v.Panels = append(v.Panels, invPanelView{Key: k, Compare: buildCompareView(lang, pal, m, metas, keys, names, norm)})
+			}
+			continue
+		}
+		v.Panels = append(v.Panels, invPanelView{Key: k, Single: buildSingleView(lang, pal, m, metas, keys, k, hist)})
+	}
+	for i := range v.Panels {
+		if v.Panels[i].Key != active {
+			continue
+		}
+		v.Panels[i].Active = true
+		v.Single = v.Panels[i].Single
+		v.Compare = v.Panels[i].Compare
+		v.ActiveIndex = i
 	}
 
 	_ = InversoresPage(v).Render(r.Context(), w)

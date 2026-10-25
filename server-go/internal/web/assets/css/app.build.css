@@ -1609,6 +1609,9 @@
     --tw-duration: 150ms;
     transition-duration: 150ms;
   }
+  .will-change-transform {
+    will-change: transform;
+  }
   .outline-none {
     --tw-outline-style: none;
     outline-style: none;
