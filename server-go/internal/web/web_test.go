@@ -29,7 +29,6 @@ func testUI(t *testing.T) (*UI, *chi.Mux, *auth.Auth) {
 		t.Fatalf("register: %v", err)
 	}
 	u := New(a, d, nil, nil, nil, nil, nil, nil, solar.PriceConfig{}, nil)
-	u.RootFiles = func(w http.ResponseWriter, r *http.Request) bool { return false }
 
 	r := chi.NewRouter()
 	u.Mount(r)

@@ -18,7 +18,7 @@ func TestSystemInfoShape(t *testing.T) {
 	store := extensions.NewStore()
 	store.Set(extensions.ResolveConfig(d))
 	sol := solar.New(nil, nil)
-	srv := NewServer(&auth.Auth{}, d, t.TempDir(), sol, nil, extensions.New(store, d, nil), store, nil, solar.PriceConfig{}, nil, "")
+	srv := NewServer(&auth.Auth{}, d, t.TempDir(), sol, nil, extensions.New(store, d, nil), store, nil, solar.PriceConfig{}, nil)
 	srv.SSE = httpNoop()
 
 	req := httptest.NewRequest("GET", "/api/system/info", nil)

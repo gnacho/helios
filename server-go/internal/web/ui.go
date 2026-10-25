@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -11,6 +12,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -100,26 +102,26 @@ type pageProps struct {
 	ReduceMotion bool
 }
 
-// UI serves the templ pages. RootFiles lets the host serve favicon-like
-// files from the SPA static dir (no index.html fallback) before the 404.
-// Ext/ExtHA give the pages access to the charger services in process (day
-// curve + history); Prices are the configured energy prices. DataDir feeds
-// the update-progress state of the Ajustes page; Push the VAPID config.
+// UI serves the templ pages. Root files (favicon, PWA manifest, service
+// worker, icons) travel embedded in the binary, so a deployment needs no
+// static directory. Ext/ExtHA give the pages access to the charger services
+// in process (day curve + history); Prices are the configured energy prices.
+// DataDir feeds the update-progress state of the Ajustes page; Push the VAPID
+// config.
 type UI struct {
-	Auth      *auth.Auth
-	DB        *db.DB
-	Solar     *solar.Solar
-	HA        solar.HAReader
-	Install   *install.Store
-	ExtStore  *extensions.Store
-	Ext       *extensions.Ext
-	ExtHA     extensions.HA
-	Prices    solar.PriceConfig
-	Hub       *sse.Hub
-	RootFiles func(w http.ResponseWriter, r *http.Request) bool
-	DataDir   string
-	Push      *push.Service
-	assets    http.Handler
+	Auth     *auth.Auth
+	DB       *db.DB
+	Solar    *solar.Solar
+	HA       solar.HAReader
+	Install  *install.Store
+	ExtStore *extensions.Store
+	Ext      *extensions.Ext
+	ExtHA    extensions.HA
+	Prices   solar.PriceConfig
+	Hub      *sse.Hub
+	DataDir  string
+	Push     *push.Service
+	assets   http.Handler
 }
 
 func New(a *auth.Auth, database *db.DB, sol *solar.Solar, ha solar.HAReader, installStore *install.Store, extStore *extensions.Store, ext *extensions.Ext, extHA extensions.HA, prices solar.PriceConfig, hub *sse.Hub) *UI {
@@ -353,6 +355,15 @@ func invTabSwapClick(key string) string {
 func (u *UI) Mount(r chi.Router) {
 	r.Get("/assets/*", navLog(http.HandlerFunc(u.handleAssets)).ServeHTTP)
 
+	// Root files come from the embed too: the binary is self-contained.
+	for _, name := range []string{
+		"/favicon.svg", "/favicon-32.png", "/apple-touch-icon.png",
+		"/pwa-icon-192.png", "/pwa-icon-512.png", "/manifest.webmanifest",
+		"/sw.js", "/empty-solar.svg",
+	} {
+		r.Get(name, u.handleRootFile)
+	}
+
 	r.Get("/login", u.handleLoginPage)
 	r.Post("/login", u.handleLoginSubmit)
 	r.Post("/logout", u.handleLogout)
@@ -520,12 +531,9 @@ func (u *UI) signalLang(r *http.Request) string {
 	return u.userLang(id)
 }
 
-// NotFound is the router fallback in templ UI mode: root static files
-// (favicon, manifest) first, then redirect-or-404 for pages.
+// NotFound is the router fallback: an unknown path is a page inside the app
+// (redirect to login) or a 404 with the shell, never a SPA fallback.
 func (u *UI) NotFound(w http.ResponseWriter, r *http.Request) {
-	if u.RootFiles != nil && u.RootFiles(w, r) {
-		return
-	}
 	sess := u.Auth.SessionIDFromCookie(r)
 	if sess == nil {
 		http.Redirect(w, r, loginURL(r.URL.RequestURI()), http.StatusFound)
@@ -535,6 +543,28 @@ func (u *UI) NotFound(w http.ResponseWriter, r *http.Request) {
 	p.Title = T(p.Lang, "stub.title")
 	w.WriteHeader(http.StatusNotFound)
 	_ = NotFoundPage(p).Render(r.Context(), w)
+}
+
+// handleRootFile serves an embedded root file. The service worker must
+// revalidate (otherwise a stale one keeps controlling the tab); the icons and
+// the favicon can be cached for a day.
+func (u *UI) handleRootFile(w http.ResponseWriter, r *http.Request) {
+	name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
+	if name == "" || name == "." || strings.Contains(name, "..") {
+		http.NotFound(w, r)
+		return
+	}
+	data, err := fs.ReadFile(assetsEmbed, "assets/root/"+name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if name == "sw.js" {
+		w.Header().Set("Cache-Control", "no-cache")
+	} else {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+	}
+	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(data))
 }
 
 func (u *UI) handleAssets(w http.ResponseWriter, r *http.Request) {

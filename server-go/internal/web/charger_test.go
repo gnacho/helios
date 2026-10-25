@@ -233,7 +233,6 @@ func buildChargerUI(t *testing.T, d *db.DB, extStore *extensions.Store, ext *ext
 		t.Fatalf("register: %v", err)
 	}
 	u := New(a, d, nil, nil, nil, extStore, ext, nil, solar.PriceConfig{}, nil)
-	u.RootFiles = func(w http.ResponseWriter, r *http.Request) bool { return false }
 
 	r := chi.NewRouter()
 	u.Mount(r)
@@ -289,7 +288,6 @@ func TestChargerPowerButtonBindsSignals(t *testing.T) {
 		"number.amp":   {State: "10", Attributes: map[string]any{}},
 	}}
 	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
-	u.RootFiles = func(w http.ResponseWriter, r *http.Request) bool { return false }
 	r := chi.NewRouter()
 	u.Mount(r)
 	r.NotFound(u.NotFound)

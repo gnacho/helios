@@ -87,7 +87,7 @@ la batería y cuánto vale en euros cada kWh autoconsumido.
 |---|---|
 | **Go 1.25 + net/http (desde v1.0.0)** | El backend se reescribió de Node/Hono a Go en v1.0.0: un binario estático de ~12 MB, sin runtime, sin `node_modules` y un solo lenguaje en el servidor. La lógica de agregados y saneado se portó con el mismo contrato de API, verificada campo a campo contra Home Assistant (SOC, producción, red, energía del cargador) antes del corte. El backend Node se eliminó del árbol (recuperable del historial de git; el binario Node desplegado en el host sigue siendo el rollback inmediato). |
 | **SQLite via modernc.org/sqlite (Go puro)** | Una BD embebida transaccional es todo lo que necesita una app doméstica: cero servicios extra, backup trivial, los 798 días caben en 90 MB, y WAL. Driver en Go puro para que el binario sea 100% estático (sin CGO ni libc) y compile para amd64/arm64 en CI. |
-| **React 19 + Vite + Tailwind** | El mismo front de todas las apps de la casa (`webapp-shell` compartida): una sola forma de hacer shell, tema, ajustes y login. |
+| **Sin SPA ni Node en el árbol** | El front React (y el flag `HELIOS_UI` que lo servía) se retiró: un solo binario sirve la API y la UI templ, con los estáticos raíz embebidos (favicon, manifest, service worker). No hay paso de `npm`, ni bundle de cliente que publicar, ni dos fronts que mantener en sintonía. |
 | **HAOS como fuente del live** | HAOS ya mantiene las integraciones con Solis/Fox y sus reconexiones. Duplicar eso en Helios sería mantener dos drivers. Helios consume, no integra. |
 | **systemd + LXC, sin Docker** | Un binario estático y una unit hardenizada (`ProtectSystem`, `ProtectHome`) es más simple de razonar y de revertir que un contenedor, y la BD vive fuera del código en `/opt/helios/data`. |
 | **Litestream → SFTP** | Réplica continua de la SQLite con point-in-time-recovery: la BD es lo único insustituible del sistema. |
@@ -144,8 +144,6 @@ Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──�
 ```
 
 - `server/`: API Hono + auth multiusuario + agregados + saneado de datos.
-- `app/`: React 19 (vistas: Hoy, Inversores, Batería, Histórico, Ajustes).
-- `shared/` + `app/src/data/types.ts`: contrato tipado server↔front (en Go la API devuelve las mismas formas).
 - Detalle completo en `ARCHITECTURE.md` y `STACK.md`.
 
 ## Instalación
@@ -170,8 +168,8 @@ la topología desde Ajustes. La BD vive en `server/data/` (o `DATA_DIR`) y el
 
 - Producción: un CT de Proxmox, servicio `helios.service`, puerto
   80 (solo LAN). La BD **no se toca** sin backup previo.
-- Desarrollo local: `npm run build` (tsc → `dist/`) y `PORT=8199 AUTH_PASS=… node dist/index.js`
-  desde `server/` (la BD de `server/data/` es una copia de desarrollo).
+- Desarrollo local: `make build` (templ + Tailwind + Go, sin Node) y ejecutar el binario con
+  `PORT=8199 DATA_DIR=/tmp/helios-dev ./helios-go` (una copia desechable de la BD).
 - Si la contraseña de admin se pierde: `curl -X POST
   http://127.0.0.1:<puerto>/api/auth/recover` **desde el propio host**
   (SSH) devuelve una temporal. No funciona a través de proxy.

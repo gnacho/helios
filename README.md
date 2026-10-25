@@ -87,7 +87,7 @@ battery is doing, and what every self-consumed kWh is worth in euros.
 | **Go 1.25 + net/http (since v1.0.0)** | The backend was rewritten from Node/Hono to Go in v1.0.0: a single static ~12 MB binary, no runtime, no `node_modules`, and one language for the server. The aggregation and data-sanitation logic was ported with the same API contract, verified field by field against Home Assistant (SOC, production, grid, charger energy) before switching over. The old Node server is removed from the tree (recoverable from git history; the deployed Node binary on the host remains as the immediate rollback). |
 | **SQLite via modernc.org/sqlite (pure Go)** | An embedded transactional DB is all a home app needs: zero extra services, trivial backups, 798 days fit in 90 MB, and WAL. Pure-Go driver so the binary is 100% static (no CGO, no libc) and cross-compiles for amd64/arm64 from CI. |
 | **templ + Datastar (since v1.1.0)** | The screens are rendered on the server, so the app ships no application JavaScript: only Datastar for live updates, a small static helper for the swipe gesture and the service worker. One binary serves the API and the UI, and the page never shows an empty shell while a client bundle boots. |
-| **React 19 + Vite + Tailwind (rollback)** | The previous front stays in `app/` and can be served with `HELIOS_UI=react`, which is the quick way back if the new UI misbehaves. |
+| **No SPA, no Node in the tree** | The React front (and the `HELIOS_UI` flag that served it) was removed: a single binary serves the API and the templ UI with the root statics embedded (favicon, manifest, service worker). There is no `npm` step, no client bundle to ship, and nothing to keep in sync between two fronts. |
 | **HAOS as the live source** | HAOS already maintains the Solis/Fox integrations and their reconnections. Duplicating that in Helios means maintaining two drivers. Helios consumes, it doesn't integrate. |
 | **systemd + LXC, no Docker** | One static binary and a hardened unit (`ProtectSystem`, `ProtectHome`) is simpler to reason about and to roll back than a container, and the DB lives outside the code in `/opt/helios/data`. |
 | **Litestream → SFTP** | Continuous SQLite replication with point-in-time recovery: the DB is the only irreplaceable part of the system. |
@@ -144,9 +144,7 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 ```
 
 - `server-go/`: Go API + multi-user auth + aggregation + data sanitation (the live backend since v1.0.0).
-- `app/`: React 19 front (views: Today, Inverters, Battery, History, Settings), served with `HELIOS_UI=react` as a rollback path.
-- `server-go/internal/web/`: server-rendered UI (templ + Datastar), the default since v1.1.0.
-- `shared/` + `app/src/data/types.ts`: typed contract server↔front (in Go the API returns the same shapes).
+- `server-go/internal/web/`: server-rendered UI (templ + Datastar) since v1.1.0, embedded in the binary together with its CSS, JS and the root statics.
 - Full detail in `ARCHITECTURE.md` and `STACK.md`.
 
 ## Installation
@@ -171,8 +169,8 @@ and the `.env` always survives updates.
 
 - Production: a Proxmox CT, `helios.service`, port 80 (LAN
   only). The DB **is never touched** without a prior backup.
-- Local dev: `npm run build` (tsc → `dist/`) and `PORT=8199 AUTH_PASS=… node dist/index.js` from
-  `server/` (the DB in `server/data/` is a development copy).
+- Local dev: `make build` (templ + Tailwind + Go, no Node) and run the binary with
+  `PORT=8199 DATA_DIR=/tmp/helios-dev ./helios-go` (a throwaway DB copy).
 - If the admin password is lost: `curl -X POST
   http://127.0.0.1:<port>/api/auth/recover` **from the host itself**
   (SSH) returns a temporary one. Doesn't work through a proxy.

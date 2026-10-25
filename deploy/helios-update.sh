@@ -5,18 +5,19 @@
 #   /opt/helios/
 #     server/helios-go   → BINARIO (se sustituye en cada update)
 #     server/.env        → configuración (NUNCA se toca)
-#     public/            → build del frontend (se sustituye)
+#     public/            → OBSOLETO: los estáticos (favicon, manifest, sw.js)
+#                          viajan dentro del binario desde la retirada del SPA
 #     data/              → SQLite, avatares, imágenes (NUNCA se toca)
 #     .release-id        → versión instalada (fuente de verdad de /api/update/status)
 #
-# Assets del release (desde v1.0.0):
-#   helios_<ver>_linux_<arch>          → binario estático
-#   helios-web_<ver>_linux_<arch>.tar.gz → frontend (stage/dist)
-#   checksums.txt                       → sha256 de ambos
+# Assets del release:
+#   helios_<ver>_linux_<arch>  → binario estático (única pieza: la UI y los
+#                                estáticos van embebidos)
+#   checksums.txt              → sha256 del binario
 #
 # Garantías:
 #   - descarga a tmp, verifica sha256 ANTES de instalar
-#   - backup del binario y del public/ anteriores
+#   - backup del binario anterior
 #   - sustitución atómica del binario (mv sobre el mismo filesystem)
 #   - si el servicio no arranca tras el restart, ROLLBACK automático al binario
 #     anterior y exit != 0
@@ -56,51 +57,30 @@ fi
 
 progress "download" 15
 BIN_NAME="helios_${VER_NO_V}_linux_${ARCH}"
-WEB_NAME="helios-web_${VER_NO_V}_linux_${ARCH}.tar.gz"
 BASE="https://github.com/$REPO/releases/download/$VER"
 curl -fL "$BASE/$BIN_NAME" -o "$TMP_DIR/helios-go"
-progress "download" 45
-curl -fL "$BASE/$WEB_NAME" -o "$TMP_DIR/web.tar.gz"
 progress "download" 55
 TS="$(date +%s)"
 curl -fL "$BASE/checksums.txt?nc=$TS" -o "$TMP_DIR/checksums.txt"
 
 progress "verify" 60
-for f in "$BIN_NAME" "$WEB_NAME"; do
-  expected="$(awk -v f="$f" '$0 ~ f {print $1; exit}' "$TMP_DIR/checksums.txt")"
-  [ -n "$expected" ] || { log "checksums.txt sin entrada para $f"; progress "error" 0; exit 5; }
-done
 EXPECTED_BIN="$(awk -v f="$BIN_NAME" '$0 ~ f {print $1; exit}' "$TMP_DIR/checksums.txt")"
-EXPECTED_WEB="$(awk -v f="$WEB_NAME" '$0 ~ f {print $1; exit}' "$TMP_DIR/checksums.txt")"
+[ -n "$EXPECTED_BIN" ] || { log "checksums.txt sin entrada para $BIN_NAME"; progress "error" 0; exit 5; }
 GOT_BIN="$(sha256sum "$TMP_DIR/helios-go" | awk '{print $1}')"
-GOT_WEB="$(sha256sum "$TMP_DIR/web.tar.gz" | awk '{print $1}')"
 [ "$EXPECTED_BIN" = "$GOT_BIN" ] || { log "SHA256 binario NO coincide"; progress "error" 0; exit 5; }
-[ "$EXPECTED_WEB" = "$GOT_WEB" ] || { log "SHA256 web NO coincide"; progress "error" 0; exit 5; }
 progress "verify" 70
 
 progress "install" 72
 TS="$(date +%Y%m%d-%H%M%S)"
 BACKUP_BIN="$OPT_DIR/server/helios-go.bak-$TS"
 [ -f "$BIN" ] && cp -a "$BIN" "$BACKUP_BIN"
-[ -d "$OPT_DIR/public" ] && cp -a "$OPT_DIR/public" "$OPT_DIR/public.bak-$TS"
-
-mkdir -p "$TMP_DIR/web"
-tar -xzf "$TMP_DIR/web.tar.gz" -C "$TMP_DIR/web"
-
-# Frontend: sustitución completa (el build es inmutable)
-rm -rf "$OPT_DIR/public.new"
-mkdir -p "$OPT_DIR/public.new"
-cp -a "$TMP_DIR/web/dist/." "$OPT_DIR/public.new/"
 
 # Binario: copia al lado y mv atómico (el servicio está parado durante el swap)
 install -m 0755 "$TMP_DIR/helios-go" "$OPT_DIR/server/helios-go.new"
 chown "$APP:$APP" "$OPT_DIR/server/helios-go.new" 2>/dev/null || true
 
 progress "install" 88
-rm -rf "$OPT_DIR/public"
-mv "$OPT_DIR/public.new" "$OPT_DIR/public"
 mv -f "$OPT_DIR/server/helios-go.new" "$BIN"
-chown -R "$APP:$APP" "$OPT_DIR/public" 2>/dev/null || true
 chown "$APP:$APP" "$BIN" 2>/dev/null || true
 
 progress "restart" 92

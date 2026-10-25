@@ -17,7 +17,7 @@ jobs:
         run: make tools/tailwindcss
       - name: Instala templ CLI
         run: go install github.com/a-h/templ/cmd/templ@v0.3.1070
-      - name: Verifica artefactos web al día (templ + css + i18n)
+      - name: Verifica artefactos web al día (templ + css)
         run: make web-check TEMPL="$(go env GOPATH)/bin/templ"
       - run: go vet ./...
         working-directory: server-go
@@ -26,49 +26,15 @@ jobs:
       - run: go build ./...
         working-directory: server-go
 
-  frontend:
+  landing:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci
-        working-directory: app
-      - run: npm run lint
-        working-directory: app
-      - run: npm run build
-        working-directory: app
-      - run: npm run check:bundlesize
-        working-directory: app
       - run: npm ci --no-audit --no-fund && npm run build
         working-directory: landing
-
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: server-go/go.mod
-          cache-dependency-path: server-go/go.sum
-      - name: Compila el binario del backend
-        working-directory: server-go
-        run: |
-          CGO_ENABLED=0 go build -o ../helios-go ./cmd/server
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-      - run: npm ci
-        working-directory: app
-      - run: npm run build
-        working-directory: app
-      - run: npx playwright install --with-deps chromium
-        working-directory: app
-      - run: npm run test:e2e
-        working-directory: app
 
   gitleaks:
     runs-on: ubuntu-latest

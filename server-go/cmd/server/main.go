@@ -134,23 +134,19 @@ func main() {
 		extHA = client
 	}
 
-	staticDir := getenv("STATIC_DIR", cfg.DataDir+"/public")
-	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices, store, staticDir)
+	srv := api.NewServer(a, database, cfg.DataDir, sol, haReader, ext, extStore, extHA, prices, store)
 	srv.Push = pushSvc
 	srv.SSE = hub
 
-	// UI templ (HELIOS_UI=templ). Por defecto sigue la SPA React.
-	if getenv("HELIOS_UI", "react") == "templ" {
-		ui := web.New(a, database, sol, haReader, store, extStore, ext, extHA, prices, hub)
-		ui.RootFiles = srv.Static.ServeFileNoSPA
-		ui.DataDir = cfg.DataDir
-		ui.Push = pushSvc
-		// Las fotos subidas desde el React solo se escalaron: recorta el aire
-		// sobrante una vez para que ocupen el alto de la tarjeta.
-		ui.OptimizeStoredChargerImages()
-		srv.UI = ui
-		log.Printf("[helios] UI templ activada (HELIOS_UI=templ)")
-	}
+	// La UI es la de templ: la SPA React se retiró (ya no hay vuelta atrás).
+	ui := web.New(a, database, sol, haReader, store, extStore, ext, extHA, prices, hub)
+	ui.DataDir = cfg.DataDir
+	ui.Push = pushSvc
+	// Las fotos heredadas del React solo se escalaron: recorta el aire
+	// sobrante una vez para que ocupen el alto de la tarjeta.
+	ui.OptimizeStoredChargerImages()
+	srv.UI = ui
+	log.Printf("[helios] UI templ servida por el binario")
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	log.Printf("helios-server go listening on %s (db=%s)", addr, cfg.DBPath)

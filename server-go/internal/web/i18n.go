@@ -1,4 +1,4 @@
-// Package web renders the HTML UI (templ + Datastar) when HELIOS_UI=templ.
+// Package web renders the HTML UI (templ + Datastar) embedded in the binary.
 // The JSON API is untouched: this package only adds page routes on top.
 package web
 

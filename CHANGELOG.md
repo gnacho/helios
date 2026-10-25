@@ -5,6 +5,28 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Changed
+
+- **Fuera la SPA: un solo binario.** La app React (`app/`) se ha retirado del
+  repositorio. El binario Go sirve ya la API y la interfaz templ, y los
+  estáticos raíz (favicon, iconos, `manifest.webmanifest`, `sw.js` y la imagen
+  de "sin datos") van embebidos en el ejecutable: desaparecen `public/`, la
+  variable `STATIC_DIR` y el flag `HELIOS_UI`, y no queda ningún paso de `npm`
+  ni bundle de cliente que desplegar.
+- **CI más corta.** Se eliminan los jobs de frontend y de end-to-end (necesitaban
+  Node y el build de Vite). Quedan las pruebas del servidor, el build de la
+  landing y el escaneo de secretos.
+- **La release publica un único artefacto.** El workflow de release deja de
+  empaquetar el frontend: sube el binario por arquitectura y los checksums.
+  `deploy/helios-update.sh` descarga y verifica solo el binario, y mantiene el
+  backup y el rollback automático si el servicio no responde.
+
+### Removed
+
+- La app React, sus pruebas end-to-end, `app/public/` y la caché de `npm` en CI.
+
 ## [1.1.7] - 2026-10-24
 
 ### Changed

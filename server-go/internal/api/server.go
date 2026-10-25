@@ -30,19 +30,17 @@ type Server struct {
 	SSE      http.Handler
 	Prices   solar.PriceConfig
 	Install  *install.Store
-	Static   *StaticFiles
 	UI       *web.UI
 	dataDir  string
 }
 
-func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, ext *extensions.Ext, extStore *extensions.Store, extHA extensions.HA, prices solar.PriceConfig, installStore *install.Store, staticDir string) *Server {
+func NewServer(a *auth.Auth, database *db.DB, dataDir string, sol *solar.Solar, haReader solar.HAReader, ext *extensions.Ext, extStore *extensions.Store, extHA extensions.HA, prices solar.PriceConfig, installStore *install.Store) *Server {
 	return &Server{
 		Auth: a, DB: database, dataDir: dataDir,
 		Solar: sol, HA: haReader,
 		Ext: ext, ExtStore: extStore, ExtHA: extHA,
 		Prices:  prices,
 		Install: installStore,
-		Static:  NewStaticFiles(staticDir),
 	}
 }
 
@@ -121,27 +119,17 @@ func (s *Server) Routes() chi.Router {
 		r.Put("/api/push/preferences", s.handlePutPushPreferences)
 	})
 
-	// UI templ (HELIOS_UI=templ): páginas HTML, assets propios y auth de página.
-	if s.UI != nil {
-		s.UI.Mount(r)
-	}
+	// UI: páginas HTML, assets propios y auth de página.
+	s.UI.Mount(r)
 
-	// Fallback: API 404 en JSON. Con UI templ, ficheros raíz + 404 HTML;
-	// sin ella, fallback SPA clásico sobre el directorio estático.
+	// Fallback: API 404 en JSON; una ruta desconocida de la app va al login o
+	// al 404 con el shell (no hay SPA que sirva index.html).
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" {
 			writeJSON(w, 404, map[string]any{"error": "ruta no encontrada"})
 			return
 		}
-		if s.UI != nil {
-			s.UI.NotFound(w, r)
-			return
-		}
-		if s.Static != nil {
-			s.Static.ServeHTTP(w, r)
-			return
-		}
-		http.NotFound(w, r)
+		s.UI.NotFound(w, r)
 	})
 
 	return r

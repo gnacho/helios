@@ -5,6 +5,12 @@ Cuando se migre Deltos, este documento es el mapa de lo que ya se pisó: los
 bugs que salieron, las decisiones que funcionaron y el proceso que evitó
 romper producción.
 
+> Nota de contexto (25-Oct-2026): este relato describe la migración Node → Go
+> mientras la SPA React seguía sirviendo la interfaz. Después se portó la UI a
+> templ + Datastar y se retiró React por completo: ya no existe `app/`, ni
+> `STATIC_DIR`, ni el flag `HELIOS_UI`, y los estáticos raíz van embebidos en el
+> binario. Las menciones a la SPA de aquí abajo son históricas.
+
 ## El port de referencia
 
 - `server-go/` reemplaza a `server/` (Node/Hono) con el MISMO contrato HTTP/SSE.

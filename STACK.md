@@ -11,7 +11,7 @@ delante. Sin Docker y sin runtime de JavaScript en el servidor.
 - **SQLite**: `modernc.org/sqlite` (Go puro para que el binario siga estático), WAL, sin ORM y con migraciones incrementales tolerantes
 - **Auth**: cookie de sesión HMAC httpOnly 30d, sesiones en SQLite, rate-limit de login en memoria
 - **SSE**: hub propio con throttle de 1 s que empuja señales Datastar al navegador
-- **UI**: renderizada en el servidor con templ; `HELIOS_UI=react` sirve la SPA antigua como rollback
+- **UI**: renderizada en el servidor con templ + Datastar, embebida en el binario (sin SPA ni flag de modo)
 - **Despliegue**: systemd (`helios-go.service`) con usuario dedicado + `AmbientCapabilities=CAP_NET_BIND_SERVICE` para :80 sin root, y Litestream replicando la BD por SFTP
 
 ## Frontend — templ + Datastar (desde v1.1.0)
@@ -19,7 +19,7 @@ delante. Sin Docker y sin runtime de JavaScript en el servidor.
 - **Estilo**: Tailwind v4 con el binario standalone (sin Node en el build del CSS) y variables CSS para los temas claro/oscuro/sistema, acentos y densidad
 - **Animaciones**: CSS puro (keyframes, contadores por señales Datastar). Nada de librerías de animación
 - **PWA**: manifest enlazado desde el layout, `sw.js` para notificaciones push y registro del worker en el helper estático
-- **React 19 (rollback)**: la SPA anterior sigue en `app/` (Vite + Tailwind + framer-motion + recharts) y se sirve con `HELIOS_UI=react`
+- **Estáticos**: favicon, iconos PWA, `manifest.webmanifest` y `sw.js` viajan en `server-go/internal/web/assets/root/` (embed), así que no hay `STATIC_DIR` ni carpeta `public/` que desplegar
 
 ## Datos (fuentes en Home Assistant)
 - **En vivo**: `subscribe_entities` a los sensores de potencia (Solis, Fox pinza, 3 medidores Tongou, batería, scraper, sun, weather, temperatura exterior)

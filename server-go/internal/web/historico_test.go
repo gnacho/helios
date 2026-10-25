@@ -355,7 +355,6 @@ func historicoTestUI(t *testing.T) (*UI, *chi.Mux) {
 
 	extStore := extensions.NewStore()
 	u := New(a, d, nil, nil, nil, extStore, nil, nil, solar.PriceConfig{}, nil)
-	u.RootFiles = func(w http.ResponseWriter, r *http.Request) bool { return false }
 
 	r := chi.NewRouter()
 	u.Mount(r)

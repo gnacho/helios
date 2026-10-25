@@ -2,9 +2,10 @@ name: release
 
 # Release estable por tag v* (desde v1.0.0 el runtime es Go).
 #
-# Publica, por arquitectura:
-#   - el BINARIO del backend Go (`helios_<ver>_linux_<arch>`), estático
-#   - el tarball del frontend ya construido (`helios-web_<ver>_linux_<arch>.tar.gz`)
+# Publica, por arquitectura, el BINARIO del backend Go
+# (`helios_<ver>_linux_<arch>`), estático y autocontenido: la UI templ y los
+# estáticos raíz (favicon, manifest, sw.js) van embebidos, así que ya no hay
+# tarball de frontend.
 # El checksums.txt se genera en un job `release` SEPARADO (needs: build) que
 # combina AMBAS arquitecturas: si cada job de la matriz subiera el suyo, el
 # último pisaría al otro (bug real ya visto en el port de deltos #36).
@@ -39,24 +40,11 @@ jobs:
           go-version-file: server-go/go.mod
           cache-dependency-path: server-go/go.sum
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
       - name: Tests del backend Go
         working-directory: server-go
         run: |
           go vet ./...
           go test -race ./...
-
-      - name: Build frontend
-        working-directory: app
-        run: |
-          npm ci --no-audit --no-fund
-          npm run lint
-          npm run build
 
       - name: Compila el binario (estático, sin CGO)
         working-directory: server-go
@@ -72,21 +60,16 @@ jobs:
             -o "../helios_${VERSION}_linux_${{ matrix.arch }}" ./cmd/server
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Empaqueta el frontend
-        run: |
-          mkdir -p stage
-          cp -r app/dist stage/dist
-          tar -czf "helios-web_${VERSION}_linux_${{ matrix.arch }}.tar.gz" -C stage .
-          ls -la helios_*
+      - name: Comprueba el artefacto
+        run: ls -la helios_*
 
-      - name: Sube artifacts (binario + web por arch)
+      - name: Sube artifacts (binario por arch)
         uses: actions/upload-artifact@v4
         with:
           name: helios-${{ matrix.arch }}
           # Globs: upload-artifact no expande variables de shell en `path`.
           path: |
             helios_*_linux_${{ matrix.arch }}
-            helios-web_*_linux_${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 7
 
@@ -106,8 +89,7 @@ jobs:
         working-directory: dist
         run: |
           chmod +x helios_*_linux_* 2>/dev/null || true
-          # "helios_*" no matchea los tarballs "helios-web_*": hay que listar ambos.
-          sha256sum helios_* helios-web_* > checksums.txt
+          sha256sum helios_*_linux_* > checksums.txt
           cat checksums.txt
 
       - name: Publica en la release
@@ -115,5 +97,4 @@ jobs:
         with:
           files: |
             dist/helios_*_linux_*
-            dist/helios-web_*_linux_*
             dist/checksums.txt
