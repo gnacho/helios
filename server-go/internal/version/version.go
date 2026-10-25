@@ -3,4 +3,4 @@
 package version
 
 // Version es la versión publicada del backend.
-var Version = "1.1.7"
+var Version = "1.1.8"

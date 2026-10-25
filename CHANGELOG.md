@@ -5,10 +5,54 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
-## [Sin publicar]
+## [1.1.8] - 2026-10-25
+
+### Added
+
+- **El histórico anual deja de ser un adorno.** El mapa de calor permite elegir
+  entre producción, consumo y autoconsumo (naranja, azul y verde), y cada
+  métrica escala sus niveles sobre su propio máximo. Al pasar el ratón por un
+  día se ve la fecha y su cifra; al pulsarlo se abre una ficha con el reparto
+  solar directa, batería y red de ese día y un botón para ir a él. La tarjeta
+  se adapta al ancho disponible y la leyenda usa cuadros del tamaño exacto de
+  las celdas.
+- **Todas las gráficas responden al ratón.** El dashboard, el día de cada
+  inversor, la comparativa, la potencia y el estado de carga de la batería, la
+  semana de balance, la curva y el histórico del cargador, las dos vistas del
+  histórico y los últimos catorce días muestran una línea de cursor y un
+  bocadillo con la hora y el valor de cada serie. En los donuts de origen de la
+  energía el sector bajo el ratón se amplía y su dato sustituye al total en el
+  centro.
+- **Las pestañas se arrastran en el móvil.** En el cargador (de pared y
+  portátil) y en inversores (Solis, Fox y comparativa) la tarjeta se coge con el
+  dedo: la vecina asoma mientras se desliza, el gesto encaja si pasa de un 22 %
+  del ancho y ofrece resistencia en los extremos. No hay recarga ni consulta al
+  servidor, porque las dos caras ya vienen pintadas.
+- **Las alertas de la campana se pueden dar por vistas.** Cada aviso lleva un
+  check que lo quita de la lista sin recargar, y el punto de la campana
+  desaparece cuando no queda ninguno. Se guarda por usuario y un aviso que
+  vuelve a ocurrir se muestra otra vez.
 
 ### Changed
 
+- **Cambiar de pestaña o de periodo ya no recarga la página.** Las pestañas del
+  cargador y de los inversores, el selector Semana/Mes/Año, las flechas, el chip
+  "Hoy" y el interruptor de normalizar la comparativa piden solo el fragmento
+  que cambia y lo reemplazan en su sitio, con las gráficas reanimándose.
+- **La batería cabe en una tarjeta.** El estado de carga con sus datos y el
+  reparto de origen de la energía comparten una sola tarjeta en una fila, con el
+  arco y el anillo al mismo tamaño, los textos juntos y el aire repartido por
+  igual a los dos lados del separador.
+- **El cargador solo enseña lo que el aparato publica.** Si el dispositivo no
+  expone potencia, temperatura o energía total, esas filas desaparecen en vez de
+  mostrar ceros o "—". El cargador portátil (cuya integración en la nube lleva
+  días caída) muestra únicamente su sesión y un aviso de que aún no hay
+  histórico, en lugar de una gráfica plana.
+- **Las fotos del cargador se guardan en JPEG cuando no tienen transparencia.**
+  Pasan de 380 KB a unos 12 KB, se sirven con ETag y respuesta 304, y aparecen
+  con un fundido de 0,45 s que tapa el pintado por franjas. Además se suben
+  desde un único icono: al elegir el fichero se envía solo y la página vuelve a
+  la misma pestaña.
 - **Fuera la SPA: un solo binario.** La app React (`app/`) se ha retirado del
   repositorio. El binario Go sirve ya la API y la interfaz templ, y los
   estáticos raíz (favicon, iconos, `manifest.webmanifest`, `sw.js` y la imagen
@@ -22,6 +66,14 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   empaquetar el frontend: sube el binario por arquitectura y los checksums.
   `deploy/helios-update.sh` descarga y verifica solo el binario, y mantiene el
   backup y el rollback automático si el servicio no responde.
+
+### Fixed
+
+- El histórico del cargador mostraba una gráfica vacía cuando el aparato no
+  había cargado nada, porque el criterio de "hay datos" incluía la producción
+  solar de la casa. Ahora dice que todavía no hay histórico.
+- La subida de la foto del cargador volvía siempre al primer cargador: ahora
+  conserva la pestaña desde la que se subió.
 
 ### Removed
 
