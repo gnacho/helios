@@ -1,5 +1,5 @@
 #!/bin/sh
-# helios-update.sh — aplica la última release ESTABLE de Helios (runtime Go).
+# helios-update.sh — aplica (o comprueba con --check) la última release ESTABLE de Helios.
 #
 # Layout en el CT:
 #   /opt/helios/
@@ -23,6 +23,24 @@
 #     anterior y exit != 0
 set -eu
 
+usage() {
+  cat <<'EOF'
+Uso: helios-update.sh [--check]
+
+  --check  dice si hay una release mas nueva, sin descargar ni instalar nada
+  -h       esta ayuda
+EOF
+}
+
+CHECK=0
+for arg in "$@"; do
+  case "$arg" in
+    --check) CHECK=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "opcion desconocida: $arg" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
 APP=helios
 REPO=gnacho/helios
 ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
@@ -45,13 +63,32 @@ progress() {
 
 rm -f "$STATE_DIR/.update-requested" 2>/dev/null || true
 
-progress "fetch" 5
 VER="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
   | sed -n 's/.*"tag_name": *"\(v\?[0-9][^"]*\)".*/\1/p' | head -n1)"
-[ -n "$VER" ] || { log "no se pudo resolver release latest"; progress "error" 0; exit 4; }
+if [ -z "$VER" ]; then
+  log "no se pudo resolver release latest"
+  [ "$CHECK" = "1" ] || progress "error" 0
+  echo "error: no se pudo consultar la ultima release" >&2
+  exit 4
+fi
 VER_NO_V="$(printf '%s' "$VER" | sed 's/^v//')"
+CURRENT="$(cat "$MARKER" 2>/dev/null || true)"
 
-if [ -f "$MARKER" ] && [ "$(cat "$MARKER" 2>/dev/null || true)" = "$VER_NO_V" ]; then
+# --check: solo informa, no toca el estado del actualizador.
+if [ "$CHECK" = "1" ]; then
+  if [ -z "$CURRENT" ]; then
+    echo "instalada: desconocida · disponible: $VER_NO_V"
+  elif [ "$CURRENT" = "$VER_NO_V" ]; then
+    echo "al dia: $CURRENT"
+  else
+    echo "disponible: $VER_NO_V (instalada: $CURRENT)"
+  fi
+  exit 0
+fi
+
+progress "fetch" 5
+
+if [ -n "$CURRENT" ] && [ "$CURRENT" = "$VER_NO_V" ]; then
   log "al día ($VER_NO_V)"; rm -f "$PROGRESS_FILE"; exit 0
 fi
 

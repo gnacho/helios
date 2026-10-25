@@ -359,7 +359,7 @@ func (u *UI) Mount(r chi.Router) {
 	for _, name := range []string{
 		"/favicon.svg", "/favicon-32.png", "/apple-touch-icon.png",
 		"/pwa-icon-192.png", "/pwa-icon-512.png", "/manifest.webmanifest",
-		"/sw.js", "/empty-solar.svg",
+		"/sw.js", "/empty-solar.svg", "/offline.html",
 	} {
 		r.Get(name, u.handleRootFile)
 	}
