@@ -5,6 +5,21 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Added
+
+- **La app abre sin red.** El service worker guarda la última página visitada y
+  los estáticos, así que con el móvil sin cobertura se ve el último estado
+  conocido en lugar de la pantalla de error del navegador. Los datos en vivo
+  (`/api/` y `/ui/`) y el inicio de sesión nunca se cachean, y una página que no
+  se había abierto muestra un aviso de "sin conexión" con botón de reintento.
+
+- **`helios-update.sh --check`.** Dice si hay una release más nueva sin
+  descargar ni instalar nada: `al dia: 1.1.8` o
+  `disponible: 1.1.9 (instalada: 1.1.8)`. No toca el marcador ni el estado del
+  actualizador.
+
 ## [1.1.8] - 2026-10-25
 
 ### Added
