@@ -36,6 +36,7 @@ templ head(p pageProps) {
 	<link rel="preload" as="font" type="font/woff2" href="/assets/fonts/SpaceGrotesk-latin.woff2" crossorigin="anonymous"/>
 	<link rel="stylesheet" href={ templ.URL("/assets/css/app.build.css?v=" + p.AssetVer) }/>
 	<script src={ templ.URL("/assets/js/gestures.js?v=" + p.AssetVer) } defer></script>
+	<script src={ templ.URL("/assets/js/select.js?v=" + p.AssetVer) } defer></script>
 	<script>
 		// Theme init (Tailwind's documented 3-way pattern): the server renders
 		// the class for pinned themes; this only resolves "auto" (no cookie).

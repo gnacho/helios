@@ -851,11 +851,21 @@ func (u *UI) handleAjustesExtensions(w http.ResponseWriter, r *http.Request) {
 		count = 0
 	}
 	chargers := make([]map[string]any, 0, count)
+	existing := u.ExtStore.Get().CarCharger.Chargers
 	for i := 0; i < count; i++ {
 		p := "chg." + strconv.Itoa(i) + "."
 		div, _ := strconv.Atoi(f.Get(p + "energyDivisor"))
 		if div < 1 {
 			div = 1
+		}
+		// delayId/durationId no se editan en este formulario: se conservan del
+		// cargador guardado (por key, o por posición si la key cambió). Sin
+		// esto, guardar ajustes los borraba del kv (issue 173).
+		delayID, durationID := "", ""
+		if old := extensions.GetChargerByKey(u.ExtStore.Get(), f.Get(p+"key")); old != nil {
+			delayID, durationID = old.DelayID, old.DurationID
+		} else if i < len(existing) {
+			delayID, durationID = existing[i].DelayID, existing[i].DurationID
 		}
 		chargers = append(chargers, map[string]any{
 			"key":                  f.Get(p + "key"),
@@ -869,6 +879,8 @@ func (u *UI) handleAjustesExtensions(w http.ResponseWriter, r *http.Request) {
 			"tempId":               f.Get(p + "tempId"),
 			"switchId":             f.Get(p + "switchId"),
 			"ampId":                f.Get(p + "ampId"),
+			"delayId":              delayID,
+			"durationId":           durationID,
 			"imageUrl":             f.Get(p + "imageUrl"),
 			"chargerInHouseMeters": f.Get(p+"inHouse") == "1",
 			"chargingStates":       parseCsvForm(f.Get(p + "chargingStates")),

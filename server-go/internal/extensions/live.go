@@ -35,6 +35,12 @@ type LiveCharger struct {
 	AmpOptions []float64 `json:"ampOptions,omitempty"`
 	AmpMin     *float64  `json:"ampMin,omitempty"`
 	AmpMax     *float64  `json:"ampMax,omitempty"`
+	Delay      *float64  `json:"delay,omitempty"`
+	Duration   *float64  `json:"duration,omitempty"`
+	// Programación por software (wall): hora de inicio, duración y armado.
+	ScheduleStart string   `json:"scheduleStart,omitempty"`
+	ScheduleHours *float64 `json:"scheduleHours,omitempty"`
+	Scheduled     bool     `json:"scheduled,omitempty"`
 }
 
 func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
@@ -138,6 +144,20 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 		AmpOptions: ampOptions,
 		AmpMin:     ampMin,
 		AmpMax:     ampMax,
+		Delay:      entityNumOrUndefined(h, c.DelayID),
+		Duration:   entityNumOrUndefined(h, c.DurationID),
+
+		ScheduleHours: entityNumOrUndefined(h, c.ScheduleDurationID),
+	}
+	if c.ScheduleArmID != "" {
+		if st, ok := h.GetState(c.ScheduleArmID); ok && st.State == "on" {
+			out.Scheduled = true
+		}
+	}
+	if c.ScheduleStartID != "" {
+		if st, ok := h.GetState(c.ScheduleStartID); ok {
+			out.ScheduleStart = st.State
+		}
 	}
 	if powerKw != nil {
 		out.PowerKw = *powerKw

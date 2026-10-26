@@ -27,6 +27,12 @@ type Charger struct {
 	TempID               string    `json:"tempId"`
 	SwitchID             string    `json:"switchId"`
 	AmpID                string    `json:"ampId"`
+	DelayID              string    `json:"delayId"`
+	DurationID           string    `json:"durationId"`
+	ScheduleStartID      string    `json:"scheduleStartId"`
+	ScheduleDurationID   string    `json:"scheduleDurationId"`
+	ScheduleArmID        string    `json:"scheduleArmId"`
+	ScheduleTimerID      string    `json:"scheduleTimerId"`
 	ImageURL             string    `json:"imageUrl,omitempty"`
 	ChargerInHouseMeters bool      `json:"chargerInHouseMeters"`
 	ChargingStates       []string  `json:"chargingStates"`
@@ -106,13 +112,19 @@ func NormalizeCharger(raw map[string]any, base Charger, index int) Charger {
 
 	stringFields := []string{
 		"key", "name", "powerId", "energyTotalId", "energySessionId",
-		"stateId", "tempId", "switchId", "ampId", "imageUrl",
+		"stateId", "tempId", "switchId", "ampId", "delayId", "durationId",
+		"scheduleStartId", "scheduleDurationId", "scheduleArmId", "scheduleTimerId",
+		"imageUrl",
 	}
 	baseStrings := map[string]string{
 		"key": base.Key, "name": base.Name, "powerId": base.PowerID,
 		"energyTotalId": base.EnergyTotalID, "energySessionId": base.EnergySessionID,
 		"stateId": base.StateID, "tempId": base.TempID,
-		"switchId": base.SwitchID, "ampId": base.AmpID, "imageUrl": base.ImageURL,
+		"switchId": base.SwitchID, "ampId": base.AmpID,
+		"delayId": base.DelayID, "durationId": base.DurationID,
+		"scheduleStartId": base.ScheduleStartID, "scheduleDurationId": base.ScheduleDurationID,
+		"scheduleArmId": base.ScheduleArmID, "scheduleTimerId": base.ScheduleTimerID,
+		"imageUrl": base.ImageURL,
 	}
 
 	vals := map[string]string{}
@@ -138,6 +150,12 @@ func NormalizeCharger(raw map[string]any, base Charger, index int) Charger {
 	out.TempID = vals["tempId"]
 	out.SwitchID = vals["switchId"]
 	out.AmpID = vals["ampId"]
+	out.DelayID = vals["delayId"]
+	out.DurationID = vals["durationId"]
+	out.ScheduleStartID = vals["scheduleStartId"]
+	out.ScheduleDurationID = vals["scheduleDurationId"]
+	out.ScheduleArmID = vals["scheduleArmId"]
+	out.ScheduleTimerID = vals["scheduleTimerId"]
 	out.ImageURL = vals["imageUrl"]
 
 	rawKey := strings.ToLower(strings.TrimSpace(vals["key"]))
@@ -336,6 +354,8 @@ func ChargerEntities(c Config) []string {
 		for _, id := range []string{
 			ch.PowerID, ch.EnergyTotalID, ch.EnergySessionID,
 			ch.StateID, ch.TempID, ch.SwitchID, ch.AmpID,
+			ch.DelayID, ch.DurationID,
+			ch.ScheduleStartID, ch.ScheduleDurationID, ch.ScheduleArmID,
 		} {
 			if id == "" {
 				continue

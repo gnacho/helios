@@ -21,6 +21,9 @@ type Ext struct {
 
 	curveMu    sync.Mutex
 	curveCache map[string]curveEntry
+
+	timesMu    sync.Mutex
+	timesCache map[string]timesEntry
 }
 
 func New(store *Store, database *db.DB, inst *install.Store) *Ext {

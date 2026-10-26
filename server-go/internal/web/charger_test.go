@@ -33,7 +33,7 @@ func TestChargerHistoryGeometry(t *testing.T) {
 		hist = append(hist, chgHistRowOf(d.Format("2006-01-02"), 10, 4))
 	}
 	pal := newPalette(false)
-	m, ok := chgHistoryChart("es", PeriodSemana, anchor, today, hist, nil, pal)
+	m, ok := chgHistoryChart("es", PeriodSemana, anchor, today, hist, nil, nil, pal)
 	if !ok {
 		t.Fatal("ok = false")
 	}
@@ -74,7 +74,7 @@ func TestChargerHistoryYearAggregates(t *testing.T) {
 		chgHistRowOf("2026-03-11", 2, 1),
 	}
 	pal := newPalette(false)
-	m, _ := chgHistoryChart("es", PeriodAno, anchor, today, hist, nil, pal)
+	m, _ := chgHistoryChart("es", PeriodAno, anchor, today, hist, nil, nil, pal)
 	if len(m.Rows) != 12 {
 		t.Fatalf("filas = %d (esperado 12 meses)", len(m.Rows))
 	}
@@ -320,6 +320,125 @@ func TestChargerPowerButtonBindsSignals(t *testing.T) {
 // TestChargerAmpChipsFilteredByRange: los atributos min/max del number de
 // amperaje recortan los chips al rango real de la entidad (regresion: un
 // number 8-32 no debe ofrecer el chip 6, un 6-16 no debe ofrecer 20/25/32).
+// buildHourSelect must render 24 options and preselect the hour of day that the
+// live delay (hours from now) points at.
+func TestBuildStartSelects(t *testing.T) {
+	now := time.Date(2026, 10, 26, 8, 30, 0, 0, time.Local)
+	delay := 2.0
+	hourSel, minSel := buildStartSelects("c2", &delay, now)
+	if len(hourSel.Options) != 24 {
+		t.Fatalf("hour options = %d, want 24", len(hourSel.Options))
+	}
+	if hourSel.Options[0].Label != "00" || hourSel.Options[23].Label != "23" {
+		t.Fatalf("hour labels = %q .. %q", hourSel.Options[0].Label, hourSel.Options[23].Label)
+	}
+	var selected []string
+	for _, o := range hourSel.Options {
+		if o.Selected {
+			selected = append(selected, o.Value)
+		}
+	}
+	// 08:30 + 2 h = 10:30 -> hour 10, minutes 30.
+	if len(selected) != 1 || selected[0] != "10" {
+		t.Fatalf("selected hour = %v, want [10]", selected)
+	}
+	if len(minSel.Options) != 2 || minSel.Options[0].Value != "0" || minSel.Options[1].Value != "30" {
+		t.Fatalf("minute options = %+v", minSel.Options)
+	}
+	if !minSel.Options[1].Selected {
+		t.Fatal("minute 30 must be preselected for 10:30")
+	}
+	if hourSel.ID != "chg-h-c2" || minSel.ID != "chg-m-c2" {
+		t.Fatalf("ids = %q, %q", hourSel.ID, minSel.ID)
+	}
+}
+
+// buildDurationSelect must offer 1..12 h and preselect the live value.
+func TestBuildDurationSelect(t *testing.T) {
+	dur := 4.0
+	sel := buildDurationSelect("c2", &dur)
+	if len(sel.Options) != 12 {
+		t.Fatalf("options = %d, want 12", len(sel.Options))
+	}
+	if sel.Options[0].Value != "1" || sel.Options[11].Value != "12" {
+		t.Fatalf("values = %q .. %q", sel.Options[0].Value, sel.Options[11].Value)
+	}
+	var selected []string
+	for _, o := range sel.Options {
+		if o.Selected {
+			selected = append(selected, o.Value)
+		}
+	}
+	if len(selected) != 1 || selected[0] != "4" {
+		t.Fatalf("selected = %v, want [4]", selected)
+	}
+	if sel.ID != "chg-d-c2" {
+		t.Fatalf("id = %q", sel.ID)
+	}
+}
+
+// chgTimedClickExpr must read the three portable pickers and post both values
+// in a single action.
+func TestChgTimedClickExpr(t *testing.T) {
+	expr := chgTimedClickExpr("c2")
+	for _, want := range []string{"$action = 'timed'", "chg-h-c2", "chg-m-c2", "chg-d-c2", "$schedHours", "$schedTime", "@post('/ui/charger/action')"} {
+		if !strings.Contains(expr, want) {
+			t.Fatalf("missing %q in %q", want, expr)
+		}
+	}
+}
+
+// The single-charger panel must render the delay/duration chip rows when the
+// charger config has those entities (portable scheduling dps via helpers).
+func TestChargerDelayDurationChips(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgdelay.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "c2", Name: "Portátil", PowerID: "sensor.p",
+		AmpID: "input_select.amps", DelayID: "input_number.feyree_delay_h",
+		DurationID: "input_select.feyree_duration_h",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "delay-pass-1", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"input_number.feyree_delay_h":    {State: "2.0", Attributes: map[string]any{"min": 0.0, "max": 24.0, "step": 0.5}},
+		"input_select.feyree_duration_h": {State: "2", Attributes: map[string]any{"options": []any{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0}}},
+		"input_select.amps":              {State: "10", Attributes: map[string]any{"options": []any{8.0, 10.0, 13.0, 16.0}}},
+		"sensor.p":                       {State: "0.0", Attributes: map[string]any{}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "delay-pass-1"))
+	req := httptest.NewRequest("GET", "/cargador?tab=c2", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	if rr.Code != 200 {
+		t.Fatalf("status = %d", rr.Code)
+	}
+	body := rr.Body.String()
+	for _, want := range []string{"Inicio", "Min", "Duración", "chg-h-c2", "chg-m-c2", "chg-d-c2", "12 h", "getElementById", "h-11", "gap-[26px]", "Programar", "timed"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %q in page", want)
+		}
+	}
+}
+
 func TestChargerAmpChipsFilteredByRange(t *testing.T) {
 	d, err := db.Open(filepath.Join(t.TempDir(), "chgrange.db"))
 	if err != nil {
@@ -451,6 +570,105 @@ func TestStateMatches(t *testing.T) {
 	for _, c := range cases {
 		if got := stateMatches(c.state, c.action, c.amps); got != c.want {
 			t.Fatalf("stateMatches(%q,%q) = %v, quería %v", c.state, c.action, got, c.want)
+		}
+	}
+}
+
+// The software schedule pickers (wall charger) start from the HA
+// input_datetime state and fall back to the current hour, 00 minutes and 6 h.
+func TestBuildSchedSelects(t *testing.T) {
+	now := time.Date(2026, 10, 26, 8, 40, 0, 0, time.Local)
+	h, m := buildSchedStartSelects("main", "22:30:00", now)
+	if h.ID != "chg-sh-main" || m.ID != "chg-sm-main" {
+		t.Fatalf("ids = %q %q", h.ID, m.ID)
+	}
+	if len(h.Options) != 24 || len(m.Options) != 2 {
+		t.Fatalf("options = %d/%d", len(h.Options), len(m.Options))
+	}
+	var hour string
+	for _, o := range h.Options {
+		if o.Selected {
+			hour = o.Value
+		}
+	}
+	if hour != "22" {
+		t.Fatalf("selected hour = %q, want 22", hour)
+	}
+	if !m.Options[1].Selected {
+		t.Fatal("minutes 30 must be selected for 22:30")
+	}
+
+	h2, m2 := buildSchedStartSelects("main", "", now)
+	sel := ""
+	for _, o := range h2.Options {
+		if o.Selected {
+			sel = o.Value
+		}
+	}
+	// Sin hora guardada, el picker arranca en la hora actual con minutos 00.
+	if sel != "8" {
+		t.Fatalf("fallback hour = %q, want 8 (hora actual)", sel)
+	}
+	if !m2.Options[0].Selected {
+		t.Fatal("fallback minutes = 00 esperado por defecto")
+	}
+	d := buildSchedDurSelect("main", nil)
+	if d.ID != "chg-sd-main" || len(d.Options) != 12 || d.Options[5].Value != "6" || !d.Options[5].Selected {
+		t.Fatalf("duration select = %+v", d)
+	}
+	if chgClock("22:30:00") != "22:30" || chgClock("") != "--:--" {
+		t.Fatal("chgClock")
+	}
+}
+
+// The wall charger has no scheduling dps: the schedule row is driven by the
+// software helpers (input_datetime + input_number + input_boolean + timer).
+func TestChargerScheduleRow(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgsched.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "main", Name: "Pared", PowerID: "sensor.p", SwitchID: "switch.pared",
+		ScheduleStartID: "input_datetime.coche_inicio", ScheduleDurationID: "input_number.coche_duracion",
+		ScheduleArmID: "input_boolean.coche_programado", ScheduleTimerID: "timer.coche_carga",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "sched-pass-1", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"input_datetime.coche_inicio":    {State: "07:30:00", Attributes: map[string]any{}},
+		"input_number.coche_duracion":    {State: "4.0", Attributes: map[string]any{}},
+		"input_boolean.coche_programado": {State: "off", Attributes: map[string]any{}},
+		"switch.pared":                   {State: "off", Attributes: map[string]any{}},
+		"sensor.p":                       {State: "0.0", Attributes: map[string]any{}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "sched-pass-1"))
+	req := httptest.NewRequest("GET", "/cargador?tab=main", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	if rr.Code != 200 {
+		t.Fatalf("status = %d", rr.Code)
+	}
+	body := rr.Body.String()
+	for _, want := range []string{"chg-sh-main", "chg-sm-main", "chg-sd-main", "Programar"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %q in page", want)
 		}
 	}
 }
