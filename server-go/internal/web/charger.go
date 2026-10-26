@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -35,8 +36,8 @@ var AMP_STEPS = []int{6, 8, 10, 13, 16, 20, 25, 32}
 // Datastar (data-attr-class), asi que el color cambia sin esperar al servidor.
 // Los mismos literales aparecen en charger.templ (Tailwind los ve alli).
 const (
-	chgPowerOnClass  = "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50 bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
-	chgPowerOffClass = "inline-flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl text-base font-semibold transition-colors disabled:opacity-50 bg-brand text-white hover:opacity-90"
+	chgPowerOnClass  = "inline-flex h-12 w-full shrink-0 items-center justify-center sm:h-[60px] sm:w-[157px] gap-2 rounded-2xl px-2 text-sm font-semibold transition-colors disabled:opacity-50 bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
+	chgPowerOffClass = "inline-flex h-12 w-full shrink-0 items-center justify-center sm:h-[60px] sm:w-[157px] gap-2 rounded-2xl px-2 text-sm font-semibold transition-colors disabled:opacity-50 bg-brand text-white hover:opacity-90"
 )
 
 // jsQuote escapes a label so it can live inside a single-quoted JS string in a
@@ -91,6 +92,7 @@ type chgHistRow struct {
 	BarW         float64
 	PvY, PvH     float64
 	RestY, RestH float64
+	Dur, Span    string // tiempo en carga (Xh Ym) y franja inicio-fin del día
 }
 
 type chgHistModel struct {
@@ -167,6 +169,19 @@ type chgSingleView struct {
 	AmpsAria  string
 	AmpChips  []ampChipView
 	AmpsText  string
+
+	// Fila de programación, idéntica en ambos cargadores: hora de inicio,
+	// minutos, duración y botón Programar. El portátil la ejecuta en su
+	// hardware (dps 118/119); el wall la arma por software en HA.
+	HasSchedule    bool
+	ScheduleLabel  string
+	ScheduleHour   chgSelectView
+	ScheduleMinute chgSelectView
+	ScheduleDur    chgSelectView
+	ScheduleClick  string
+	ScheduleCancel string
+	ScheduleArmed  bool
+	ScheduleText   string
 
 	TempKnown bool
 	TempText  string
@@ -362,7 +377,7 @@ func chgCurveY(v, yMax float64) float64 {
 
 // chgHistoryWindow resolves the visible period for the charger history
 // (semana anclada a HOY, mes/año como el Histórico) and the bars.
-func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []extensions.ChargerHistoryRow, solarRows []db.DailyRow, pal Palette) (chgHistModel, bool) {
+func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []extensions.ChargerHistoryRow, solarRows []db.DailyRow, times map[string]extensions.ChargerDayTimes, pal Palette) (chgHistModel, bool) {
 	m := chgHistModel{
 		W:           chgHistW,
 		Lang:        lang,
@@ -425,6 +440,26 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 			prod += prodByDay[key]
 		}
 		row := chgHistRow{Label: rw.label, PvH: pv, RestH: math.Max(0, kwh-pv)}
+		var mins int
+		var firstStart, lastEnd string
+		for d := rw.from; !d.After(rw.to); d = d.AddDate(0, 0, 1) {
+			if td, ok := times[d.Format("2006-01-02")]; ok {
+				mins += td.Minutes
+				if firstStart == "" && td.Start != "" {
+					firstStart = td.Start
+				}
+				if td.End != "" {
+					lastEnd = td.End
+				}
+			}
+		}
+		if mins > 0 {
+			row.Dur = fmtChgDur(mins)
+			// La franja inicio-fin solo tiene sentido en barras de un día.
+			if rw.from.Equal(rw.to) && firstStart != "" && lastEnd != "" {
+				row.Span = firstStart + " - " + lastEnd
+			}
+		}
 		if kwh > yMaxF {
 			yMaxF = kwh
 		}
@@ -486,10 +521,26 @@ func chgHistoryChart(lang string, p Period, anchor, today time.Time, hist []exte
 		if rest := vals[i][0] - vals[i][1]; rest > 0 {
 			rowsH = append(rowsH, hoverRow{Color: m.ColorGrid, Label: T(lang, "cargador.fromGrid"), Value: fmtEnergy(lang, rest) + " kWh"})
 		}
+		if out[i].Dur != "" {
+			rowsH = append(rowsH, hoverRow{Label: T(lang, "cargador.chargeHours"), Value: out[i].Dur})
+		}
+		if out[i].Span != "" {
+			rowsH = append(rowsH, hoverRow{Label: T(lang, "cargador.chargeTimes"), Value: out[i].Span})
+		}
 		samplesH = append(samplesH, hoverSample{X: out[i].X + out[i].BarW/2, W: slot, Title: out[i].Label, Rows: rowsH})
 	}
 	m.Hover = buildHoverCols(samplesH, hoverBox{34, chgHistW - 12, 10, m.PlotBottomY})
 	return m, true
+}
+
+// fmtChgDur renders charging minutes as "Xh Ym" (or "Ym" under an hour).
+func fmtChgDur(min int) string {
+	h := min / 60
+	m := min % 60
+	if h > 0 {
+		return fmt.Sprintf("%dh %02dm", h, m)
+	}
+	return fmt.Sprintf("%dm", m)
 }
 
 // chgPeriodStats aggregates the period totals shown in the side card.
@@ -558,6 +609,8 @@ func (u *UI) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 		Charger string   `json:"charger"`
 		Action  string   `json:"action"`
 		Amps    *float64 `json:"amps"`
+		Time    string   `json:"schedTime"`
+		Hours   *float64 `json:"schedHours"`
 	}
 	decodeErr := json.NewDecoder(r.Body).Decode(&body)
 
@@ -586,13 +639,36 @@ func (u *UI) handleChargerAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	start := time.Now()
-	_, err := extensions.ApplyAction(u.ExtHA, *charger, body.Action, body.Amps)
+	var err error
 	confirmed := false
-	if err == nil {
-		confirmed = u.waitChargerState(*charger, body.Action, body.Amps)
-		log.Printf("[chg-action] %s %s confirmed=%v in %s", charger.Key, body.Action, confirmed, time.Since(start).Round(time.Millisecond))
+	if body.Action == "schedule" || body.Action == "unschedule" || body.Action == "timed" {
+		if body.Action == "schedule" {
+			hours := 0.0
+			if body.Hours != nil {
+				hours = *body.Hours
+			}
+			err = extensions.ApplySchedule(u.ExtHA, *charger, body.Time, hours)
+		} else if body.Action == "timed" {
+			hours := 0.0
+			if body.Hours != nil {
+				hours = *body.Hours
+			}
+			err = extensions.ApplyTimed(u.ExtHA, *charger, body.Time, hours)
+		} else {
+			err = extensions.ClearSchedule(u.ExtHA, *charger)
+		}
+		confirmed = err == nil
+		if err != nil {
+			log.Printf("[chg-action] %s %s error=%v", charger.Key, body.Action, err)
+		}
 	} else {
-		log.Printf("[chg-action] %s %s error=%v", charger.Key, body.Action, err)
+		_, err = extensions.ApplyAction(u.ExtHA, *charger, body.Action, body.Amps)
+		if err == nil {
+			confirmed = u.waitChargerState(*charger, body.Action, body.Amps)
+			log.Printf("[chg-action] %s %s confirmed=%v in %s", charger.Key, body.Action, confirmed, time.Since(start).Round(time.Millisecond))
+		} else {
+			log.Printf("[chg-action] %s %s error=%v", charger.Key, body.Action, err)
+		}
 	}
 
 	patch := map[string]any{"ui": map[string]any{"pending": "", "error": ""}}
@@ -619,6 +695,12 @@ func (u *UI) waitChargerState(charger extensions.Charger, action string, amps *f
 	if action == "amp" {
 		entity = charger.AmpID
 	}
+	if action == "delay" {
+		entity = charger.DelayID
+	}
+	if action == "duration" {
+		entity = charger.DurationID
+	}
 	deadline := time.Now().Add(1500 * time.Millisecond)
 	for {
 		if st, ok := u.ExtHA.GetState(entity); ok && stateMatches(st.State, action, amps) {
@@ -644,6 +726,12 @@ func stateMatches(state, action string, amps *float64) bool {
 		}
 		v, err := strconv.ParseFloat(state, 64)
 		return err == nil && math.Abs(v-*amps) < 0.05
+	case "delay", "duration":
+		if amps == nil {
+			return true
+		}
+		v, err := strconv.ParseFloat(state, 64)
+		return err == nil && math.Abs(v-*amps) < 0.3
 	}
 	return true
 }
@@ -657,8 +745,185 @@ func chargerActionError(lang string, err error) string {
 		return T(lang, "cargador.errorNoAmp")
 	case errors.Is(err, extensions.ErrChargerAmps):
 		return T(lang, "cargador.errorAmps")
+	case errors.Is(err, extensions.ErrChargerDelay):
+		return T(lang, "cargador.errorDelay")
+	case errors.Is(err, extensions.ErrChargerDuration):
+		return T(lang, "cargador.errorDuration")
 	}
 	return T(lang, "common.error")
+}
+
+// chgSelectView is a native select bound to one charger action.
+type chgSelectView struct {
+	ID      string
+	Options []chgSelectOption
+	// SelectedLabel/SelectedValue describe the selected option: the closed
+	// dropdown shows the label and the hidden input carries the value.
+	SelectedLabel string
+	SelectedValue string
+}
+
+// newChgSelect fills SelectedLabel from the option list so the markup can
+// render the closed control server side.
+func newChgSelect(id string, opts []chgSelectOption) chgSelectView {
+	v := chgSelectView{ID: id, Options: opts}
+	for _, o := range opts {
+		if o.Selected {
+			v.SelectedLabel = o.Label
+			v.SelectedValue = o.Value
+			break
+		}
+	}
+	if v.SelectedValue == "" && len(opts) > 0 {
+		v.SelectedLabel = opts[0].Label
+		v.SelectedValue = opts[0].Value
+	}
+	return v
+}
+
+type chgSelectOption struct {
+	Value    string
+	Label    string
+	Selected bool
+}
+
+// chgSelectClass is the shared look of the scheduling selects: full width and
+// tall enough to balance the power button, so the card has no hollow gaps.
+const chgSelectClass = "h-11 rounded-xl border border-app bg-surface px-3 text-sm font-semibold tabular-nums text-app transition-colors hover:bg-surface-2 disabled:opacity-50"
+
+// buildStartSelects renders the start time as two selects (24h hour plus
+// half-hour minutes). The device dp only understands hours from now: the
+// Programar button converts the chosen clock time into that delay.
+func buildStartSelects(key string, delay *float64, now time.Time) (chgSelectView, chgSelectView) {
+	// Por defecto: hora actual y minutos 00 (petición del usuario).
+	hour, minute := now.Hour(), 0
+	if delay != nil {
+		t := now.Add(time.Duration(*delay * float64(time.Hour))).Round(time.Minute)
+		mins := int(math.Round(float64(t.Hour()*60+t.Minute())/30)) * 30
+		hour = (mins / 60) % 24
+		minute = mins % 60
+	}
+	hourOpts := make([]chgSelectOption, 0, 24)
+	for h := 0; h < 24; h++ {
+		hourOpts = append(hourOpts, chgSelectOption{
+			Value:    strconv.Itoa(h),
+			Label:    fmt.Sprintf("%02d", h),
+			Selected: h == hour,
+		})
+	}
+	minOpts := []chgSelectOption{
+		{Value: "0", Label: "00", Selected: minute == 0},
+		{Value: "30", Label: "30", Selected: minute == 30},
+	}
+	return newChgSelect("chg-h-"+key, hourOpts),
+		newChgSelect("chg-m-"+key, minOpts)
+}
+
+// buildDurationSelect renders the 1-12 h duration selector.
+func buildDurationSelect(key string, duration *float64) chgSelectView {
+	cur := 6
+	if duration != nil {
+		cur = int(math.Round(*duration))
+	}
+	opts := make([]chgSelectOption, 0, 12)
+	for h := 1; h <= 12; h++ {
+		opts = append(opts, chgSelectOption{
+			Value:    strconv.Itoa(h),
+			Label:    strconv.Itoa(h) + " h",
+			Selected: h == cur,
+		})
+	}
+	return newChgSelect("chg-d-"+key, opts)
+}
+
+// chgTimedClickExpr posts both hardware scheduling values at once: the clock
+// time of the start pickers and the duration picker.
+func chgTimedClickExpr(key string) string {
+	hid, mid, did := "chg-h-"+key, "chg-m-"+key, "chg-d-"+key
+	return "$charger = '" + key + "'; $action = 'timed'; " +
+		"$schedTime = (function(){var h = parseInt(document.getElementById('" + hid + "').value, 10); " +
+		"var m = parseInt(document.getElementById('" + mid + "').value, 10); " +
+		"return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;})(); " +
+		"$schedHours = parseInt(document.getElementById('" + did + "').value, 10); " +
+		"$ui.error = ''; @post('/ui/charger/action')"
+}
+
+// chgSchedClickExpr arms a software schedule: reads the two time selects plus
+// the duration select and posts them with the schedule action.
+func chgSchedClickExpr(key string) string {
+	hid, mid, did := "chg-sh-"+key, "chg-sm-"+key, "chg-sd-"+key
+	return "$charger = '" + key + "'; $action = 'schedule'; " +
+		"$schedTime = (function(){var h = parseInt(document.getElementById('" + hid + "').value, 10); " +
+		"var m = parseInt(document.getElementById('" + mid + "').value, 10); " +
+		"return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;})(); " +
+		"$schedHours = parseInt(document.getElementById('" + did + "').value, 10); " +
+		"$ui.error = ''; @post('/ui/charger/action')"
+}
+
+// buildSchedStartSelects renders the start time pickers from the HA
+// input_datetime state (HH:MM:SS), defaulting to the next hour when unset.
+func buildSchedStartSelects(key, start string, now time.Time) (chgSelectView, chgSelectView) {
+	t := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location())
+	if p, err := time.ParseInLocation("15:04:05", start, time.Local); err == nil {
+		t = p
+	}
+	hour, minute := t.Hour(), t.Minute()
+	hourOpts := make([]chgSelectOption, 0, 24)
+	for h := 0; h < 24; h++ {
+		hourOpts = append(hourOpts, chgSelectOption{
+			Value:    strconv.Itoa(h),
+			Label:    fmt.Sprintf("%02d", h),
+			Selected: h == hour,
+		})
+	}
+	minOpts := []chgSelectOption{
+		{Value: "0", Label: "00", Selected: minute < 30},
+		{Value: "30", Label: "30", Selected: minute >= 30},
+	}
+	return newChgSelect("chg-sh-"+key, hourOpts),
+		newChgSelect("chg-sm-"+key, minOpts)
+}
+
+// buildSchedDurSelect renders the 1-12 h duration picker of a software
+// schedule (independent of the portable charger hardware dps).
+func buildSchedDurSelect(key string, hours *float64) chgSelectView {
+	cur := 6
+	if hours != nil {
+		cur = int(math.Round(*hours))
+	}
+	opts := make([]chgSelectOption, 0, 12)
+	for h := 1; h <= 12; h++ {
+		opts = append(opts, chgSelectOption{
+			Value:    strconv.Itoa(h),
+			Label:    strconv.Itoa(h) + " h",
+			Selected: h == cur,
+		})
+	}
+	return newChgSelect("chg-sd-"+key, opts)
+}
+
+// chgClock trims an HA time state (HH:MM:SS) to HH:MM for display.
+func chgClock(s string) string {
+	if len(s) >= 5 {
+		return s[:5]
+	}
+	return "--:--"
+}
+
+// derefFloat returns the value pointed to by v, or def when nil.
+func derefFloat(v *float64, def float64) float64 {
+	if v == nil {
+		return def
+	}
+	return *v
+}
+
+// currentOr returns the live value when available, nil otherwise.
+func currentOr(hasLive bool, v *float64) *float64 {
+	if !hasLive {
+		return nil
+	}
+	return v
 }
 
 // buildChgSingle builds one charger panel: hero, live stats, today curve and
@@ -751,8 +1016,8 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 			}
 		}
 		sort.Float64s(opts)
-		ampClassOn := "inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-brand bg-brand/10 px-2 text-xs font-semibold tabular-nums text-brand transition-colors disabled:opacity-50"
-		ampClassOff := "inline-flex h-7 min-w-9 items-center justify-center rounded-full border border-app bg-surface px-2 text-xs font-semibold tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
+		ampClassOn := "inline-flex h-9 min-w-10 items-center justify-center rounded-xl border border-brand bg-brand/10 px-3 text-sm font-semibold tabular-nums text-brand transition-colors disabled:opacity-50"
+		ampClassOff := "inline-flex h-9 min-w-10 items-center justify-center rounded-xl border border-app bg-surface px-3 text-sm font-semibold tabular-nums text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50"
 		ampsSignal := "$chg." + charger.Key + ".amps"
 		for _, a := range opts {
 			active := hasLive && live.Amps != nil && *live.Amps == a
@@ -768,6 +1033,38 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		}
 		if hasLive && live.Amps != nil {
 			sv.AmpsText = strconv.FormatFloat(*live.Amps, 'f', -1, 64)
+		}
+	}
+
+	// Fila de programación (misma en ambos cargadores): hora de inicio +
+	// duración + Programar. El portátil la aplica en su hardware con los dps
+	// 118/119 vía helpers; el wall la arma con el input_datetime y el timer.
+	if charger.DelayID != "" && charger.DurationID != "" {
+		sv.HasSchedule = true
+		sv.ScheduleLabel = T(lang, "cargador.schedule")
+		sv.ScheduleHour, sv.ScheduleMinute = buildStartSelects(charger.Key, nil, time.Now())
+		sv.ScheduleDur = buildDurationSelect(charger.Key, nil)
+		sv.ScheduleClick = chgTimedClickExpr(charger.Key)
+	} else if charger.ScheduleStartID != "" && charger.ScheduleDurationID != "" && charger.ScheduleArmID != "" {
+		sv.HasSchedule = true
+		sv.ScheduleLabel = T(lang, "cargador.schedule")
+		var start string
+		var hours *float64
+		if hasLive {
+			sv.ScheduleArmed = live.Scheduled
+			// Sin una programación armada, los pickers arrancan en la hora
+			// actual, minutos 00 y 6 h en lugar de mostrar lo último guardado.
+			if live.Scheduled {
+				start = live.ScheduleStart
+				hours = live.ScheduleHours
+			}
+		}
+		sv.ScheduleHour, sv.ScheduleMinute = buildSchedStartSelects(charger.Key, start, time.Now())
+		sv.ScheduleDur = buildSchedDurSelect(charger.Key, hours)
+		sv.ScheduleClick = chgSchedClickExpr(charger.Key)
+		sv.ScheduleCancel = "$charger = '" + charger.Key + "'; $action = 'unschedule'; $ui.error = ''; @post('/ui/charger/action')"
+		if sv.ScheduleArmed {
+			sv.ScheduleText = T(lang, "cargador.scheduled") + " " + chgClock(start) + " · " + fmtInt(lang, math.Round(derefFloat(hours, 0))) + " h"
 		}
 	}
 
@@ -849,6 +1146,14 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		solarRows = u.dailyHistory()
 	}
 
+	// Horas de carga y franja inicio-fin por día (issue 173): del historial de
+	// estados del cargador, para el periodo visible.
+	var times map[string]extensions.ChargerDayTimes
+	if u.Ext != nil {
+		fromD, toD := periodWindow(period, anchor)
+		times = u.Ext.ChargerDayTimes(u.ExtHA, fromD.Format("2006-01-02"), toD.Format("2006-01-02"), charger)
+	}
+
 	// Selector del cargador: mismas pestañas que el React (semana/mes/año, sin
 	// día) y TODAS las URLs apuntan a /cargador conservando el cargador activo
 	// (antes solo la de semana lo hacía y el resto saltaba al Histórico).
@@ -880,7 +1185,7 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	sv.HistSub = periodSubtitle(period, anchor, lang)
 
 	st := chgStats(lang, period, anchor, today, hist, solarRows)
-	sv.Hist, _ = chgHistoryChart(lang, period, anchor, today, hist, solarRows, pal)
+	sv.Hist, _ = chgHistoryChart(lang, period, anchor, today, hist, solarRows, times, pal)
 	// Only the energy actually charged counts: st.Prod is the whole-house solar
 	// production, which is always > 0 and would hide the empty state forever.
 	sv.HistHasData = st.Kwh > 0
@@ -953,6 +1258,8 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 	}
 	signals["ui"] = map[string]any{"busy": false, "error": "", "charger": charger.Key, "action": "", "amps": nil,
 		"pending": "", "pendingAt": 0}
+	signals["schedTime"] = ""
+	signals["schedHours"] = 4
 	sigJSON, err := json.Marshal(signals)
 	if err != nil {
 		sigJSON = []byte("{}")

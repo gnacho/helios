@@ -568,3 +568,43 @@ func TestLiveChargerOmitsUndefined(t *testing.T) {
 		t.Fatal("potencia > 0.05 debería marcar charging")
 	}
 }
+
+// Regression: delayId/durationId must survive the real config load path
+// (kv extensions_config -> ResolveConfig -> NormalizeCharger). The whitelist
+// in NormalizeCharger dropped them, so the portable charger never rendered
+// its delay/duration chips even though the stored config had the entities.
+func TestResolveConfigKeepsDelayDuration(t *testing.T) {
+	d := testDB(t)
+	raw := `{"enabled":true,"carCharger":{"enabled":true,"chargers":[
+		{"key":"c2","name":"Portatil","powerId":"sensor.p","ampId":"input_select.amps",
+		 "delayId":"input_select.feyree_delay_h","durationId":"input_select.feyree_duration_h"}]}}`
+	if err := d.KVSet("extensions_config", raw); err != nil {
+		t.Fatalf("kv: %v", err)
+	}
+
+	cfg := ResolveConfig(d)
+	ch := GetChargerByKey(cfg, "c2")
+	if ch == nil {
+		t.Fatalf("cargador c2 no encontrado: %+v", cfg.CarCharger.Chargers)
+	}
+	if ch.DelayID != "input_select.feyree_delay_h" {
+		t.Fatalf("delayId = %q (perdido al normalizar)", ch.DelayID)
+	}
+	if ch.DurationID != "input_select.feyree_duration_h" {
+		t.Fatalf("durationId = %q (perdido al normalizar)", ch.DurationID)
+	}
+
+	// The scheduling entities must be subscribed so the live value arrives.
+	var hasDelay, hasDur bool
+	for _, id := range ChargerEntities(cfg) {
+		if id == "input_select.feyree_delay_h" {
+			hasDelay = true
+		}
+		if id == "input_select.feyree_duration_h" {
+			hasDur = true
+		}
+	}
+	if !hasDelay || !hasDur {
+		t.Fatalf("delay/duration ausentes de ChargerEntities: %v", ChargerEntities(cfg))
+	}
+}

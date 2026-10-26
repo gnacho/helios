@@ -117,7 +117,9 @@ templ chartHoverTip(c hoverCol) {
 				<rect x={ r2(c.TipX) } y={ r2(c.TipY) } width={ r2(c.TipW) } height={ r2(c.TipH) } rx="8" fill="var(--surface)" stroke="var(--line)"></rect>
 				<text x={ r2(c.TitleX) } y={ r2(c.TitleY) } font-size="11" font-weight="600" fill="var(--text)" font-family="Inter">{ c.Title }</text>
 				for _, rw := range c.Rows {
-					<circle cx={ r2(rw.DotX) } cy={ r2(rw.DotY) } r="2.5" fill={ rw.Color }></circle>
+					if rw.Color != "" {
+						<circle cx={ r2(rw.DotX) } cy={ r2(rw.DotY) } r="2.5" fill={ rw.Color }></circle>
+					}
 					<text x={ r2(rw.LabelX) } y={ r2(rw.TextY) } font-size="11" fill="var(--text-muted)" font-family="Inter">{ rw.Label }</text>
 					<text x={ r2(rw.ValueX) } y={ r2(rw.TextY) } font-size="11" font-weight="600" fill="var(--text)" font-family="Inter" text-anchor="end">{ rw.Value }</text>
 				}
