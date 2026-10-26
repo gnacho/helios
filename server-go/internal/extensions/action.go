@@ -28,6 +28,7 @@ var (
 var (
 	switchIDRe = regexp.MustCompile(`^switch\.[a-z0-9_]+$`)
 	ampIDRe    = regexp.MustCompile(`^(number|input_select|select)\.[a-z0-9_]+$`)
+	schedIDRe  = regexp.MustCompile(`^(number|input_number|input_select|select)\.[a-z0-9_]+$`)
 	dtIDRe     = regexp.MustCompile(`^input_datetime\.[a-z0-9_]+$`)
 	numIDRe    = regexp.MustCompile(`^input_number\.[a-z0-9_]+$`)
 	boolIDRe   = regexp.MustCompile(`^input_boolean\.[a-z0-9_]+$`)
@@ -153,7 +154,7 @@ func ApplyTimed(extHA HA, charger Charger, at string, hours float64) error {
 	if extHA == nil {
 		return errors.New("HAOS no conectado")
 	}
-	if !ampIDRe.MatchString(charger.DelayID) || !ampIDRe.MatchString(charger.DurationID) {
+	if !schedIDRe.MatchString(charger.DelayID) || !schedIDRe.MatchString(charger.DurationID) {
 		return ErrChargerNoAmp
 	}
 	now := time.Now()
@@ -242,19 +243,10 @@ func ApplyAction(extHA HA, charger Charger, action string, amps *float64) (float
 		} else if value < 0 || value > 24 {
 			return 0, ErrChargerDelay
 		}
-		if !ampIDRe.MatchString(target) {
+		if !schedIDRe.MatchString(target) {
 			return 0, ErrChargerNoAmp
 		}
-		domain := target[:strings.Index(target, ".")]
-		if domain == "number" || domain == "input_number" {
-			if err := extHA.CallService("number", "set_value", map[string]any{
-				"entity_id": target, "value": value,
-			}); err != nil {
-				return 0, err
-			}
-		} else if err := extHA.CallService(domain, "select_option", map[string]any{
-			"entity_id": target, "option": strconv.FormatFloat(value, 'f', -1, 64),
-		}); err != nil {
+		if err := setScheduleValue(extHA, target, value); err != nil {
 			return 0, err
 		}
 		return value, nil
