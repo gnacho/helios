@@ -124,6 +124,17 @@ func TestNormalizeKeepsBaseWhenEmpty(t *testing.T) {
 	}
 }
 
+func TestNormalizeSanitizesUnsafeInverterKey(t *testing.T) {
+	payload := "x[(console.info(1),'x')]"
+	out := Normalize(TopologyInput{Inverters: []InverterInput{{Key: payload}}}, GenericTopology)
+	if len(out.Inverters) != 1 {
+		t.Fatalf("inverters = %d", len(out.Inverters))
+	}
+	if got := out.Inverters[0].Key; got != "inv1" {
+		t.Fatalf("key = %q, want inv1", got)
+	}
+}
+
 func TestStoreIsolatesMutations(t *testing.T) {
 	s := NewStore()
 	before := s.Entities().PvSolis

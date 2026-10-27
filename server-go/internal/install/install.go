@@ -2,6 +2,7 @@ package install
 
 import (
 	"encoding/json"
+	"errors"
 	"sync"
 
 	"helios-server/internal/db"
@@ -301,6 +302,29 @@ type InverterInput struct {
 	GlitchOffsets   map[string]float64 `json:"glitchOffsets"`
 }
 
+func ValidateTopologyInput(cfg TopologyInput) error {
+	for _, inv := range cfg.Inverters {
+		if inv.Key != "" && !validInverterKey(inv.Key) {
+			return errors.New("clave de inversor inválida")
+		}
+	}
+	return nil
+}
+
+func validInverterKey(key string) bool {
+	if len(key) < 1 || len(key) > 20 {
+		return false
+	}
+	for i := 0; i < len(key); i++ {
+		c := key[i]
+		if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 // ResolveInstall devuelve la topología efectiva: kv install_config.topology si
 // existe y parsea, si no el perfil base (legacy si hay datos, genérico si no).
 func ResolveInstall(database *db.DB) Topology {
@@ -335,7 +359,7 @@ func Normalize(cfg TopologyInput, base Topology) Topology {
 			if i < len(base.Inverters) {
 				b = base.Inverters[i]
 			}
-			if inv.Key != "" {
+			if validInverterKey(inv.Key) {
 				b.Key = inv.Key
 			} else {
 				b.Key = "inv" + itoa(i+1)

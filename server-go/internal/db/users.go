@@ -68,6 +68,44 @@ func (d *DB) CreateUser(username, passwordHash, language, role string) (*UserVie
 	return d.GetUserByID(id)
 }
 
+func (d *DB) DeleteUserAndSessions(userID string) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM sessions WHERE user_id = ?`, userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM users WHERE id = ?`, userID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (d *DB) UpdateUserPasswordAndRevokeSessions(userID, passwordHash string) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, passwordHash, userID)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+	if _, err := tx.Exec(`DELETE FROM sessions WHERE user_id = ?`, userID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (d *DB) GetUserByUsernameByID(id string) (*UserRow, error) {
 	var u UserRow
 	err := d.db.QueryRow(

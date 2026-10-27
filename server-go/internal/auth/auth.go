@@ -285,6 +285,11 @@ func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "no autorizado"})
 			return
 		}
+		user, err := a.DB.GetUserByID(s.UserID)
+		if err != nil || user == nil {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "no autorizado"})
+			return
+		}
 		if renewed, _ := a.DB.RenewSessionIfDue(s.ID, a.SessionTTL.Milliseconds()); renewed {
 			value := s.ID + "." + mustSign(a, s.ID)
 			setSessionCookie(w, r, value, a.SessionTTL)
@@ -301,6 +306,11 @@ func (a *Auth) RequireAuthRedirect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s := a.SessionIDFromCookie(r)
 		if s == nil {
+			http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
+			return
+		}
+		user, err := a.DB.GetUserByID(s.UserID)
+		if err != nil || user == nil {
 			http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
 			return
 		}

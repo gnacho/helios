@@ -106,6 +106,11 @@ func (s *Server) avatarsDir() string {
 }
 
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
+	_, _, isAdmin := s.currentUser(r)
+	if !isAdmin {
+		writeJSON(w, 403, map[string]any{"error": "solo administradores"})
+		return
+	}
 	users, err := s.DB.ListUsers()
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": "error interno"})
@@ -134,7 +139,7 @@ func (s *Server) handleAdminSetPassword(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, 500, map[string]any{"error": "error interno"})
 		return
 	}
-	if _, err := s.DB.Exec(`UPDATE users SET password_hash = ? WHERE id = ?`, string(hash), targetID); err != nil {
+	if err := s.DB.UpdateUserPasswordAndRevokeSessions(targetID, string(hash)); err != nil {
 		writeJSON(w, 500, map[string]any{"error": "error interno"})
 		return
 	}
@@ -180,6 +185,10 @@ func (s *Server) handleAdminSetRole(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "formato inválido"})
 		return
 	}
+	if targetID == adminID {
+		writeJSON(w, 400, map[string]any{"error": "no puedes cambiar tu propio rol"})
+		return
+	}
 	if _, err := s.DB.Exec(`UPDATE users SET role = ? WHERE id = ?`, body.Role, targetID); err != nil {
 		writeJSON(w, 500, map[string]any{"error": "error interno"})
 		return
@@ -200,7 +209,7 @@ func (s *Server) handleAdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "no puedes borrarte a ti mismo"})
 		return
 	}
-	if _, err := s.DB.Exec(`DELETE FROM users WHERE id = ?`, targetID); err != nil {
+	if err := s.DB.DeleteUserAndSessions(targetID); err != nil {
 		writeJSON(w, 500, map[string]any{"error": "error interno"})
 		return
 	}
@@ -209,6 +218,11 @@ func (s *Server) handleAdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
+	_, _, isAdmin := s.currentUser(r)
+	if !isAdmin {
+		writeJSON(w, 403, map[string]any{"error": "solo administradores"})
+		return
+	}
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))

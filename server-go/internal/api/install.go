@@ -114,6 +114,11 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
+	_, _, isAdmin := s.currentUser(r)
+	if !isAdmin {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "requiere administrador"})
+		return
+	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeJSON(w, 400, map[string]any{"error": "body inválido"})
@@ -137,6 +142,10 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 		rawTopo, _ := json.Marshal(topoMap)
 		if err := json.Unmarshal(rawTopo, &input); err != nil {
 			writeJSON(w, 400, map[string]any{"error": "topología inválida en topology: " + err.Error()})
+			return
+		}
+		if err := install.ValidateTopologyInput(input); err != nil {
+			writeJSON(w, 400, map[string]any{"error": err.Error()})
 			return
 		}
 		normalized := install.Normalize(input, base)
