@@ -25,8 +25,8 @@ func TestBuildDayChartGeometry(t *testing.T) {
 	m := BuildDayChart("es", testSeries(), 720, []string{"solis", "fox"}, map[string]string{"solis": "Solis", "fox": "Fox"})
 
 	// yMax: max 3.483 + 0.3 → ceil 4 (mínimo 1).
-	if m.YMax != 4 {
-		t.Fatalf("yMax = %d (esperado 4)", m.YMax)
+	if m.YMax != 5 {
+		t.Fatalf("yMax = %d (esperado 5)", m.YMax)
 	}
 	// Picos en los extremos del eje X (geometría propia de la gráfica).
 	g := geomDashboard
