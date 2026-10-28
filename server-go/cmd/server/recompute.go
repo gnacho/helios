@@ -25,7 +25,7 @@ const haConnectTimeout = 30 * time.Second
 // runRecomputeChargerPV ejecuta el recálculo y escribe el resumen en out.
 func runRecomputeChargerPV(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet(cmdRecomputeChargerPV, flag.ContinueOnError)
-	days := fs.Int("days", 0, "días hacia atrás a recalcular (0 = ventana del backfill)")
+	days := fs.Int("days", 0, "días hacia atrás a recalcular (0 = ventana del backfill, 9 días)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
