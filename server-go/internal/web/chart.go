@@ -92,7 +92,7 @@ func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []s
 	g := geomDashboard
 	m := DayChartModel{Lang: lang, Now: roundStep(nowMin), W: g.W, H: g.H}
 
-	// yMax replica: max de producción/consumo/inversores +0.3, ceil, min 1.
+	// yMax replica: max de producción/consumo/inversores +0.3, ceil, min 5.
 	maxV := 0.5
 	for _, p := range points {
 		if p.Production > maxV {
@@ -107,7 +107,7 @@ func BuildDayChart(lang string, points []solar.DayPoint, nowMin int, invKeys []s
 			}
 		}
 	}
-	m.YMax = int(math.Max(1, math.Ceil(maxV+0.3)))
+	m.YMax = int(math.Max(5, math.Ceil(maxV+0.3)))
 
 	nowIdx := m.Now / stepMin
 	if nowIdx > len(points) {
