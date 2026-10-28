@@ -5,6 +5,23 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### Fixed
+
+- **El reparto de fotovoltaica del cargador deja de usar las pinzas.** La parte
+  de la carga del coche que venía del sol se estimaba con las tres pinzas de
+  potencia como "resto de casa", así que se calculaba sobre una base hasta siete
+  veces menor que la real (pinzas a 407 W con la casa consumiendo 3115 W el
+  28-Oct-2026) y casi toda la carga salía como solar. Ahora el reparto usa el
+  mismo balance que el consumo en vivo (producción + red - batería), tanto en el
+  acumulador al vuelo como en la consolidación de días, y descuenta siempre el
+  cargador de ese balance, que es de casa entera. Las pinzas quedan como detalle
+  por circuito y solo se usan si no hay fuente de red configurada, igual que en
+  el KPI de consumo. Con la fuente de red configurada y caída no hay balance, así
+  que la fotovoltaica de ese tramo queda sin dato en lugar de escribirse con una
+  cifra inventada.
+
 ## [1.2.1] - 2026-10-28
 
 ### Fixed
