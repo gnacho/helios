@@ -134,7 +134,7 @@ func TodayStr() string {
 	return time.Now().Format("2006-01-02")
 }
 
-func (s *Solar) entityNum(haReader HAReader, id string, divisor float64) float64 {
+func entityNum(haReader HAReader, id string, divisor float64) float64 {
 	if id == "" || divisor == 0 {
 		if divisor == 0 {
 			divisor = 1
@@ -150,8 +150,8 @@ func (s *Solar) entityNum(haReader HAReader, id string, divisor float64) float64
 	return Num(st.State) / divisor
 }
 
-func (s *Solar) inverterPowerKw(haReader HAReader, inv install.Inverter) float64 {
-	raw := s.entityNum(haReader, inv.PowerID, 1)
+func inverterPowerKw(haReader HAReader, inv install.Inverter) float64 {
+	raw := entityNum(haReader, inv.PowerID, 1)
 	if inv.PowerUnit == install.UnitW {
 		return raw / 1000
 	}
@@ -166,14 +166,13 @@ func (s *Solar) consumptionKw(haReader HAReader) float64 {
 	}
 	total := 0.0
 	for _, id := range t.Consumption.PowerIDs {
-		total += s.entityNum(haReader, id, div)
+		total += entityNum(haReader, id, div)
 	}
 	return total
 }
 
 // batteryPowerKw: positivo = cargando, negativo = descargando, según sinónimos configurados.
-func (s *Solar) batteryPowerKw(haReader HAReader, batMag float64) float64 {
-	b := s.Store.Get().Battery
+func batteryPowerKw(b install.BatteryConfig, haReader HAReader, batMag float64) float64 {
 	if !b.Enabled {
 		return 0
 	}
@@ -225,16 +224,14 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 	t := s.Store.Get()
 	ents := s.Store.Entities()
 
-	production := 0.0
-	invLive := make([]LiveInverter, 0, len(t.Inverters))
-	for _, inv := range t.Inverters {
-		kw := s.inverterPowerKw(haReader, inv)
-		if kw < 0.02 {
-			kw = 0
-		}
-		production += kw
-		invLive = append(invLive, LiveInverter{Key: inv.Key, Name: inv.Name, Kw: Round3(kw)})
-	}
+	// Producción, red y batería en vivo con el mismo lector que usa el reparto de
+	// FV del cargador: una sola implementación del balance.
+	power := ReadLivePower(t, haReader)
+	production := power.Production
+	invLive := power.Inverters
+	batteryPower := power.BatteryPower
+	grid := power.Grid
+	gridDown := power.GridDown
 
 	clampKw := s.consumptionKw(haReader)
 
@@ -251,14 +248,9 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 	}
 
 	b := t.Battery
-	batMag := 0.0
-	if b.Enabled {
-		batMag = s.entityNum(haReader, b.PowerID, 1)
-	}
-	batteryPower := s.batteryPowerKw(haReader, batMag)
 	soc := 0.0
 	if b.Enabled {
-		soc = s.entityNum(haReader, b.SocID, 1)
+		soc = entityNum(haReader, b.SocID, 1)
 	}
 	batState := ""
 	if b.Enabled {
@@ -267,92 +259,18 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 		}
 	}
 
-	// Grid: modo attrs (atributos) o sensor (estado con signo / pares import-export).
-	grid := 0.0
-	if t.Grid.Mode == "attrs" && t.Grid.AttrsID != nil && *t.Grid.AttrsID != "" {
-		st, _ := haReader.GetState(*t.Grid.AttrsID)
-		gridMag := math.Abs(attrNum(st.Attributes, "currentGridPower"))
-		dir := attrStr(st.Attributes, "gridDirection")
-		if dir == "" {
-			dir = "none"
-		}
-		switch dir {
-		case "import":
-			grid = gridMag
-		case "export":
-			grid = -gridMag
-		default:
-			grid = 0
-		}
-	} else {
-		if t.Grid.SensorID != nil && *t.Grid.SensorID != "" {
-			grid = s.entityNum(haReader, *t.Grid.SensorID, 1)
-		} else {
-			imp := 0.0
-			if t.Grid.ImportID != nil {
-				imp = s.entityNum(haReader, *t.Grid.ImportID, 1)
-			}
-			exp := 0.0
-			if t.Grid.ExportID != nil {
-				exp = s.entityNum(haReader, *t.Grid.ExportID, 1)
-			}
-			if imp > 0 {
-				grid = imp
-			} else {
-				grid = -exp
-			}
-		}
-	}
-
-	gridDown := false
-	if connected {
-		if t.Grid.Mode == "attrs" && t.Grid.AttrsID != nil {
-			st, ok := haReader.GetState(*t.Grid.AttrsID)
-			gridDown = isDown(st, ok)
-		} else if t.Grid.SensorID != nil {
-			st, ok := haReader.GetState(*t.Grid.SensorID)
-			gridDown = isDown(st, ok)
-		} else {
-			if t.Grid.ImportID != nil {
-				st, ok := haReader.GetState(*t.Grid.ImportID)
-				if isDown(st, ok) {
-					gridDown = true
-				}
-			}
-			if !gridDown && t.Grid.ExportID != nil {
-				st, ok := haReader.GetState(*t.Grid.ExportID)
-				if isDown(st, ok) {
-					gridDown = true
-				}
-			}
-		}
-	}
-
 	sunState, _ := haReader.GetState(t.Sun)
 	weatherState, _ := haReader.GetState(t.Weather)
 	elevation := attrNum(sunState.Attributes, "elevation")
-
-	// De noche no puede haber export solar.
-	if !gridDown && elevation < 0 && grid < -0.03 && production < 0.02 {
-		grid = -grid
-	}
 
 	// Consumo con el balance de HA (producción + red - batería): las pinzas no
 	// cubren la casa y dos pueden estar paradas, así que solo son detalle por
 	// circuito. Con la fuente de red configurada pero caída no hay balance y el
 	// consumo se sirve como no disponible antes que como una cifra varias veces
 	// menor.
-	gridConfigured := (t.Grid.Mode == "attrs" && t.Grid.AttrsID != nil && *t.Grid.AttrsID != "") ||
-		(t.Grid.SensorID != nil && *t.Grid.SensorID != "") ||
-		t.Grid.ImportID != nil || t.Grid.ExportID != nil
-	balanced := gridConfigured && !gridDown
-	consumption := clampKw
-	if balanced {
-		consumption = production + grid - batteryPower
-		if consumption < 0 {
-			consumption = 0
-		}
-	} else if !gridDown && grid == 0 && consumption > 0.1 && production < 0.02 {
+	house := power.HouseConsumption(clampKw, consDown)
+	consumption := house.Kw
+	if !power.GridConfigured && !gridDown && grid == 0 && consumption > 0.1 && production < 0.02 {
 		// Sin balance (fuente de red sin configurar) se mantiene el respaldo
 		// anterior: importación estimada a partir del consumo de las pinzas.
 		grid = consumption
@@ -434,7 +352,7 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 	// Con balance manda el balance aunque alguna pinza esté parada. Sin fuente
 	// de red se sirve la suma de pinzas, salvo que estén caídas.
 	var consumptionPtr *float64
-	if balanced || (!gridConfigured && !consDown) {
+	if house.OK {
 		v := Round3(consumption)
 		consumptionPtr = &v
 	}
@@ -485,8 +403,8 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 	return LiveData{
 		Production:     Round3(production),
 		Consumption:    consumptionPtr,
-		RespaldoKw:     Round3(s.entityNum(haReader, respaldoID, respaldoDiv)),
-		NoRespaldadaKw: Round3(s.entityNum(haReader, noRespID, consDiv)),
+		RespaldoKw:     Round3(entityNum(haReader, respaldoID, respaldoDiv)),
+		NoRespaldadaKw: Round3(entityNum(haReader, noRespID, consDiv)),
 		BatteryPower:   Round3(batteryPower),
 		BatteryStatus:  batteryStatus,
 		Soc:            Round1(soc),
@@ -503,7 +421,7 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 			NextSetting: nextSetting,
 		},
 		Weather:        weatherText,
-		WeatherTemp:    s.entityNum(haReader, t.WeatherTemp, 1),
+		WeatherTemp:    entityNum(haReader, t.WeatherTemp, 1),
 		Station:        station,
 		InverterOnline: inverterOnline,
 		Ts:             now.UTC().Format(time.RFC3339),
@@ -569,7 +487,7 @@ func (s *Solar) ConsumptionTodayFromCounters(haReader HAReader, baseline *Consum
 	total := 0.0
 	usable := false
 	for _, id := range ids {
-		cur := s.entityNum(haReader, id, 1)
+		cur := entityNum(haReader, id, 1)
 		if baseline != nil {
 			if base, ok := baseline.Values[id]; ok && base != nil && cur >= *base {
 				total += cur - *base
@@ -592,7 +510,7 @@ func (s *Solar) ComputeTodayKpis(haReader HAReader, consumptionOverride *float64
 		if id == "" {
 			return 0
 		}
-		return s.entityNum(haReader, id, 1)
+		return entityNum(haReader, id, 1)
 	}
 
 	production := 0.0

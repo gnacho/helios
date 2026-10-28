@@ -150,7 +150,7 @@ func (s *Solar) getDaySeriesUncached(haReader HAReader, dateStr string) (DaySeri
 	if isToday {
 		for _, inv := range t.Inverters {
 			if inv.BackupPowerID != "" && inv.EnergyID != "" {
-				liveTargets[inv.Key] = s.entityNum(haReader, inv.EnergyID, 1)
+				liveTargets[inv.Key] = entityNum(haReader, inv.EnergyID, 1)
 			}
 		}
 	}
