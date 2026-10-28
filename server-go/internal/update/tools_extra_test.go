@@ -9,34 +9,37 @@ import (
 	"testing"
 )
 
-// TestMakefileAcceptsPublishedTailwindDigest checks the pinned digest against
-// the checksum published by the project, so a typo or a stale pin is caught.
+// TestMakefileAcceptsPublishedTailwindDigest checks every pinned digest against
+// the checksums published by the project, so a typo or a stale pin is caught.
 func TestMakefileAcceptsPublishedTailwindDigest(t *testing.T) {
 	if os.Getenv("HELIOS_NETWORK_TESTS") != "1" {
 		t.Skip("set HELIOS_NETWORK_TESTS=1 to fetch the published checksum")
 	}
 	mk := readRepoFile(t, "Makefile")
-	digest := regexpFind(t, mk, `TW_SHA256\s*\?=\s*([0-9a-f]{64})`)
 	ver := regexpFind(t, mk, `TW_VER\s*\?=\s*(v[0-9]+\.[0-9]+\.[0-9]+)`)
-	asset := regexpFind(t, mk, `TW_ASSET\s*\?=\s*([a-z0-9-]+)`)
 
 	out, err := exec.Command("curl", "-fsSL", "--max-time", "60",
 		"https://github.com/tailwindlabs/tailwindcss/releases/download/"+ver+"/sha256sums.txt").Output()
 	if err != nil {
 		t.Fatalf("fetch sha256sums: %v", err)
 	}
-	published := ""
+	published := map[string]string{}
 	for _, line := range strings.Split(string(out), "\n") {
 		fields := strings.Fields(line)
-		if len(fields) == 2 && strings.TrimPrefix(fields[1], "./") == asset {
-			published = fields[0]
+		if len(fields) == 2 {
+			published[strings.TrimPrefix(fields[1], "./")] = fields[0]
 		}
 	}
-	if published == "" {
-		t.Fatalf("sha256sums.txt no publica %s", asset)
-	}
-	if published != digest {
-		t.Fatalf("digest fijado %s no coincide con el publicado %s", digest, published)
+	for _, arch := range []string{"x64", "arm64"} {
+		asset := "tailwindcss-linux-" + arch
+		digest := regexpFind(t, mk, `TW_SHA256_`+arch+`\s*:?=\s*([0-9a-f]{64})`)
+		got, ok := published[asset]
+		if !ok {
+			t.Fatalf("sha256sums.txt no publica %s", asset)
+		}
+		if got != digest {
+			t.Fatalf("digest fijado de %s %s no coincide con el publicado %s", asset, digest, got)
+		}
 	}
 }
 

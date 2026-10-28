@@ -36,17 +36,25 @@ func TestMakefileVerifiesTailwindChecksum(t *testing.T) {
 }
 
 // TestMakefilePinsTailwindDigest requires a concrete digest for the pinned
-// version so a compromised release asset cannot swap it silently.
+// version so a compromised release asset cannot swap it silently, and one
+// digest per architecture so the release matrix can run the binary it
+// downloads.
 func TestMakefilePinsTailwindDigest(t *testing.T) {
 	mk := readRepoFile(t, "Makefile")
-	if !regexp.MustCompile(`TW_SHA256\s*\?=\s*[0-9a-f]{64}`).MatchString(mk) {
-		t.Fatal("falta TW_SHA256 con el digest fijado de Tailwind")
+	for _, arch := range []string{"x64", "arm64"} {
+		re := regexp.MustCompile(`TW_SHA256_` + arch + `\s*:?=\s*[0-9a-f]{64}`)
+		if !re.MatchString(mk) {
+			t.Fatalf("falta TW_SHA256_%s con el digest fijado de Tailwind", arch)
+		}
 	}
 	if !regexp.MustCompile(`TW_VER\s*\?=\s*v[0-9]+\.[0-9]+\.[0-9]+`).MatchString(mk) {
 		t.Fatal("falta TW_VER fijada junto al digest")
 	}
-	if !regexp.MustCompile(`TW_ASSET\s*\?=\s*tailwindcss-linux-x64`).MatchString(mk) {
-		t.Fatal("falta TW_ASSET que fija el artefacto descargado")
+	if !regexp.MustCompile(`TW_ASSET\s*\?=\s*tailwindcss-linux-\$\(TW_ARCH\)`).MatchString(mk) {
+		t.Fatal("TW_ASSET debe elegir el artefacto segun la arquitectura del runner")
+	}
+	if !strings.Contains(mk, "TW_SHA256 ?= $(TW_SHA256_$(TW_ARCH))") {
+		t.Fatal("TW_SHA256 debe resolver el digest de la arquitectura elegida")
 	}
 }
 
