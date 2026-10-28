@@ -77,20 +77,32 @@ func toHistoryPoints(rows []ha.HistoryRow) []HistoryPoint {
 }
 
 // ChargerPVFromCurves integra min(cargador, max(0, producción - resto casa))
-// sobre buckets de 5 min. Devuelve kWh por día.
+// sobre buckets de 5 min. Devuelve kWh por día. El resto de casa sale del
+// contador de consumo del balance (el mismo que consolida los días y que integra
+// la serie de 5 minutos), no de las pinzas, que no cubren la casa. Los buckets
+// sin balance no se reparten: el día queda sin dato de FV en vez de con una
+// cifra calculada sobre una base falsa.
 func (e *Ext) ChargerPVFromCurves(h HA, startTime, endTime string, c Charger) map[string]float64 {
 	t := e.Inst.Get()
 
+	startParsed, err := time.Parse(time.RFC3339, startTime)
+	if err != nil {
+		return map[string]float64{}
+	}
+	endParsed, err := time.Parse(time.RFC3339, endTime)
+	if err != nil {
+		return map[string]float64{}
+	}
+
+	consID := t.Energy.ConsumptionID
 	idSet := map[string]struct{}{}
 	for _, inv := range t.Inverters {
 		if inv.PowerID != "" {
 			idSet[inv.PowerID] = struct{}{}
 		}
 	}
-	for _, id := range t.Consumption.PowerIDs {
-		if id != "" {
-			idSet[id] = struct{}{}
-		}
+	if consID != "" {
+		idSet[consID] = struct{}{}
 	}
 	if len(idSet) == 0 {
 		return map[string]float64{}
@@ -101,30 +113,34 @@ func (e *Ext) ChargerPVFromCurves(h HA, startTime, endTime string, c Charger) ma
 	}
 	sort.Strings(statIDs)
 
-	stats, err := h.StatisticsDuringPeriod(startTime, endTime, statIDs, "5minute", []string{"mean"})
+	// Un bucket más atrás para que el primero tenga su lectura previa del
+	// contador y pueda dar delta.
+	queryStart := startParsed.Add(-5 * time.Minute)
+	stats, err := h.StatisticsDuringPeriod(queryStart.Format(time.RFC3339), endTime, statIDs, "5minute", []string{"mean", "sum"})
 	if err != nil {
 		return map[string]float64{}
 	}
 
-	// bucketStartMs -> mean, por sensor
+	// bucketStartMs -> mean, por sensor. El contador del balance se guarda por
+	// separado con su sum acumulado.
 	bySensor := map[string]map[int64]float64{}
+	sums := map[int64]float64{}
 	for id, rows := range stats {
 		m := map[int64]float64{}
 		for _, r := range rows {
-			if r.Mean == nil {
-				continue
-			}
 			ts := r.Start.Time
-			err := error(nil)
-			_ = err
-			if err != nil {
-				continue
+			if r.Mean != nil {
+				m[ts.UnixMilli()] = *r.Mean
 			}
-			m[ts.UnixMilli()] = *r.Mean
+			if id == consID && r.Sum != nil {
+				sums[ts.UnixMilli()] = *r.Sum
+			}
 		}
-		bySensor[id] = m
+		if len(m) > 0 {
+			bySensor[id] = m
+		}
 	}
-	if len(bySensor) == 0 {
+	if len(bySensor) == 0 || len(sums) == 0 {
 		return map[string]float64{}
 	}
 
@@ -171,22 +187,29 @@ func (e *Ext) ChargerPVFromCurves(h HA, startTime, endTime string, c Charger) ma
 		return v
 	}
 
-	consDiv := 1.0
-	if t.Consumption.PowerUnit == install.UnitW {
-		consDiv = 1000
+	bucket := int64(5 * 60 * 1000)
+	bucketHours := float64(bucket) / 3600000.0
+
+	// houseKwh da la energía de la casa en el bucket desde el contador del
+	// balance. Un contador que retrocede (reset) no aporta delta.
+	houseKwh := func(ms int64) (float64, bool) {
+		cur, ok := sums[ms]
+		if !ok {
+			return 0, false
+		}
+		prev, ok := sums[ms-bucket]
+		if !ok {
+			return 0, false
+		}
+		d := cur - prev
+		if d < 0 {
+			return 0, false
+		}
+		return d, true
 	}
 
 	pvByDay := map[string]float64{}
-	bucket := int64(5 * 60 * 1000)
 
-	startParsed, err := time.Parse(time.RFC3339, startTime)
-	if err != nil {
-		return pvByDay
-	}
-	endParsed, err := time.Parse(time.RFC3339, endTime)
-	if err != nil {
-		return pvByDay
-	}
 	startMs := ((startParsed.UnixMilli() + bucket - 1) / bucket) * bucket
 	endMs := endParsed.UnixMilli()
 	if now := time.Now().UnixMilli(); now < endMs {
@@ -208,27 +231,16 @@ func (e *Ext) ChargerPVFromCurves(h HA, startTime, endTime string, c Charger) ma
 				}
 			}
 		}
-		cons := 0.0
-		haveCons := true
-		for _, id := range t.Consumption.PowerIDs {
-			v, ok := bySensor[id][ms]
-			if !ok {
-				haveCons = false
-				break
-			}
-			cons += v / consDiv
-		}
-		if !haveCons {
+		kwh, ok := houseKwh(ms)
+		if !ok {
 			continue
 		}
-		other := cons
-		if c.ChargerInHouseMeters {
-			other = cons - k
-		}
+		// El balance es de casa entera y siempre incluye el cargador.
+		other := kwh/bucketHours - k
 		if other < 0 {
 			other = 0
 		}
-		solar := math.Min(k, math.Max(0, prod-other)) * (float64(bucket) / 3600000.0)
+		solar := math.Min(k, math.Max(0, prod-other)) * bucketHours
 		if solar <= 0 {
 			continue
 		}

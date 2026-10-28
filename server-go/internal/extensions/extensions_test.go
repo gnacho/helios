@@ -271,18 +271,27 @@ func TestPVShareNow(t *testing.T) {
 	f := newFake()
 	inst := install.NewStore()
 
-	// Producción 5 kW, consumo 1 kW, cargador 2 kW en circuito aparte.
+	// Producción 5 kW, casa 1 kW (exportando 4), cargador 2 kW en circuito aparte.
 	f.set("sensor.solis_potencia_actual", "3")
 	f.set("sensor.almacen_pinza_power_b", "2000") // W
 	f.set("sensor.medidor_respaldo_power", "500")
 	f.set("sensor.vivienda_medidor_power", "500")
 	f.set("sensor.almacen_pinza_power_a", "0")
+	f.setAttrs("sensor.solis_scraper", map[string]any{
+		"currentGridPower": 4.0,
+		"gridDirection":    "export",
+	})
+	f.set("sun.sun", "above_horizon")
+	f.setAttrs("sun.sun", map[string]any{"elevation": float64(30)})
 
 	power := 2.0
 	charger := Charger{Key: "main", ChargerInHouseMeters: false}
-	share := PVShareNow(f, inst, &power, charger)
+	share, ok := PVShareNow(f, inst, &power, charger)
+	if !ok {
+		t.Fatal("el reparto debe estar disponible")
+	}
 
-	// other = consumo (1 kW), solarToCharger = min(2, max(0, 5-1)) = 2 -> share 1
+	// balance = 5 + (-4) - 0 = 1 kW, solar al cargador = min(2, 5-1) = 2 -> share 1
 	if share != 1 {
 		t.Fatalf("share = %v (esperado 1)", share)
 	}
@@ -293,14 +302,23 @@ func TestPVShareNowInHouseMeters(t *testing.T) {
 	inst := install.NewStore()
 	f.set("sensor.solis_potencia_actual", "3")
 	f.set("sensor.almacen_pinza_power_b", "0")
-	// consumo incluye el cargador: 3 kW total, cargador 2 kW -> resto 1
+	// El balance es de casa entera y siempre incluye el cargador: 3 kW.
 	f.set("sensor.medidor_respaldo_power", "1500")
 	f.set("sensor.vivienda_medidor_power", "1500")
 	f.set("sensor.almacen_pinza_power_a", "0")
+	f.setAttrs("sensor.solis_scraper", map[string]any{
+		"currentGridPower": 0.0,
+		"gridDirection":    "none",
+	})
+	f.set("sun.sun", "above_horizon")
+	f.setAttrs("sun.sun", map[string]any{"elevation": float64(30)})
 
 	power := 2.0
 	charger := Charger{Key: "main", ChargerInHouseMeters: true}
-	share := PVShareNow(f, inst, &power, charger)
+	share, ok := PVShareNow(f, inst, &power, charger)
+	if !ok {
+		t.Fatal("el reparto debe estar disponible")
+	}
 	// production 3, other = 3-2 = 1, solarToCharger = min(2, 2) = 2 -> 1
 	if share != 1 {
 		t.Fatalf("share = %v (esperado 1)", share)

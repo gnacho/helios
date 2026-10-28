@@ -6,6 +6,7 @@ import (
 
 	"helios-server/internal/ha"
 	"helios-server/internal/install"
+	"helios-server/internal/solar"
 )
 
 // HA es lo que extensions necesita de Home Assistant.
@@ -182,53 +183,69 @@ func ComputeChargerLive(h HA, c Config) []LiveCharger {
 	return out
 }
 
-// PVShareNow: fracción [0..1] del delta que pudo venir de excedente FV.
-func PVShareNow(h HA, store *install.Store, chargerPowerKw *float64, c Charger) float64 {
+// PVShareNow devuelve la fracción [0..1] del delta del cargador que pudo venir
+// de excedente FV y si el reparto se puede calcular. El resto de casa sale del
+// balance de la casa (producción + red - batería), el mismo que alimenta el
+// consumo en vivo, y no de las pinzas, que no cubren la casa. Con fuente de red
+// configurada y caída no hay balance: el reparto se declara no disponible en vez
+// de calcularse sobre una base falsa.
+func PVShareNow(h HA, store *install.Store, chargerPowerKw *float64, c Charger) (float64, bool) {
 	t := store.Get()
 
-	production := 0.0
-	for _, inv := range t.Inverters {
-		raw := entityNumOrUndefined(h, inv.PowerID)
-		if raw == nil {
-			continue
-		}
-		if inv.PowerUnit == install.UnitW {
-			production += *raw / 1000
-		} else {
-			production += *raw
-		}
-	}
-
-	consDiv := 1.0
-	if t.Consumption.PowerUnit == install.UnitW {
-		consDiv = 1000
-	}
-	consumption := 0.0
-	for _, id := range t.Consumption.PowerIDs {
-		if raw := entityNumOrUndefined(h, id); raw != nil {
-			consumption += *raw / consDiv
-		}
+	metersKw, metersDown := consumptionMetersKw(h, t)
+	p := solar.ReadLivePower(t, h)
+	house := p.HouseConsumption(metersKw, metersDown)
+	if !house.OK {
+		return 0, false
 	}
 
 	if chargerPowerKw != nil && *chargerPowerKw > 0.05 {
-		other := consumption
-		if c.ChargerInHouseMeters {
-			other = consumption - *chargerPowerKw
-		}
-		if other < 0 {
-			other = 0
-		}
-		solarToCharger := math.Min(*chargerPowerKw, math.Max(0, production-other))
-		return math.Max(0, math.Min(1, solarToCharger/(*chargerPowerKw)))
+		other := restOfHouseKw(house, *chargerPowerKw, c.ChargerInHouseMeters)
+		solarToCharger := math.Min(*chargerPowerKw, math.Max(0, p.Production-other))
+		return math.Max(0, math.Min(1, solarToCharger/(*chargerPowerKw))), true
 	}
 
-	if consumption > 0.01 {
-		return math.Max(0, math.Min(1, production/consumption))
+	if house.Kw > 0.01 {
+		return math.Max(0, math.Min(1, p.Production/house.Kw)), true
 	}
-	if production > 0 {
-		return 1
+	if p.Production > 0 {
+		return 1, true
 	}
-	return 0
+	return 0, true
+}
+
+// restOfHouseKw es la casa sin el cargador. El balance es de casa entera y
+// siempre incluye el cargador, así que se descuenta siempre. Las pinzas solo
+// cubren los circuitos que miden, así que ahí solo se descuenta si el cargador
+// está detrás de ellas.
+func restOfHouseKw(house solar.HouseConsumption, chargerKw float64, chargerInMeters bool) float64 {
+	other := house.Kw
+	if house.FromGrid || chargerInMeters {
+		other -= chargerKw
+	}
+	if other < 0 {
+		other = 0
+	}
+	return other
+}
+
+// consumptionMetersKw suma las pinzas de consumo y dice si alguna está caída.
+func consumptionMetersKw(h HA, t install.Topology) (float64, bool) {
+	div := 1.0
+	if t.Consumption.PowerUnit == install.UnitW {
+		div = 1000
+	}
+	total := 0.0
+	down := false
+	for _, id := range t.Consumption.PowerIDs {
+		v := entityNumOrUndefined(h, id)
+		if v == nil {
+			down = true
+			continue
+		}
+		total += *v / div
+	}
+	return total, down
 }
 
 func containsStr(xs []string, v string) bool {

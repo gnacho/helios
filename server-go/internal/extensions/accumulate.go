@@ -107,8 +107,17 @@ func (e *Ext) accumulateOne(h HA, c Charger) {
 			}
 			powerKw = &v
 		}
-		pv := delta * PVShareNow(h, e.Inst, powerKw, c)
-		if err := e.DB.AddChargerKwh(todayStr(), c.Key, round3(delta), round3(pv)); err != nil {
+		share, ok := PVShareNow(h, e.Inst, powerKw, c)
+		kwh := round3(delta)
+		var err error
+		if ok {
+			err = e.DB.AddChargerKwh(todayStr(), c.Key, kwh, round3(delta*share))
+		} else {
+			// Sin balance no se inventa un reparto: la energía se acumula igual y
+			// la FV de ese tramo queda sin dato.
+			err = e.DB.AddChargerKwhUnknownPV(todayStr(), c.Key, kwh)
+		}
+		if err != nil {
 			log.Printf("[extensions] addChargerKwh %s: %v", c.Key, err)
 		}
 	} else if delta > chargerGlitchKwh {

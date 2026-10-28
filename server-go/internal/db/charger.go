@@ -29,6 +29,20 @@ func (d *DB) AddChargerKwh(date, charger string, kwh, pvKwh float64) error {
 	return err
 }
 
+// AddChargerKwhUnknownPV suma kWh al día del cargador sin tocar el reparto
+// solar: cuando no hay balance la FV de ese tramo es desconocida y no se
+// escribe una cifra inventada.
+func (d *DB) AddChargerKwhUnknownPV(date, charger string, kwh float64) error {
+	_, err := d.db.Exec(
+		`INSERT INTO daily_charger (date, charger, kwh, pv_kwh)
+		 VALUES (?, ?, ?, NULL)
+		 ON CONFLICT(date, charger) DO UPDATE SET
+		   kwh = COALESCE(kwh, 0) + excluded.kwh`,
+		date, charger, kwh,
+	)
+	return err
+}
+
 // SetChargerKwhIfNull fija el valor SOLO si estaba a NULL, creando la fila.
 func (d *DB) SetChargerKwhIfNull(date, charger string, kwh float64, pvKwh *float64) error {
 	if _, err := d.db.Exec(
