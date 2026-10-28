@@ -71,6 +71,21 @@ func (d *DB) SetChargerKwhIfNull(date, charger string, kwh float64, pvKwh *float
 	return err
 }
 
+// SetChargerPVKwh reescribe el reparto solar de un día ya cerrado, clampeado a
+// la energía acumulada. No crea filas ni toca kWh: un día sin energía no se
+// puede repartir.
+func (d *DB) SetChargerPVKwh(date, charger string, pvKwh float64) error {
+	if pvKwh < 0 {
+		pvKwh = 0
+	}
+	_, err := d.db.Exec(
+		`UPDATE daily_charger SET pv_kwh = MIN(?, kwh)
+		 WHERE date = ? AND charger = ? AND kwh IS NOT NULL`,
+		pvKwh, date, charger,
+	)
+	return err
+}
+
 // ChargerHistoryRange devuelve las filas de un cargador en un rango.
 func (d *DB) ChargerHistoryRange(from, to, charger string) ([]ChargerDayRow, error) {
 	rows, err := d.db.Query(
