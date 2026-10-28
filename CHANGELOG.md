@@ -5,6 +5,12 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.3] - 2026-10-28
+
+### Changed
+
+- El gráfico de histórico arranca el eje vertical en 5 y solo crece cuando el pico de producción o consumo lo exige. Antes la escala se ajustaba al máximo del día, así que los días flojos quedaban con un eje incómodo de leer.
+
 ## [1.2.2] - 2026-10-28
 
 ### Added
