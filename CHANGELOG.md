@@ -5,6 +5,19 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### Fixed
+
+- **El consumo de hoy ya no sale de las pinzas.** El consumo en vivo y el del
+  día en curso se calculan con el balance de contadores (producción + red -
+  batería), el mismo criterio que Home Assistant y que los días ya consolidados.
+  Las tres pinzas no cubren la casa y dos podían estar paradas, así que el total
+  salía hasta siete veces por debajo (6,89 kWh frente a 20,0 kWh medidos en
+  Home Assistant) y la red derivada mostraba exportación inexistente. Las pinzas
+  quedan como detalle por circuito y, cuando el balance no se puede calcular, el
+  consumo se muestra como no disponible en lugar de con una cifra errónea.
+
 ## [1.2.0] - 2026-10-28
 
 ### Added
