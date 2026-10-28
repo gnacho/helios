@@ -128,10 +128,18 @@ func (s *Solar) getDaySeriesUncached(haReader HAReader, dateStr string) (DaySeri
 			ids = append(ids, t.Battery.SocID)
 		}
 	}
+	// Contadores del balance: su suma acumulada da el consumo y la red de cada
+	// bucket, el mismo criterio que la consolidación diaria.
+	e := s.Store.EnergyEntities()
+	for _, id := range []string{e.Consumption, e.GridImport, e.GridExport} {
+		if id != "" {
+			ids = append(ids, id)
+		}
+	}
 
 	stats, err := haReader.StatisticsDuringPeriod(
 		start.Format(time.RFC3339), end.Format(time.RFC3339),
-		ids, "5minute", []string{"mean"},
+		ids, "5minute", []string{"mean", "sum"},
 	)
 	if err != nil {
 		return DaySeries{}, err

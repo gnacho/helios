@@ -30,6 +30,87 @@ func statsRow(minute int, mean float64) ha.StatsRow {
 
 func mkStats(m map[string][]ha.StatsRow) ha.Stats { return ha.Stats(m) }
 
+func statsSumRow(minute int, sum float64) ha.StatsRow {
+	// Igual que statsRow pero con la suma acumulada de un contador de energía.
+	base := time.Date(2026, 10, 22, minute/60, minute%60, 0, 0, time.Local)
+	v := sum
+	return ha.StatsRow{Start: ha.FlexTime{Time: base}, Sum: &v}
+}
+
+// Caso real del 28-Oct-2026: las pinzas suman 407 W mientras el balance da
+// 3115 W. La serie sale de los contadores de energía, con el mismo criterio que
+// los días ya consolidados.
+func TestBuildDaySeriesConsumptionAndGridFromCounters(t *testing.T) {
+	d := testDB(t)
+	s := New(install.NewStore(), d)
+
+	// Un bucket de 5 minutos: 0.259 kWh de consumo (3.108 kW) y 0.06 kWh
+	// importados de red (0.72 kW). Exportación plana.
+	stats := mkStats(map[string][]ha.StatsRow{
+		"sensor.solis_potencia_actual":       {statsRow(720, 2.0)},
+		"sensor.almacen_pinza_power_b":       {statsRow(720, 900)},
+		"sensor.medidor_respaldo_power":      {statsRow(720, 394)},
+		"sensor.vivienda_medidor_power":      {statsRow(720, 0)},
+		"sensor.almacen_pinza_power_a":       {statsRow(720, 12.8)},
+		"sensor.solis_bateria_potencia":      {statsRow(720, 0.385)},
+		"sensor.solis_bateria_soc":           {statsRow(720, 55)},
+		"sensor.consumo_total_diario":        {statsSumRow(715, 100), statsSumRow(720, 100.259)},
+		"sensor.energia_red_importada_solis": {statsSumRow(715, 50), statsSumRow(720, 50.06)},
+		"sensor.energia_red_exportada_solis": {statsSumRow(715, 10), statsSumRow(720, 10)},
+	})
+
+	res := s.BuildDaySeries(stats, "2026-10-22", nil)
+	if len(res.Points) != 1 {
+		t.Fatalf("points = %d", len(res.Points))
+	}
+	p := res.Points[0]
+	if p.Consumption < 3.1 || p.Consumption > 3.11 {
+		t.Fatalf("consumption = %v (esperado ~3.108 del balance, no 0.407 de las pinzas)", p.Consumption)
+	}
+	if p.Grid == nil {
+		t.Fatal("grid debería calcularse desde los contadores")
+	}
+	if *p.Grid < 0.71 || *p.Grid > 0.73 {
+		t.Fatalf("grid = %v (esperado ~0.72 importado)", *p.Grid)
+	}
+	// La integral del día recupera los kWh de los contadores, que son los que
+	// cuadran con Home Assistant.
+	if got := p.Consumption * bucketHours; got < 0.258 || got > 0.26 {
+		t.Fatalf("consumo integrado = %v kWh (esperado 0.259 del contador)", got)
+	}
+	if got := *p.Grid * bucketHours; got < 0.059 || got > 0.061 {
+		t.Fatalf("red integrada = %v kWh (esperado 0.06 importados)", got)
+	}
+}
+
+// Un contador que retrocede (reset a medianoche) no puede dar consumo negativo:
+// ese bucket vuelve a la suma de pinzas.
+func TestBuildDaySeriesCounterResetFallsBack(t *testing.T) {
+	d := testDB(t)
+	s := New(install.NewStore(), d)
+
+	stats := mkStats(map[string][]ha.StatsRow{
+		"sensor.solis_potencia_actual":       {statsRow(720, 2.0)},
+		"sensor.almacen_pinza_power_b":       {statsRow(720, 900)},
+		"sensor.medidor_respaldo_power":      {statsRow(720, 394)},
+		"sensor.vivienda_medidor_power":      {statsRow(720, 0)},
+		"sensor.almacen_pinza_power_a":       {statsRow(720, 12.8)},
+		"sensor.solis_bateria_potencia":      {statsRow(720, 0.385)},
+		"sensor.solis_bateria_soc":           {statsRow(720, 55)},
+		"sensor.consumo_total_diario":        {statsSumRow(715, 100), statsSumRow(720, 40)},
+		"sensor.energia_red_importada_solis": {statsSumRow(715, 50), statsSumRow(720, 50)},
+		"sensor.energia_red_exportada_solis": {statsSumRow(715, 10), statsSumRow(720, 10)},
+	})
+
+	res := s.BuildDaySeries(stats, "2026-10-22", nil)
+	if len(res.Points) != 1 {
+		t.Fatalf("points = %d", len(res.Points))
+	}
+	if got := res.Points[0].Consumption; got != 0.407 {
+		t.Fatalf("consumption = %v (esperado 0.407, respaldo de pinzas)", got)
+	}
+}
+
 func TestBuildDaySeriesBasic(t *testing.T) {
 	d := testDB(t)
 	store := install.NewStore()

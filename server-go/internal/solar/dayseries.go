@@ -30,10 +30,17 @@ type DaySeries struct {
 	Estimated bool       `json:"estimated"`
 }
 
-const bucketHours = 5.0 / 60.0
+const (
+	bucketHours   = 5.0 / 60.0
+	bucketMinutes = 5
+	// kwPerBucket convierte el kWh de un bucket de 5 minutos a kW.
+	kwPerBucket = 60.0 / bucketMinutes
+)
 
 // BuildDaySeries replica buildDaySeries() de solar.ts.
-// stats: {sensorId: [{start, mean}]} con buckets de 5 minutos.
+// stats: {sensorId: [{start, mean, sum}]} con buckets de 5 minutos. El consumo y
+// la red salen de la suma acumulada de los contadores de energía (mismo criterio
+// que los días consolidados) y las pinzas quedan como respaldo y detalle.
 func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[string]float64) DaySeries {
 	t := s.Store.Get()
 
@@ -80,6 +87,52 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 	}
 	sort.Ints(minutes)
 
+	// Contadores del balance: el consumo y la red salen de su suma acumulada,
+	// con el mismo criterio que la consolidación diaria. Las pinzas quedan como
+	// detalle por circuito y solo se usan si el contador no da un bucket válido.
+	e := s.Store.EnergyEntities()
+	sums := map[string]map[int]float64{}
+	for _, id := range []string{e.Consumption, e.GridImport, e.GridExport} {
+		if id == "" {
+			continue
+		}
+		for _, row := range stats[id] {
+			if row.Sum == nil {
+				continue
+			}
+			m, ok := bucketMinute(row.Start.Time)
+			if !ok {
+				continue
+			}
+			if sums[id] == nil {
+				sums[id] = map[int]float64{}
+			}
+			sums[id][m] = *row.Sum
+		}
+	}
+
+	// counterDelta devuelve el kWh del bucket usando la lectura del bucket
+	// inmediatamente anterior. Un contador que retrocede (reset) da ok=false.
+	counterDelta := func(id string, min int) (float64, bool) {
+		rows := sums[id]
+		if rows == nil {
+			return 0, false
+		}
+		cur, ok := rows[min]
+		if !ok {
+			return 0, false
+		}
+		prev, ok := rows[min-bucketMinutes]
+		if !ok {
+			return 0, false
+		}
+		d := cur - prev
+		if d < 0 {
+			return 0, false
+		}
+		return d, true
+	}
+
 	consDiv := 1.0
 	if t.Consumption.PowerUnit == install.UnitW {
 		consDiv = 1000
@@ -87,6 +140,7 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 	consMeterIDs := t.Consumption.PowerIDs
 
 	points := make([]DayPoint, 0, len(minutes))
+	measuredGrid := make([]bool, 0, len(minutes))
 	var prevSoc *float64
 	backupIdx := map[string][]int{}
 	consGapIdx := make([]int, 0)
@@ -123,9 +177,44 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 			production += kw
 		}
 
+		// Consumo del bucket: contador del balance si lo hay, si no la suma de
+		// las pinzas.
+		consumption := 0.0
+		consFromCounters := false
+		if d, ok := counterDelta(e.Consumption, min); ok {
+			consumption = d * kwPerBucket
+			consFromCounters = true
+		} else {
+			for _, id := range consMeterIDs {
+				if v, ok := b[id]; ok {
+					consumption += v / consDiv
+				}
+			}
+		}
+
+		// Red del bucket: contadores de importación y exportación.
+		gridFromCounters := false
+		grid := 0.0
+		switch {
+		case e.GridImport != "" && e.GridExport != "":
+			imp, okImp := counterDelta(e.GridImport, min)
+			exp, okExp := counterDelta(e.GridExport, min)
+			if okImp && okExp {
+				grid, gridFromCounters = (imp-exp)*kwPerBucket, true
+			}
+		case e.GridImport != "":
+			if imp, ok := counterDelta(e.GridImport, min); ok {
+				grid, gridFromCounters = imp*kwPerBucket, true
+			}
+		case e.GridExport != "":
+			if exp, ok := counterDelta(e.GridExport, min); ok {
+				grid, gridFromCounters = -exp*kwPerBucket, true
+			}
+		}
+
 		// Hueco de consumo: el bucket existe pero ningún medidor tiene fila.
 		consGap := false
-		if len(consMeterIDs) > 0 {
+		if !consFromCounters && len(consMeterIDs) > 0 {
 			consGap = true
 			for _, id := range consMeterIDs {
 				if _, ok := b[id]; ok {
@@ -136,13 +225,6 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 		}
 		if consGap {
 			consGapIdx = append(consGapIdx, pointIdx)
-		}
-
-		consumption := 0.0
-		for _, id := range consMeterIDs {
-			if v, ok := b[id]; ok {
-				consumption += v / consDiv
-			}
 		}
 
 		batteryPower := 0.0
@@ -175,28 +257,35 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 			}
 		}
 
-		grid := consumption - production + batteryPower
-		if math.Abs(grid) < 0.03 {
-			grid = 0
-		}
-
-		consMissing := false
-		for _, id := range consMeterIDs {
-			if _, ok := b[id]; !ok {
-				consMissing = true
-				break
-			}
-		}
-		batMissing := false
-		if t.Battery.Enabled && t.Battery.PowerID != "" {
-			if _, ok := b[t.Battery.PowerID]; !ok {
-				batMissing = true
-			}
-		}
 		var gridPtr *float64
-		if !consMissing && !batMissing {
+		measured := gridFromCounters
+		if measured {
 			v := Round3(grid)
 			gridPtr = &v
+		} else {
+			derivedGrid := consumption - production + batteryPower
+			if math.Abs(derivedGrid) < 0.03 {
+				derivedGrid = 0
+			}
+			consMissing := false
+			if !consFromCounters {
+				for _, id := range consMeterIDs {
+					if _, ok := b[id]; !ok {
+						consMissing = true
+						break
+					}
+				}
+			}
+			batMissing := false
+			if t.Battery.Enabled && t.Battery.PowerID != "" {
+				if _, ok := b[t.Battery.PowerID]; !ok {
+					batMissing = true
+				}
+			}
+			if !consMissing && !batMissing {
+				v := Round3(derivedGrid)
+				gridPtr = &v
+			}
 		}
 
 		inv0, inv1 := 0.0, 0.0
@@ -224,6 +313,22 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 			Soc:          Round1(soc),
 			Grid:         gridPtr,
 		})
+		measuredGrid = append(measuredGrid, measured)
+	}
+
+	// setGrid recalcula el grid derivado de un punto (consumo - producción +
+	// batería) salvo que venga medido por los contadores del balance.
+	setGrid := func(i int) {
+		if i < len(measuredGrid) && measuredGrid[i] {
+			return
+		}
+		p := &points[i]
+		grid := p.Consumption - p.Production + p.BatteryPower
+		if math.Abs(grid) < 0.03 {
+			grid = 0
+		}
+		v := Round3(grid)
+		p.Grid = &v
 	}
 
 	dayKey := dateStr
@@ -320,12 +425,7 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 					prod += p.Inverters[x.Key]
 				}
 				p.Production = Round3(prod)
-				grid := p.Consumption - p.Production + p.BatteryPower
-				if math.Abs(grid) < 0.03 {
-					grid = 0
-				}
-				v2 := Round3(grid)
-				p.Grid = &v2
+				setGrid(i)
 			}
 		}
 	}
@@ -384,12 +484,7 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 							continue
 						}
 						p.Consumption = Round3(pat * f)
-						grid := p.Consumption - p.Production + p.BatteryPower
-						if math.Abs(grid) < 0.03 {
-							grid = 0
-						}
-						v := Round3(grid)
-						p.Grid = &v
+						setGrid(i)
 					}
 					estimated = true
 				}
@@ -426,12 +521,7 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 						p.Inverters[inv0Key] = Round3(p.Inverters[inv1Key] * ratio)
 						p.Solis = p.Inverters[inv0Key]
 						p.Production = Round3(p.Inverters[inv0Key] + p.Inverters[inv1Key])
-						grid := p.Consumption - p.Production + p.BatteryPower
-						if math.Abs(grid) < 0.03 {
-							grid = 0
-						}
-						v := Round3(grid)
-						p.Grid = &v
+						setGrid(i)
 					}
 					estimated = true
 				}
