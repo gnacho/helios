@@ -7,6 +7,18 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
 
 ## [Unreleased]
 
+### Added
+
+- **Recálculo único del reparto FV del histórico del cargador.**
+  `helios-server recompute-charger-pv` reescribe `daily_charger.pv_kwh` de los
+  días ya cerrados con el criterio del balance, para deshacer los días que
+  quedaron guardados con el reparto de las pinzas. Recorre la misma ventana de
+  nueve días que el backfill del cargador y no toca hoy, que lo sigue acumulando
+  el tick de cada minuto. Los días sin balance utilizable (sin contador, contador
+  caído o contador que retrocede) quedan intactos y salen en el resumen con su
+  motivo. Es idempotente: una segunda pasada no reescribe nada. No se ejecuta en
+  el arranque ni en el cron, solo cuando se lanza el subcomando.
+
 ### Fixed
 
 - **El reparto de fotovoltaica del cargador deja de usar las pinzas.** La parte
