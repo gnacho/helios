@@ -1,10 +1,10 @@
 // Helios service worker: push notifications plus an offline shell.
-// The app is server rendered, so the cache is runtime only: whatever page the
-// user opened last is what shows up with no network, and the assets keep
-// working because they carry a versioned query string.
+// Pages are never cached because they contain private account data. Only public
+// assets and the offline notice are stored, and the assets keep working because
+// they carry a versioned query string.
 const ctx = self;
 
-const SHELL = "helios-shell-v1";
+const SHELL = "helios-shell-v2";
 const ASSETS = "helios-assets-v1";
 const OFFLINE_URL = "/offline.html";
 // Root files served from the binary's embed (see handleRootFile).
@@ -64,26 +64,17 @@ ctx.addEventListener("fetch", (event) => {
   }
   if (url.origin !== ctx.location.origin || isLive(url)) return;
 
-  // Pages: network first, last visit as the fallback, offline notice if none.
+  // Pages: network only. Never store private server-rendered HTML in Cache
+  // Storage. The offline notice is the only document kept by the shell cache.
   if (req.mode === "navigate") {
     event.respondWith(
-      (async () => {
-        try {
-          const res = await fetch(req);
-          if (res && res.ok) {
-            const cache = await caches.open(SHELL);
-            cache.put(req, res.clone()).catch(() => {});
-          }
-          return res;
-        } catch {
-          const cache = await caches.open(SHELL);
-          return (
-            (await cache.match(req)) ||
-            (await cache.match(OFFLINE_URL)) ||
-            new Response("Sin conexión", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } })
-          );
-        }
-      })()
+      fetch(req).catch(async () => {
+        const cache = await caches.open(SHELL);
+        return (
+          (await cache.match(OFFLINE_URL)) ||
+          new Response("Sin conexión", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } })
+        );
+      })
     );
     return;
   }

@@ -160,7 +160,9 @@ API and reads the sensors HAOS already exposes. Only two HAOS settings matter:
 - `TRUSTED_PROXIES` - optional comma-separated IPs or CIDR ranges of reverse
   proxies. Empty by default, so `X-Forwarded-For` is ignored and the direct
   peer address is used. Behind a reverse proxy, set this to the proxy address
-  so login rate limiting sees the real client IP.
+  so login rate limiting sees the real client IP. The proxy must also preserve
+  the original `Host` header: mutating browser requests are rejected when
+  `Origin` or `Referer` points to a different host.
 
 Copy `server/.env.example` to `.env` and fill those two values (plus the auth
 ones). On startup Helios authenticates with the token and subscribes to the

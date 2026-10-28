@@ -377,17 +377,66 @@ func TestAssetsServed(t *testing.T) {
 	}
 }
 
+func TestPrivateHTMLIsNotCacheable(t *testing.T) {
+	_, r, _ := testUI(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	for _, tc := range []struct {
+		name   string
+		path   string
+		cookie *http.Cookie
+	}{
+		{name: "dashboard autenticado", path: "/", cookie: cookie},
+		{name: "login anónimo", path: "/login"},
+	} {
+		req := httptest.NewRequest("GET", tc.path, nil)
+		if tc.cookie != nil {
+			req.AddCookie(tc.cookie)
+		}
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		if cc := rec.Header().Get("Cache-Control"); cc != "no-store" {
+			t.Fatalf("%s: Cache-Control = %q, esperado no-store", tc.name, cc)
+		}
+	}
+}
+
 func TestSafeNext(t *testing.T) {
 	cases := map[string]string{
-		"":           "/",
-		"/cargador":  "/cargador",
-		"//evil.com": "/",
-		"http://x":   "/",
-		"/a?b=c":     "/a?b=c",
+		"":                    "/",
+		"/cargador":           "/cargador",
+		"//evil.com":          "/",
+		"http://x":            "/",
+		"/a?b=c":              "/a?b=c",
+		"/\t/evil.example":    "/",
+		"/\n/evil.example":    "/",
+		"/\r/evil.example":    "/",
+		"/\\evil.example":     "/",
+		"/%2F%2Fevil.example": "/",
+		"/%5Cevil.example":    "/",
+		"/cargador?tab=1#top": "/cargador?tab=1#top",
 	}
 	for in, want := range cases {
 		if got := safeNext(in); got != want {
 			t.Fatalf("safeNext(%q) = %q (esperado %q)", in, got, want)
 		}
+	}
+}
+
+func TestLoginRedirectRejectsControlCharacters(t *testing.T) {
+	_, r, _ := testUI(t)
+	login := doLogin(t, r, "nacho", "password1")
+	cookie := sessionCookie(t, login)
+
+	req := httptest.NewRequest("GET", "/login?next=/%09/evil.example", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status = %d, esperado %d", rec.Code, http.StatusFound)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/" {
+		t.Fatalf("location = %q, esperado %q", loc, "/")
 	}
 }

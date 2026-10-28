@@ -352,7 +352,21 @@ func invTabSwapClick(key string) string {
 	return clickTab("/inversores?inv="+url.QueryEscape(key), "@get('/ui/inv?inv="+jsQuote(key)+"')")
 }
 
-func (u *UI) Mount(r chi.Router) {
+func noStorePrivate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (u *UI) Mount(parent chi.Router) {
+	parent.Group(func(r chi.Router) {
+		r.Use(noStorePrivate)
+		u.mount(r)
+	})
+}
+
+func (u *UI) mount(r chi.Router) {
 	r.Get("/assets/*", navLog(http.HandlerFunc(u.handleAssets)).ServeHTTP)
 
 	// Root files come from the embed too: the binary is self-contained.
@@ -1052,11 +1066,25 @@ func loginURL(next string) string {
 	return "/login?next=" + url.QueryEscape(n)
 }
 
-// safeNext only allows local paths (no open redirects). The browser treats a
-// backslash as a slash, so "/\\evil.com" becomes "//evil.com": reject any
-// backslash, not just a leading "//".
+// safeNext only allows local paths (no open redirects). The browser decodes
+// percent escapes and treats backslashes and control characters as separators,
+// so "/%09/evil.com" or "/\\evil.com" can become "//evil.com". Validate both
+// the original and decoded forms before returning the original path.
 func safeNext(next string) string {
-	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") || strings.Contains(next, `\`) {
+	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
+		return "/"
+	}
+	decoded, err := url.PathUnescape(next)
+	if err != nil || strings.HasPrefix(decoded, "//") || strings.Contains(decoded, `\`) {
+		return "/"
+	}
+	for _, r := range decoded {
+		if r < 0x20 || r == 0x7f {
+			return "/"
+		}
+	}
+	u, err := url.Parse(next)
+	if err != nil || u.IsAbs() || u.Host != "" || u.User != nil {
 		return "/"
 	}
 	return next
