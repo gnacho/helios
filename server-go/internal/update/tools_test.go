@@ -35,6 +35,20 @@ func TestMakefileVerifiesTailwindChecksum(t *testing.T) {
 	}
 }
 
+// TestCILandingGuardUsesPlainSubstitution rejects the escaped "$$(...)" form in
+// the CI landing guard. Inside a run block no escaping is needed, and "$$"
+// expands to the shell PID followed by literal text, so the emptiness check
+// fails on every run regardless of the working tree.
+func TestCILandingGuardUsesPlainSubstitution(t *testing.T) {
+	ci := readRepoFile(t, ".github/workflows/ci.yml")
+	if strings.Contains(ci, "$$(") {
+		t.Fatal("el guard de la landing usa $$( ), que se expande como PID y texto literal")
+	}
+	if !strings.Contains(ci, `test -z "$(git status --porcelain)"`) {
+		t.Fatal("el guard de la landing debe usar $(git status --porcelain) sin escapar")
+	}
+}
+
 // TestMakefilePinsTailwindDigest requires a concrete digest for the pinned
 // version so a compromised release asset cannot swap it silently, and one
 // digest per architecture so the release matrix can run the binary it

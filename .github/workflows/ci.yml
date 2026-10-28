@@ -38,7 +38,7 @@ jobs:
       - name: Verifica que el build no deja cambios sin commitear
         run: |
           git status --porcelain
-          test -z "$$(git status --porcelain)" || {
+          test -z "$(git status --porcelain)" || {
             echo "ERROR: el build de la landing dejó cambios sin commitear" >&2
             exit 1
           }
