@@ -41,10 +41,15 @@ func main() {
 	}
 	defer database.Close()
 
+	trustedProxies, err := auth.ParseTrustedProxies(cfg.TrustedProxies)
+	if err != nil {
+		log.Fatalf("trusted proxies: %v", err)
+	}
 	a := &auth.Auth{
-		DB:            database,
-		SessionTTL:    cfg.SessionTTL,
-		SessionSecret: os.Getenv("SESSION_SECRET"),
+		DB:             database,
+		SessionTTL:     cfg.SessionTTL,
+		SessionSecret:  os.Getenv("SESSION_SECRET"),
+		TrustedProxies: trustedProxies,
 	}
 
 	if err := ensureBootstrapAdmin(database, a); err != nil {
@@ -150,8 +155,21 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	log.Printf("helios-server go listening on %s (db=%s)", addr, cfg.DBPath)
-	if err := http.ListenAndServe(addr, srv.Routes()); err != nil {
+	httpSrv := newHTTPServer(addr, srv.Routes())
+	if err := httpSrv.ListenAndServe(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       60 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    64 << 10,
+		// WriteTimeout stays disabled: SSE streams are long-lived.
 	}
 }
 

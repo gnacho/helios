@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,11 +20,26 @@ type Config struct {
 	PriceExport float64
 	Co2PerKwh   float64
 
-	SessionTTL time.Duration
+	SessionTTL     time.Duration
+	TrustedProxies []string
 
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
 	VAPIDSubject    string
+}
+
+func envList(key string) []string {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil
+	}
+	var values []string
+	for _, item := range strings.Split(raw, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			values = append(values, item)
+		}
+	}
+	return values
 }
 
 func envFloat(key string, def float64) float64 {
@@ -76,7 +92,8 @@ func Load() (*Config, error) {
 		PriceExport: envFloat("PRICE_EXPORT_EUR", 0.08),
 		Co2PerKwh:   envFloat("CO2_KG_PER_KWH", 0.25),
 
-		SessionTTL: 30 * 24 * time.Hour,
+		SessionTTL:     30 * 24 * time.Hour,
+		TrustedProxies: envList("TRUSTED_PROXIES"),
 
 		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),

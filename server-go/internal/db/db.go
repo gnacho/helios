@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   attempts INTEGER DEFAULT 0,
   locked_until INTEGER DEFAULT 0
 );
+CREATE INDEX IF NOT EXISTS idx_login_attempts_locked_until ON login_attempts(locked_until);
 
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

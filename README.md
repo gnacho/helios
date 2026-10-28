@@ -157,6 +157,10 @@ API and reads the sensors HAOS already exposes. Only two HAOS settings matter:
   (`http://` is upgraded to `ws://` internally).
 - `HAOS_TOKEN` — a **long-lived access token**, generated in HAOS under
   Profile → Security → Long-lived access tokens.
+- `TRUSTED_PROXIES` - optional comma-separated IPs or CIDR ranges of reverse
+  proxies. Empty by default, so `X-Forwarded-For` is ignored and the direct
+  peer address is used. Behind a reverse proxy, set this to the proxy address
+  so login rate limiting sees the real client IP.
 
 Copy `server/.env.example` to `.env` and fill those two values (plus the auth
 ones). On startup Helios authenticates with the token and subscribes to the

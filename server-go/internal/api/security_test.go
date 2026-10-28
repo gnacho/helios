@@ -102,6 +102,32 @@ func securityOrphanCookie(t *testing.T, router chi.Router, a *auth.Auth) *http.C
 	return cookie
 }
 
+func TestRoutesRejectOversizedLoginBody(t *testing.T) {
+	_, _, router := newSecurityRouter(t)
+	body := bytes.Repeat([]byte("a"), (1<<20)+1)
+	rec := securityRequest(t, router, http.MethodPost, "/api/auth/login", nil, body)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusRequestEntityTooLarge)
+	}
+}
+
+func TestRoutesRejectChunkedOversizedLoginBody(t *testing.T) {
+	_, _, router := newSecurityRouter(t)
+	var body bytes.Buffer
+	body.WriteString(`{"username":"`)
+	body.Write(bytes.Repeat([]byte("a"), (1<<20)+1))
+	body.WriteString(`","password":"x"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(body.Bytes()))
+	req.ContentLength = -1
+	req.TransferEncoding = []string{"chunked"}
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusRequestEntityTooLarge)
+	}
+}
+
 func TestPutConfigRejectsUnsafeInverterKey(t *testing.T) {
 	_, _, router := newSecurityRouter(t)
 	adminCookie := securityLogin(t, router, securityAdminUser, securityAdminPass)

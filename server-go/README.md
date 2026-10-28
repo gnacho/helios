@@ -21,7 +21,7 @@ HELIOS_DATA_DIR=/tmp/helios-data ./helios-server
 ## Estructura
 
 - `cmd/server/main.go`: entrypoint, wiring.
-- `internal/config`: env vars (PORT, HELIOS_DATA_DIR, HELIOS_DB_PATH).
+- `internal/config`: env vars (PORT, HELIOS_DATA_DIR, HELIOS_DB_PATH, TRUSTED_PROXIES).
 - `internal/db`: apertura SQLite + migraciones.
 - `internal/health`: handler `/health`.
 

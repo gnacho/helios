@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,9 +21,10 @@ import (
 const CookieName = "helios_session"
 
 type Auth struct {
-	DB            *db.DB
-	SessionTTL    time.Duration
-	SessionSecret string // if empty, read from kv
+	DB             *db.DB
+	SessionTTL     time.Duration
+	SessionSecret  string // if empty, read from kv
+	TrustedProxies []*net.IPNet
 }
 
 type PublicUser struct {
@@ -77,45 +80,116 @@ func safeEqual(a, b string) bool {
 	return hmac.Equal([]byte(a), []byte(b))
 }
 
-func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		parts := strings.Split(xff, ",")
-		return strings.TrimSpace(parts[0])
+// ParseTrustedProxies accepts IP addresses and CIDR ranges. A bare address is
+// treated as a single-host network.
+func ParseTrustedProxies(entries []string) ([]*net.IPNet, error) {
+	var networks []*net.IPNet
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if strings.Contains(entry, "/") {
+			_, network, err := net.ParseCIDR(entry)
+			if err != nil {
+				return nil, fmt.Errorf("invalid trusted proxy %q: %w", entry, err)
+			}
+			networks = append(networks, network)
+			continue
+		}
+		ip := net.ParseIP(entry)
+		if ip == nil {
+			return nil, fmt.Errorf("invalid trusted proxy %q", entry)
+		}
+		bits := 128
+		if v4 := ip.To4(); v4 != nil {
+			ip = v4
+			bits = 32
+		}
+		networks = append(networks, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
 	}
-	// chi/httplog puede sobreescribir; fallback a RemoteAddr
-	host := r.RemoteAddr
-	if i := strings.LastIndex(host, ":"); i > 0 {
-		return host[:i]
+	return networks, nil
+}
+
+func (a *Auth) trustedProxy(ip net.IP) bool {
+	for _, network := range a.TrustedProxies {
+		if network.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func remoteIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
 	}
 	return host
 }
 
+// clientIP returns the peer address unless the immediate peer is a configured
+// trusted proxy. In that case it walks X-Forwarded-For from right to left and
+// returns the first address that is not another trusted proxy.
+func (a *Auth) clientIP(r *http.Request) string {
+	peer := remoteIP(r)
+	peerIP := net.ParseIP(peer)
+	if peerIP == nil || !a.trustedProxy(peerIP) {
+		return peer
+	}
+
+	hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
+	for i := len(hops) - 1; i >= 0; i-- {
+		ip := net.ParseIP(strings.TrimSpace(hops[i]))
+		if ip == nil {
+			return peer
+		}
+		if !a.trustedProxy(ip) {
+			return ip.String()
+		}
+	}
+	return peer
+}
+
 func (a *Auth) LoginRateLimited(r *http.Request) bool {
-	ip := clientIP(r)
+	ip := a.clientIP(r)
+	var attempts int
 	var lockedUntil int64
-	err := a.DB.QueryRow(`SELECT locked_until FROM login_attempts WHERE ip = ?`, ip).Scan(&lockedUntil)
+	err := a.DB.QueryRow(`SELECT attempts, locked_until FROM login_attempts WHERE ip = ?`, ip).Scan(&attempts, &lockedUntil)
 	if err == sql.ErrNoRows {
 		return false
 	}
 	if err != nil {
 		return false
 	}
-	return lockedUntil > time.Now().UnixMilli()
+	return attempts >= 5 && lockedUntil > time.Now().UnixMilli()
 }
 
 func (a *Auth) RegisterLoginFail(r *http.Request) error {
-	ip := clientIP(r)
+	ip := a.clientIP(r)
+	now := time.Now().UnixMilli()
+	windowEnd := now + 5*60*1000
+
+	// Lazy retention: stale rows from other addresses are removed when a new
+	// failure is recorded.
+	if _, err := a.DB.Exec(`DELETE FROM login_attempts WHERE locked_until < ?`, now-24*60*60*1000); err != nil {
+		return err
+	}
 	_, err := a.DB.Exec(`
-		INSERT INTO login_attempts (ip, attempts, locked_until) VALUES (?, 1, 0)
+		INSERT INTO login_attempts (ip, attempts, locked_until) VALUES (?, 1, ?)
 		ON CONFLICT(ip) DO UPDATE SET
-		  attempts = attempts + 1,
-		  locked_until = CASE WHEN attempts >= 4 THEN ? ELSE locked_until END
-	`, ip, time.Now().UnixMilli()+5*60*1000)
+		  attempts = CASE WHEN login_attempts.locked_until < ? THEN 1 ELSE login_attempts.attempts + 1 END,
+		  locked_until = CASE
+		    WHEN login_attempts.locked_until < ? THEN ?
+		    WHEN login_attempts.attempts + 1 >= 5 THEN ?
+		    ELSE ?
+		  END
+	`, ip, windowEnd, now, now, windowEnd, windowEnd, windowEnd)
 	return err
 }
 
 func (a *Auth) LoginOk(r *http.Request) error {
-	ip := clientIP(r)
+	ip := a.clientIP(r)
 	_, err := a.DB.Exec(`DELETE FROM login_attempts WHERE ip = ?`, ip)
 	return err
 }
