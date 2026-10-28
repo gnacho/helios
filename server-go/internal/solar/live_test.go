@@ -74,8 +74,10 @@ func TestComputeLiveNominal(t *testing.T) {
 	if live.Solis != 2.5 || live.Fox != 1.2 {
 		t.Fatalf("solis/fox = %v/%v", live.Solis, live.Fox)
 	}
-	if live.Consumption == nil || *live.Consumption != 0.6 {
-		t.Fatalf("consumption = %v (esperado 0.6)", live.Consumption)
+	// Balance: 3.7 kW de producción + 0.4 kW de red - 0.5 kW de carga de
+	// batería. Las pinzas suman 0.6 kW y no cubren la casa.
+	if live.Consumption == nil || *live.Consumption != 3.6 {
+		t.Fatalf("consumption = %v (esperado 3.6 del balance)", live.Consumption)
 	}
 	if live.BatteryPower != 0.5 {
 		t.Fatalf("batteryPower = %v (esperado 0.5 cargando)", live.BatteryPower)
@@ -143,8 +145,10 @@ func TestComputeLiveConsumptionDown(t *testing.T) {
 	s := newSolar()
 	live := s.ComputeLive(f)
 
-	if live.Consumption != nil {
-		t.Fatalf("consumption debería ser null con medidores caídos, es %v", *live.Consumption)
+	// Las pinzas caídas ya no esconden el total: el consumo sale del balance
+	// (2 kW de producción + 0.1 kW de red).
+	if live.Consumption == nil || *live.Consumption != 2.1 {
+		t.Fatalf("consumption = %v (esperado 2.1 del balance)", live.Consumption)
 	}
 	found := false
 	for _, a := range live.Alerts {
@@ -154,6 +158,62 @@ func TestComputeLiveConsumptionDown(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("falta alerta de consumo: %+v", live.Alerts)
+	}
+}
+
+// Caso real del 28-Oct-2026: las pinzas suman 407 W mientras el balance da
+// 3115 W. Helios servía la suma de pinzas, siete veces menor.
+func TestComputeLiveConsumptionFromBalance(t *testing.T) {
+	f := newFake()
+	f.set("sensor.solis_potencia_actual", "2")
+	f.set("sensor.almacen_pinza_power_b", "900") // W -> 0.9 kW
+	f.set("sensor.solis_bateria_potencia", "0.385")
+	f.set("sensor.solis_bateria_estado", "Cargando")
+	f.set("sensor.solis_bateria_soc", "55")
+	f.set("sensor.medidor_respaldo_power", "394")
+	f.set("sensor.vivienda_medidor_power", "0")
+	f.set("sensor.almacen_pinza_power_a", "12.8")
+	f.setAttrs("sensor.solis_scraper", map[string]any{
+		"currentGridPower": 0.6,
+		"gridDirection":    "import",
+		"inverterOnline":   float64(1),
+		"stationName":      "Casa",
+	})
+	f.set("sun.sun", "above_horizon")
+	f.setAttrs("sun.sun", map[string]any{"elevation": float64(30)})
+	f.set("weather.forecast_casa", "sunny")
+
+	s := newSolar()
+	live := s.ComputeLive(f)
+
+	if live.Consumption == nil {
+		t.Fatal("consumption no debería ser nil con el balance disponible")
+	}
+	// 2.9 kW de producción + 0.6 kW de red - 0.385 kW de carga de batería.
+	if got := *live.Consumption; got < 3.11 || got > 3.12 {
+		t.Fatalf("consumption = %v (esperado ~3.115 del balance, no 0.407 de las pinzas)", got)
+	}
+}
+
+// Sin fuente de red configurada el balance no existe: se mantiene la suma de
+// las pinzas como respaldo, que es el comportamiento anterior.
+func TestComputeLiveConsumptionFallbackWithoutGridSource(t *testing.T) {
+	f := newFake()
+	f.set("sensor.inverter_power", "3")
+	f.set("sensor.house_power", "800")
+	f.set("sun.sun", "above_horizon")
+	f.setAttrs("sun.sun", map[string]any{"elevation": float64(30)})
+
+	store := install.NewStore()
+	topo := install.GenericTopology
+	topo.Grid = install.GridConfig{}
+	store.Set(topo)
+
+	s := New(store, nil)
+	live := s.ComputeLive(f)
+
+	if live.Consumption == nil || *live.Consumption != 0.8 {
+		t.Fatalf("consumption = %v (esperado 0.8 de la única pinza)", live.Consumption)
 	}
 }
 
@@ -176,6 +236,11 @@ func TestComputeLiveGridDown(t *testing.T) {
 
 	if live.Grid != nil {
 		t.Fatalf("grid debería ser null con fuente caída, es %v", *live.Grid)
+	}
+	// Sin red no hay balance: mejor consumo no disponible que la suma de las
+	// pinzas, que se queda muy corta.
+	if live.Consumption != nil {
+		t.Fatalf("consumption debería ser null sin balance, es %v", *live.Consumption)
 	}
 }
 
@@ -228,7 +293,53 @@ func TestComputeTodayKpis(t *testing.T) {
 	}
 }
 
-func TestComputeTodayKpisConsumptionOverrideWins(t *testing.T) {
+// Caso real del 28-Oct-2026: las pinzas marcan 6.89 kWh de consumo y el
+// balance de contadores 20.0 kWh. El total sale del balance.
+func TestComputeTodayKpisConsumptionFromBalance(t *testing.T) {
+	f := newFake()
+	f.set("sensor.solis_energia_hoy", "13.1")
+	f.set("sensor.energia_fox_diaria", "6.9")
+	f.set("sensor.energia_red_importada_solis", "7.2")
+	f.set("sensor.energia_red_exportada_solis", "0.1")
+	f.set("sensor.energia_bateria_carga_diaria", "7.1")
+	f.set("sensor.energia_bateria_descarga_diaria", "0")
+	f.set("sensor.consumo_total_diario", "20.0")
+
+	s := newSolar()
+	override := 6.89
+	k := s.ComputeTodayKpis(f, &override)
+
+	// derived = 13.1 + 6.9 + 7.2 - 0.1 - 7.1 + 0 = 20.0
+	if k.ConsumptionKwh != 20.0 {
+		t.Fatalf("consumptionKwh = %v (esperado 20.0 del balance, no 6.89 de las pinzas)", k.ConsumptionKwh)
+	}
+	if k.GridImportKwh != 7.2 || k.GridExportKwh != 0.1 {
+		t.Fatalf("grid = %v/%v (esperado 7.2/0.1)", k.GridImportKwh, k.GridExportKwh)
+	}
+}
+
+// Las pinzas solo mandan cuando el balance no se puede calcular.
+func TestComputeTodayKpisClampOverrideOnlyWithoutBalance(t *testing.T) {
+	f := newFake()
+	f.set("sensor.solis_energia_hoy", "0")
+	f.set("sensor.energia_fox_diaria", "0")
+	f.set("sensor.energia_red_importada_solis", "0")
+	f.set("sensor.energia_red_exportada_solis", "0")
+	f.set("sensor.energia_bateria_carga_diaria", "0")
+	f.set("sensor.energia_bateria_descarga_diaria", "0")
+	f.set("sensor.consumo_total_diario", "0")
+
+	s := newSolar()
+	override := 4.2
+	k := s.ComputeTodayKpis(f, &override)
+
+	if k.ConsumptionKwh != 4.2 {
+		t.Fatalf("consumptionKwh = %v (esperado 4.2, respaldo de pinzas)", k.ConsumptionKwh)
+	}
+}
+
+// El override de pinzas no puede pisar un balance válido.
+func TestComputeTodayKpisClampOverrideDoesNotBeatBalance(t *testing.T) {
 	f := newFake()
 	f.set("sensor.solis_energia_hoy", "1")
 	f.set("sensor.energia_fox_diaria", "0")
@@ -242,8 +353,9 @@ func TestComputeTodayKpisConsumptionOverrideWins(t *testing.T) {
 	override := 4.2
 	k := s.ComputeTodayKpis(f, &override)
 
-	if k.ConsumptionKwh != 4.2 {
-		t.Fatalf("consumptionKwh = %v (esperado 4.2, medidores mandan)", k.ConsumptionKwh)
+	// derived = 1 kWh. El medidor diario de HA (0.5) no lo supera.
+	if k.ConsumptionKwh != 1 {
+		t.Fatalf("consumptionKwh = %v (esperado 1.0 del balance)", k.ConsumptionKwh)
 	}
 }
 

@@ -236,7 +236,7 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 		invLive = append(invLive, LiveInverter{Key: inv.Key, Name: inv.Name, Kw: Round3(kw)})
 	}
 
-	consumption := s.consumptionKw(haReader)
+	clampKw := s.consumptionKw(haReader)
 
 	connected := haReader.IsConnected()
 	consDown := false
@@ -336,8 +336,25 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 	if !gridDown && elevation < 0 && grid < -0.03 && production < 0.02 {
 		grid = -grid
 	}
-	// Sin datos de grid pero con consumo y sin producción → import estimado.
-	if !gridDown && grid == 0 && consumption > 0.1 && production < 0.02 {
+
+	// Consumo con el balance de HA (producción + red - batería): las pinzas no
+	// cubren la casa y dos pueden estar paradas, así que solo son detalle por
+	// circuito. Con la fuente de red configurada pero caída no hay balance y el
+	// consumo se sirve como no disponible antes que como una cifra varias veces
+	// menor.
+	gridConfigured := (t.Grid.Mode == "attrs" && t.Grid.AttrsID != nil && *t.Grid.AttrsID != "") ||
+		(t.Grid.SensorID != nil && *t.Grid.SensorID != "") ||
+		t.Grid.ImportID != nil || t.Grid.ExportID != nil
+	balanced := gridConfigured && !gridDown
+	consumption := clampKw
+	if balanced {
+		consumption = production + grid - batteryPower
+		if consumption < 0 {
+			consumption = 0
+		}
+	} else if !gridDown && grid == 0 && consumption > 0.1 && production < 0.02 {
+		// Sin balance (fuente de red sin configurar) se mantiene el respaldo
+		// anterior: importación estimada a partir del consumo de las pinzas.
 		grid = consumption
 	}
 
@@ -414,8 +431,10 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 		noRespID = *t.Consumption.NoRespaldadaID
 	}
 
+	// Con balance manda el balance aunque alguna pinza esté parada. Sin fuente
+	// de red se sirve la suma de pinzas, salvo que estén caídas.
 	var consumptionPtr *float64
-	if !consDown {
+	if balanced || (!gridConfigured && !consDown) {
 		v := Round3(consumption)
 		consumptionPtr = &v
 	}
@@ -594,15 +613,19 @@ func (s *Solar) ComputeTodayKpis(haReader HAReader, consumptionOverride *float64
 		medidores = *consumptionOverride
 	}
 	derived := production + gridImport - gridExport - batCharge + batDischarge
+	// El balance de contadores es el mismo criterio que los días ya
+	// consolidados (backfill). Si todos sus términos están a cero no hay balance
+	// utilizable y se recurre al contador de las pinzas.
+	balanceUsable := production != 0 || gridImport != 0 || gridExport != 0 || batCharge != 0 || batDischarge != 0
 
-	consumption := medidores
-	if derived > consumption {
-		consumption = derived
-	}
-	if medidores <= 0 {
-		if e := g(ents.Consumption); e > consumption {
-			consumption = e
-		}
+	consumption := 0.0
+	switch {
+	case balanceUsable:
+		consumption = math.Max(derived, g(ents.Consumption))
+	case medidores > 0:
+		consumption = medidores
+	default:
+		consumption = g(ents.Consumption)
 	}
 
 	roundedInv := make(map[string]float64, len(perInv))
