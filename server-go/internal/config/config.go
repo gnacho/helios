@@ -13,8 +13,9 @@ type Config struct {
 	DBPath  string
 	DataDir string
 
-	HAOSURL   string
-	HAOSToken string
+	HAOSURL           string
+	HAOSToken         string
+	HAOSAllowInsecure bool
 
 	PriceImport float64
 	PriceExport float64
@@ -40,6 +41,15 @@ func envList(key string) []string {
 		}
 	}
 	return values
+}
+
+func envBool(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 func envFloat(key string, def float64) float64 {
@@ -87,6 +97,8 @@ func Load() (*Config, error) {
 		DataDir:   dataDir,
 		HAOSURL:   haosURL,
 		HAOSToken: os.Getenv("HAOS_TOKEN"),
+
+		HAOSAllowInsecure: envBool("HAOS_ALLOW_INSECURE"),
 
 		PriceImport: envFloat("PRICE_IMPORT_EUR", 0.15),
 		PriceExport: envFloat("PRICE_EXPORT_EUR", 0.08),

@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"math/rand"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -146,6 +149,17 @@ type haMessage struct {
 // Client is a Home Assistant websocket client with auto-reconnect.
 var debugHA = os.Getenv("HELIOS_HA_DEBUG") == "1"
 
+const (
+	// maxWSMessageBytes caps a single state message. Entity payloads are a few
+	// kilobytes, so 1 MiB leaves room without letting a compromised or buggy
+	// instance exhaust server memory.
+	maxWSMessageBytes = 1 << 20
+	// maxRESTResponseBytes caps the whole body of a REST history response.
+	maxRESTResponseBytes = 8 << 20
+	// maxHistoryRows caps the rows returned for a single history query.
+	maxHistoryRows = 50000
+)
+
 type Client struct {
 	httpURL string
 	wsURL   string
@@ -171,8 +185,65 @@ type Client struct {
 	OnWSError    func(msg string)
 }
 
+var ErrInsecureTransport = errors.New("HA transport must be encrypted outside loopback")
+
+// ValidateHAURL rejects cleartext transports unless the target is loopback or
+// the operator explicitly opted out with allowInsecure.
+func ValidateHAURL(raw string, allowInsecure bool) error {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return errors.New("HA URL is empty")
+	}
+	u, err := url.Parse(trimmed)
+	if err != nil {
+		return fmt.Errorf("invalid HA URL: %w", err)
+	}
+	if u.Hostname() == "" {
+		return errors.New("HA URL has no host")
+	}
+	if u.User != nil {
+		return errors.New("HA URL must not embed credentials")
+	}
+
+	tls := false
+	switch u.Scheme {
+	case "https", "wss":
+		tls = true
+	case "http", "ws":
+		tls = false
+	default:
+		return fmt.Errorf("unsupported HA scheme %q", u.Scheme)
+	}
+
+	host := u.Hostname()
+	if host == "localhost" {
+		return nil
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		return nil
+	}
+	if !tls && !allowInsecure {
+		return ErrInsecureTransport
+	}
+	return nil
+}
+
+func websocketURL(raw string) string {
+	trimmed := strings.TrimSuffix(strings.TrimSpace(raw), "/")
+	switch {
+	case strings.HasPrefix(trimmed, "wss://"), strings.HasPrefix(trimmed, "ws://"):
+		return trimmed + "/api/websocket"
+	case strings.HasPrefix(trimmed, "https://"):
+		return "wss://" + strings.TrimPrefix(trimmed, "https://") + "/api/websocket"
+	case strings.HasPrefix(trimmed, "http://"):
+		return "ws://" + strings.TrimPrefix(trimmed, "http://") + "/api/websocket"
+	default:
+		return trimmed + "/api/websocket"
+	}
+}
+
 func NewClient(httpURL, token string) *Client {
-	wsURL := strings.TrimSuffix(strings.Replace(httpURL, "http", "ws", 1), "/") + "/api/websocket"
+	wsURL := websocketURL(httpURL)
 	return &Client{
 		httpURL:  strings.TrimSuffix(httpURL, "/"),
 		wsURL:    wsURL,
@@ -231,6 +302,7 @@ func (c *Client) readLoop(ws *websocket.Conn) {
 	// Keep-alive: ping cada 30 s y deadline de lectura de 90 s. Sin esto HAOS
 	// cierra la conexión a los 60 s de inactividad (visto en producción
 	// 22-Oct-2026: desconexión exacta a los 60 s del arranque).
+	ws.SetReadLimit(maxWSMessageBytes)
 	ws.SetReadDeadline(time.Now().Add(90 * time.Second))
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
@@ -565,11 +637,16 @@ func (c *Client) HistoryDuringPeriod(startTime, endTime, entityID string) ([]His
 	}
 
 	var data [][]HistoryRow
-	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+	dec := json.NewDecoder(io.LimitReader(res.Body, maxRESTResponseBytes))
+	if err := dec.Decode(&data); err != nil {
 		return nil, err
 	}
 	if len(data) > 0 {
-		return data[0], nil
+		rows := data[0]
+		if len(rows) > maxHistoryRows {
+			rows = rows[:maxHistoryRows]
+		}
+		return rows, nil
 	}
 	return []HistoryRow{}, nil
 }

@@ -1,7 +1,11 @@
 package extensions
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"image"
+	"image/png"
 	"path/filepath"
 	"testing"
 	"time"
@@ -10,6 +14,10 @@ import (
 	"helios-server/internal/ha"
 	"helios-server/internal/install"
 )
+
+func pngEncodeTiny(buf *bytes.Buffer) error {
+	return png.Encode(buf, image.NewRGBA(image.Rect(0, 0, 2, 2)))
+}
 
 type fakeHA struct {
 	states  map[string]ha.EntityState
@@ -514,7 +522,11 @@ func TestSaveAndClearChargerImage(t *testing.T) {
 	dataDir := t.TempDir()
 	e := New(store, d, install.NewStore())
 
-	ok, msg := e.SaveChargerImage(dataDir, "main", "data:image/png;base64,aGVsbG8=")
+	var png bytes.Buffer
+	if err := pngEncodeTiny(&png); err != nil {
+		t.Fatalf("fixture png: %v", err)
+	}
+	ok, msg := e.SaveChargerImage(dataDir, "main", "data:image/png;base64,"+base64.StdEncoding.EncodeToString(png.Bytes()))
 	if !ok {
 		t.Fatalf("save falló: %s", msg)
 	}

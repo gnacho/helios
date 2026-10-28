@@ -41,6 +41,10 @@ func (s *Server) handlePushSubscribe(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "suscripción inválida"})
 		return
 	}
+	if err := push.ValidateEndpoint(body.Endpoint); err != nil {
+		writeJSON(w, 400, map[string]any{"error": "suscripción inválida"})
+		return
+	}
 
 	userID, _ := auth.UserIDFrom(r.Context())
 	now := time.Now().UnixMilli()

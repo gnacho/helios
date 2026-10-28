@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,8 +17,11 @@ type DB struct {
 
 func Open(path string) (*DB, error) {
 	if dir := filepath.Dir(path); dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return nil, fmt.Errorf("mkdir data dir: %w", err)
+		}
+		if err := os.Chmod(dir, 0o700); err != nil {
+			return nil, fmt.Errorf("chmod data dir: %w", err)
 		}
 	}
 	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path)
@@ -33,7 +37,22 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
+	if err := restrictFileMode(path); err != nil {
+		return nil, err
+	}
+
 	return &DB{db: sqldb}, nil
+}
+
+// restrictFileMode keeps the database and its WAL sidecars readable only by the
+// service account, including files created before this hardening.
+func restrictFileMode(path string) error {
+	for _, name := range []string{path, path + "-wal", path + "-shm"} {
+		if err := os.Chmod(name, 0o600); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("chmod %s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 func (d *DB) Close() error { return d.db.Close() }

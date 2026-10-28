@@ -151,10 +151,13 @@ Inverters (Solis/Fox) ──integrations──▶ HAOS ──WebSocket──▶ 
 
 Helios is a single Go service with an embedded SQLite DB. It does **not** talk to
 the inverters directly: it connects to your Home Assistant over its WebSocket
-API and reads the sensors HAOS already exposes. Only two HAOS settings matter:
+API and reads the sensors HAOS already exposes. These HAOS settings matter:
 
-- `HAOS_URL` — your HAOS address, e.g. `http://192.168.10.244:8123`
-  (`http://` is upgraded to `ws://` internally).
+- `HAOS_URL` — your HAOS address. Use `https://` outside loopback: cleartext
+  `http://` and `ws://` are rejected unless the host is loopback. The scheme is
+  upgraded to `wss://` or `ws://` internally.
+- `HAOS_ALLOW_INSECURE` - set to `1` only for a lab setup to accept cleartext
+  `http://` or `ws://` towards a non-loopback host. Disabled by default.
 - `HAOS_TOKEN` — a **long-lived access token**, generated in HAOS under
   Profile → Security → Long-lived access tokens.
 - `TRUSTED_PROXIES` - optional comma-separated IPs or CIDR ranges of reverse

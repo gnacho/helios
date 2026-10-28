@@ -163,8 +163,8 @@ func navLog(next http.Handler) http.Handler {
 				ua = ua[:i+1]
 			}
 			log.Printf("[nav] %s %d %s mode=%s inm=%t ua=%q",
-				r.URL.Path, rec.status, time.Since(start).Round(time.Millisecond),
-				r.Header.Get("Sec-Fetch-Mode"), r.Header.Get("If-None-Match") != "", ua)
+				logSafeValue(r.URL.Path), rec.status, time.Since(start).Round(time.Millisecond),
+				logSafeValue(r.Header.Get("Sec-Fetch-Mode")), r.Header.Get("If-None-Match") != "", logSafeValue(ua))
 		}
 	})
 }

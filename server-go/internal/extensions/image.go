@@ -1,18 +1,28 @@
 package extensions
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	_ "golang.org/x/image/webp"
 )
 
 var imageDataRe = regexp.MustCompile(`^data:image/(png|jpeg|webp);base64,(.+)$`)
 
 const chargerImageMax = 4 * 1024 * 1024
+
+// Pixel ceiling shared with the web upload path; a header-only check happens
+// before the decoder allocates width*height pixels.
+const chargerImageMaxPixels = 40_000_000
 
 var imageMimeByExt = map[string]string{
 	"png":  "image/png",
@@ -60,23 +70,24 @@ func (e *Ext) SetChargerImageURL(key, url string) {
 	}
 }
 
+// DecodeDataURLImage validates a base64 data URL, enforces a pixel budget and
+// returns a re-encoded image plus its canonical extension. The declared media
+// type must match the decoded format, so a mislabeled payload is rejected.
+func DecodeDataURLImage(raw string, maxPixels int) ([]byte, string, error) {
+	return decodeImage(raw, maxPixels)
+}
+
 // WriteChargerImageFile escribe el data URL como <key>.<ext> y borra las demás
 // extensiones de esa clave. No toca la configuración del KV.
+//
+// The bytes are decoded and re-encoded: the data URL label is not trusted, so a
+// text payload cannot land on disk disguised as an image. The pixel ceiling is
+// checked from the header before decoding, which keeps a small PNG with a huge
+// IHDR from allocating gigabytes.
 func WriteChargerImageFile(dataDir, key, dataURL string) error {
-	m := imageDataRe.FindStringSubmatch(dataURL)
-	if m == nil {
-		return errors.New("formato de imagen invalido")
-	}
-	buf, err := base64.StdEncoding.DecodeString(m[2])
-	if err != nil || len(buf) == 0 {
-		return errors.New("imagen vacia")
-	}
-	ext := "png"
-	switch m[1] {
-	case "jpeg":
-		ext = "jpg"
-	case "webp":
-		ext = "webp"
+	out, ext, err := decodeImage(dataURL, chargerImageMaxPixels)
+	if err != nil {
+		return err
 	}
 	dir := ChargerImageDir(dataDir)
 	for _, e := range imageExts {
@@ -85,7 +96,54 @@ func WriteChargerImageFile(dataDir, key, dataURL string) error {
 			os.Remove(f)
 		}
 	}
-	return os.WriteFile(filepath.Join(dir, key+"."+ext), buf, 0o644)
+	return os.WriteFile(filepath.Join(dir, key+"."+ext), out, 0o644)
+}
+
+// decodeImage turns a base64 data URL into a re-encoded image. It validates the
+// payload before decoding: base64 must be valid, the decoded bytes must parse as
+// an image, the pixel budget must hold, and the declared media type must match
+// the detected format. Re-encoding never trusts the original bytes.
+func decodeImage(raw string, maxPixels int) ([]byte, string, error) {
+	m := imageDataRe.FindStringSubmatch(raw)
+	if m == nil {
+		return nil, "", errors.New("formato de imagen invalido")
+	}
+	buf, err := base64.StdEncoding.DecodeString(m[2])
+	if err != nil || len(buf) == 0 {
+		return nil, "", errors.New("imagen vacia")
+	}
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(buf))
+	if err != nil {
+		return nil, "", errors.New("formato de imagen invalido")
+	}
+	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > maxPixels {
+		return nil, "", errors.New("imagen con demasiados pixeles")
+	}
+	declared := m[1]
+	if declared == "jpeg" {
+		declared = "jpg"
+	}
+	if format != declared {
+		return nil, "", errors.New("el tipo declarado no coincide con la imagen")
+	}
+	img, _, err := image.Decode(bytes.NewReader(buf))
+	if err != nil {
+		return nil, "", errors.New("formato de imagen invalido")
+	}
+	var out bytes.Buffer
+	ext := "png"
+	switch format {
+	case "jpg", "jpeg":
+		ext = "jpg"
+		if err := jpeg.Encode(&out, img, &jpeg.Options{Quality: 90}); err != nil {
+			return nil, "", errors.New("no se pudo recodificar la imagen")
+		}
+	default:
+		if err := png.Encode(&out, img); err != nil {
+			return nil, "", errors.New("no se pudo recodificar la imagen")
+		}
+	}
+	return out.Bytes(), ext, nil
 }
 
 // SaveChargerImage guarda la imagen (data URL) y apunta imageUrl al endpoint.

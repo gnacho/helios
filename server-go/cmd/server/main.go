@@ -29,6 +29,17 @@ type livePayload struct {
 	Byd      *extensions.BydLive      `json:"byd"`
 }
 
+// newHAClient builds the Home Assistant client after enforcing transport rules.
+func newHAClient(cfg *config.Config) (*ha.Client, error) {
+	if cfg.HAOSToken == "" {
+		return nil, nil
+	}
+	if err := ha.ValidateHAURL(cfg.HAOSURL, cfg.HAOSAllowInsecure); err != nil {
+		return nil, err
+	}
+	return ha.NewClient(cfg.HAOSURL, cfg.HAOSToken), nil
+}
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -71,7 +82,11 @@ func main() {
 	var hub *sse.Hub
 
 	if cfg.HAOSToken != "" {
-		client = ha.NewClient(cfg.HAOSURL, cfg.HAOSToken)
+		haClient, err := newHAClient(cfg)
+		if err != nil {
+			log.Fatalf("[ha] %v", err)
+		}
+		client = haClient
 
 		hub = sse.NewHub(func() []byte {
 			payload := livePayload{
@@ -87,7 +102,7 @@ func main() {
 		})
 
 		client.OnConnected = func() {
-			log.Printf("[ha] conectado a %s", cfg.HAOSURL)
+			log.Printf("[ha] conectado a %s", ha.LogSafeURL(cfg.HAOSURL))
 			ids := append(store.LiveEntities(), extensions.ChargerEntities(extStore.Get())...)
 			ids = append(ids, extensions.BydEntities(extStore.Get())...)
 			if err := client.SubscribeEntities(ids); err != nil {

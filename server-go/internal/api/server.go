@@ -50,6 +50,7 @@ func parseDay(s string) (time.Time, error) {
 
 func (s *Server) Routes() chi.Router {
 	r := chi.NewRouter()
+	r.Use(defensiveHeaders)
 	r.Use(sameOriginOnly)
 	r.Use(requestBodyLimit)
 

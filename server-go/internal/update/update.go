@@ -78,6 +78,12 @@ func Subscribe(fn func(ProgressPayload)) func() {
 	}
 }
 
+// Publish entrega un evento a los suscriptores, igual que la lectura del
+// progreso desde el fichero.
+func Publish(payload ProgressPayload) {
+	broadcast(payload)
+}
+
 func broadcast(payload ProgressPayload) {
 	listeners.Lock()
 	fns := make([]func(ProgressPayload), 0, len(listeners.set))
@@ -185,10 +191,21 @@ func ReadProgress(dataDir string) *ProgressState {
 	if err := json.Unmarshal(b, &p); err != nil {
 		return nil
 	}
-	if p.Ts > 0 && time.Since(time.UnixMilli(p.Ts)) > progressStale {
+	if p.Ts > 0 && time.Since(progressTime(p.Ts)) > progressStale {
 		return nil
 	}
 	return &p
+}
+
+// progressTime tolera el desfase de unidades entre el script de despliegue y
+// el servidor. Los timestamps por debajo de 1e11 son segundos; por encima,
+// milisegundos. 1e11 segundos equivale al año 5138 y 1e11 milisegundos al año
+// 1973, así que el umbral separa ambas escalas sin ambigüedad práctica.
+func progressTime(ts int64) time.Time {
+	if ts < 100_000_000_000 {
+		return time.Unix(ts, 0)
+	}
+	return time.UnixMilli(ts)
 }
 
 func GetStatus(database *db.DB, dataDir string) (*StatusResult, error) {

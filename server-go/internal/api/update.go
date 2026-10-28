@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 	"strings"
@@ -18,7 +19,14 @@ var (
 	appName      = "Helios"
 	reactVersion = "19.2.0"
 	processStart = time.Now()
+	// updateHeartbeatInterval is a variable so tests can force the heartbeat
+	// to overlap with the subscriber callback.
+	updateHeartbeatInterval = 15 * time.Second
 )
+
+// updateEventBuffer bounds how many pending progress frames a slow client may
+// accumulate before frames start being dropped.
+const updateEventBuffer = 32
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	build := update.CurrentID()
@@ -100,30 +108,32 @@ func (s *Server) handleUpdateStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.WriteHeader(http.StatusOK)
 
-	writeEvent := func(data any) bool {
-		raw, err := json.Marshal(data)
-		if err != nil {
-			return false
-		}
-		if _, err := fmt.Fprintf(w, "event: update\ndata: %s\n\n", raw); err != nil {
-			return false
-		}
-		flusher.Flush()
-		return true
-	}
+	events := make(chan any, updateEventBuffer)
+	done := make(chan struct{})
+	defer close(done)
 
+	// The subscriber callback runs on the WatchProgress goroutine, so it must
+	// not touch the ResponseWriter. It hands events to the handler loop, which
+	// is the only writer.
 	unsub := update.Subscribe(func(p update.ProgressPayload) {
-		writeEvent(map[string]any{"type": p.Type, "step": p.Step, "pct": p.Pct})
+		payload := map[string]any{"type": p.Type, "step": p.Step, "pct": p.Pct}
+		select {
+		case events <- payload:
+		case <-done:
+		default:
+			// Slow client: drop the oldest progress frame rather than block
+			// the broadcast for every other subscriber.
+		}
 	})
 	defer unsub()
 
 	if st, err := update.GetStatus(s.DB, s.dataDir); err == nil {
-		if !writeEvent(st) {
+		if ok, err := writeJSONEvent(w, flusher, st); err != nil || !ok {
 			return
 		}
 	}
 
-	heartbeat := time.NewTicker(15 * time.Second)
+	heartbeat := time.NewTicker(updateHeartbeatInterval)
 	defer heartbeat.Stop()
 
 	// Observa también el fichero de progreso (watch del original).
@@ -135,6 +145,10 @@ func (s *Server) handleUpdateStream(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			return
+		case payload := <-events:
+			if ok, err := writeJSONEvent(w, flusher, payload); err != nil || !ok {
+				return
+			}
 		case <-heartbeat.C:
 			if _, err := fmt.Fprint(w, "event: heartbeat\ndata: \n\n"); err != nil {
 				return
@@ -142,6 +156,20 @@ func (s *Server) handleUpdateStream(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+// writeJSONEvent serializes one SSE frame. It returns ok=false when the payload
+// cannot be encoded and err when the connection is gone.
+func writeJSONEvent(w io.Writer, flusher http.Flusher, data any) (bool, error) {
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return false, nil
+	}
+	if _, err := fmt.Fprintf(w, "event: update\ndata: %s\n\n", raw); err != nil {
+		return false, err
+	}
+	flusher.Flush()
+	return true, nil
 }
 
 func (s *Server) handleUpdateApply(w http.ResponseWriter, r *http.Request) {

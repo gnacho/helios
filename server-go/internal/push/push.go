@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -52,27 +53,13 @@ func New(database *db.DB, publicKey, privateKey, subject string) *Service {
 	} else {
 		log.Printf("[push] VAPID configurado: notificaciones push activas")
 	}
-	s.sendFn = func(sub *webpush.Subscription, payload []byte, opts *webpush.Options) (int, error) {
-		resp, err := webpush.SendNotification(payload, sub, opts)
-		if err != nil {
-			return 0, err
-		}
-		defer resp.Body.Close()
-		return resp.StatusCode, nil
-	}
+	s.sendFn = defaultSendFn()
 	return s
 }
 
 func (s *Service) SetSendFn(fn SendFn) {
 	if fn == nil {
-		s.sendFn = func(sub *webpush.Subscription, payload []byte, opts *webpush.Options) (int, error) {
-			resp, err := webpush.SendNotification(payload, sub, opts)
-			if err != nil {
-				return 0, err
-			}
-			defer resp.Body.Close()
-			return resp.StatusCode, nil
-		}
+		s.sendFn = defaultSendFn()
 		return
 	}
 	s.sendFn = fn
@@ -350,8 +337,20 @@ func (s *Service) NotifyUsers(userIDs []string, tipo string, datos Datos, opts O
 			urgency = "normal"
 		}
 
-		for _, sub := range subs {
-			outcome := s.enviarAUna(sub, payload, ttl, urgency, tipo)
+		outcomes := make([]string, len(subs))
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, maxConcurrentSends)
+		for i, sub := range subs {
+			wg.Add(1)
+			go func(i int, sub db.PushSub) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				outcomes[i] = s.enviarAUna(sub, payload, ttl, urgency, tipo)
+			}(i, sub)
+		}
+		wg.Wait()
+		for _, outcome := range outcomes {
 			switch outcome {
 			case "ok":
 				res.Enviados++
@@ -367,6 +366,10 @@ func (s *Service) NotifyUsers(userIDs []string, tipo string, datos Datos, opts O
 
 // enviarAUna: 404/410 borra la suscripción; 429/5xx reintenta con backoff.
 func (s *Service) enviarAUna(sub db.PushSub, payload []byte, ttl int, urgency, topic string) string {
+	if err := ValidateEndpoint(sub.Endpoint); err != nil {
+		log.Printf("[push] suscripción %s descartada: %v", sub.ID, err)
+		return "fallido"
+	}
 	dest := &webpush.Subscription{
 		Endpoint: sub.Endpoint,
 		Keys: webpush.Keys{
@@ -383,6 +386,7 @@ func (s *Service) enviarAUna(sub db.PushSub, payload []byte, ttl int, urgency, t
 			TTL:             ttl,
 			Urgency:         webpush.Urgency(urgency),
 			Topic:           topic,
+			HTTPClient:      SendClient(),
 		}
 		status, err := s.sendFn(dest, payload, opts)
 		if err == nil && status >= 200 && status < 300 {
@@ -406,7 +410,7 @@ func (s *Service) enviarAUna(sub db.PushSub, payload []byte, ttl int, urgency, t
 				continue
 			}
 		}
-		log.Printf("[push] error status=%d sub=%s: %v", status, sub.ID, err)
+		log.Printf("[push] error status=%d sub=%s: %s", status, sub.ID, logSafeValue(redactEndpoint(sub.Endpoint)+" "+err.Error()))
 		return "fallido"
 	}
 	return "fallido"
@@ -418,14 +422,12 @@ func (s *Service) NotifyAll(tipo string, datos Datos, opts Options) {
 	if err != nil || len(ids) == 0 {
 		return
 	}
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("[push] panic en NotifyAll: %v", r)
-			}
-		}()
-		s.NotifyUsers(ids, tipo, datos, opts)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[push] panic en NotifyAll: %v", r)
+		}
 	}()
+	s.NotifyUsers(ids, tipo, datos, opts)
 }
 
 // FlushNotificationQueue consolida la cola de horas de silencio.

@@ -17,6 +17,7 @@ import (
 
 	"helios-server/internal/auth"
 	"helios-server/internal/db"
+	"helios-server/internal/extensions"
 )
 
 var avatarNameRe = regexp.MustCompile(`^[\w-]+$`)
@@ -38,7 +39,7 @@ func (s *Server) handleGetAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "image/webp")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("Cache-Control", "private, max-age=3600")
 	w.Write(buf)
 }
 
@@ -49,6 +50,8 @@ type avatarUploadRequest struct {
 var avatarDataRe = regexp.MustCompile(`^data:image/(webp|png|jpeg);base64,(.+)$`)
 
 const avatarMax = 200 * 1024
+
+const avatarMaxPixels = 4_000_000
 
 func (s *Server) handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, _ := auth.UserIDFrom(r.Context())
@@ -62,7 +65,7 @@ func (s *Server) handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "formato de imagen inválido"})
 		return
 	}
-	buf, err := base64.StdEncoding.DecodeString(m[2])
+	buf, _, err := extensions.DecodeDataURLImage(body.Avatar, avatarMaxPixels)
 	if err != nil {
 		writeJSON(w, 400, map[string]any{"error": "formato de imagen inválido"})
 		return
