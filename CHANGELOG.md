@@ -73,7 +73,9 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   por SHA-256.
 
 - **Build y logs.** `web-check`, la release y la landing fallan si hay artefactos
-  generados modificados o sin rastrear. Los logs sanean rutas y valores, redactan
+  generados modificados o sin rastrear. `web-check` descarga el binario de
+  Tailwind de la arquitectura del runner (x64 o arm64), así que la matriz de
+  release compila en ambas. Los logs sanean rutas y valores, redactan
   los endpoints push hasta esquema y host, y ocultan credenciales, query y
   fragmento de la URL de Home Assistant.
 

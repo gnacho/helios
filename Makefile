@@ -2,8 +2,20 @@
 TEMPL  ?= $(HOME)/go/bin/templ
 TW        ?= tools/tailwindcss
 TW_VER    ?= v4.3.3
-TW_ASSET  ?= tailwindcss-linux-x64
-TW_SHA256 ?= dc61b3ac6b8c9ca874c0cc4c57b2409791a64c5540404ca5f5367360babc313a
+
+# La matriz de release compila en amd64 y en arm64: el binario standalone debe
+# coincidir con la arquitectura del runner, o no se puede ejecutar.
+UNAME_M := $(shell uname -m)
+ifeq ($(filter aarch64 arm64,$(UNAME_M)),)
+TW_ARCH ?= x64
+else
+TW_ARCH ?= arm64
+endif
+
+TW_ASSET  ?= tailwindcss-linux-$(TW_ARCH)
+TW_SHA256_x64   := dc61b3ac6b8c9ca874c0cc4c57b2409791a64c5540404ca5f5367360babc313a
+TW_SHA256_arm64 := 55fd0b241214eff3de1e8ee4f22796662f2d2e7a49bcfca7477cfd0bac398195
+TW_SHA256 ?= $(TW_SHA256_$(TW_ARCH))
 WEB       := server-go/internal/web
 
 .PHONY: web-templ web-css web-assets web-check
