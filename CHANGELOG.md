@@ -5,7 +5,7 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
-## [Sin publicar]
+## [1.2.0] - 2026-10-28
 
 ### Added
 
@@ -16,9 +16,73 @@ y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/
   se había abierto muestra un aviso de "sin conexión" con botón de reintento.
 
 - **`helios-update.sh --check`.** Dice si hay una release más nueva sin
-  descargar ni instalar nada: `al dia: 1.1.8` o
-  `disponible: 1.1.9 (instalada: 1.1.8)`. No toca el marcador ni el estado del
+  descargar ni instalar nada: `al dia: 1.2.0` o
+  `disponible: 1.3.0 (instalada: 1.2.0)`. No toca el marcador ni el estado del
   actualizador.
+
+### Security
+
+- **Cierre de la auditoría post-migración (29 hallazgos).** Se corrigieron dos
+  fallos altos, quince medios y doce bajos detectados tras el port a Go. Los dos
+  altos permitían a cualquier usuario autenticado guardar una clave de inversor
+  que acababa emitida como expresión Datastar, y publicar releases con acciones
+  mutables y permiso de escritura sobre todo el repositorio.
+
+- **Claves y configuración validadas.** La clave del inversor queda limitada a
+  entre 1 y 20 caracteres `[a-z0-9-]`, se valida antes de guardar y se sanea al
+  normalizar valores ya almacenados. Escribir la configuración global, listar
+  usuarios y leer la auditoría exige ahora rol de administrador.
+
+- **Sesiones que mueren cuando deben.** Borrar un usuario elimina sus sesiones en
+  la misma transacción, restablecer una contraseña las revoca y una sesión cuyo
+  usuario ya no existe se rechaza. Un administrador tampoco puede quitarse el rol
+  a sí mismo.
+
+- **Entrada y conexiones acotadas.** El cuerpo de las peticiones se limita a 1 MiB
+  (12 MiB en subidas de imagen) y responde 413 si se declara o se envía de más.
+  El servidor fija tiempos de cabecera, lectura e inactividad y un tamaño máximo
+  de cabeceras. El limitador de acceso solo acepta `X-Forwarded-For` de los
+  proxies configurados, purga intentos antiguos y ya no se puede esquivar rotando
+  la dirección declarada.
+
+- **Navegador más estricto.** El redirect posterior al acceso rechaza caracteres
+  de control, separadores codificados, barras invertidas, userinfo y URLs
+  absolutas. Las rutas de la interfaz envían `Cache-Control: no-store`, el service
+  worker deja de cachear navegaciones y borra la caché anterior al activarse. Las
+  mutaciones del navegador rechazan un `Origin` o `Referer` de otro host. Todas
+  las respuestas llevan `nosniff`, `X-Frame-Options`, `Referrer-Policy` y
+  `Permissions-Policy`. Los avatares y las imágenes de cargador se decodifican,
+  se limitan por número de píxeles, se verifican contra el formato declarado y se
+  recodifican antes de guardarse.
+
+- **Integraciones salientes sin SSRF ciego.** Las suscripciones push solo admiten
+  HTTPS sin userinfo y rechazan loopback, rangos privados, link-local, CGNAT y
+  reservados, validan la IP durante el dial, no siguen redirecciones, tienen
+  tiempo límite y envían con un máximo de cuatro en paralelo. Home Assistant exige
+  TLS fuera de loopback salvo opt-in explícito de laboratorio, y el WebSocket, las
+  respuestas REST y el histórico quedan acotados a 1 MiB, 8 MiB y 50000 filas.
+
+- **Actualizador y release endurecidos.** El progreso vive en un directorio
+  propiedad de root fuera del path escribible por el servicio y se publica por
+  enlace, sin seguir symlinks. El binario y los backups quedan de root con modos
+  restringidos, las descargas solo por HTTPS con redirecciones, tiempo y tamaño
+  acotados, y solo se actualiza a una versión estrictamente mayor. Si el health
+  check falla se revierten binario y marcador juntos. Las acciones del workflow se
+  fijan por SHA completo, `contents: write` se queda solo en el job de release, el
+  tag llega por entorno con validación semver y Tailwind y Gitleaks se verifican
+  por SHA-256.
+
+- **Build y logs.** `web-check`, la release y la landing fallan si hay artefactos
+  generados modificados o sin rastrear. Los logs sanean rutas y valores, redactan
+  los endpoints push hasta esquema y host, y ocultan credenciales, query y
+  fragmento de la URL de Home Assistant.
+
+- **Permisos en disco.** El directorio de datos se crea con 0700 y la base, el WAL
+  y el SHM quedan con 0600, incluidos los ficheros que ya existían.
+
+- **Nota de actualización.** Tras actualizar conviene revisar `TRUSTED_PROXIES`: si
+  está vacío, las cabeceras de proxy se ignoran. El proxy inverso debe conservar
+  el `Host` original, y `HAOS_ALLOW_INSECURE` es solo para laboratorio.
 
 ## [1.1.8] - 2026-10-25
 
