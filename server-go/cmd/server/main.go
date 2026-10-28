@@ -41,6 +41,15 @@ func newHAClient(cfg *config.Config) (*ha.Client, error) {
 }
 
 func main() {
+	// Recálculo único del reparto FV del cargador: subcomando explícito, nunca
+	// parte del arranque normal.
+	if len(os.Args) > 1 && os.Args[1] == cmdRecomputeChargerPV {
+		if err := runRecomputeChargerPV(os.Args[2:], os.Stdout); err != nil {
+			log.Fatalf("recompute-charger-pv: %v", err)
+		}
+		return
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
