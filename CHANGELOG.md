@@ -5,6 +5,35 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.4] - 2026-10-30
+
+### Added
+
+- **Aviso de dato viejo en la tarjeta del cargador.** Cuando la potencia lleva
+  más de diez minutos sin actualizarse, la tarjeta muestra "Sin datos desde hace
+  N min" en lugar de un 0 kW que parece una lectura real. Algunos cargadores
+  dejan la conexión abierta sin enviar ningún dato, así que el cero era una
+  mentira silenciosa.
+
+### Changed
+
+- **Las estadísticas del cargador salen de la contabilidad propia.** El bloque
+  de la tarjeta muestra "Energía hoy" y "Total acumulado" calculados por Helios a
+  partir de los kWh que ya acumula por cargador y día. Antes se leían del contador
+  del aparato, y el cargador portátil no publica ese dato: enseñaba un total de
+  0,0 kWh y una sesión vacía. Ahora la cifra es la misma para los dos cargadores y
+  no depende del firmware.
+- **Los botones de amperaje se generan con el rango real del aparato.** Si el
+  cargador expone su corriente como una entidad con mínimo, máximo y paso, los
+  botones salen de ese rango y el valor aplicado siempre aparece marcado. En
+  rangos anchos se mantienen los valores de siempre para no llenar la tarjeta de
+  botones.
+
+### Removed
+
+- La fila "Sesión" y el total leído del contador del aparato, que en el cargador
+  portátil salían vacíos o a cero porque su firmware no los reporta.
+
 ## [1.2.3] - 2026-10-28
 
 ### Changed
