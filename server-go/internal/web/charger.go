@@ -32,6 +32,11 @@ import (
 // AMP_STEPS are the preset currents (IEC 61851 min 6 A).
 var AMP_STEPS = []int{6, 8, 10, 13, 16, 20, 25, 32}
 
+// ampMaxChips is the widest range rendered step by step. Beyond it the card
+// falls back to the presets, so a wall box accepting 8-32 A keeps a short
+// picker instead of 25 buttons.
+const ampMaxChips = 12
+
 // ampRange lists every current a number entity accepts: min..max by step (1 A
 // when the entity does not declare one), capped so a bogus range cannot flood
 // the card with chips.
@@ -1014,8 +1019,16 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		case hasLive && live.AmpMin != nil && live.AmpMax != nil:
 			// A number entity declares the range it accepts, so mirror it with
 			// its own step: a fixed preset list leaves valid currents (12 A)
-			// without a chip and nothing marked as active.
+			// without a chip and nothing marked as active. Long ranges fall
+			// back to the presets: a wall box accepting 8-32 A would render
+			// 25 chips, which is a picker nobody can use.
 			opts = ampRange(*live.AmpMin, *live.AmpMax, live.AmpStep)
+			if len(opts) > ampMaxChips {
+				opts = nil
+				for _, a := range AMP_STEPS {
+					opts = append(opts, float64(a))
+				}
+			}
 		default:
 			for _, a := range AMP_STEPS {
 				opts = append(opts, float64(a))
@@ -1037,6 +1050,22 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 			}
 			if len(filtered) > 0 {
 				opts = filtered
+			}
+		}
+		// The applied current must always have a chip: with the preset
+		// fallback, a wall box set to 9 A would otherwise mark nothing.
+		if hasLive && live.Amps != nil {
+			found := false
+			for _, a := range opts {
+				if a == *live.Amps {
+					found = true
+					break
+				}
+			}
+			inRange := (live.AmpMin == nil || *live.Amps >= *live.AmpMin) &&
+				(live.AmpMax == nil || *live.Amps <= *live.AmpMax)
+			if !found && inRange {
+				opts = append(opts, *live.Amps)
 			}
 		}
 		sort.Float64s(opts)
