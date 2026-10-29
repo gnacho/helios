@@ -1128,44 +1128,35 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		sv.TempText = "—"
 	}
 
-	powerText, sessionText, totalText := "…", "—", "—"
-	animPow, animSes, animTot := 0.0, 0.0, 0.0
+	powerText := "…"
+	animPow := 0.0
 	if hasLive {
 		animPow = live.PowerKw
 		powerText = fmtKwVal(lang, live.PowerKw) + " kW"
-		if live.SessionKwh != nil {
-			animSes = *live.SessionKwh
-			sessionText = fmtEnergy(lang, *live.SessionKwh) + " kWh"
-		}
-		if live.TotalKwh != nil {
-			animTot = *live.TotalKwh
-			totalText = fmtEnergy(lang, *live.TotalKwh) + " kWh"
-		}
 	}
 	k := charger.Key
 	powStat := chgLiveStat{IconKey: "zap", Label: T(lang, "cargador.currentPower"), Value: powerText, Signal: "$chg." + k + ".powerKw",
 		AnimID: "chg" + k + "Pow", Num: animPow, Dec: 2, Suffix: " kW"}
-	sesStat := chgLiveStat{IconKey: "clock", Label: T(lang, "cargador.session"), Value: sessionText, Signal: "$chg." + k + ".sessionKwh",
-		AnimID: "chg" + k + "Ses", Num: animSes, Dec: 1, Suffix: " kWh"}
-	totStat := chgLiveStat{IconKey: "gauge", Label: T(lang, "cargador.lifetime"), Value: totalText, Signal: "$chg." + k + ".totalKwh",
-		AnimID: "chg" + k + "Tot", Num: animTot, Dec: 1, Suffix: " kWh"}
-	// Solo se muestra lo que el cargador publica de verdad: un 0,00 kW de una
-	// entidad unavailable y un "total" que repite la sesión son ruido, no datos.
-	if !hasLive {
-		sv.Stats = []chgLiveStat{powStat, sesStat, totStat}
-	} else {
-		var stats []chgLiveStat
-		if live.PowerKnown {
-			stats = append(stats, powStat)
-		}
-		if live.SessionKwh != nil {
-			stats = append(stats, sesStat)
-		}
-		if live.TotalKwh != nil && !sameKwh(live.SessionKwh, live.TotalKwh) {
-			stats = append(stats, totStat)
-		}
-		sv.Stats = stats
+	// La energía sale de la contabilidad propia (daily_charger), no del
+	// contador del aparato: hay firmware que no lo publica y otros que lo
+	// repiten por sesión, así que se usa una sola fuente para todos.
+	var stats []chgLiveStat
+	if hasLive && live.PowerKnown {
+		stats = append(stats, powStat)
+	} else if !hasLive {
+		stats = append(stats, powStat)
 	}
+	if u.DB != nil {
+		if todayKwh, totalKwh, err := u.DB.ChargerEnergyTotals(k, solar.TodayStr()); err == nil {
+			stats = append(stats,
+				chgLiveStat{IconKey: "sun", Label: T(lang, "inversores.energyToday"),
+					Value: fmtEnergy(lang, todayKwh) + " kWh"},
+				chgLiveStat{IconKey: "gauge", Label: T(lang, "cargador.lifetime"),
+					Value: fmtEnergy(lang, totalKwh) + " kWh"},
+			)
+		}
+	}
+	sv.Stats = stats
 
 	// Curva del día (servicio en proceso, con caché propia).
 	if u.Ext != nil && u.ExtHA != nil {

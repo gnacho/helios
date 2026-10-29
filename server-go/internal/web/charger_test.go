@@ -788,16 +788,24 @@ func TestChargerScheduleRow(t *testing.T) {
 	}
 }
 
-// TestChargerHidesUnreportedStats: el firmware del cargador portátil no
-// publica energía, ni de sesión ni acumulada. La cabecera solo pinta lo que el
-// aparato reporta de verdad, así que no debe rellenar el hueco con "Sesión —"
-// ni con un "Total acumulado 0,0 kWh" que es falso.
-func TestChargerHidesUnreportedStats(t *testing.T) {
+// TestChargerStatsUseOwnAccounting: la energía de la cabecera sale de la
+// contabilidad propia (daily_charger), no del contador del aparato. El
+// firmware del portátil no publica energía y el de pared repite la sesión,
+// así que se muestra una sola fuente para ambos: hoy y total acumulado.
+func TestChargerStatsUseOwnAccounting(t *testing.T) {
 	d, err := db.Open(filepath.Join(t.TempDir(), "chgstats.db"))
 	if err != nil {
 		t.Fatalf("db: %v", err)
 	}
 	t.Cleanup(func() { d.Close() })
+
+	today := solar.TodayStr()
+	if err := d.AddChargerKwh(today, "c2", 12.5, 10); err != nil {
+		t.Fatalf("seed today: %v", err)
+	}
+	if err := d.AddChargerKwh("2026-10-01", "c2", 18, 4); err != nil {
+		t.Fatalf("seed past: %v", err)
+	}
 
 	cfg := extensions.Config{Enabled: true}
 	cfg.CarCharger.Enabled = true
@@ -836,12 +844,12 @@ func TestChargerHidesUnreportedStats(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "Potencia actual") {
-		t.Fatal("falta la potencia actual, que sí se publica")
-	}
-	for _, unwanted := range []string{"Total acumulado", "Sesión"} {
-		if strings.Contains(body, unwanted) {
-			t.Fatalf("%q no debería pintarse: el cargador no lo publica", unwanted)
+	for _, want := range []string{"Energía hoy", "12,5 kWh", "Total acumulado", "30,5 kWh"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta %q en la cabecera del cargador", want)
 		}
+	}
+	if strings.Contains(body, "Sesión") {
+		t.Fatal("Sesión no debería pintarse: la contabilidad propia no la usa")
 	}
 }
