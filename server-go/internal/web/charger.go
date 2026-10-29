@@ -32,6 +32,24 @@ import (
 // AMP_STEPS are the preset currents (IEC 61851 min 6 A).
 var AMP_STEPS = []int{6, 8, 10, 13, 16, 20, 25, 32}
 
+// ampRange lists every current a number entity accepts: min..max by step (1 A
+// when the entity does not declare one), capped so a bogus range cannot flood
+// the card with chips.
+func ampRange(min, max float64, step *float64) []float64 {
+	s := 1.0
+	if step != nil && *step > 0 {
+		s = *step
+	}
+	out := make([]float64, 0, 16)
+	for a := min; a <= max+1e-9 && len(out) < 32; a += s {
+		out = append(out, math.Round(a*1000)/1000)
+	}
+	if len(out) == 0 {
+		out = append(out, min)
+	}
+	return out
+}
+
 // Clases del boton de encendido en cada estado: van dentro de una expresion
 // Datastar (data-attr-class), asi que el color cambia sin esperar al servidor.
 // Los mismos literales aparecen en charger.templ (Tailwind los ve alli).
@@ -990,9 +1008,15 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		sv.AmpsLabel = T(lang, "cargador.amps")
 		sv.AmpsAria = T(lang, "cargador.ampsAria")
 		var opts []float64
-		if hasLive && len(live.AmpOptions) > 0 {
+		switch {
+		case hasLive && len(live.AmpOptions) > 0:
 			opts = live.AmpOptions
-		} else {
+		case hasLive && live.AmpMin != nil && live.AmpMax != nil:
+			// A number entity declares the range it accepts, so mirror it with
+			// its own step: a fixed preset list leaves valid currents (12 A)
+			// without a chip and nothing marked as active.
+			opts = ampRange(*live.AmpMin, *live.AmpMax, live.AmpStep)
+		default:
 			for _, a := range AMP_STEPS {
 				opts = append(opts, float64(a))
 			}

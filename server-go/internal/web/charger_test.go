@@ -497,6 +497,62 @@ func TestChargerAmpChipsFilteredByRange(t *testing.T) {
 	}
 }
 
+// TestChargerAmpChipsCoverNumberRange: un number 6-16 A en pasos de 1 A acepta
+// corrientes que no estan en AMP_STEPS (12 A). Los chips deben salir del rango
+// real de la entidad y el valor aplicado tiene que quedar marcado.
+func TestChargerAmpChipsCoverNumberRange(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgnum.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "c2", Name: "Portátil", PowerID: "sensor.p", AmpID: "number.amp",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "range-pass-2", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"sensor.p":   {State: "0.0", Attributes: map[string]any{}},
+		"number.amp": {State: "12", Attributes: map[string]any{"min": 6.0, "max": 16.0, "step": 1.0}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "range-pass-2"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	// Corrientes que AMP_STEPS no incluye pero la entidad si acepta.
+	for _, want := range []string{">6<", ">7<", ">11<", ">12<", ">15<", ">16<"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta el chip %s (rango 6-16 paso 1)", want)
+		}
+	}
+	if strings.Contains(body, ">20<") || strings.Contains(body, ">32<") {
+		t.Fatal("no deberia haber chips fuera del rango 6-16")
+	}
+	if !strings.Contains(body, "aria-pressed=\"true\"") {
+		t.Fatal("el valor aplicado (12 A) deberia quedar marcado")
+	}
+}
+
 // flakyChargerHA cambia el estado tras N lecturas, como HA cuando aplica la
 // accion de forma asincrona.
 type flakyChargerHA struct {

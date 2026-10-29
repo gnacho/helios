@@ -36,6 +36,7 @@ type LiveCharger struct {
 	AmpOptions []float64 `json:"ampOptions,omitempty"`
 	AmpMin     *float64  `json:"ampMin,omitempty"`
 	AmpMax     *float64  `json:"ampMax,omitempty"`
+	AmpStep    *float64  `json:"ampStep,omitempty"`
 	Delay      *float64  `json:"delay,omitempty"`
 	Duration   *float64  `json:"duration,omitempty"`
 	// Programación por software (wall): hora de inicio, duración y armado.
@@ -116,7 +117,7 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 	sw := entityStateOrUndefined(h, c.SwitchID)
 
 	var ampOptions []float64
-	var ampMin, ampMax *float64
+	var ampMin, ampMax, ampStep *float64
 	if c.AmpID != "" {
 		if ent, ok := h.GetState(c.AmpID); ok && ent.Attributes != nil {
 			if opts, ok := ent.Attributes["options"].([]any); ok {
@@ -129,6 +130,7 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 			}
 			ampMin = toFloat(ent.Attributes["min"])
 			ampMax = toFloat(ent.Attributes["max"])
+			ampStep = toFloat(ent.Attributes["step"])
 		}
 	}
 
@@ -145,6 +147,7 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 		AmpOptions: ampOptions,
 		AmpMin:     ampMin,
 		AmpMax:     ampMax,
+		AmpStep:    ampStep,
 		Delay:      entityNumOrUndefined(h, c.DelayID),
 		Duration:   entityNumOrUndefined(h, c.DurationID),
 
