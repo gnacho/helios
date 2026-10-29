@@ -1105,7 +1105,9 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		if live.PowerKnown {
 			stats = append(stats, powStat)
 		}
-		stats = append(stats, sesStat)
+		if live.SessionKwh != nil {
+			stats = append(stats, sesStat)
+		}
 		if live.TotalKwh != nil && !sameKwh(live.SessionKwh, live.TotalKwh) {
 			stats = append(stats, totStat)
 		}

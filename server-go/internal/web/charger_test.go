@@ -672,3 +672,61 @@ func TestChargerScheduleRow(t *testing.T) {
 		}
 	}
 }
+
+// TestChargerHidesUnreportedStats: el firmware del cargador portátil no
+// publica energía, ni de sesión ni acumulada. La cabecera solo pinta lo que el
+// aparato reporta de verdad, así que no debe rellenar el hueco con "Sesión —"
+// ni con un "Total acumulado 0,0 kWh" que es falso.
+func TestChargerHidesUnreportedStats(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgstats.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "c2", Name: "Portátil", PowerID: "sensor.p", PowerUnit: "W",
+		StateID: "sensor.st", TempID: "sensor.t", SwitchID: "switch.s",
+		AmpID: "number.amp",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "stats-pass-1", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"sensor.p":   {State: "1500", Attributes: map[string]any{}},
+		"sensor.st":  {State: "charing", Attributes: map[string]any{}},
+		"sensor.t":   {State: "30", Attributes: map[string]any{}},
+		"switch.s":   {State: "on", Attributes: map[string]any{}},
+		"number.amp": {State: "12", Attributes: map[string]any{"min": 6.0, "max": 16.0}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "stats-pass-1"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	if !strings.Contains(body, "Potencia actual") {
+		t.Fatal("falta la potencia actual, que sí se publica")
+	}
+	for _, unwanted := range []string{"Total acumulado", "Sesión"} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("%q no debería pintarse: el cargador no lo publica", unwanted)
+		}
+	}
+}
