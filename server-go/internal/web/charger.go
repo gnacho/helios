@@ -77,6 +77,11 @@ const chgCurveH = 220.0
 // the previous-year view of the year period).
 const chargerHistoryFromDays = 400
 
+// chargerStaleAfter es la antigüedad máxima del dato de potencia antes de
+// avisar de que la lectura está congelada. El aparato reporta cada ~10 min
+// aunque esté parado, así que por debajo de esto un 0 kW es creíble.
+const chargerStaleAfter = 10 * time.Minute
+
 type chgTabView struct {
 	Key, Name string
 	Active    bool
@@ -1141,9 +1146,18 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	// contador del aparato: hay firmware que no lo publica y otros que lo
 	// repiten por sesión, así que se usa una sola fuente para todos.
 	var stats []chgLiveStat
-	if hasLive && live.PowerKnown {
+	switch {
+	case !hasLive:
 		stats = append(stats, powStat)
-	} else if !hasLive {
+	case live.PowerAgeS > int(chargerStaleAfter/time.Second):
+		// Socket abierto sin frames: mejor decir desde cuándo no hay dato
+		// que pintar un 0 kW que parece una lectura real.
+		stats = append(stats, chgLiveStat{
+			IconKey: "clock",
+			Label:   T(lang, "cargador.currentPower"),
+			Value:   T(lang, "cargador.staleData", map[string]string{"n": strconv.Itoa(live.PowerAgeS / 60)}),
+		})
+	case live.PowerKnown:
 		stats = append(stats, powStat)
 	}
 	if u.DB != nil {

@@ -175,6 +175,7 @@
   "cargador": {
     "connected": "Enchufado",
     "currentPower": "Potencia actual",
+    "staleData": "Sin datos desde hace {{n}} min",
     "session": "Sesión",
     "lifetime": "Total acumulado",
     "temperature": "Temperatura",

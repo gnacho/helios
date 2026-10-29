@@ -853,3 +853,62 @@ func TestChargerStatsUseOwnAccounting(t *testing.T) {
 		t.Fatal("Sesión no debería pintarse: la contabilidad propia no la usa")
 	}
 }
+
+// TestChargerWarnsStalePower: si la potencia lleva rato sin actualizarse, la
+// tarjeta avisa en vez de pintar un 0 kW que parece una lectura real.
+func TestChargerWarnsStalePower(t *testing.T) {
+	render := func(t *testing.T, lastUpdated time.Time) string {
+		d, err := db.Open(filepath.Join(t.TempDir(), "chgstale.db"))
+		if err != nil {
+			t.Fatalf("db: %v", err)
+		}
+		t.Cleanup(func() { d.Close() })
+
+		cfg := extensions.Config{Enabled: true}
+		cfg.CarCharger.Enabled = true
+		cfg.CarCharger.Chargers = []extensions.Charger{{
+			Key: "main", Name: "Pared", PowerID: "sensor.p",
+			PowerUnit: "kW", StateID: "sensor.st", SwitchID: "switch.pared",
+		}}
+		extStore := extensions.NewStore()
+		extStore.Set(cfg)
+		ext := extensions.New(extStore, d, nil)
+
+		a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+		if _, err := a.RegisterUser("nacho", "password1", "es", "admin"); err != nil {
+			t.Fatalf("register: %v", err)
+		}
+		fa := stubChargerHA{states: map[string]ha.EntityState{
+			"switch.pared": {State: "on"},
+			"sensor.st":    {State: "charger_free", LastUpdated: lastUpdated.Format(time.RFC3339)},
+			"sensor.p":     {State: "0.0", LastUpdated: lastUpdated.Format(time.RFC3339)},
+		}}
+		u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+		r := chi.NewRouter()
+		u.Mount(r)
+		r.NotFound(u.NotFound)
+
+		cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+		req := httptest.NewRequest("GET", "/cargador", nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec.Body.String()
+	}
+
+	fresh := render(t, time.Now().Add(-time.Minute))
+	if strings.Contains(fresh, "Sin datos desde hace") {
+		t.Fatalf("con dato fresco no debe avisar de dato viejo")
+	}
+	if !strings.Contains(fresh, "chgmainPow") {
+		t.Fatalf("con dato fresco debe pintar la potencia con su señal")
+	}
+
+	stale := render(t, time.Now().Add(-45*time.Minute))
+	if !strings.Contains(stale, "Sin datos desde hace 45 min") {
+		t.Fatalf("con dato de hace 45 min debe avisar, no mostrar 0 kW")
+	}
+	if strings.Contains(stale, "chgmainPow") {
+		t.Fatalf("con dato viejo no debe haber señal de potencia (pintaria un valor falso)")
+	}
+}

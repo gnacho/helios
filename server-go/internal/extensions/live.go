@@ -3,6 +3,7 @@ package extensions
 import (
 	"math"
 	"sort"
+	"time"
 
 	"helios-server/internal/ha"
 	"helios-server/internal/install"
@@ -21,13 +22,17 @@ type HA interface {
 // Los campos opcionales van con omitempty: el server Node omitía las claves
 // undefined y el front distingue "sin dato" (undefined) de null.
 type LiveCharger struct {
-	Key        string    `json:"key"`
-	Name       string    `json:"name"`
-	Charging   bool      `json:"charging"`
-	Connected  bool      `json:"connected"`
-	State      *string   `json:"state,omitempty"`
-	PowerKw    float64   `json:"powerKw"`
-	PowerKnown bool      `json:"powerKnown"`
+	Key        string  `json:"key"`
+	Name       string  `json:"name"`
+	Charging   bool    `json:"charging"`
+	Connected  bool    `json:"connected"`
+	State      *string `json:"state,omitempty"`
+	PowerKw    float64 `json:"powerKw"`
+	PowerKnown bool    `json:"powerKnown"`
+	// PowerAgeS es la antigüedad en segundos del último dato de potencia.
+	// localtuya puede dejar el socket abierto sin recibir frames: sin esto,
+	// un 0 kW viejo parece una lectura real.
+	PowerAgeS  int       `json:"powerAgeS,omitempty"`
 	SessionKwh *float64  `json:"sessionKwh,omitempty"`
 	TotalKwh   *float64  `json:"totalKwh,omitempty"`
 	TempC      *float64  `json:"tempC,omitempty"`
@@ -100,8 +105,20 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 		powerKw = &v
 	}
 
-	state := entityStateOrUndefined(h, c.StateID)
+	// Antigüedad del dato de potencia: el aparato puede dejar el socket
+	// abierto sin enviar frames y la lectura se quedaría congelada.
+	powerAgeS := 0
+	if c.PowerID != "" {
+		if ent, ok := h.GetState(c.PowerID); ok && ent.LastUpdated != "" {
+			if ts, err := time.Parse(time.RFC3339, ent.LastUpdated); err == nil {
+				if age := time.Since(ts); age > 0 {
+					powerAgeS = int(age / time.Second)
+				}
+			}
+		}
+	}
 
+	state := entityStateOrUndefined(h, c.StateID)
 	charging := false
 	if state != nil && containsStr(c.ChargingStates, *state) {
 		charging = true
@@ -150,6 +167,7 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 		AmpStep:    ampStep,
 		Delay:      entityNumOrUndefined(h, c.DelayID),
 		Duration:   entityNumOrUndefined(h, c.DurationID),
+		PowerAgeS:  powerAgeS,
 
 		ScheduleHours: entityNumOrUndefined(h, c.ScheduleDurationID),
 	}
