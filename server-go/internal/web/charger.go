@@ -32,6 +32,29 @@ import (
 // AMP_STEPS are the preset currents (IEC 61851 min 6 A).
 var AMP_STEPS = []int{6, 8, 10, 13, 16, 20, 25, 32}
 
+// ampMaxChips is the widest range rendered step by step. Beyond it the card
+// falls back to the presets, so a wall box accepting 8-32 A keeps a short
+// picker instead of 25 buttons.
+const ampMaxChips = 12
+
+// ampRange lists every current a number entity accepts: min..max by step (1 A
+// when the entity does not declare one), capped so a bogus range cannot flood
+// the card with chips.
+func ampRange(min, max float64, step *float64) []float64 {
+	s := 1.0
+	if step != nil && *step > 0 {
+		s = *step
+	}
+	out := make([]float64, 0, 16)
+	for a := min; a <= max+1e-9 && len(out) < 32; a += s {
+		out = append(out, math.Round(a*1000)/1000)
+	}
+	if len(out) == 0 {
+		out = append(out, min)
+	}
+	return out
+}
+
 // Clases del boton de encendido en cada estado: van dentro de una expresion
 // Datastar (data-attr-class), asi que el color cambia sin esperar al servidor.
 // Los mismos literales aparecen en charger.templ (Tailwind los ve alli).
@@ -53,6 +76,11 @@ const chgCurveH = 220.0
 // chargerHistoryFromDays is the history window the React page loads (covers
 // the previous-year view of the year period).
 const chargerHistoryFromDays = 400
+
+// chargerStaleAfter es la antigüedad máxima del dato de potencia antes de
+// avisar de que la lectura está congelada. El aparato reporta cada ~10 min
+// aunque esté parado, así que por debajo de esto un 0 kW es creíble.
+const chargerStaleAfter = 10 * time.Minute
 
 type chgTabView struct {
 	Key, Name string
@@ -990,9 +1018,23 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		sv.AmpsLabel = T(lang, "cargador.amps")
 		sv.AmpsAria = T(lang, "cargador.ampsAria")
 		var opts []float64
-		if hasLive && len(live.AmpOptions) > 0 {
+		switch {
+		case hasLive && len(live.AmpOptions) > 0:
 			opts = live.AmpOptions
-		} else {
+		case hasLive && live.AmpMin != nil && live.AmpMax != nil:
+			// A number entity declares the range it accepts, so mirror it with
+			// its own step: a fixed preset list leaves valid currents (12 A)
+			// without a chip and nothing marked as active. Long ranges fall
+			// back to the presets: a wall box accepting 8-32 A would render
+			// 25 chips, which is a picker nobody can use.
+			opts = ampRange(*live.AmpMin, *live.AmpMax, live.AmpStep)
+			if len(opts) > ampMaxChips {
+				opts = nil
+				for _, a := range AMP_STEPS {
+					opts = append(opts, float64(a))
+				}
+			}
+		default:
 			for _, a := range AMP_STEPS {
 				opts = append(opts, float64(a))
 			}
@@ -1013,6 +1055,22 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 			}
 			if len(filtered) > 0 {
 				opts = filtered
+			}
+		}
+		// The applied current must always have a chip: with the preset
+		// fallback, a wall box set to 9 A would otherwise mark nothing.
+		if hasLive && live.Amps != nil {
+			found := false
+			for _, a := range opts {
+				if a == *live.Amps {
+					found = true
+					break
+				}
+			}
+			inRange := (live.AmpMin == nil || *live.Amps >= *live.AmpMin) &&
+				(live.AmpMax == nil || *live.Amps <= *live.AmpMax)
+			if !found && inRange {
+				opts = append(opts, *live.Amps)
 			}
 		}
 		sort.Float64s(opts)
@@ -1075,42 +1133,44 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 		sv.TempText = "—"
 	}
 
-	powerText, sessionText, totalText := "…", "—", "—"
-	animPow, animSes, animTot := 0.0, 0.0, 0.0
+	powerText := "…"
+	animPow := 0.0
 	if hasLive {
 		animPow = live.PowerKw
 		powerText = fmtKwVal(lang, live.PowerKw) + " kW"
-		if live.SessionKwh != nil {
-			animSes = *live.SessionKwh
-			sessionText = fmtEnergy(lang, *live.SessionKwh) + " kWh"
-		}
-		if live.TotalKwh != nil {
-			animTot = *live.TotalKwh
-			totalText = fmtEnergy(lang, *live.TotalKwh) + " kWh"
-		}
 	}
 	k := charger.Key
 	powStat := chgLiveStat{IconKey: "zap", Label: T(lang, "cargador.currentPower"), Value: powerText, Signal: "$chg." + k + ".powerKw",
 		AnimID: "chg" + k + "Pow", Num: animPow, Dec: 2, Suffix: " kW"}
-	sesStat := chgLiveStat{IconKey: "clock", Label: T(lang, "cargador.session"), Value: sessionText, Signal: "$chg." + k + ".sessionKwh",
-		AnimID: "chg" + k + "Ses", Num: animSes, Dec: 1, Suffix: " kWh"}
-	totStat := chgLiveStat{IconKey: "gauge", Label: T(lang, "cargador.lifetime"), Value: totalText, Signal: "$chg." + k + ".totalKwh",
-		AnimID: "chg" + k + "Tot", Num: animTot, Dec: 1, Suffix: " kWh"}
-	// Solo se muestra lo que el cargador publica de verdad: un 0,00 kW de una
-	// entidad unavailable y un "total" que repite la sesión son ruido, no datos.
-	if !hasLive {
-		sv.Stats = []chgLiveStat{powStat, sesStat, totStat}
-	} else {
-		var stats []chgLiveStat
-		if live.PowerKnown {
-			stats = append(stats, powStat)
-		}
-		stats = append(stats, sesStat)
-		if live.TotalKwh != nil && !sameKwh(live.SessionKwh, live.TotalKwh) {
-			stats = append(stats, totStat)
-		}
-		sv.Stats = stats
+	// La energía sale de la contabilidad propia (daily_charger), no del
+	// contador del aparato: hay firmware que no lo publica y otros que lo
+	// repiten por sesión, así que se usa una sola fuente para todos.
+	var stats []chgLiveStat
+	switch {
+	case !hasLive:
+		stats = append(stats, powStat)
+	case live.PowerAgeS > int(chargerStaleAfter/time.Second):
+		// Socket abierto sin frames: mejor decir desde cuándo no hay dato
+		// que pintar un 0 kW que parece una lectura real.
+		stats = append(stats, chgLiveStat{
+			IconKey: "clock",
+			Label:   T(lang, "cargador.currentPower"),
+			Value:   T(lang, "cargador.staleData", map[string]string{"n": strconv.Itoa(live.PowerAgeS / 60)}),
+		})
+	case live.PowerKnown:
+		stats = append(stats, powStat)
 	}
+	if u.DB != nil {
+		if todayKwh, totalKwh, err := u.DB.ChargerEnergyTotals(k, solar.TodayStr()); err == nil {
+			stats = append(stats,
+				chgLiveStat{IconKey: "sun", Label: T(lang, "inversores.energyToday"),
+					Value: fmtEnergy(lang, todayKwh) + " kWh"},
+				chgLiveStat{IconKey: "gauge", Label: T(lang, "cargador.lifetime"),
+					Value: fmtEnergy(lang, totalKwh) + " kWh"},
+			)
+		}
+	}
+	sv.Stats = stats
 
 	// Curva del día (servicio en proceso, con caché propia).
 	if u.Ext != nil && u.ExtHA != nil {

@@ -497,6 +497,121 @@ func TestChargerAmpChipsFilteredByRange(t *testing.T) {
 	}
 }
 
+// TestChargerAmpChipsCoverNumberRange: un number 6-16 A en pasos de 1 A acepta
+// corrientes que no estan en AMP_STEPS (12 A). Los chips deben salir del rango
+// real de la entidad y el valor aplicado tiene que quedar marcado.
+func TestChargerAmpChipsCoverNumberRange(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgnum.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "c2", Name: "Portátil", PowerID: "sensor.p", AmpID: "number.amp",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "range-pass-2", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"sensor.p":   {State: "0.0", Attributes: map[string]any{}},
+		"number.amp": {State: "12", Attributes: map[string]any{"min": 6.0, "max": 16.0, "step": 1.0}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "range-pass-2"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	// Corrientes que AMP_STEPS no incluye pero la entidad si acepta.
+	for _, want := range []string{">6<", ">7<", ">11<", ">12<", ">15<", ">16<"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta el chip %s (rango 6-16 paso 1)", want)
+		}
+	}
+	if strings.Contains(body, ">20<") || strings.Contains(body, ">32<") {
+		t.Fatal("no deberia haber chips fuera del rango 6-16")
+	}
+	if !strings.Contains(body, "aria-pressed=\"true\"") {
+		t.Fatal("el valor aplicado (12 A) deberia quedar marcado")
+	}
+}
+
+// Un rango ancho (cargador de pared 8-32 A en pasos de 1) mantiene el
+// selector corto: presets dentro del rango mas el valor aplicado si no es
+// un preset.
+func TestChargerAmpChipsFallBackOnWideRange(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgwide.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "main", Name: "Pared", PowerID: "sensor.p", AmpID: "number.amp",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "wide-pass", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"sensor.p":   {State: "0.0", Attributes: map[string]any{}},
+		"number.amp": {State: "9", Attributes: map[string]any{"min": 8.0, "max": 32.0, "step": 1.0}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "wide-pass"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	for _, want := range []string{">8<", ">10<", ">13<", ">16<", ">20<", ">25<", ">32<"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta el preset %s", want)
+		}
+	}
+	// Pasos intermedios que no son preset ni el valor aplicado.
+	if strings.Contains(body, ">11<") || strings.Contains(body, ">30<") {
+		t.Fatal("el rango ancho no deberia listar cada amperio")
+	}
+	if !strings.Contains(body, ">9<") {
+		t.Fatal("el valor aplicado (9 A) deberia tener chip aunque no sea preset")
+	}
+	if !strings.Contains(body, "aria-pressed=\"true\"") {
+		t.Fatal("el valor aplicado (9 A) deberia quedar marcado")
+	}
+}
+
 // flakyChargerHA cambia el estado tras N lecturas, como HA cuando aplica la
 // accion de forma asincrona.
 type flakyChargerHA struct {
@@ -670,5 +785,130 @@ func TestChargerScheduleRow(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %q in page", want)
 		}
+	}
+}
+
+// TestChargerStatsUseOwnAccounting: la energía de la cabecera sale de la
+// contabilidad propia (daily_charger), no del contador del aparato. El
+// firmware del portátil no publica energía y el de pared repite la sesión,
+// así que se muestra una sola fuente para ambos: hoy y total acumulado.
+func TestChargerStatsUseOwnAccounting(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgstats.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	today := solar.TodayStr()
+	if err := d.AddChargerKwh(today, "c2", 12.5, 10); err != nil {
+		t.Fatalf("seed today: %v", err)
+	}
+	if err := d.AddChargerKwh("2026-10-01", "c2", 18, 4); err != nil {
+		t.Fatalf("seed past: %v", err)
+	}
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "c2", Name: "Portátil", PowerID: "sensor.p", PowerUnit: "W",
+		StateID: "sensor.st", TempID: "sensor.t", SwitchID: "switch.s",
+		AmpID: "number.amp",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "stats-pass-1", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"sensor.p":   {State: "1500", Attributes: map[string]any{}},
+		"sensor.st":  {State: "charing", Attributes: map[string]any{}},
+		"sensor.t":   {State: "30", Attributes: map[string]any{}},
+		"switch.s":   {State: "on", Attributes: map[string]any{}},
+		"number.amp": {State: "12", Attributes: map[string]any{"min": 6.0, "max": 16.0}},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "stats-pass-1"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	for _, want := range []string{"Energía hoy", "12,5 kWh", "Total acumulado", "30,5 kWh"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("falta %q en la cabecera del cargador", want)
+		}
+	}
+	if strings.Contains(body, "Sesión") {
+		t.Fatal("Sesión no debería pintarse: la contabilidad propia no la usa")
+	}
+}
+
+// TestChargerWarnsStalePower: si la potencia lleva rato sin actualizarse, la
+// tarjeta avisa en vez de pintar un 0 kW que parece una lectura real.
+func TestChargerWarnsStalePower(t *testing.T) {
+	render := func(t *testing.T, lastUpdated time.Time) string {
+		d, err := db.Open(filepath.Join(t.TempDir(), "chgstale.db"))
+		if err != nil {
+			t.Fatalf("db: %v", err)
+		}
+		t.Cleanup(func() { d.Close() })
+
+		cfg := extensions.Config{Enabled: true}
+		cfg.CarCharger.Enabled = true
+		cfg.CarCharger.Chargers = []extensions.Charger{{
+			Key: "main", Name: "Pared", PowerID: "sensor.p",
+			PowerUnit: "kW", StateID: "sensor.st", SwitchID: "switch.pared",
+		}}
+		extStore := extensions.NewStore()
+		extStore.Set(cfg)
+		ext := extensions.New(extStore, d, nil)
+
+		a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+		if _, err := a.RegisterUser("nacho", "password1", "es", "admin"); err != nil {
+			t.Fatalf("register: %v", err)
+		}
+		fa := stubChargerHA{states: map[string]ha.EntityState{
+			"switch.pared": {State: "on"},
+			"sensor.st":    {State: "charger_free", LastUpdated: lastUpdated.Format(time.RFC3339)},
+			"sensor.p":     {State: "0.0", LastUpdated: lastUpdated.Format(time.RFC3339)},
+		}}
+		u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+		r := chi.NewRouter()
+		u.Mount(r)
+		r.NotFound(u.NotFound)
+
+		cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+		req := httptest.NewRequest("GET", "/cargador", nil)
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec.Body.String()
+	}
+
+	fresh := render(t, time.Now().Add(-time.Minute))
+	if strings.Contains(fresh, "Sin datos desde hace") {
+		t.Fatalf("con dato fresco no debe avisar de dato viejo")
+	}
+	if !strings.Contains(fresh, "chgmainPow") {
+		t.Fatalf("con dato fresco debe pintar la potencia con su señal")
+	}
+
+	stale := render(t, time.Now().Add(-45*time.Minute))
+	if !strings.Contains(stale, "Sin datos desde hace 45 min") {
+		t.Fatalf("con dato de hace 45 min debe avisar, no mostrar 0 kW")
+	}
+	if strings.Contains(stale, "chgmainPow") {
+		t.Fatalf("con dato viejo no debe haber señal de potencia (pintaria un valor falso)")
 	}
 }

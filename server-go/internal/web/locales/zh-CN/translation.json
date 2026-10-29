@@ -175,6 +175,7 @@
   "cargador": {
     "connected": "已插枪",
     "currentPower": "当前功率",
+    "staleData": "已有 {{n}} 分钟没有数据",
     "session": "本次充电",
     "lifetime": "累计电量",
     "temperature": "温度",

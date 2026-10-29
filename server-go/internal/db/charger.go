@@ -169,3 +169,19 @@ func (d *DB) HasDailyRow(date string) (bool, error) {
 	}
 	return true, nil
 }
+
+// ChargerEnergyTotals devuelve los kWh acumulados de un cargador y los de un
+// día concreto, según la contabilidad propia (daily_charger).
+func (d *DB) ChargerEnergyTotals(charger, day string) (todayKwh, totalKwh float64, err error) {
+	if err = d.db.QueryRow(
+		`SELECT COALESCE(SUM(kwh), 0) FROM daily_charger WHERE charger = ?`, charger,
+	).Scan(&totalKwh); err != nil {
+		return 0, 0, err
+	}
+	if err = d.db.QueryRow(
+		`SELECT COALESCE(SUM(kwh), 0) FROM daily_charger WHERE charger = ? AND date = ?`, charger, day,
+	).Scan(&todayKwh); err != nil {
+		return 0, 0, err
+	}
+	return todayKwh, totalKwh, nil
+}

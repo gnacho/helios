@@ -896,6 +896,8 @@ func iconForChgStat(key string, class string) templ.Component {
 		return iconClock(class)
 	case "gauge":
 		return iconGauge(class)
+	case "sun":
+		return iconSun(class)
 	}
 	return iconZap(class)
 }
@@ -929,7 +931,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 193, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 195, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 		if templ_7745c5c3_Err != nil {
@@ -972,7 +974,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 		var templ_7745c5c3_Var55 string
 		templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(s.Chip.Text)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 196, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 198, Col: 17}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 		if templ_7745c5c3_Err != nil {
@@ -990,7 +992,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var56 string
 			templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.Key)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 201, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 203, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var56)
 			if templ_7745c5c3_Err != nil {
@@ -1003,7 +1005,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var57 string
 			templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.ResolveAttributeValue(T(v.Lang, "cargador.imageEdit"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 202, Col: 218}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 204, Col: 218}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var57)
 			if templ_7745c5c3_Err != nil {
@@ -1016,7 +1018,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var58 string
 			templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.ResolveAttributeValue(T(v.Lang, "cargador.imageEdit"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 202, Col: 265}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 204, Col: 265}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var58)
 			if templ_7745c5c3_Err != nil {
@@ -1047,7 +1049,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var59 string
 			templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, "cargador.imageError"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 210, Col: 151}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 212, Col: 151}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 			if templ_7745c5c3_Err != nil {
@@ -1070,7 +1072,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var60 string
 			templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.URL(s.ImageURL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 217, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 219, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var60)
 			if templ_7745c5c3_Err != nil {
@@ -1083,7 +1085,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var61 string
 			templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 217, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 219, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var61)
 			if templ_7745c5c3_Err != nil {
@@ -1111,7 +1113,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var62 string
 			templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(s.AmpsLabel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 229, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 231, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 			if templ_7745c5c3_Err != nil {
@@ -1124,7 +1126,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var63 string
 			templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.AmpsAria)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 230, Col: 118}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 232, Col: 118}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var63)
 			if templ_7745c5c3_Err != nil {
@@ -1147,7 +1149,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var65 string
 				templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.ResolveAttributeValue(chip.Aria)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 234, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 236, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var65)
 				if templ_7745c5c3_Err != nil {
@@ -1160,7 +1162,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var66 string
 				templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.ResolveAttributeValue(chip.ClickExpr)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 235, Col: 40}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 237, Col: 40}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var66)
 				if templ_7745c5c3_Err != nil {
@@ -1173,7 +1175,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var67 string
 				templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.ResolveAttributeValue("$ui.busy")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 237, Col: 41}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 239, Col: 41}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var67)
 				if templ_7745c5c3_Err != nil {
@@ -1186,7 +1188,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var68 string
 				templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.ResolveAttributeValue(chip.AriaExpr)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 238, Col: 48}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 240, Col: 48}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var68)
 				if templ_7745c5c3_Err != nil {
@@ -1199,7 +1201,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var69 string
 				templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.ResolveAttributeValue(chip.ClassExpr)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 239, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 241, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var69)
 				if templ_7745c5c3_Err != nil {
@@ -1225,7 +1227,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var71 string
 				templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(chip.AmpsText)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 242, Col: 25}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 244, Col: 25}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 				if templ_7745c5c3_Err != nil {
@@ -1258,7 +1260,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var73 string
 			templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.PowerClick)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 254, Col: 35}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 256, Col: 35}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var73)
 			if templ_7745c5c3_Err != nil {
@@ -1271,7 +1273,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var74 string
 			templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.PendingClearExpr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 256, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 258, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var74)
 			if templ_7745c5c3_Err != nil {
@@ -1284,7 +1286,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var75 string
 			templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.ResolveAttributeValue("$ui.busy || $ui.pending != ''")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 257, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 259, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var75)
 			if templ_7745c5c3_Err != nil {
@@ -1297,7 +1299,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var76 string
 			templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.PressedExpr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 258, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 260, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var76)
 			if templ_7745c5c3_Err != nil {
@@ -1310,7 +1312,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var77 string
 			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.TitleExpr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 259, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 261, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var77)
 			if templ_7745c5c3_Err != nil {
@@ -1323,7 +1325,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var78 string
 			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.ClassExpr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 260, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 262, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var78)
 			if templ_7745c5c3_Err != nil {
@@ -1336,7 +1338,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var79 string
 			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.PowerTitle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 261, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 263, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var79)
 			if templ_7745c5c3_Err != nil {
@@ -1370,7 +1372,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var81 string
 			templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.LabelExpr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 265, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 267, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var81)
 			if templ_7745c5c3_Err != nil {
@@ -1383,7 +1385,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var82 string
 			templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(s.PowerLabel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 265, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 267, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
 			if templ_7745c5c3_Err != nil {
@@ -1404,7 +1406,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var83 string
 			templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.PendingExpr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 267, Col: 68}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 269, Col: 68}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var83)
 			if templ_7745c5c3_Err != nil {
@@ -1417,7 +1419,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var84 string
 			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(s.PendingText)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 267, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 269, Col: 86}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 			if templ_7745c5c3_Err != nil {
@@ -1435,7 +1437,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var85 string
 			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.PowerTitle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 274, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 276, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var85)
 			if templ_7745c5c3_Err != nil {
@@ -1456,7 +1458,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var86 string
 			templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(s.PowerLabel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 278, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 280, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var86))
 			if templ_7745c5c3_Err != nil {
@@ -1479,7 +1481,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var87 string
 			templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(s.ScheduleLabel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 290, Col: 70}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 292, Col: 70}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var87))
 			if templ_7745c5c3_Err != nil {
@@ -1497,7 +1499,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var88 string
 				templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.JoinStringErrs(s.ScheduleText)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 292, Col: 100}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 294, Col: 100}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var88))
 				if templ_7745c5c3_Err != nil {
@@ -1520,7 +1522,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var89 string
 				templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.ScheduleCancel)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 298, Col: 41}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 300, Col: 41}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var89)
 				if templ_7745c5c3_Err != nil {
@@ -1533,7 +1535,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				var templ_7745c5c3_Var90 string
 				templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, "common.cancel"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 303, Col: 37}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 305, Col: 37}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var90))
 				if templ_7745c5c3_Err != nil {
@@ -1567,7 +1569,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var91 string
 			templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.ScheduleClick)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 313, Col: 39}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 315, Col: 39}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var91)
 			if templ_7745c5c3_Err != nil {
@@ -1580,7 +1582,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var92 string
 			templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(s.ScheduleLabel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 318, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 320, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var92))
 			if templ_7745c5c3_Err != nil {
@@ -1611,7 +1613,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var93 string
 			templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, "cargador.temperature"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 328, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 330, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var93))
 			if templ_7745c5c3_Err != nil {
@@ -1624,7 +1626,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var94 string
 			templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.ResolveAttributeValue("$chg." + s.Key + ".tempText")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 329, Col: 109}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 331, Col: 109}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var94)
 			if templ_7745c5c3_Err != nil {
@@ -1637,7 +1639,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var95 string
 			templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(s.TempText)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 329, Col: 124}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 331, Col: 124}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 			if templ_7745c5c3_Err != nil {
@@ -1687,7 +1689,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 		var templ_7745c5c3_Var97 string
 		templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 342, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 344, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var97))
 		if templ_7745c5c3_Err != nil {
@@ -1722,7 +1724,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 		var templ_7745c5c3_Var100 string
 		templ_7745c5c3_Var100, templ_7745c5c3_Err = templ.JoinStringErrs(v.SelectedLabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 350, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 352, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var100))
 		if templ_7745c5c3_Err != nil {
@@ -1741,7 +1743,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 				var templ_7745c5c3_Var101 string
 				templ_7745c5c3_Var101, templ_7745c5c3_Err = templ.ResolveAttributeValue(o.Value)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 358, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 360, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var101)
 				if templ_7745c5c3_Err != nil {
@@ -1754,7 +1756,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 				var templ_7745c5c3_Var102 string
 				templ_7745c5c3_Var102, templ_7745c5c3_Err = templ.ResolveAttributeValue(o.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 358, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 360, Col: 84}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var102)
 				if templ_7745c5c3_Err != nil {
@@ -1767,7 +1769,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 				var templ_7745c5c3_Var103 string
 				templ_7745c5c3_Var103, templ_7745c5c3_Err = templ.JoinStringErrs(o.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 358, Col: 215}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 360, Col: 215}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var103))
 				if templ_7745c5c3_Err != nil {
@@ -1785,7 +1787,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 				var templ_7745c5c3_Var104 string
 				templ_7745c5c3_Var104, templ_7745c5c3_Err = templ.ResolveAttributeValue(o.Value)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 360, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 362, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var104)
 				if templ_7745c5c3_Err != nil {
@@ -1798,7 +1800,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 				var templ_7745c5c3_Var105 string
 				templ_7745c5c3_Var105, templ_7745c5c3_Err = templ.ResolveAttributeValue(o.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 360, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 362, Col: 84}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var105)
 				if templ_7745c5c3_Err != nil {
@@ -1811,7 +1813,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 				var templ_7745c5c3_Var106 string
 				templ_7745c5c3_Var106, templ_7745c5c3_Err = templ.JoinStringErrs(o.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 360, Col: 207}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 362, Col: 207}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var106))
 				if templ_7745c5c3_Err != nil {
@@ -1830,7 +1832,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 		var templ_7745c5c3_Var107 string
 		templ_7745c5c3_Var107, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.ID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 364, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 366, Col: 32}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var107)
 		if templ_7745c5c3_Err != nil {
@@ -1843,7 +1845,7 @@ func chgDrop(label string, v chgSelectView) templ.Component {
 		var templ_7745c5c3_Var108 string
 		templ_7745c5c3_Var108, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.SelectedValue)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 364, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 366, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var108)
 		if templ_7745c5c3_Err != nil {
@@ -1905,7 +1907,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 		var templ_7745c5c3_Var110 string
 		templ_7745c5c3_Var110, templ_7745c5c3_Err = templ.ResolveAttributeValue(T(v.Lang, "historico.periodAria"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 390, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 392, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var110)
 		if templ_7745c5c3_Err != nil {
@@ -1928,7 +1930,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var112 templ.SafeURL
 			templ_7745c5c3_Var112, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(tb.URL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 393, Col: 29}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 395, Col: 29}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var112))
 			if templ_7745c5c3_Err != nil {
@@ -1941,7 +1943,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var113 string
 			templ_7745c5c3_Var113, templ_7745c5c3_Err = templ.ResolveAttributeValue(chgPeriodSwapClick(tb.URL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 394, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 396, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var113)
 			if templ_7745c5c3_Err != nil {
@@ -1954,7 +1956,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var114 string
 			templ_7745c5c3_Var114, templ_7745c5c3_Err = templ.ResolveAttributeValue(boolStr(tb.Active))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 396, Col: 39}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 398, Col: 39}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var114)
 			if templ_7745c5c3_Err != nil {
@@ -1990,7 +1992,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var116 string
 			templ_7745c5c3_Var116, templ_7745c5c3_Err = templ.JoinStringErrs(tb.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 402, Col: 38}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 404, Col: 38}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var116))
 			if templ_7745c5c3_Err != nil {
@@ -2008,7 +2010,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 		var templ_7745c5c3_Var117 templ.SafeURL
 		templ_7745c5c3_Var117, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(s.Sel.PrevURL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 407, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 409, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var117))
 		if templ_7745c5c3_Err != nil {
@@ -2021,7 +2023,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 		var templ_7745c5c3_Var118 string
 		templ_7745c5c3_Var118, templ_7745c5c3_Err = templ.ResolveAttributeValue(chgPeriodSwapClick(s.Sel.PrevURL))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 407, Col: 98}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 409, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var118)
 		if templ_7745c5c3_Err != nil {
@@ -2034,7 +2036,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 		var templ_7745c5c3_Var119 string
 		templ_7745c5c3_Var119, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.Sel.PrevAria)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 407, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 409, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var119)
 		if templ_7745c5c3_Err != nil {
@@ -2055,7 +2057,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 		var templ_7745c5c3_Var120 string
 		templ_7745c5c3_Var120, templ_7745c5c3_Err = templ.JoinStringErrs(s.NavLabel)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 411, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 413, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var120))
 		if templ_7745c5c3_Err != nil {
@@ -2073,7 +2075,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var121 templ.SafeURL
 			templ_7745c5c3_Var121, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(s.Sel.NextURL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 414, Col: 38}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 416, Col: 38}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var121))
 			if templ_7745c5c3_Err != nil {
@@ -2086,7 +2088,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var122 string
 			templ_7745c5c3_Var122, templ_7745c5c3_Err = templ.ResolveAttributeValue(chgPeriodSwapClick(s.Sel.NextURL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 414, Col: 99}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 416, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var122)
 			if templ_7745c5c3_Err != nil {
@@ -2099,7 +2101,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var123 string
 			templ_7745c5c3_Var123, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.Sel.NextAria)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 414, Col: 129}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 416, Col: 129}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var123)
 			if templ_7745c5c3_Err != nil {
@@ -2143,7 +2145,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var124 templ.SafeURL
 			templ_7745c5c3_Var124, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(s.Sel.TodayURL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 424, Col: 38}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 426, Col: 38}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var124))
 			if templ_7745c5c3_Err != nil {
@@ -2156,7 +2158,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var125 string
 			templ_7745c5c3_Var125, templ_7745c5c3_Err = templ.ResolveAttributeValue(chgPeriodSwapClick(s.Sel.TodayURL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 424, Col: 100}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 426, Col: 100}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var125)
 			if templ_7745c5c3_Err != nil {
@@ -2169,7 +2171,7 @@ func chgPeriodNav(v chargerView, s *chgSingleView) templ.Component {
 			var templ_7745c5c3_Var126 string
 			templ_7745c5c3_Var126, templ_7745c5c3_Err = templ.JoinStringErrs(T(v.Lang, "common.today"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 425, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 427, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var126))
 			if templ_7745c5c3_Err != nil {
@@ -2217,7 +2219,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 		var templ_7745c5c3_Var128 string
 		templ_7745c5c3_Var128, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 437, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 439, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var128)
 		if templ_7745c5c3_Err != nil {
@@ -2230,7 +2232,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 		var templ_7745c5c3_Var129 string
 		templ_7745c5c3_Var129, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 438, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 440, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var129)
 		if templ_7745c5c3_Err != nil {
@@ -2248,7 +2250,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var130 string
 			templ_7745c5c3_Var130, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(34))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 442, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 444, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var130)
 			if templ_7745c5c3_Err != nil {
@@ -2261,7 +2263,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var131 string
 			templ_7745c5c3_Var131, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(c.PlotRightX))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 442, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 444, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var131)
 			if templ_7745c5c3_Err != nil {
@@ -2274,7 +2276,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var132 string
 			templ_7745c5c3_Var132, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y - 4))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 442, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 444, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var132)
 			if templ_7745c5c3_Err != nil {
@@ -2287,7 +2289,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var133 string
 			templ_7745c5c3_Var133, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y - 4))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 442, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 444, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var133)
 			if templ_7745c5c3_Err != nil {
@@ -2306,7 +2308,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var134 string
 			templ_7745c5c3_Var134, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.X))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 445, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 447, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var134)
 			if templ_7745c5c3_Err != nil {
@@ -2319,7 +2321,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var135 string
 			templ_7745c5c3_Var135, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 445, Col: 35}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 447, Col: 35}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var135)
 			if templ_7745c5c3_Err != nil {
@@ -2332,7 +2334,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var136 string
 			templ_7745c5c3_Var136, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 445, Col: 125}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 447, Col: 125}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var136))
 			if templ_7745c5c3_Err != nil {
@@ -2352,7 +2354,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 				var templ_7745c5c3_Var137 string
 				templ_7745c5c3_Var137, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(chgCurveW))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 449, Col: 28}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 451, Col: 28}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var137)
 				if templ_7745c5c3_Err != nil {
@@ -2365,7 +2367,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 				var templ_7745c5c3_Var138 string
 				templ_7745c5c3_Var138, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 449, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 451, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var138)
 				if templ_7745c5c3_Err != nil {
@@ -2378,7 +2380,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 				var templ_7745c5c3_Var139 string
 				templ_7745c5c3_Var139, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 449, Col: 132}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 451, Col: 132}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var139))
 				if templ_7745c5c3_Err != nil {
@@ -2396,7 +2398,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 				var templ_7745c5c3_Var140 string
 				templ_7745c5c3_Var140, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.X))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 451, Col: 22}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 453, Col: 22}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var140)
 				if templ_7745c5c3_Err != nil {
@@ -2409,7 +2411,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 				var templ_7745c5c3_Var141 string
 				templ_7745c5c3_Var141, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 451, Col: 36}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 453, Col: 36}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var141)
 				if templ_7745c5c3_Err != nil {
@@ -2422,7 +2424,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 				var templ_7745c5c3_Var142 string
 				templ_7745c5c3_Var142, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 451, Col: 129}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 453, Col: 129}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var142))
 				if templ_7745c5c3_Err != nil {
@@ -2442,7 +2444,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var143 string
 			templ_7745c5c3_Var143, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.AreaPath)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 455, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 457, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var143)
 			if templ_7745c5c3_Err != nil {
@@ -2455,7 +2457,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var144 string
 			templ_7745c5c3_Var144, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.LinePath)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 456, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 458, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var144)
 			if templ_7745c5c3_Err != nil {
@@ -2468,7 +2470,7 @@ func chgCurveSVG(c chgCurveModel) templ.Component {
 			var templ_7745c5c3_Var145 string
 			templ_7745c5c3_Var145, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.Color)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 456, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 458, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var145)
 			if templ_7745c5c3_Err != nil {
@@ -2525,7 +2527,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 			var templ_7745c5c3_Var147 string
 			templ_7745c5c3_Var147, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(34))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 467, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 469, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var147)
 			if templ_7745c5c3_Err != nil {
@@ -2538,7 +2540,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 			var templ_7745c5c3_Var148 string
 			templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(m.PlotRightX))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 467, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 469, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var148)
 			if templ_7745c5c3_Err != nil {
@@ -2551,7 +2553,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 			var templ_7745c5c3_Var149 string
 			templ_7745c5c3_Var149, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y - 4))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 467, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 469, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var149)
 			if templ_7745c5c3_Err != nil {
@@ -2564,7 +2566,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 			var templ_7745c5c3_Var150 string
 			templ_7745c5c3_Var150, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y - 4))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 467, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 469, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var150)
 			if templ_7745c5c3_Err != nil {
@@ -2583,7 +2585,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 			var templ_7745c5c3_Var151 string
 			templ_7745c5c3_Var151, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.X))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 470, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 472, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var151)
 			if templ_7745c5c3_Err != nil {
@@ -2596,7 +2598,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 			var templ_7745c5c3_Var152 string
 			templ_7745c5c3_Var152, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(t.Y))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 470, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 472, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var152)
 			if templ_7745c5c3_Err != nil {
@@ -2609,7 +2611,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 			var templ_7745c5c3_Var153 string
 			templ_7745c5c3_Var153, templ_7745c5c3_Err = templ.JoinStringErrs(t.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 470, Col: 124}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 472, Col: 124}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var153))
 			if templ_7745c5c3_Err != nil {
@@ -2633,7 +2635,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var154 string
 				templ_7745c5c3_Var154, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.X))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 477, Col: 24}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 479, Col: 24}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var154)
 				if templ_7745c5c3_Err != nil {
@@ -2646,7 +2648,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var155 string
 				templ_7745c5c3_Var155, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.PvY))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 477, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 479, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var155)
 				if templ_7745c5c3_Err != nil {
@@ -2659,7 +2661,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var156 string
 				templ_7745c5c3_Var156, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.BarW))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 477, Col: 65}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 479, Col: 65}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var156)
 				if templ_7745c5c3_Err != nil {
@@ -2672,7 +2674,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var157 string
 				templ_7745c5c3_Var157, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.PvH))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 477, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 479, Col: 88}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var157)
 				if templ_7745c5c3_Err != nil {
@@ -2685,7 +2687,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var158 string
 				templ_7745c5c3_Var158, templ_7745c5c3_Err = templ.ResolveAttributeValue(m.ColorSolar)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 477, Col: 110}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 479, Col: 110}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var158)
 				if templ_7745c5c3_Err != nil {
@@ -2704,7 +2706,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var159 string
 				templ_7745c5c3_Var159, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.X))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 480, Col: 24}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 482, Col: 24}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var159)
 				if templ_7745c5c3_Err != nil {
@@ -2717,7 +2719,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var160 string
 				templ_7745c5c3_Var160, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.RestY))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 480, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 482, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var160)
 				if templ_7745c5c3_Err != nil {
@@ -2730,7 +2732,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var161 string
 				templ_7745c5c3_Var161, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.BarW))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 480, Col: 67}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 482, Col: 67}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var161)
 				if templ_7745c5c3_Err != nil {
@@ -2743,7 +2745,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var162 string
 				templ_7745c5c3_Var162, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.RestH))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 480, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 482, Col: 92}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var162)
 				if templ_7745c5c3_Err != nil {
@@ -2756,7 +2758,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var163 string
 				templ_7745c5c3_Var163, templ_7745c5c3_Err = templ.ResolveAttributeValue(m.ColorGrid)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 480, Col: 120}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 482, Col: 120}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var163)
 				if templ_7745c5c3_Err != nil {
@@ -2779,7 +2781,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var164 string
 				templ_7745c5c3_Var164, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(row.X + row.BarW/2))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 484, Col: 36}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 486, Col: 36}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var164)
 				if templ_7745c5c3_Err != nil {
@@ -2792,7 +2794,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var165 string
 				templ_7745c5c3_Var165, templ_7745c5c3_Err = templ.ResolveAttributeValue(r2(chgCurveH - 2))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 484, Col: 60}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 486, Col: 60}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var165)
 				if templ_7745c5c3_Err != nil {
@@ -2805,7 +2807,7 @@ func chgHistSVG(m chgHistModel) templ.Component {
 				var templ_7745c5c3_Var166 string
 				templ_7745c5c3_Var166, templ_7745c5c3_Err = templ.JoinStringErrs(row.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 484, Col: 155}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/charger.templ`, Line: 486, Col: 155}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var166))
 				if templ_7745c5c3_Err != nil {
