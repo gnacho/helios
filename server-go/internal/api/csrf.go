@@ -32,6 +32,16 @@ func (s *Server) sameOriginOnly(next http.Handler) http.Handler {
 			return
 		}
 
+		// The sign-in entry points cannot rely on a session: an opaque origin
+		// (a null Origin header) would make them unreachable, and logging in
+		// has no session to protect. SameSite=Lax still keeps cross-site
+		// requests from carrying one.
+		if strings.EqualFold(origin, "null") && isAuthEntryPoint(r) {
+			log.Printf("[helios] csrf: origen nulo en la entrada de sesión path=%q", r.URL.Path)
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// A service worker (pushsubscriptionchange) and a few sandboxed contexts
 		// send a null origin, with no way to name the host they belong to. The
 		// session cookie is SameSite=Lax, so a cross-site POST never carries it:
@@ -49,6 +59,19 @@ func (s *Server) sameOriginOnly(next http.Handler) http.Handler {
 
 func (s *Server) hasValidSession(r *http.Request) bool {
 	return s.Auth != nil && s.Auth.SessionIDFromCookie(r) != nil
+}
+
+// isAuthEntryPoint reports whether the request targets a route that starts a
+// session, where there is nothing to protect with an origin check.
+func isAuthEntryPoint(r *http.Request) bool {
+	if r.Method != http.MethodPost {
+		return false
+	}
+	switch r.URL.Path {
+	case "/login", "/api/auth/login", "/api/auth/register", "/api/auth/recover":
+		return true
+	}
+	return false
 }
 
 // matchesRequestHost accepts a request whose Origin/Referer points at the
