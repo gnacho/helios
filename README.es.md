@@ -14,8 +14,6 @@
   <a href="https://ko-fi.com/gnacho"><img alt="Apóyame en Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
-<p align="center"><a href="https://demo.helios.cloudless.club"><strong>Prueba la demo en vivo</strong></a> en <code>demo.helios.cloudless.club</code></p>
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-es-dark.png">
@@ -24,92 +22,87 @@
   </picture>
 </p>
 
-> Este README no es para vender el proyecto: es para que un futuro
-> mantenedor entienda en cinco minutos **por qué existe esto, de dónde
-> salió y por qué está hecho como está hecho**, sin tener que re-leerse
-> todo el código.
+Helios es un monitor solar que alojas tú. Lee los sensores de energía que tu
+Home Assistant ya tiene, por su API WebSocket, y los convierte en tres cosas: un
+panel en vivo, un histórico largo y el dinero que tu instalación ahorra contra
+la tarifa que pagas de verdad.
 
-Helios es el monitor solar de una instalación doméstica: dos inversores
-(Solis 4,4 kWp + Fox 2,7 kWp), una batería de 5 kWh, más de 798 días de
-histórico, datos en vivo desde Home Assistant y el ahorro en euros
-calculado contra la tarifa eléctrica real. Un único servicio Go +
-SQLite corriendo en un LXC en casa. Sin nube.
+Un único binario estático de Go con SQLite dentro. No hay cuenta en la nube ni
+app del fabricante, y el cliente no descarga un bundle de JavaScript. Tampoco
+necesitas Docker.
+
+- **Tus datos se quedan en casa.** La base de datos es un fichero en tu
+  máquina, con una réplica continua que controlas tú.
+- **Lecturas en vivo.** El panel se mueve con los sensores,
+  al ritmo que publique tu integración.
+- **Cualquier hardware que Home Assistant vea.** Inversores, batería, contador
+  de red, cargadores de coche.
+- **Ahorro en euros.** Autoconsumo y ahorro calculados contra
+  tu precio real de la luz, no contra una media.
 
 > **Prueba la demo en vivo**
 >
-> Mírala en funcionamiento sin instalar nada. Entra en **[demo.helios.cloudless.club](https://demo.helios.cloudless.club)** — una instalación solar de ejemplo con datos solares realistas, sin registro. En modo de solo lectura, para que explores sin riesgo.
+> Mírala funcionando sin instalar nada: **[demo.helios.cloudless.club](https://demo.helios.cloudless.club)**.
+> Una instalación de ejemplo con datos solares realistas, sin registro y en
+> solo lectura.
 
-> **Nació hecho a medida, ahora es mayormente configurable.** Helios empezó
-> como mi propia configuración — dos inversores concretos y una batería — y
-> esos datos estaban hardcodeados. Desde 0.7.x la topología de la instalación
-> (inversores, batería, fuente de red, mapeo de sensores) se resuelve desde
-> `install_config` — cualquier instalación HAOS puede ejecutarlo configurando
-> sus sensores, sin tocar código. El dashboard, la página de inversores y
-> Ajustes se adaptan a la topología resuelta (N inversores). No es un producto
-> "plug-and-play" del todo pulido, pero desde 0.7.2 un admin puede editar la
-> topología (inversores, batería, fuente de red, mapeo de sensores de HAOS)
-> desde Ajustes, sin tocar código ni JSON.
-> Forkea el repo y adáptalo a tu instalación.
+## Qué hace
 
-## ¿Por qué existe?
+**Panel en vivo.** Curvas de producción y consumo, el diagrama de flujo de
+energía y los totales del día: lo que hicieron las placas, lo que gastó la casa,
+lo que fue a la batería y lo que cruzó el contador. Todo se actualiza por SSE
+mientras la página está abierta, y las gráficas se redibujan solas cada minuto
+sin recargar.
 
-Las apps de los fabricantes (Solis Cloud y similares):
+**Histórico que sobrevive.** Agregados diarios por inversor, por cargador y del
+conjunto: producción, consumo, importación y exportación de red, carga y
+descarga de batería, ratio de autoconsumo, ahorro y CO₂ evitado. Se navega por
+semana, mes o año, y los datos son un fichero SQLite que puedes copiar,
+inspeccionar o llevarte a otra máquina cuando quieras.
 
-- Viven en la nube del fabricante: si cae su servicio o cambian la API, te
-  quedas sin tus datos. Que encima son **tuyos**, y ni siquiera los puedes
-  exportar bien.
-- Actualizan cada 5+ minutos y con retraso. Nada de "ahora mismo".
-- No mezclan ambos inversores ni cruzan la producción con el precio real
-  de la luz para decirte cuánto **dinero** te estás ahorrando.
+**Tu batería.** Estado de carga, flujos de carga y descarga, y cuánto de tu día
+pasó por ella.
 
-Helios nace para tener **en casa, en local y para siempre** la telemetría
-de la instalación: qué produce cada inversor, qué consume la casa, cómo va
-la batería y cuánto vale en euros cada kWh autoconsumido.
+**Cargadores de coche.** Una tarjeta por cargador, con potencia instantánea,
+los amperios que hayas elegido y programación. Funciona con wallbox y con
+cargadores portátiles que solo aparecen en Home Assistant mientras están
+enchufados.
 
-## Cómo ha crecido
+**Multiusuario con roles.** Admin y usuarios normales, cookies httpOnly, bcrypt,
+límite de intentos de login y registro de auditoría. La recuperación de admin
+está limitada a peticiones desde localhost, a propósito.
 
-1. **Home Assistant (HAOS)** ya integraba los dos inversores, así que HAOS
-   es la **fuente de verdad del dato en vivo** (sensores de potencia,
-   batería, red). Helios no habla con los inversores: habla con HAOS.
-2. La primera versión fue un panel rápido de "producción vs consumo".
-   Creció a multiusuario con roles, histórico, batería, precios y PWA.
-3. El histórico diario se importó desde HAOS y se sigue alimentando cada
-   día: **798+ días** en una SQLite que es **intocable** (vive en
-   `/opt/helios/data/helios.db` del host de producción; antes de cualquier
-   migración, backup. Hay réplica Litestream con PITR a un disco del host
-   de backup).
-4. Un **scraper de Solis Cloud** (un LXC aparte + add-on HAOS) complementa el
-   dato cuando la integración local se queda corta.
+**Tres idiomas.** Inglés, español y chino, elegidos por usuario y guardados en
+la base de datos.
 
-## Por qué este stack (y no otro)
+**Una PWA.** Instalable, con tema claro, oscuro y automático. El automático va
+por hora solar, no por el sistema operativo.
 
-| Decisión | Motivo |
-|---|---|
-| **Go 1.25 + net/http (desde v1.0.0)** | El backend se reescribió de Node/Hono a Go en v1.0.0: un binario estático de ~12 MB, sin runtime, sin `node_modules` y un solo lenguaje en el servidor. La lógica de agregados y saneado se portó con el mismo contrato de API, verificada campo a campo contra Home Assistant (SOC, producción, red, energía del cargador) antes del corte. El backend Node se eliminó del árbol (recuperable del historial de git; el binario Node desplegado en el host sigue siendo el rollback inmediato). |
-| **SQLite via modernc.org/sqlite (Go puro)** | Una BD embebida transaccional es todo lo que necesita una app doméstica: cero servicios extra, backup trivial, los 798 días caben en 90 MB, y WAL. Driver en Go puro para que el binario sea 100% estático (sin CGO ni libc) y compile para amd64/arm64 en CI. |
-| **Sin SPA ni Node en el árbol** | El front React (y el flag `HELIOS_UI` que lo servía) se retiró: un solo binario sirve la API y la UI templ, con los estáticos raíz embebidos (favicon, manifest, service worker). No hay paso de `npm`, ni bundle de cliente que publicar, ni dos fronts que mantener en sintonía. |
-| **HAOS como fuente del live** | HAOS ya mantiene las integraciones con Solis/Fox y sus reconexiones. Duplicar eso en Helios sería mantener dos drivers. Helios consume, no integra. |
-| **systemd + LXC, sin Docker** | Un binario estático y una unit hardenizada (`ProtectSystem`, `ProtectHome`) es más simple de razonar y de revertir que un contenedor, y la BD vive fuera del código en `/opt/helios/data`. |
-| **Litestream → SFTP** | Réplica continua de la SQLite con point-in-time-recovery: la BD es lo único insustituible del sistema. |
+## Funciona con cualquier instalación
 
-## Qué cubre (requisitos de verdad)
+Helios habla con Home Assistant en lugar de con tu hardware, así que cualquier
+cosa que HAOS pueda exponer sirve:
 
-- **Multiusuario con roles** (admin/user), sesiones con cookie httpOnly,
-  bcrypt, rate-limit de login, audit log y recovery de admin **solo desde
-  localhost** (pensado para entrar por SSH al CT).
-- **i18n ES/EN/zh-CN** con idioma por usuario guardado en BD.
-- **Dato en vivo vía WebSocket a HAOS** (no REST lento): la vista Hoy y el
-  flujo de energía se mueven en tiempo real.
-- **Histórico serio**: 798+ días con agregados diarios (producción,
-  consumo, import/export de red, carga/descarga de batería, por inversor),
-  autoconsumo, ahorro en € con precios reales y CO₂ evitado.
-- **PWA instalable**, tema claro/oscuro/auto (el auto va por hora solar,
-  no por el sistema), densidad y shell común con el resto de apps de la
-  casa.
-- **Sin Docker**: servicio systemd en un LXC de Proxmox, con la BD fuera
-  del código para que las actualizaciones no la toquen.
+- **Cualquier número de inversores.** Cada uno con su nombre, su potencia pico y
+  sus sensores.
+- **Cualquier número de cargadores de coche.** Wallbox o portátil, a través de
+  un interruptor, un sensor de potencia y un selector de amperaje.
+- **Una batería.** Este es el límite actual: la topología describe un solo banco
+  de baterías, con sus sensores de potencia y de estado de carga. Soportar
+  varias está abierto en [#197](https://github.com/gnacho/helios/issues/197).
 
-## Capturas (uso real, instalación en producción)
+Mi instalación, como ejemplo y no como requisito: dos inversores de marcas
+distintas, una batería y dos cargadores de coche, el segundo portátil y solo
+presente en Home Assistant mientras está enchufado. Nada del código está atado a
+esas marcas.
+
+Si un equipo no tiene integración local, un scraper puede alimentar Home
+Assistant y Helios lo leerá como cualquier otro sensor. A Helios le da igual de
+dónde venga el número, solo le importa que esté en HAOS.
+
+## Capturas
+
+Uso real, de la instalación en producción:
 
 **Histórico: agregados semanales, ahorro y CO₂**
 
@@ -127,90 +120,57 @@ la batería y cuánto vale en euros cada kWh autoconsumido.
   <img alt="Vista de batería con estado de carga, flujos de carga y descarga y uso diario de la batería" src="assets/screenshot-battery-es-light.png" width="800">
 </picture>
 
-Las capturas son de la **instalación real** (server de desarrollo contra
-el HAOS local y una copia de la BD con 798 días). No hay dataset demo
-aparte: los datos de verdad cuentan mejor para qué sirve cada vista.
+No hay dataset de demo detrás: son datos reales, que explican mejor para qué
+sirve cada vista.
 
-## Arquitectura en 30 segundos
+## Cómo funciona
 
 ```
-Inversores (Solis/Fox) ──integraciones──▶ HAOS ──WebSocket──▶ Helios server (Go)
-                                            ▲                    │ SQLite (Go puro)
-                                  scraper Solis Cloud             ▼
-                                    (LXC aparte)            SQLite (798+ días)
-                                                                   │ Litestream
-                                                                   ▼
-                                                    SFTP a un disco (host backup)
+inversores · batería · contador · cargadores
+                 │
+                 ▼
+          Home Assistant  ──WebSocket──▶  Helios (Go)
+                 ▲                          │
+        scraper opcional                    ▼
+        (alimenta HAOS)                 fichero SQLite
+                                            │
+                                        Litestream
+                                            ▼
+                                   backup que tú controlas
 ```
 
-- `server/`: API Hono + auth multiusuario + agregados + saneado de datos.
-- Detalle completo en `ARCHITECTURE.md` y `STACK.md`.
+Home Assistant hace la parte difícil: habla con el hardware y mantiene vivas las
+conexiones. Helios se suscribe a esas entidades, agrega y sanea las lecturas, y
+sirve la API y la interfaz desde el mismo binario.
+
+HTML renderizado en el servidor con un poco de Datastar encima, así que no hay
+bundle de cliente que compilar ni invalidar. Todo es un proceso Go junto a su
+base de datos.
+
+El razonamiento de cada pieza está en [STACK.md](STACK.md) y
+[ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Instalación
 
-Helios es un servicio Node con SQLite embebida. **No** habla con los
-inversores directamente: se conecta a tu Home Assistant por su API WebSocket y
-lee los sensores que HAOS ya expone. Solo dos ajustes de HAOS importan:
+Helios necesita un Home Assistant con los sensores de energía ya funcionando, y
+un token de acceso de larga duración (Perfil → Seguridad → Tokens de acceso de
+larga duración).
 
-- `HAOS_URL` — la dirección de tu HAOS, p. ej. `http://192.168.10.244:8123`
-  (el `http://` se promociona internamente a `ws://`).
-- `HAOS_TOKEN` — un **token de acceso de larga duración**, generado en HAOS en
-  Perfil → Seguridad → Tokens de acceso de larga duración.
-
-Copia `server/.env.example` a `.env` y rellena esos dos valores (además de los
-de autenticación). Al arrancar, Helios autentica con el token y se suscribe a
-las entidades declaradas en la topología. Puedes ver la lista resuelta de
-entidades y probar la conexión en Ajustes → Conexión y datos; un admin edita
-la topología desde Ajustes. La BD vive en `server/data/` (o `DATA_DIR`) y el
-`.env` sobrevive siempre a las actualizaciones.
-
-## Operación (lo justo para no romper nada)
-
-- Producción: un CT de Proxmox, servicio `helios.service`, puerto
-  80 (solo LAN). La BD **no se toca** sin backup previo.
-- Desarrollo local: `make build` (templ + Tailwind + Go, sin Node) y ejecutar el binario con
-  `PORT=8199 DATA_DIR=/tmp/helios-dev ./helios-go` (una copia desechable de la BD).
-- Si la contraseña de admin se pierde: `curl -X POST
-  http://127.0.0.1:<puerto>/api/auth/recover` **desde el propio host**
-  (SSH) devuelve una temporal. No funciona a través de proxy.
-  ⚠️ El recover **resetea la contraseña de admin** a ese valor temporal:
-  tras usarlo, cambia la contraseña de nuevo en Ajustes.
-- Actualizar = desplegar el build nuevo y reiniciar el servicio; la BD y
-  el `.env` (`/opt/helios/`) sobreviven siempre.
-
-## Configurar la instalación (topología)
-
-Helios lee la topología de la instalación (inversores, batería, fuente de red,
-mapeo de sensores de HAOS) de `install_config`, un JSON en el store kv. Al
-primer arranque la resuelve solo: una BD existente conserva el perfil legacy
-(scraper + Solis/Fox + batería), una BD vacía obtiene el perfil genérico (sin
-scraper, red desde sensores planos). Para fijar tus sensores, escribe un objeto
-`topology`:
-
-```
-PUT /api/config  (auth admin)
-{
-  "topology": {
-    "inverters": [
-      { "key": "inv1", "name": "Mi inversor", "kwp": 5.0, "powerId": "sensor.inverter_power", "powerUnit": "kW", "energyId": "sensor.inverter_energy_today", "energyAcc": "state", "deepIds": ["sensor.inverter_energy_total"] }
-    ],
-    "battery": { "enabled": false },
-    "grid": { "mode": "sensor", "sensorId": "sensor.grid_net" },
-    "consumption": { "powerIds": ["sensor.house_power"], "powerUnit": "W", "energyIds": ["sensor.house_energy"] },
-    "sun": "sun.sun",
-    "weather": "weather.forecast"
-  }
-}
+```bash
+git clone https://github.com/gnacho/helios.git
+cd helios
+make build            # templ + Tailwind + Go, sin Node
+./helios-go           # exporta antes HAOS_URL, HAOS_TOKEN y SESSION_SECRET
 ```
 
-`GET /api/install` devuelve la topología resuelta y la lista de entidades que
-muestra Ajustes. `powerUnit` es `kW` o `W`; los estados de carga/descarga de la
-batería (`chargingStates`/`dischargingStates`) aceptan cualquier cadena, así
-que idiomas de HAOS distintos del español funcionan. Todo viene de HAOS:
-`grid.mode: "attrs"` lee la potencia/dirección de red de los atributos de un
-sensor (el scraper Solis es solo un sensor así), `grid.mode: "sensor"` lee
-sensores planos de red, y `statusAttrsId` aporta opcionalmente el estado del
-inversor (online, estación).
+Luego abre la app y deja que un admin configure la topología desde Ajustes: qué
+entidades son tus inversores, tu batería, tu fuente de red y tus cargadores. No
+hace falta JSON, aunque la API lo acepta si lo prefieres.
+
+- **Configuración en detalle**, con todas las variables de entorno y el objeto
+  de topología completo: [docs/configuration.md](docs/configuration.md).
+- **Ponerlo en producción**, unit de systemd, backups, actualizaciones y
+  recuperación de admin: [docs/operations.md](docs/operations.md).
 
 ## Hoja de ruta
 
@@ -221,16 +181,17 @@ inversor (online, estación).
 | 3 | Hardware configurable (siempre bajo HAOS) | Hecho (0.7.x) |
 | 4 | Multi-instalación: varios HAOS o varios Helios vía API | Próximo |
 
-Ver [ROADMAP.md](ROADMAP.md) para más detalle.
+Detalle en [ROADMAP.md](ROADMAP.md). Varias baterías por instalación está
+abierto aparte en [#197](https://github.com/gnacho/helios/issues/197).
 
 ## Gracias enormes
 
-Helios no existiría sin [Home Assistant](https://www.home-assistant.io/).
-Él hace la parte difícil: hablar con los inversores, gestionar sus
-reconexiones y exponer sensores limpios. Helios se limita a leer lo que HAOS
-ya recoge. Si este proyecto te sirve, el mérito real es de la gente que
-mantiene Home Assistant en marcha.
+Helios no existiría sin [Home Assistant](https://www.home-assistant.io/). Él
+hace la parte difícil: hablar con el hardware, gestionar sus reconexiones y
+exponer sensores limpios. Helios se limita a leer lo que HAOS ya recoge. Si este
+proyecto te sirve, el mérito real es de la gente que mantiene Home Assistant en
+marcha.
 
 ## Licencia
 
-AGPL-3.0 — ver [LICENSE](LICENSE).
+AGPL-3.0, ver [LICENSE](LICENSE).
