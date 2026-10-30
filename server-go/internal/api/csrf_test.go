@@ -33,7 +33,6 @@ func TestMutatingRequestRejectsCrossOrigin(t *testing.T) {
 		referer string
 	}{
 		{name: "origin distinto", origin: "https://evil.example"},
-		{name: "origin nulo", origin: "null"},
 		{name: "referer distinto sin origin", referer: "https://evil.example/page"},
 	}
 	for _, tc := range cases {
@@ -140,5 +139,62 @@ func TestGetIgnoresCrossOriginHeaders(t *testing.T) {
 	rec := securityRequestOrigin(t, router, http.MethodGet, "/api/config", cookie, "https://evil.example", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, esperado %d", rec.Code, http.StatusOK)
+	}
+}
+
+func TestNullOriginRequiresValidSession(t *testing.T) {
+	cases := []struct {
+		name   string
+		cookie bool
+		tamper bool
+		want   int
+	}{
+		{name: "sin sesión rechaza", want: http.StatusForbidden},
+		{name: "cookie manipulada rechaza", cookie: true, tamper: true, want: http.StatusForbidden},
+		{name: "sesión válida acepta", cookie: true, want: http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, router := newSecurityRouter(t)
+			var cookie *http.Cookie
+			if tc.cookie {
+				cookie = securityLogin(t, router, securityUser, securityUserPass)
+				if tc.tamper {
+					cookie.Value += "x"
+				}
+			}
+			rec := securityRequestOrigin(t, router, http.MethodPost, "/api/auth/logout", cookie, "null", "")
+			if rec.Code != tc.want {
+				t.Fatalf("status = %d, esperado %d", rec.Code, tc.want)
+			}
+		})
+	}
+}
+
+func TestMatchesRequestHostNormalizesPortsAndIPv6(t *testing.T) {
+	cases := []struct {
+		name          string
+		origin        string
+		host          string
+		forwardedHost string
+		want          bool
+	}{
+		{name: "puerto distinto", origin: "https://helios.example:8443", host: "helios.example", want: true},
+		{name: "ipv6 con puertos distintos", origin: "http://[::1]:9090", host: "[::1]:8080", want: true},
+		{name: "ipv6 origin con puerto y host sin puerto", origin: "http://[::1]:9090", host: "[::1]", want: true},
+		{name: "ipv6 origin sin puerto y host con puerto", origin: "http://[::1]", host: "[::1]:8080", want: true},
+		{name: "mayúsculas y punto final", origin: "https://HELIOS.example.", host: "helios.example:443", want: true},
+		{name: "host interno con x-forwarded-host", origin: "https://helios.example", host: "10.0.0.5:8080", forwardedHost: "helios.example", want: true},
+		{name: "solo cuenta el primer x-forwarded-host", origin: "https://evil.example", host: "10.0.0.5:8080", forwardedHost: "helios.example, evil.example", want: false},
+		{name: "origin nulo no casa por host", origin: "null", host: "helios.example", want: false},
+		{name: "origin distinto", origin: "https://evil.example", host: "helios.example", want: false},
+		{name: "esquema no http", origin: "ftp://helios.example", host: "helios.example", want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := matchesRequestHost(tc.origin, tc.host, tc.forwardedHost); got != tc.want {
+				t.Fatalf("matchesRequestHost(%q, %q, %q) = %v, esperado %v", tc.origin, tc.host, tc.forwardedHost, got, tc.want)
+			}
+		})
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func sameOriginOnly(next http.Handler) http.Handler {
+func (s *Server) sameOriginOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
@@ -21,14 +21,34 @@ func sameOriginOnly(next http.Handler) http.Handler {
 		if origin == "" {
 			origin = strings.TrimSpace(r.Header.Get("Referer"))
 		}
-		forwardedHost := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
-		if origin != "" && !matchesRequestHost(origin, r.Host, forwardedHost) {
-			log.Printf("[helios] csrf: origen no permitido origin=%q host=%q x-forwarded-host=%q", origin, r.Host, forwardedHost)
-			writeJSON(w, http.StatusForbidden, map[string]any{"error": "origen no permitido"})
+		if origin == "" {
+			next.ServeHTTP(w, r)
 			return
 		}
-		next.ServeHTTP(w, r)
+
+		forwardedHost := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
+		if matchesRequestHost(origin, r.Host, forwardedHost) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// A service worker (pushsubscriptionchange) and a few sandboxed contexts
+		// send a null origin, with no way to name the host they belong to. The
+		// session cookie is SameSite=Lax, so a cross-site POST never carries it:
+		// requiring a valid session keeps the check meaningful.
+		if strings.EqualFold(origin, "null") && s.hasValidSession(r) {
+			log.Printf("[helios] csrf: origen nulo con sesión válida path=%q", r.URL.Path)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		log.Printf("[helios] csrf: origen no permitido origin=%q host=%q x-forwarded-host=%q", origin, r.Host, forwardedHost)
+		writeJSON(w, http.StatusForbidden, map[string]any{"error": "origen no permitido"})
 	})
+}
+
+func (s *Server) hasValidSession(r *http.Request) bool {
+	return s.Auth != nil && s.Auth.SessionIDFromCookie(r) != nil
 }
 
 // matchesRequestHost accepts a request whose Origin/Referer points at the
@@ -60,6 +80,8 @@ func matchesRequestHost(raw, host, forwardedHost string) bool {
 	return originHost == normalizeHost(forwardedHost)
 }
 
+// normalizeHost drops the port, the brackets around an IPv6 literal and the
+// trailing dot of a fully qualified name, then folds case.
 func normalizeHost(host string) string {
 	host = strings.TrimSpace(host)
 	if host == "" {
@@ -67,6 +89,8 @@ func normalizeHost(host string) string {
 	}
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
+	} else if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = host[1 : len(host)-1]
 	}
 	return strings.ToLower(strings.TrimSuffix(host, "."))
 }
