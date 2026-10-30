@@ -5,6 +5,30 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.5] - 2026-10-30
+
+### Added
+
+- **Las gráficas se refrescan solas cada minuto.** La curva del panel, la del
+  cargador, las de batería y las de inversores se piden de nuevo cada minuto y
+  se sustituyen en el sitio, sin recargar la página. Antes solo se movían los
+  números y una gráfica actualizada obligaba a refrescar a mano.
+
+### Fixed
+
+- **El cargador apagado dice "Desconectado".** Antes, cuando el aparato estaba
+  simplemente apagado, la tarjeta contaba minutos "sin datos" como si hubiera
+  una avería. Ahora distingue un aparato ausente de un aparato que dejó de
+  publicar.
+- **El inicio de sesión ya no se rechaza con "origen no permitido".** El guard
+  de origen también cubría el formulario de entrada, y algunos navegadores
+  envían un origen nulo al enviarlo: la petición moría en un 403 antes de llegar
+  al formulario. Las rutas de entrada aceptan ese caso, y el resto de peticiones
+  mantiene el filtro intacto.
+- **El log deja de llenarse de avisos de cabecera duplicada.** El envoltorio del
+  límite de cuerpo escribía la cabecera después del primer vaciado del flujo de
+  eventos, así que Go avisaba de una cabecera superflua en cada conexión.
+
 ## [1.2.4] - 2026-10-30
 
 ### Added
