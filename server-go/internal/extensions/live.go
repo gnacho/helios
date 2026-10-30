@@ -32,18 +32,21 @@ type LiveCharger struct {
 	// PowerAgeS es la antigüedad en segundos del último dato de potencia.
 	// localtuya puede dejar el socket abierto sin recibir frames: sin esto,
 	// un 0 kW viejo parece una lectura real.
-	PowerAgeS  int       `json:"powerAgeS,omitempty"`
-	SessionKwh *float64  `json:"sessionKwh,omitempty"`
-	TotalKwh   *float64  `json:"totalKwh,omitempty"`
-	TempC      *float64  `json:"tempC,omitempty"`
-	SwitchOn   *bool     `json:"switchOn,omitempty"`
-	Amps       *float64  `json:"amps,omitempty"`
-	AmpOptions []float64 `json:"ampOptions,omitempty"`
-	AmpMin     *float64  `json:"ampMin,omitempty"`
-	AmpMax     *float64  `json:"ampMax,omitempty"`
-	AmpStep    *float64  `json:"ampStep,omitempty"`
-	Delay      *float64  `json:"delay,omitempty"`
-	Duration   *float64  `json:"duration,omitempty"`
+	PowerAgeS int `json:"powerAgeS,omitempty"`
+	// DeviceOffline indica que el aparato no está disponible en HA (apagado o
+	// desenchufado), que es distinto de estar encendido y callado.
+	DeviceOffline bool      `json:"deviceOffline,omitempty"`
+	SessionKwh    *float64  `json:"sessionKwh,omitempty"`
+	TotalKwh      *float64  `json:"totalKwh,omitempty"`
+	TempC         *float64  `json:"tempC,omitempty"`
+	SwitchOn      *bool     `json:"switchOn,omitempty"`
+	Amps          *float64  `json:"amps,omitempty"`
+	AmpOptions    []float64 `json:"ampOptions,omitempty"`
+	AmpMin        *float64  `json:"ampMin,omitempty"`
+	AmpMax        *float64  `json:"ampMax,omitempty"`
+	AmpStep       *float64  `json:"ampStep,omitempty"`
+	Delay         *float64  `json:"delay,omitempty"`
+	Duration      *float64  `json:"duration,omitempty"`
 	// Programación por software (wall): hora de inicio, duración y armado.
 	ScheduleStart string   `json:"scheduleStart,omitempty"`
 	ScheduleHours *float64 `json:"scheduleHours,omitempty"`
@@ -118,6 +121,21 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 		}
 	}
 
+	// Aparato ausente: todas sus entidades configuradas sin datos. Un cargador
+	// portátil solo se enciende cuando se va a usar, así que este es su estado
+	// normal y no un fallo de comunicaciones.
+	offline, seen := true, false
+	for _, id := range []string{c.PowerID, c.StateID, c.SwitchID} {
+		if id == "" {
+			continue
+		}
+		seen = true
+		if ent, ok := h.GetState(id); ok && ent.State != "unavailable" && ent.State != "unknown" {
+			offline = false
+		}
+	}
+	deviceOffline := seen && offline
+
 	state := entityStateOrUndefined(h, c.StateID)
 	charging := false
 	if state != nil && containsStr(c.ChargingStates, *state) {
@@ -152,22 +170,23 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 	}
 
 	out := LiveCharger{
-		Key:        c.Key,
-		Name:       c.Name,
-		Charging:   charging,
-		Connected:  connected,
-		State:      state,
-		SessionKwh: divOpt(entityNumOrUndefined(h, c.EnergySessionID), c.EnergyDivisor),
-		TotalKwh:   divOpt(entityNumOrUndefined(h, c.EnergyTotalID), c.EnergyDivisor),
-		TempC:      entityNumOrUndefined(h, c.TempID),
-		Amps:       entityNumOrUndefined(h, c.AmpID),
-		AmpOptions: ampOptions,
-		AmpMin:     ampMin,
-		AmpMax:     ampMax,
-		AmpStep:    ampStep,
-		Delay:      entityNumOrUndefined(h, c.DelayID),
-		Duration:   entityNumOrUndefined(h, c.DurationID),
-		PowerAgeS:  powerAgeS,
+		Key:           c.Key,
+		Name:          c.Name,
+		Charging:      charging,
+		Connected:     connected,
+		State:         state,
+		SessionKwh:    divOpt(entityNumOrUndefined(h, c.EnergySessionID), c.EnergyDivisor),
+		TotalKwh:      divOpt(entityNumOrUndefined(h, c.EnergyTotalID), c.EnergyDivisor),
+		TempC:         entityNumOrUndefined(h, c.TempID),
+		Amps:          entityNumOrUndefined(h, c.AmpID),
+		AmpOptions:    ampOptions,
+		AmpMin:        ampMin,
+		AmpMax:        ampMax,
+		AmpStep:       ampStep,
+		Delay:         entityNumOrUndefined(h, c.DelayID),
+		Duration:      entityNumOrUndefined(h, c.DurationID),
+		PowerAgeS:     powerAgeS,
+		DeviceOffline: deviceOffline,
 
 		ScheduleHours: entityNumOrUndefined(h, c.ScheduleDurationID),
 	}

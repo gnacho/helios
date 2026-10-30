@@ -97,7 +97,7 @@ templ chgSingle(v chargerView, s *chgSingleView) {
 					</span>
 				}
 			</div>
-			<div id={ "chg-curve-" + s.Key }>
+			<div id={ "chg-curve-" + s.Key } data-on-interval__duration.60s={ "@get('/ui/chg-curve?key=" + s.Key + "')" }>
 				@chgCurveSVG(s.Curve)
 			</div>
 		</section>

@@ -115,6 +115,38 @@ func kwpOf(m dashboardModel, key string) float64 {
 	return 0
 }
 
+// compareRefreshExpr is the polling expression of the comparison chart: the
+// normalised view has to keep its flag, or the refresh would flip it.
+func compareRefreshExpr(norm bool) string {
+	if norm {
+		return "@get('/ui/inv-charts?key=compare&norm=1')"
+	}
+	return "@get('/ui/inv-charts?key=compare')"
+}
+
+// invKeysAndNames lists the keys the charts use (topology order) with their
+// display names, falling back to the classic Solis/Fox keys when the topology
+// is empty.
+func invKeysAndNames(m dashboardModel, metas []invMetaView) ([]string, map[string]string) {
+	keys, names := chartInvKeys(m)
+	if len(metas) == 0 {
+		return keys, names
+	}
+	// Nombres reales de la topología para el chart y las señales.
+	for i := range keys {
+		if names[keys[i]] == "" {
+			names[keys[i]] = keys[i]
+		}
+	}
+	for i, mt := range metas {
+		if i < len(keys) {
+			keys[i] = mt.Key
+			names[mt.Key] = mt.Name
+		}
+	}
+	return keys, names
+}
+
 // invDayKwhAndPeaks integrates per-inverter kWh and the daily peak from the
 // day series (same loop as CompareView/Inversores.tsx).
 func invDayKwhAndPeaks(points []solar.DayPoint, keys []string) ([]float64, []peakAt) {
@@ -179,22 +211,8 @@ func (u *UI) handleInversores(w http.ResponseWriter, r *http.Request) {
 	m := u.buildDashboard(pal)
 	hist := u.dailyHistory()
 
-	keys, names := chartInvKeys(m)
 	metas := invMetasOf(m.Invs, hist, time.Now())
-	if len(metas) > 0 {
-		// Nombres reales de la topología para el chart y las señales.
-		for i := range keys {
-			if names[keys[i]] == "" {
-				names[keys[i]] = keys[i]
-			}
-		}
-		for i, mt := range metas {
-			if i < len(keys) {
-				keys[i] = mt.Key
-				names[mt.Key] = mt.Name
-			}
-		}
-	}
+	keys, names := invKeysAndNames(m, metas)
 
 	// Tab activa: ?inv= (canónico) o ?tab= (alias histórico del dashboard).
 	tab := r.URL.Query().Get("inv")

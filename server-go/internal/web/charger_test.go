@@ -912,3 +912,55 @@ func TestChargerWarnsStalePower(t *testing.T) {
 		t.Fatalf("con dato viejo no debe haber señal de potencia (pintaria un valor falso)")
 	}
 }
+
+// TestChargerShowsDisconnected: un cargador portátil solo se enciende cuando se
+// va a usar, así que sus entidades están unavailable el resto del tiempo. Eso no
+// es un dato que falte, y no debe leerse como una avería.
+func TestChargerShowsDisconnected(t *testing.T) {
+	d, err := db.Open(filepath.Join(t.TempDir(), "chgoffline.db"))
+	if err != nil {
+		t.Fatalf("db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+
+	cfg := extensions.Config{Enabled: true}
+	cfg.CarCharger.Enabled = true
+	cfg.CarCharger.Chargers = []extensions.Charger{{
+		Key: "c2", Name: "Portatil", PowerID: "sensor.p",
+		PowerUnit: "W", StateID: "sensor.st", SwitchID: "switch.c2",
+	}}
+	extStore := extensions.NewStore()
+	extStore.Set(cfg)
+	ext := extensions.New(extStore, d, nil)
+
+	a := &auth.Auth{DB: d, SessionTTL: time.Hour, SessionSecret: "test-secret"}
+	if _, err := a.RegisterUser("nacho", "password1", "es", "admin"); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	fa := stubChargerHA{states: map[string]ha.EntityState{
+		"switch.c2": {State: "unavailable"},
+		"sensor.st": {State: "unavailable"},
+		"sensor.p":  {State: "unavailable"},
+	}}
+	u := New(a, d, nil, nil, nil, extStore, ext, fa, solar.PriceConfig{}, nil)
+	r := chi.NewRouter()
+	u.Mount(r)
+	r.NotFound(u.NotFound)
+
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+	req := httptest.NewRequest("GET", "/cargador", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	body := rec.Body.String()
+
+	if !strings.Contains(body, "Desconectado") {
+		t.Fatalf("un aparato ausente debe decir que está desconectado")
+	}
+	if strings.Contains(body, "Sin datos desde hace") {
+		t.Fatalf("desconectado no debe contarse como dato viejo")
+	}
+	if strings.Contains(body, "chgc2Pow") {
+		t.Fatalf("sin aparato no debe pintar señal de potencia")
+	}
+}
