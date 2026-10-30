@@ -67,6 +67,9 @@ func (w *bodyLimitWriter) Write(p []byte) (int, error) {
 }
 
 func (w *bodyLimitWriter) Flush() {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
 	if f, ok := w.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
