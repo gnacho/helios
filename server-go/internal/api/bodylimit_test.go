@@ -3,8 +3,10 @@ package api
 import (
 	"bytes"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -48,5 +50,38 @@ func TestRequestBodyLimitAllowsImagePathAboveDefault(t *testing.T) {
 	}
 	if read != int64(len(body)) {
 		t.Fatalf("read = %d, want %d", read, len(body))
+	}
+}
+
+func TestRequestBodyLimitFlushDoesNotWriteHeaderTwice(t *testing.T) {
+	var logged bytes.Buffer
+	handler := requestBodyLimit(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		if err := http.NewResponseController(w).Flush(); err != nil {
+			t.Errorf("flush: %v", err)
+		}
+		io.WriteString(w, "data: ok\n\n")
+	}))
+
+	srv := httptest.NewUnstartedServer(handler)
+	srv.Config.ErrorLog = log.New(&logged, "", 0)
+	srv.Start()
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/ui/stream")
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if !strings.Contains(string(body), "data: ok") {
+		t.Fatalf("body = %q, want the event", body)
+	}
+	if strings.Contains(logged.String(), "superfluous") {
+		t.Fatalf("flushing before the first write logged a superfluous WriteHeader: %s", logged.String())
 	}
 }
