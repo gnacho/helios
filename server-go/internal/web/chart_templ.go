@@ -236,7 +236,7 @@ func dayChartSVG(c DayChartModel) templ.Component {
 			templ_7745c5c3_Var11 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div id=\"day-chart\" class=\"overflow-x-auto px-1 pb-1 lg:overflow-visible\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div id=\"day-chart\" data-on-interval__duration.60s=\"@get('/ui/day-chart')\" class=\"overflow-x-auto px-1 pb-1 lg:overflow-visible\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

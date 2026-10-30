@@ -127,7 +127,7 @@ templ BateriaPage(v bateriaView) {
 
 // socGaugeSVG ports SocHeroGauge (static arc; the GSAP sweep is not ported).
 templ socGaugeSVG(v bateriaView, g socGaugeModel) {
-	<div class="flex justify-center" role="img" aria-label={ g.Aria }>
+	<div id="soc-gauge" class="flex justify-center" role="img" aria-label={ g.Aria }>
 		<!-- viewBox ajustado al dibujo (no a 260x240): el arco crece un 10% dentro de la
 			     misma caja de 242 px, que es la que fija el alto de la tarjeta. -->
 			<svg viewBox="-12.4 15.7 236.3 236.3" class="block h-[242px] w-[242px]" fill="none">
@@ -170,7 +170,7 @@ templ batPowerCard(v bateriaView) {
 }
 
 templ batPowerSVG(m batPowerChartModel) {
-	<div class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
+	<div id="bat-power" data-on-interval__duration.60s="@get('/ui/bat-charts')" class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
 		<svg viewBox="0 0 570 260" class="anim-bars h-auto w-full min-w-[320px]" role="img" aria-hidden="true">
 			for _, t := range m.TicksY[1:] {
 				<line x1={ r2(batSideL) } x2={ r2(m.PlotRightX) } y1={ r2(t.Y - 4) } y2={ r2(t.Y - 4) } stroke="var(--line)" stroke-opacity="0.6" stroke-dasharray="3 6"></line>
@@ -228,7 +228,7 @@ templ socDayCard(v bateriaView) {
 }
 
 templ socDaySVG(m socDayChartModel) {
-	<div class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
+	<div id="soc-day" class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
 		<svg viewBox="0 0 570 280" class="anim-draw h-auto w-full min-w-[320px]" role="img" aria-hidden="true">
 			<defs>
 				<linearGradient id="grad-soc-day" x1="0" y1="0" x2="0" y2="1">

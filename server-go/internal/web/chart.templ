@@ -49,7 +49,7 @@ func chipLabel(name string) string {
 
 
 templ dayChartSVG(c DayChartModel) {
-	<div id="day-chart" class="overflow-x-auto px-1 pb-1 lg:overflow-visible">
+	<div id="day-chart" data-on-interval__duration.60s="@get('/ui/day-chart')" class="overflow-x-auto px-1 pb-1 lg:overflow-visible">
 		@dayChartSVGInner(c)
 	</div>
 }

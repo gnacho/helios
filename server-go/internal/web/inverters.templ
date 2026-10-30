@@ -222,7 +222,7 @@ templ invDayChart(v inversoresView, c invDayChartModel) {
 }
 
 templ invDaySVG(c invDayChartModel) {
-	<div class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
+	<div id={ "inv-day-" + c.Key } data-on-interval__duration.60s={ "@get('/ui/inv-charts?key=" + c.Key + "')" } class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
 		<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 			<defs>
 				<linearGradient id={ "grad-inv-" + c.Key } x1="0" y1="0" x2="0" y2="1">
@@ -357,12 +357,12 @@ templ invCompareChart(v inversoresView, c *invCompareView) {
 				{ T(v.Lang, "inversores.foxBetter") }
 			</p>
 		}
-		@invCompareSVG(v, c.Chart)
+		@invCompareSVG(v, c.Chart, c.Norm)
 	</section>
 }
 
-templ invCompareSVG(v inversoresView, c DayChartModel) {
-	<div class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
+templ invCompareSVG(v inversoresView, c DayChartModel, norm bool) {
+	<div id="inv-compare" data-on-interval__duration.60s={ compareRefreshExpr(norm) } class="overflow-x-auto px-1 pb-2 lg:overflow-visible">
 		<svg viewBox={ "0 0 " + r2s(c.W) + " " + r2s(c.H) } class="anim-draw h-auto w-full min-w-[480px]" role="img" aria-hidden="true">
 			<defs>
 				for _, inv := range c.InvPaths {
