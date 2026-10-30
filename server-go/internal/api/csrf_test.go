@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -196,5 +197,31 @@ func TestMatchesRequestHostNormalizesPortsAndIPv6(t *testing.T) {
 				t.Fatalf("matchesRequestHost(%q, %q, %q) = %v, esperado %v", tc.origin, tc.host, tc.forwardedHost, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestAuthEntryPointAcceptsNullOrigin(t *testing.T) {
+	cases := []struct{ name, path string }{
+		{name: "formulario de login", path: "/login"},
+		{name: "api login", path: "/api/auth/login"},
+		{name: "registro", path: "/api/auth/register"},
+		{name: "recuperación", path: "/api/auth/recover"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, router := newSecurityRouter(t)
+			rec := securityRequestOrigin(t, router, http.MethodPost, tc.path, nil, "null", "")
+			if rec.Code == http.StatusForbidden && strings.Contains(rec.Body.String(), "origen no permitido") {
+				t.Fatalf("%s: un origen nulo sin sesión no debe rechazarse por CSRF", tc.path)
+			}
+		})
+	}
+}
+
+func TestAuthEntryPointRejectsForeignOrigin(t *testing.T) {
+	_, _, router := newSecurityRouter(t)
+	rec := securityRequestOrigin(t, router, http.MethodPost, "/api/auth/login", nil, "https://evil.example", "")
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, esperado %d", rec.Code, http.StatusForbidden)
 	}
 }
