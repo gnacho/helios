@@ -2,6 +2,7 @@ package api
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,23 +18,20 @@ func (s *Server) sameOriginOnly(next http.Handler) http.Handler {
 		}
 
 		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		// A fetch started from a service worker has no document behind it, so
+		// the browser signs it with "null". The session cookie is SameSite=Lax,
+		// which means a cross-site POST carries no session: accepting null with
+		// a valid session does not open CSRF, and null without one still fails.
+		if origin == "null" && s.Auth != nil && s.Auth.SessionIDFromCookie(r) != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if origin == "" {
 			origin = strings.TrimSpace(r.Header.Get("Referer"))
 		}
-		if origin != "" && !matchesAnyRequestHost(origin, r) {
-			// Un navegador manda Origin: null cuando la petición sale sin
-			// documento detrás (service worker) o desde un iframe sandbox. La
-			// cookie de sesión es SameSite=Lax, así que un POST de otro sitio no
-			// lleva sesión: exigir sesión válida deja pasar al service worker sin
-			// abrir CSRF.
-			if origin == "null" && s.Auth != nil && s.Auth.SessionIDFromCookie(r) != nil {
-				next.ServeHTTP(w, r)
-				return
-			}
-			// Sin estos valores, un rechazo legítimo detrás de un proxy es
-			// indistinguible de un ataque y no hay forma de diagnosticarlo.
-			log.Printf("[api] origen rechazado method=%s path=%s origin=%q host=%q x-forwarded-host=%q ua=%q",
-				r.Method, r.URL.Path, origin, r.Host, r.Header.Get("X-Forwarded-Host"), r.UserAgent())
+		forwardedHost := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
+		if origin != "" && !matchesRequestHost(origin, r.Host, forwardedHost) {
+			log.Printf("[helios] csrf: origen no permitido method=%s path=%s origin=%q host=%q x-forwarded-host=%q", r.Method, r.URL.Path, origin, r.Host, forwardedHost)
 			writeJSON(w, http.StatusForbidden, map[string]any{"error": "origen no permitido"})
 			return
 		}
@@ -41,41 +39,42 @@ func (s *Server) sameOriginOnly(next http.Handler) http.Handler {
 	})
 }
 
-// matchesAnyRequestHost acepta el origen si coincide con el Host de la petición
-// o con el host que anuncia el proxy. Detrás de un reverse proxy el Host puede
-// venir reescrito (el de la aplicación) mientras el navegador firma el público.
-func matchesAnyRequestHost(origin string, r *http.Request) bool {
-	u, err := url.Parse(origin)
+// matchesRequestHost accepts a request whose Origin/Referer points at the
+// host the browser used. Behind a reverse proxy r.Host can be an internal
+// address while the browser sees the public one, which the proxy passes in
+// X-Forwarded-Host; ports are ignored because they can differ between the
+// two hops.
+func matchesRequestHost(raw, host, forwardedHost string) bool {
+	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
 		return false
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return false
 	}
-	want := hostOnly(u.Host)
-	for _, candidate := range requestHosts(r) {
-		if strings.EqualFold(hostOnly(candidate), want) {
-			return true
-		}
+
+	originHost := normalizeHost(u.Host)
+	if originHost == "" {
+		return false
 	}
-	return false
+	if originHost == normalizeHost(host) {
+		return true
+	}
+	// X-Forwarded-Host may carry a comma-separated chain; the first value is
+	// the one the client originally requested.
+	if first, _, ok := strings.Cut(forwardedHost, ","); ok {
+		forwardedHost = first
+	}
+	return originHost == normalizeHost(forwardedHost)
 }
 
-func requestHosts(r *http.Request) []string {
-	hosts := []string{r.Host}
-	for _, raw := range strings.Split(r.Header.Get("X-Forwarded-Host"), ",") {
-		if h := strings.TrimSpace(raw); h != "" {
-			hosts = append(hosts, h)
-		}
+func normalizeHost(host string) string {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return ""
 	}
-	return hosts
-}
-
-// hostOnly deja el host sin puerto ni punto final: el puerto no cambia el sitio.
-func hostOnly(host string) string {
-	h := strings.TrimSuffix(strings.TrimSpace(host), ".")
-	if i := strings.LastIndex(h, ":"); i > 0 && !strings.Contains(h[i+1:], "]") {
-		return strings.TrimSuffix(h[:i], ".")
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
 	}
-	return h
+	return strings.ToLower(strings.TrimSuffix(host, "."))
 }

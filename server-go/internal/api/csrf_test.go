@@ -77,6 +77,66 @@ func TestMutatingRequestAllowsSameOriginAndClientsWithoutOrigin(t *testing.T) {
 	}
 }
 
+func TestMutatingRequestAllowsSameSiteBehindReverseProxy(t *testing.T) {
+	cases := []struct {
+		name          string
+		host          string
+		forwardedHost string
+		origin        string
+		referer       string
+	}{
+		{name: "origin con puerto distinto", origin: "https://helios.example:8443"},
+		{name: "referer con puerto distinto", referer: "https://helios.example:8443/page"},
+		{name: "host interno y x-forwarded-host", host: "10.0.0.5:8080", forwardedHost: "helios.example", origin: "https://helios.example"},
+		{name: "x-forwarded-host en cadena", host: "10.0.0.5:8080", forwardedHost: "helios.example, edge.local", origin: "https://helios.example"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, router := newSecurityRouter(t)
+			cookie := securityLogin(t, router, securityUser, securityUserPass)
+
+			req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+			req.Host = "helios.example"
+			if tc.host != "" {
+				req.Host = tc.host
+			}
+			req.AddCookie(cookie)
+			if tc.origin != "" {
+				req.Header.Set("Origin", tc.origin)
+			}
+			if tc.referer != "" {
+				req.Header.Set("Referer", tc.referer)
+			}
+			if tc.forwardedHost != "" {
+				req.Header.Set("X-Forwarded-Host", tc.forwardedHost)
+			}
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, esperado %d", rec.Code, http.StatusOK)
+			}
+		})
+	}
+}
+
+func TestMutatingRequestRejectsCrossOriginBehindReverseProxy(t *testing.T) {
+	_, _, router := newSecurityRouter(t)
+	cookie := securityLogin(t, router, securityUser, securityUserPass)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	req.Host = "10.0.0.5:8080"
+	req.AddCookie(cookie)
+	req.Header.Set("Origin", "https://evil.example")
+	req.Header.Set("X-Forwarded-Host", "helios.example")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, esperado %d", rec.Code, http.StatusForbidden)
+	}
+}
+
 func TestGetIgnoresCrossOriginHeaders(t *testing.T) {
 	_, _, router := newSecurityRouter(t)
 	cookie := securityLogin(t, router, securityUser, securityUserPass)
