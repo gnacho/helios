@@ -33,7 +33,6 @@ func TestMutatingRequestRejectsCrossOrigin(t *testing.T) {
 		referer string
 	}{
 		{name: "origin distinto", origin: "https://evil.example"},
-		{name: "origin nulo", origin: "null"},
 		{name: "referer distinto sin origin", referer: "https://evil.example/page"},
 	}
 	for _, tc := range cases {
@@ -61,6 +60,10 @@ func TestMutatingRequestAllowsSameOriginAndClientsWithoutOrigin(t *testing.T) {
 		{name: "mismo origin", origin: "https://helios.example"},
 		{name: "mismo referer sin origin", referer: "https://helios.example/page"},
 		{name: "cliente sin cabeceras"},
+		// El service worker no tiene documento detrás y firma con Origin: null.
+		// Con sesión válida se acepta (la cookie es SameSite=Lax, así que un POST
+		// de otro sitio no llega con sesión).
+		{name: "origin nulo con sesion", origin: "null"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -126,5 +129,15 @@ func TestMutatingRequestAcceptsProxyHosts(t *testing.T) {
 				t.Fatalf("status = %d, esperado %d (body=%s)", rec.Code, want, rec.Body.String())
 			}
 		})
+	}
+}
+
+// Un origen nulo sin sesión sigue rechazado: es el vector clásico del iframe
+// sandbox, y ahí no hay cookie SameSite=Lax que valga.
+func TestMutatingRequestRejectsNullOriginWithoutSession(t *testing.T) {
+	_, _, router := newSecurityRouter(t)
+	rec := securityRequestOrigin(t, router, http.MethodPost, "/api/auth/logout", nil, "null", "")
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, esperado %d", rec.Code, http.StatusForbidden)
 	}
 }
