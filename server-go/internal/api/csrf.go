@@ -60,6 +60,8 @@ func matchesRequestHost(raw, host, forwardedHost string) bool {
 	return originHost == normalizeHost(forwardedHost)
 }
 
+// normalizeHost drops the port, the brackets around an IPv6 literal and the
+// trailing dot of a fully qualified name, then folds case.
 func normalizeHost(host string) string {
 	host = strings.TrimSpace(host)
 	if host == "" {
@@ -67,6 +69,8 @@ func normalizeHost(host string) string {
 	}
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
+	} else if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = host[1 : len(host)-1]
 	}
 	return strings.ToLower(strings.TrimSuffix(host, "."))
 }
