@@ -33,7 +33,6 @@ func TestMutatingRequestRejectsCrossOrigin(t *testing.T) {
 		referer string
 	}{
 		{name: "origin distinto", origin: "https://evil.example"},
-		{name: "origin nulo", origin: "null"},
 		{name: "referer distinto sin origin", referer: "https://evil.example/page"},
 	}
 	for _, tc := range cases {
@@ -140,6 +139,35 @@ func TestGetIgnoresCrossOriginHeaders(t *testing.T) {
 	rec := securityRequestOrigin(t, router, http.MethodGet, "/api/config", cookie, "https://evil.example", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, esperado %d", rec.Code, http.StatusOK)
+	}
+}
+
+func TestNullOriginRequiresValidSession(t *testing.T) {
+	cases := []struct {
+		name   string
+		cookie bool
+		tamper bool
+		want   int
+	}{
+		{name: "sin sesión rechaza", want: http.StatusForbidden},
+		{name: "cookie manipulada rechaza", cookie: true, tamper: true, want: http.StatusForbidden},
+		{name: "sesión válida acepta", cookie: true, want: http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, router := newSecurityRouter(t)
+			var cookie *http.Cookie
+			if tc.cookie {
+				cookie = securityLogin(t, router, securityUser, securityUserPass)
+				if tc.tamper {
+					cookie.Value += "x"
+				}
+			}
+			rec := securityRequestOrigin(t, router, http.MethodPost, "/api/auth/logout", cookie, "null", "")
+			if rec.Code != tc.want {
+				t.Fatalf("status = %d, esperado %d", rec.Code, tc.want)
+			}
+		})
 	}
 }
 
