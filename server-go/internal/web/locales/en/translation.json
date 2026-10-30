@@ -176,6 +176,7 @@
     "connected": "Plugged in",
     "currentPower": "Current power",
     "staleData": "No data for {{n}} min",
+    "disconnected": "Disconnected",
     "session": "Session",
     "lifetime": "Lifetime total",
     "temperature": "Temperature",

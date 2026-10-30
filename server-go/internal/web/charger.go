@@ -1149,6 +1149,14 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	switch {
 	case !hasLive:
 		stats = append(stats, powStat)
+	case live.DeviceOffline:
+		// El aparato no está en la red (apagado o desenchufado): es su estado
+		// normal cuando no se usa, no una avería ni un dato que falte.
+		stats = append(stats, chgLiveStat{
+			IconKey: "zap",
+			Label:   T(lang, "cargador.currentPower"),
+			Value:   T(lang, "cargador.disconnected"),
+		})
 	case live.PowerAgeS > int(chargerStaleAfter/time.Second):
 		// Socket abierto sin frames: mejor decir desde cuándo no hay dato
 		// que pintar un 0 kW que parece una lectura real.
