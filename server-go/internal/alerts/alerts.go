@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"helios-server/internal/db"
+	"helios-server/internal/extensions"
 	"helios-server/internal/ha"
 	"helios-server/internal/install"
 	"helios-server/internal/push"
@@ -56,6 +57,7 @@ type Estado struct {
 	RedAlertado      bool
 	BateriaAlertado  bool
 	BateriaLlena     bool
+	Chg              map[string]*ChgCargadorEstado
 }
 
 type Engine struct {
@@ -67,6 +69,9 @@ type Engine struct {
 
 	// LiveFn calcula el snapshot en vivo (inyectado desde solar).
 	LiveFn func(HA) LiveSnapshot
+	// ChargersFn devuelve los cargadores con extensión activa (inyectada
+	// desde extensions en el arranque); nil desactiva la sección.
+	ChargersFn func() []extensions.Charger
 	// TodayFn devuelve la fecha de hoy.
 	TodayFn func() string
 }
@@ -77,6 +82,7 @@ func New(database *db.DB, haReader HA, store *install.Store, notify NotifyFn) *E
 	}
 	return &Engine{
 		DB: database, HA: haReader, Store: store, Notify: notify,
+		Estado:  Estado{Chg: map[string]*ChgCargadorEstado{}},
 		TodayFn: func() string { return time.Now().Format("2006-01-02") },
 	}
 }
@@ -242,6 +248,9 @@ func (e *Engine) Tick() {
 	} else if e.Estado.BateriaLlena && live.Soc < 100-histeresisSoc {
 		e.Estado.BateriaLlena = false
 	}
+
+	// ---- Carga programada de los cargadores ----
+	e.tickChargers()
 }
 
 // Resumen diario

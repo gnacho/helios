@@ -206,6 +206,7 @@
     "errorAmps": "Current out of range (6-32 A)",
     "errorDelay": "Start time out of range (0-24 h)",
     "errorDuration": "Duration out of range (1-12 h)",
+    "errorScheduleActive": "A schedule is already active: stop it before scheduling another",
     "powerToastOn": "{{name}} turned on",
     "powerToastOff": "{{name}} turned off",
     "amps": "Current (A)",
@@ -215,6 +216,8 @@
     "duration": "Duration",
     "schedule": "Schedule",
     "scheduled": "Scheduled",
+    "endsAt": "Charging until",
+    "stopSchedule": "Stop schedule",
     "ampsToast": "{{name}} current set to {{amps}} A",
     "imageEdit": "Change image (transparent PNG, recommended height 460 px; auto-rescaled)",
     "imageClear": "Remove image",
@@ -539,7 +542,9 @@
         "corte_red_ok": "Grid restored",
         "bateria_baja": "Low battery",
         "bateria_llena": "Battery full",
-        "resumen_diario": "Daily summary at sunset"
+        "resumen_diario": "Daily summary at sunset",
+        "carga_inicio": "Scheduled charge started",
+        "carga_fin": "Scheduled charge finished"
       }
     },
     "topology": {

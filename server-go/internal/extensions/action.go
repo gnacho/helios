@@ -23,6 +23,7 @@ var (
 	ErrChargerNoSchedule    = errors.New("el cargador no tiene programación configurada")
 	ErrChargerScheduleTime  = errors.New("hora de inicio no válida (HH:MM)")
 	ErrChargerScheduleHours = errors.New("duración fuera de rango (1-12 h)")
+	ErrChargerScheduleActive = errors.New("ya hay una programación activa: detenla antes de programar otra")
 )
 
 var (
@@ -82,6 +83,16 @@ func ApplySchedule(extHA HA, charger Charger, at string, hours float64) error {
 		!numIDRe.MatchString(charger.ScheduleDurationID) ||
 		!boolIDRe.MatchString(charger.ScheduleArmID) {
 		return ErrChargerNoSchedule
+	}
+	// Una programación vigente (armada o con la carga en marcha por timer)
+	// bloquea programar otra: hay que detenerla antes.
+	if st, ok := extHA.GetState(charger.ScheduleArmID); ok && st.State == "on" {
+		return ErrChargerScheduleActive
+	}
+	if timerIDRe.MatchString(charger.ScheduleTimerID) {
+		if st, ok := extHA.GetState(charger.ScheduleTimerID); ok && st.State == "active" {
+			return ErrChargerScheduleActive
+		}
 	}
 	now := time.Now()
 	start, end, err := scheduleWindow(at, hours, now)
@@ -198,6 +209,21 @@ func ApplyAction(extHA HA, charger Charger, action string, amps *float64) (float
 		}
 		if err := extHA.CallService("switch", service, map[string]any{"entity_id": charger.SwitchID}); err != nil {
 			return 0, err
+		}
+		// An explicit off ends any active schedule: the running session (timer)
+		// and the armed future window (nothing reconnects at its start time).
+		// Unconditional like ClearSchedule: HA ignores cancel on idle timers.
+		if action == "off" {
+			if boolIDRe.MatchString(charger.ScheduleArmID) {
+				if err := extHA.CallService("input_boolean", "turn_off", map[string]any{"entity_id": charger.ScheduleArmID}); err != nil {
+					return 0, err
+				}
+			}
+			if timerIDRe.MatchString(charger.ScheduleTimerID) {
+				if err := extHA.CallService("timer", "cancel", map[string]any{"entity_id": charger.ScheduleTimerID}); err != nil {
+					return 0, err
+				}
+			}
 		}
 		return 0, nil
 

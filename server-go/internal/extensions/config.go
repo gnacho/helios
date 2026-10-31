@@ -356,6 +356,7 @@ func ChargerEntities(c Config) []string {
 			ch.StateID, ch.TempID, ch.SwitchID, ch.AmpID,
 			ch.DelayID, ch.DurationID,
 			ch.ScheduleStartID, ch.ScheduleDurationID, ch.ScheduleArmID,
+			ch.ScheduleTimerID,
 		} {
 			if id == "" {
 				continue

@@ -80,6 +80,7 @@ var TiposAlerta = []string{
 	"fox_offline", "fox_ok",
 	"corte_red", "corte_red_ok",
 	"bateria_baja", "bateria_llena",
+	"carga_inicio", "carga_fin",
 	"resumen_diario",
 }
 
@@ -149,6 +150,16 @@ var catalogo = map[Lang]map[string]entrada{
 		"corte_red_ok":  {titulo: "Red recuperada", cuerpo: func(d Datos) string { return "La red eléctrica vuelve a estar presente" }},
 		"bateria_baja":  {titulo: "Batería baja", cuerpo: func(d Datos) string { return "SOC en " + n(d, "soc") + "% (reserva " + n(d, "reserva") + "%)" }},
 		"bateria_llena": {titulo: "Batería llena", cuerpo: func(d Datos) string { return "La batería está al " + n(d, "soc") + "%" }},
+		"carga_inicio": {titulo: "Carga iniciada", cuerpo: func(d Datos) string {
+			cuerpo := s(d, "nombre", "El cargador") + " está cargando"
+			if fin := n(d, "fin"); fin != "" {
+				cuerpo += " hasta las " + fin
+			}
+			return cuerpo
+		}},
+		"carga_fin": {titulo: "Carga terminada", cuerpo: func(d Datos) string {
+			return s(d, "nombre", "El cargador") + " terminó de cargar a las " + n(d, "fin")
+		}},
 		"resumen_diario": {titulo: "Resumen del día", cuerpo: func(d Datos) string {
 			return "Producción " + n(d, "produccion") + " kWh · Consumo " + n(d, "consumo") + " kWh · Autoconsumo " + n(d, "autoconsumo") + "%"
 		}},
@@ -167,6 +178,16 @@ var catalogo = map[Lang]map[string]entrada{
 		"corte_red_ok":  {titulo: "Grid restored", cuerpo: func(d Datos) string { return "Grid power is back" }},
 		"bateria_baja":  {titulo: "Low battery", cuerpo: func(d Datos) string { return "SOC at " + n(d, "soc") + "% (reserve " + n(d, "reserva") + "%)" }},
 		"bateria_llena": {titulo: "Battery full", cuerpo: func(d Datos) string { return "The battery is at " + n(d, "soc") + "%" }},
+		"carga_inicio": {titulo: "Charging started", cuerpo: func(d Datos) string {
+			cuerpo := s(d, "nombre", "The charger") + " is charging"
+			if fin := n(d, "fin"); fin != "" {
+				cuerpo += " until " + fin
+			}
+			return cuerpo
+		}},
+		"carga_fin": {titulo: "Charging finished", cuerpo: func(d Datos) string {
+			return s(d, "nombre", "The charger") + " finished charging at " + n(d, "fin")
+		}},
 		"resumen_diario": {titulo: "Daily summary", cuerpo: func(d Datos) string {
 			return "Production " + n(d, "produccion") + " kWh · Consumption " + n(d, "consumo") + " kWh · Self-consumption " + n(d, "autoconsumo") + "%"
 		}},
@@ -183,6 +204,16 @@ var catalogo = map[Lang]map[string]entrada{
 		"corte_red_ok":     {titulo: "电网已恢复", cuerpo: func(d Datos) string { return "电网供电已恢复" }},
 		"bateria_baja":     {titulo: "电池电量低", cuerpo: func(d Datos) string { return "SOC " + n(d, "soc") + "%（保留 " + n(d, "reserva") + "%）" }},
 		"bateria_llena":    {titulo: "电池已满", cuerpo: func(d Datos) string { return "电池电量已达 " + n(d, "soc") + "%" }},
+		"carga_inicio": {titulo: "开始充电", cuerpo: func(d Datos) string {
+			cuerpo := s(d, "nombre", "充电桩") + " 正在充电"
+			if fin := n(d, "fin"); fin != "" {
+				cuerpo += "，预计 " + fin + " 结束"
+			}
+			return cuerpo
+		}},
+		"carga_fin": {titulo: "充电已结束", cuerpo: func(d Datos) string {
+			return s(d, "nombre", "充电桩") + " 已于 " + n(d, "fin") + " 结束充电"
+		}},
 		"resumen_diario": {titulo: "每日总结", cuerpo: func(d Datos) string {
 			return "发电 " + n(d, "produccion") + " kWh · 用电 " + n(d, "consumo") + " kWh · 自用 " + n(d, "autoconsumo") + "%"
 		}},

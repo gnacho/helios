@@ -23,6 +23,7 @@ type fakeHA struct {
 	states  map[string]ha.EntityState
 	history map[string][]ha.HistoryRow
 	stats   ha.Stats
+	calls   []string
 }
 
 func newFake() *fakeHA {
@@ -58,7 +59,17 @@ func (f *fakeHA) HistoryDuringPeriod(start, end, entityID string) ([]ha.HistoryR
 }
 
 func (f *fakeHA) CallService(domain, service string, data map[string]any) error {
+	f.calls = append(f.calls, domain+"/"+service)
 	return nil
+}
+
+func (f *fakeHA) called(s string) bool {
+	for _, c := range f.calls {
+		if c == s {
+			return true
+		}
+	}
+	return false
 }
 
 func testDB(t *testing.T) *db.DB {
