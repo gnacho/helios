@@ -258,6 +258,47 @@ func TestAjustesTopologyForbiddenForUser(t *testing.T) {
 	}
 }
 
+// TestAjustesTopologyRejectsInvalidKey: el form web debe aplicar la misma
+// validación de claves que PUT /api/config (charset y longitud) antes de
+// normalizar, y no debe tocar el KV con una clave inválida (#203).
+func TestAjustesTopologyRejectsInvalidKey(t *testing.T) {
+	u, r := ajustesTestUI(t)
+	cookie := doLoginAs(t, r, "nacho", "password1")
+
+	before, _ := u.DB.KVGet("install_config")
+
+	cases := []string{
+		"x[(console.info(1),'x')]", // caracteres peligrosos
+		"Solis",                    // mayúsculas fuera de charset
+		"un-clave-mucho-demasiado-larga-para-el-limite",
+	}
+	for _, key := range cases {
+		form := url.Values{
+			"inv.count":     {"1"},
+			"inv.0.key":     {key},
+			"inv.0.name":    {"Inyección"},
+			"inv.0.powerId": {"sensor.mal"},
+		}
+		rec := ajustesPostForm(t, r, cookie, "/ajustes/topology", form)
+		if rec.Code != http.StatusSeeOther {
+			t.Fatalf("key %q: status = %d", key, rec.Code)
+		}
+		loc := rec.Header().Get("Location")
+		if !strings.Contains(loc, "err=topologyKey") {
+			t.Fatalf("key %q: Location = %q (esperado err=topologyKey)", key, loc)
+		}
+		after, _ := u.DB.KVGet("install_config")
+		if after != before {
+			t.Fatalf("key %q: el KV cambió con una clave inválida", key)
+		}
+	}
+
+	rec := ajustesGetPath(t, r, cookie, "/ajustes?err=topologyKey")
+	if !strings.Contains(rec.Body.String(), T("es", "ajustes.topology.invalidKey")) {
+		t.Fatal("falta el mensaje de clave inválida en la página")
+	}
+}
+
 func TestAjustesProfileSave(t *testing.T) {
 	u, r := ajustesTestUI(t)
 	cookie := doLoginAs(t, r, "nacho", "password1")

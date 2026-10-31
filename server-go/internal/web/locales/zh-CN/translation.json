@@ -555,6 +555,7 @@
       "saved": "拓扑已保存。重启服务以应用订阅变更。",
       "savedRestart": "拓扑已保存。重启服务以更新实体订阅。",
       "saveError": "无法保存拓扑。请检查实体是否完整。",
+      "invalidKey": "逆变器 key 无效：只能用小写字母、数字和连字符，长度 1 到 20 个字符。",
       "inverters": "逆变器",
       "inverterLabel": "逆变器 {{n}}",
       "inverterNew": "逆变器 {{n}}",
