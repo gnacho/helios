@@ -41,6 +41,62 @@ func TestApplyScheduleBlockedWhenActive(t *testing.T) {
 	}
 }
 
+// TestApplyActionOffClearsActiveSchedule checks that an explicit off ends the
+// whole schedule: the running timer (planned end disappears) and the armed
+// future window (nothing reconnects at its start). Chargers without schedule
+// entities just switch off; "on" never touches the plan.
+func TestApplyActionOffClearsActiveSchedule(t *testing.T) {
+	ch := Charger{
+		Key: "main", Name: "Coche",
+		SwitchID:        "switch.c",
+		ScheduleArmID:   "input_boolean.a",
+		ScheduleTimerID: "timer.t",
+	}
+
+	// Carga programada en marcha: apagar corta la sesion y limpia el plan.
+	f := newFake()
+	f.set("switch.c", "on")
+	f.set("timer.t", "active")
+	if _, err := ApplyAction(f, ch, "off", nil); err != nil {
+		t.Fatalf("off en marcha: err = %v", err)
+	}
+	if !f.called("switch/turn_off") || !f.called("input_boolean/turn_off") || !f.called("timer/cancel") {
+		t.Fatalf("off debe apagar switch, arm y timer: %v", f.calls)
+	}
+
+	// Ventana futura armada: apagar tambien la desarma (no reconecta a su hora).
+	f = newFake()
+	f.set("switch.c", "off")
+	f.set("input_boolean.a", "on")
+	if _, err := ApplyAction(f, ch, "off", nil); err != nil {
+		t.Fatalf("off armado: err = %v", err)
+	}
+	if !f.called("input_boolean/turn_off") {
+		t.Fatalf("off debe desarmar la ventana futura: %v", f.calls)
+	}
+
+	// Sin programacion configurada (portatil): solo el switch, sin error.
+	f = newFake()
+	f.set("switch.c", "on")
+	bare := Charger{Key: "c2", Name: "Portatil", SwitchID: "switch.p"}
+	if _, err := ApplyAction(f, bare, "off", nil); err != nil {
+		t.Fatalf("off sin schedule: err = %v", err)
+	}
+	if len(f.calls) != 1 || !f.called("switch/turn_off") {
+		t.Fatalf("off sin schedule debe tocar solo el switch: %v", f.calls)
+	}
+
+	// "on" no toca el plan.
+	f = newFake()
+	f.set("input_boolean.a", "on")
+	if _, err := ApplyAction(f, ch, "on", nil); err != nil {
+		t.Fatalf("on: err = %v", err)
+	}
+	if f.called("input_boolean/turn_off") || f.called("timer/cancel") {
+		t.Fatalf("on no debe tocar el plan: %v", f.calls)
+	}
+}
+
 // TestChargerEntitiesIncludeTimer checks that the HA timer of the schedule is
 // subscribed: without it, GetState never sees the timer and the live view
 // cannot show the expected end while the scheduled charge runs.

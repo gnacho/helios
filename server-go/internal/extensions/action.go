@@ -210,6 +210,21 @@ func ApplyAction(extHA HA, charger Charger, action string, amps *float64) (float
 		if err := extHA.CallService("switch", service, map[string]any{"entity_id": charger.SwitchID}); err != nil {
 			return 0, err
 		}
+		// An explicit off ends any active schedule: the running session (timer)
+		// and the armed future window (nothing reconnects at its start time).
+		// Unconditional like ClearSchedule: HA ignores cancel on idle timers.
+		if action == "off" {
+			if boolIDRe.MatchString(charger.ScheduleArmID) {
+				if err := extHA.CallService("input_boolean", "turn_off", map[string]any{"entity_id": charger.ScheduleArmID}); err != nil {
+					return 0, err
+				}
+			}
+			if timerIDRe.MatchString(charger.ScheduleTimerID) {
+				if err := extHA.CallService("timer", "cancel", map[string]any{"entity_id": charger.ScheduleTimerID}); err != nil {
+					return 0, err
+				}
+			}
+		}
 		return 0, nil
 
 	case "amp":
