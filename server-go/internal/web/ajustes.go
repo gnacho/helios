@@ -791,6 +791,12 @@ func (u *UI) handleAjustesTopology(w http.ResponseWriter, r *http.Request) {
 	input.Weather = f.Get("env.weather")
 	input.WeatherTemp = f.Get("env.weatherTemp")
 
+	// Mismas reglas que PUT /api/config: validar antes de normalizar (#203).
+	if err := install.ValidateTopologyInput(input); err != nil {
+		ajustesRedirectFlag(w, r, "err", "topologyKey")
+		return
+	}
+
 	normalized := install.Normalize(input, u.Install.Get())
 
 	// Merge sobre el KV existente (la API machaca el body completo; el form

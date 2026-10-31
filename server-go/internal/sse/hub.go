@@ -19,8 +19,10 @@ type client struct {
 }
 
 // Hub gestiona los clientes SSE y el throttle de emisión.
-// Dos pools: `clients` recibe el mensaje SSE plano ya formateado (API React)
-// y `dsClients` recibe el payload CRUDO para endpoints Datastar (UI templ).
+// Dos pools con presupuesto independiente (MaxClients cada una): `clients`
+// recibe el mensaje SSE plano ya formateado (endpoint público /api/solar/stream
+// y /api/charger/stream) y `dsClients` recibe el payload CRUDO para endpoints
+// Datastar (UI templ). Un pool no puede hambrunar al otro (#206).
 type Hub struct {
 	mu        sync.Mutex
 	clients   map[*client]struct{}
@@ -44,15 +46,23 @@ func (h *Hub) count() int {
 	return len(h.clients) + len(h.dsClients)
 }
 
+// legacyCount devuelve los clientes de la pool legacy (la que atienden
+// ServeHTTP y los endpoints de API externa).
+func (h *Hub) legacyCount() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.clients)
+}
+
 // Count expone el total de clientes conectados (ambas pools).
 func (h *Hub) Count() int { return h.count() }
 
 // SubscribeDatastar registra un receptor del payload crudo (sin prefijo
-// "data: "). Devuelve nil si se alcanzó el máximo de clientes.
+// "data: "). Devuelve nil si su pool alcanzó el máximo de clientes.
 func (h *Hub) SubscribeDatastar() chan []byte {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if len(h.clients)+len(h.dsClients) >= MaxClients {
+	if len(h.dsClients) >= MaxClients {
 		return nil
 	}
 	c := &client{ch: make(chan []byte, 8)}
@@ -121,9 +131,9 @@ func (h *Hub) Broadcast() {
 	}
 }
 
-// ServeHTTP implementa GET /api/solar/stream.
+// ServeHTTP implementa GET /api/solar/stream (pool legacy, presupuesto propio).
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if h.count() >= MaxClients {
+	if h.legacyCount() >= MaxClients {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error":"demasiados clientes conectados"}`))

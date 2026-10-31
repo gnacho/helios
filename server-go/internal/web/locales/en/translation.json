@@ -558,6 +558,7 @@
       "saved": "Topology saved. Restart the service to apply subscription changes.",
       "savedRestart": "Topology saved. Restart the service so entity subscriptions change.",
       "saveError": "Could not save the topology. Check that the entities are complete.",
+      "invalidKey": "Invalid inverter key: use lowercase letters, numbers and hyphens, between 1 and 20 characters.",
       "inverters": "Inverters",
       "inverterLabel": "Inverter {{n}}",
       "inverterNew": "Inverter {{n}}",
