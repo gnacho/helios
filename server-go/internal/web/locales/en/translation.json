@@ -215,6 +215,8 @@
     "duration": "Duration",
     "schedule": "Schedule",
     "scheduled": "Scheduled",
+    "endsAt": "Charging until",
+    "stopSchedule": "Stop schedule",
     "ampsToast": "{{name}} current set to {{amps}} A",
     "imageEdit": "Change image (transparent PNG, recommended height 460 px; auto-rescaled)",
     "imageClear": "Remove image",
@@ -539,7 +541,9 @@
         "corte_red_ok": "Grid restored",
         "bateria_baja": "Low battery",
         "bateria_llena": "Battery full",
-        "resumen_diario": "Daily summary at sunset"
+        "resumen_diario": "Daily summary at sunset",
+        "carga_inicio": "Scheduled charge started",
+        "carga_fin": "Scheduled charge finished"
       }
     },
     "topology": {

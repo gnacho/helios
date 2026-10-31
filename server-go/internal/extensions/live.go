@@ -3,6 +3,8 @@ package extensions
 import (
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"helios-server/internal/ha"
@@ -51,6 +53,47 @@ type LiveCharger struct {
 	ScheduleStart string   `json:"scheduleStart,omitempty"`
 	ScheduleHours *float64 `json:"scheduleHours,omitempty"`
 	Scheduled     bool     `json:"scheduled,omitempty"`
+	// TimerRemainingS son los segundos que le quedan al timer HA de la carga
+	// programada (solo mientras está active): da la hora prevista de fin.
+	TimerRemainingS *int `json:"timerRemainingS,omitempty"`
+}
+
+// timerRemainingSeconds lee cuántos segundos le quedan a un timer helper de
+// HA. Prefiere finishes_at (RFC3339, presente mientras está active); si no
+// viene, cae al atributo remaining ("HH:MM:SS" o segundos planos).
+func timerRemainingSeconds(st ha.EntityState) (int, bool) {
+	if st.Attributes != nil {
+		if v, ok := st.Attributes["finishes_at"].(string); ok && v != "" {
+			if t, err := time.Parse(time.RFC3339, v); err == nil {
+				secs := int(time.Until(t).Seconds())
+				if secs < 0 {
+					secs = 0
+				}
+				return secs, true
+			}
+		}
+		if v, ok := st.Attributes["remaining"].(string); ok && v != "" {
+			parts := strings.Split(v, ":")
+			if len(parts) >= 1 && len(parts) <= 3 {
+				secs, bad := 0, false
+				for i, p := range parts {
+					n, err := strconv.Atoi(strings.TrimSpace(p))
+					if err != nil {
+						bad = true
+						break
+					}
+					secs += n * []int{3600, 60, 1}[i+3-len(parts)]
+				}
+				if !bad {
+					return secs, true
+				}
+			}
+			if n, err := strconv.Atoi(v); err == nil {
+				return n, true
+			}
+		}
+	}
+	return 0, false
 }
 
 func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
@@ -198,6 +241,13 @@ func ComputeOneChargerLive(h HA, c Charger) LiveCharger {
 	if c.ScheduleStartID != "" {
 		if st, ok := h.GetState(c.ScheduleStartID); ok {
 			out.ScheduleStart = st.State
+		}
+	}
+	if c.ScheduleTimerID != "" {
+		if st, ok := h.GetState(c.ScheduleTimerID); ok && st.State == "active" {
+			if secs, ok := timerRemainingSeconds(st); ok {
+				out.TimerRemainingS = &secs
+			}
 		}
 	}
 	if powerKw != nil {

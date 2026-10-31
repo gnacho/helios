@@ -215,6 +215,8 @@
     "duration": "Duración",
     "schedule": "Programar",
     "scheduled": "Programado",
+    "endsAt": "Cargando hasta las",
+    "stopSchedule": "Detener programación",
     "ampsToast": "Amperaje de {{name}} a {{amps}} A",
     "imageEdit": "Cambiar imagen (PNG con transparencia, alto recomendado 460 px; se reescala solo)",
     "imageClear": "Quitar imagen",
@@ -539,7 +541,9 @@
         "corte_red_ok": "Red recuperada",
         "bateria_baja": "Batería baja",
         "bateria_llena": "Batería llena",
-        "resumen_diario": "Resumen diario al anochecer"
+        "resumen_diario": "Resumen diario al anochecer",
+        "carga_inicio": "Carga programada iniciada",
+        "carga_fin": "Carga programada finalizada"
       }
     },
     "topology": {

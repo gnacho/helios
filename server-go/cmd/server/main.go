@@ -212,6 +212,15 @@ func startBackgroundLoops(database *db.DB, client *ha.Client, store *install.Sto
 			NoRespaldadaKw: live.NoRespaldadaKw,
 		}
 	}
+	// Cargadores con extensión activa: el motor vigila la carga programada
+	// (push de inicio/fin) leyendo sus entidades HA en cada tick.
+	engine.ChargersFn = func() []extensions.Charger {
+		cfg := extStore.Get()
+		if !extensions.ChargerActive(cfg) {
+			return nil
+		}
+		return cfg.CarCharger.Chargers
+	}
 
 	kpisFn := func() (alerts.KpisResumen, error) {
 		k, err := sol.GetKpis(client, solar.TodayStr(), solar.PriceConfig{})

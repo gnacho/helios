@@ -191,6 +191,11 @@ type chgSingleView struct {
 	PendingClearExpr string
 	// aria-pressed expressions
 	PressedExpr string
+	// Chip live: text, class and icon follow $chg.KEY.state so a charging
+	// charger never stays on "Idle" until the page is reloaded.
+	ChipStateExpr string
+	ChipTextExpr  string
+	ChipClassExpr string
 
 	HasAmps   bool
 	AmpsLabel string
@@ -210,6 +215,11 @@ type chgSingleView struct {
 	ScheduleCancel string
 	ScheduleArmed  bool
 	ScheduleText   string
+	// Schedule row live: form hides and the status line + Stop button show
+	// while the schedule is armed or the scheduled charge is running.
+	ScheduleShowExpr string
+	ScheduleTextExpr string
+	ScheduleFormExpr string
 
 	TempKnown bool
 	TempText  string
@@ -309,11 +319,29 @@ func chgSignalOf(lang string, l extensions.LiveCharger) map[string]any {
 		"tempText":    tempText,
 		"switchOn":    switchOn,
 		"amps":        amps,
+		// Programación: el estado del armado y la línea visible (ventana
+		// planeada u hora prevista de fin mientras carga).
+		"scheduleArmed": l.Scheduled,
+		"scheduleText":  chgScheduleText(lang, l),
 		// Numeric twins for the count-up tween.
 		"powerKw":    powerKw,
 		"sessionKwh": sessionKwh,
 		"totalKwh":   totalKwh,
 	}
+}
+
+// chgScheduleText builds the green status line of the schedule row: the
+// planned window while armed, the expected end while the scheduled charge is
+// running (timer active). Empty when there is nothing scheduled.
+func chgScheduleText(lang string, l extensions.LiveCharger) string {
+	if l.Scheduled && l.ScheduleStart != "" {
+		return T(lang, "cargador.scheduled") + " " + chgClock(l.ScheduleStart) + " · " + fmtInt(lang, math.Round(derefFloat(l.ScheduleHours, 0))) + " h"
+	}
+	if l.TimerRemainingS != nil {
+		end := time.Now().Add(time.Duration(*l.TimerRemainingS) * time.Second)
+		return T(lang, "cargador.endsAt") + " " + end.Format("15:04")
+	}
+	return ""
 }
 
 func chgStateText(lang, state string, l extensions.LiveCharger) string {
@@ -326,14 +354,20 @@ func chgStateText(lang, state string, l extensions.LiveCharger) string {
 	return T(lang, "common.idle")
 }
 
+const (
+	chgChipChargingCls  = "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+	chgChipConnectedCls = "bg-amber-500/12 text-amber-600 dark:text-amber-400"
+	chgChipIdleCls      = "bg-surface-2 text-muted"
+)
+
 func chgChipFor(lang, state string) chgChip {
 	switch state {
 	case "charging":
-		return chgChip{State: state, Cls: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"}
+		return chgChip{State: state, Cls: chgChipChargingCls}
 	case "connected":
-		return chgChip{State: state, Cls: "bg-amber-500/12 text-amber-600 dark:text-amber-400"}
+		return chgChip{State: state, Cls: chgChipConnectedCls}
 	}
-	return chgChip{State: "idle", Cls: "bg-surface-2 text-muted"}
+	return chgChip{State: "idle", Cls: chgChipIdleCls}
 }
 
 // chgDayCurveChart ports the React AreaChart of the charger day curve.
@@ -981,6 +1015,13 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	}
 	sv.Chip = chgChipFor(lang, state)
 	sv.Chip.Text = chgStateText(lang, state, live)
+	// Chip reactivo: la señal $chg.KEY.state manda en texto, color e icono
+	// (el render del servidor es solo el valor inicial).
+	stSig := "$chg." + charger.Key + ".state"
+	sv.ChipStateExpr = stSig
+	sv.ChipTextExpr = "$chg." + charger.Key + ".stateText"
+	sv.ChipClassExpr = stSig + " == 'charging' ? '" + jsQuote(chgChipChargingCls) + "' : (" + stSig +
+		" == 'connected' ? '" + jsQuote(chgChipConnectedCls) + "' : '" + jsQuote(chgChipIdleCls) + "')"
 	if charger.ImageURL != "" {
 		sv.HasImage = true
 		sv.ImageURL = charger.ImageURL
@@ -1097,6 +1138,13 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	// Fila de programación (misma en ambos cargadores): hora de inicio +
 	// duración + Programar. El portátil la aplica en su hardware con los dps
 	// 118/119 vía helpers; el wall la arma con el input_datetime y el timer.
+	// Las expresiones van en ambas ramas: con la programación armada (o la
+	// carga programada en marcha) el formulario se oculta y aparece el estado
+	// con el botón Detener, todo en vivo vía $chg.KEY.
+	schedSig := "$chg." + charger.Key
+	sv.ScheduleShowExpr = schedSig + ".scheduleText != ''"
+	sv.ScheduleTextExpr = schedSig + ".scheduleText"
+	sv.ScheduleFormExpr = "!(" + schedSig + ".scheduleArmed) && !(" + schedSig + ".scheduleText != '')"
 	if charger.DelayID != "" && charger.DurationID != "" {
 		sv.HasSchedule = true
 		sv.ScheduleLabel = T(lang, "cargador.schedule")
@@ -1116,14 +1164,14 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 				start = live.ScheduleStart
 				hours = live.ScheduleHours
 			}
+			// Estado inicial de la línea verde: ventana planeada u hora
+			// prevista de fin si la carga programada ya está en marcha.
+			sv.ScheduleText = chgScheduleText(lang, live)
 		}
 		sv.ScheduleHour, sv.ScheduleMinute = buildSchedStartSelects(charger.Key, start, time.Now())
 		sv.ScheduleDur = buildSchedDurSelect(charger.Key, hours)
 		sv.ScheduleClick = chgSchedClickExpr(charger.Key)
 		sv.ScheduleCancel = "$charger = '" + charger.Key + "'; $action = 'unschedule'; $ui.error = ''; @post('/ui/charger/action')"
-		if sv.ScheduleArmed {
-			sv.ScheduleText = T(lang, "cargador.scheduled") + " " + chgClock(start) + " · " + fmtInt(lang, math.Round(derefFloat(hours, 0))) + " h"
-		}
 	}
 
 	if hasLive && live.TempC != nil {
