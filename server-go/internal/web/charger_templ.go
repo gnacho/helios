@@ -1562,7 +1562,7 @@ func chgHero(v chargerView, s *chgSingleView) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 135, "\" data-indicator=\"$ui.busy\" data-attr:disabled=\"$ui.busy\" class=\"inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-app bg-surface px-3 text-xs font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-app disabled:opacity-50\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 135, "\" data-indicator=\"$ui.busy\" data-attr:disabled=\"$ui.busy\" class=\"inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-500/15 disabled:opacity-50 dark:text-rose-400\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
