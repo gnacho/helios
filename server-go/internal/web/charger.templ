@@ -193,12 +193,10 @@ templ chgHero(v chargerView, s *chgSingleView) {
 	<section class="helios-card col-span-12 flex flex-col gap-4 p-5 shadow-card dark:shadow-card-dark sm:p-6">
 		<div class="flex flex-wrap items-center gap-3">
 			<h2 class="text-[17px] font-semibold text-app">{ s.Name }</h2>
-			<!-- El chip sigue a $chg.KEY.state (texto, color e icono): un
-			     cargador cargando no se queda en "En reposo" hasta recargar. -->
-			<span class={ "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold", s.Chip.Cls } data-attr:class={ s.ChipClassExpr }>
-				<span data-show={ s.ChipStateExpr + " == 'charging'" }>@iconBatteryCharging("h-[14px] w-[14px]")</span>
-				<span data-show={ s.ChipStateExpr + " == 'connected'" }>@iconCable("h-[14px] w-[14px]")</span>
-				<span data-show={ s.ChipStateExpr + " != 'charging' && " + s.ChipStateExpr + " != 'connected'" }>@iconPlugZap("h-[14px] w-[14px]")</span>
+			<!-- El chip sigue a $chg.KEY.state (texto y color): un cargador
+			     cargando no se queda en "En reposo" hasta recargar. Sin icono:
+			     el pill es estrecho en movil y el icono lo partia en dos filas. -->
+			<span class={ "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold", s.Chip.Cls } data-attr:class={ s.ChipClassExpr }>
 				<span data-text={ s.ChipTextExpr }>{ s.Chip.Text }</span>
 			</span>
 			if v.IsAdmin {

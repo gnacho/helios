@@ -23,6 +23,7 @@ var (
 	ErrChargerNoSchedule    = errors.New("el cargador no tiene programación configurada")
 	ErrChargerScheduleTime  = errors.New("hora de inicio no válida (HH:MM)")
 	ErrChargerScheduleHours = errors.New("duración fuera de rango (1-12 h)")
+	ErrChargerScheduleActive = errors.New("ya hay una programación activa: detenla antes de programar otra")
 )
 
 var (
@@ -82,6 +83,16 @@ func ApplySchedule(extHA HA, charger Charger, at string, hours float64) error {
 		!numIDRe.MatchString(charger.ScheduleDurationID) ||
 		!boolIDRe.MatchString(charger.ScheduleArmID) {
 		return ErrChargerNoSchedule
+	}
+	// Una programación vigente (armada o con la carga en marcha por timer)
+	// bloquea programar otra: hay que detenerla antes.
+	if st, ok := extHA.GetState(charger.ScheduleArmID); ok && st.State == "on" {
+		return ErrChargerScheduleActive
+	}
+	if timerIDRe.MatchString(charger.ScheduleTimerID) {
+		if st, ok := extHA.GetState(charger.ScheduleTimerID); ok && st.State == "active" {
+			return ErrChargerScheduleActive
+		}
 	}
 	now := time.Now()
 	start, end, err := scheduleWindow(at, hours, now)

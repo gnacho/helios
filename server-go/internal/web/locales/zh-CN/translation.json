@@ -206,6 +206,7 @@
     "errorAmps": "电流超出范围 (6-32 A)",
     "errorDelay": "开始时间超出范围 (0-24 小时)",
     "errorDuration": "时长超出范围 (1-12 小时)",
+    "errorScheduleActive": "已有一个定时任务：请先停止再重新定时",
     "powerToastOn": "{{name}} 已开启",
     "powerToastOff": "{{name}} 已关闭",
     "amps": "充电电流",

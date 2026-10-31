@@ -109,17 +109,19 @@ func TestChargerChipAndScheduleBindings(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	// Chip: texto, clase e iconos siguen a $chg.main.state (templ escapa las
-	// comillas simples como &#39;).
+	// Chip: texto y clase siguen a $chg.main.state (templ escapa las comillas
+	// simples como &#39;). Sin iconos: el pill partia en dos filas en movil.
 	for _, want := range []string{
 		`data-text="$chg.main.stateText"`,
 		`data-attr:class="$chg.main.state == &#39;charging&#39;`,
-		`$chg.main.state == &#39;connected&#39;`,
-		`data-show="$chg.main.state == &#39;charging&#39;"`,
+		`whitespace-nowrap`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("al chip le falta %q", want)
 		}
+	}
+	if strings.Contains(body, `data-show="$chg.main.state == &#39;charging&#39;"`) {
+		t.Fatal("el chip no debe llevar iconos con data-show")
 	}
 	// Fila de programación: formulario condicional y estado en vivo.
 	for _, want := range []string{

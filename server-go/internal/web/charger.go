@@ -811,6 +811,8 @@ func chargerActionError(lang string, err error) string {
 		return T(lang, "cargador.errorDelay")
 	case errors.Is(err, extensions.ErrChargerDuration):
 		return T(lang, "cargador.errorDuration")
+	case errors.Is(err, extensions.ErrChargerScheduleActive):
+		return T(lang, "cargador.errorScheduleActive")
 	}
 	return T(lang, "common.error")
 }

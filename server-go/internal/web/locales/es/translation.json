@@ -206,6 +206,7 @@
     "errorAmps": "Amperaje fuera de rango (6-32 A)",
     "errorDelay": "Hora de inicio fuera de rango (0-24 h)",
     "errorDuration": "Duración fuera de rango (1-12 h)",
+    "errorScheduleActive": "Ya hay una programación activa: deténla antes de programar otra",
     "powerToastOn": "{{name}} encendido",
     "powerToastOff": "{{name}} apagado",
     "amps": "Amperaje",

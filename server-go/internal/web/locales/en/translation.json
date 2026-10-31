@@ -206,6 +206,7 @@
     "errorAmps": "Current out of range (6-32 A)",
     "errorDelay": "Start time out of range (0-24 h)",
     "errorDuration": "Duration out of range (1-12 h)",
+    "errorScheduleActive": "A schedule is already active: stop it before scheduling another",
     "powerToastOn": "{{name}} turned on",
     "powerToastOff": "{{name}} turned off",
     "amps": "Current (A)",
