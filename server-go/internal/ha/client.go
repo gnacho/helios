@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -398,7 +399,7 @@ func (c *Client) handle(msg haMessage, ws *websocket.Conn) {
 			go c.OnConnected()
 		}
 		if len(ids) > 0 {
-			go c.SubscribeEntities(ids)
+			go c.resubscribe(ids)
 		}
 	case "auth_invalid":
 		msgText := "token rechazado"
@@ -547,17 +548,51 @@ func (c *Client) Call(message map[string]any) (json.RawMessage, error) {
 	return raw, nil
 }
 
+// SubscribeEntities actualiza la lista de entidades vigiladas. Con conexión y
+// lista equivalente no reenvía el comando: cada subscribe_entities apila una
+// suscripción nueva en HA y un guardado sin cambios no debe apilar nada.
+// Sin conexión solo almacena la lista: auth_ok la reenvía al reconectar.
 func (c *Client) SubscribeEntities(ids []string) error {
+	c.mu.Lock()
+	same := c.connected && sameIDs(c.subscribed, ids)
+	c.subscribed = ids
+	c.mu.Unlock()
+	if same {
+		return nil
+	}
+	if !c.IsConnected() {
+		return nil
+	}
+	return c.subscribe(ids)
+}
+
+// resubscribe reenvía el comando sin deduplicar: tras auth_ok HA ha perdido la
+// suscripción anterior aunque la lista no haya cambiado.
+func (c *Client) resubscribe(ids []string) error {
 	c.mu.Lock()
 	c.subscribed = ids
 	c.mu.Unlock()
+	return c.subscribe(ids)
+}
 
+func (c *Client) subscribe(ids []string) error {
 	_, err := c.Call(map[string]any{"type": "subscribe_entities", "entity_ids": ids})
 	if err != nil {
 		c.emitError("subscribe_entities: " + err.Error())
 		return err
 	}
 	return nil
+}
+
+func sameIDs(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	x := slices.Clone(a)
+	y := slices.Clone(b)
+	slices.Sort(x)
+	slices.Sort(y)
+	return slices.Equal(x, y)
 }
 
 func (c *Client) CallService(domain, service string, data map[string]any) error {

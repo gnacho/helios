@@ -299,13 +299,21 @@ func NormalizeConfig(raw map[string]any, base Config) Config {
 // Store mantiene la configuración resuelta.
 type Store struct {
 	current Config
+	// OnChange, si está asignado, se invoca tras cada Set. main.go lo usa para
+	// re-suscribir en HA las entidades de la config nueva sin reiniciar (#201).
+	OnChange func()
 }
 
 func NewStore() *Store {
 	return &Store{current: GenericExtensions}
 }
 
-func (s *Store) Set(c Config) { s.current = c }
+func (s *Store) Set(c Config) {
+	s.current = c
+	if s.OnChange != nil {
+		s.OnChange()
+	}
+}
 
 func (s *Store) Get() Config { return s.current }
 
