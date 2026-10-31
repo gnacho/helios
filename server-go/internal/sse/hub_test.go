@@ -150,6 +150,91 @@ func TestMaxClientsRejected(t *testing.T) {
 	}
 }
 
+// TestMaxClientsPerPool: los dos pools tienen presupuesto independiente (#206).
+// Llenar la pool legacy (API externa) no debe bloquear la UI templ, y llenar la
+// pool Datastar no debe bloquear los consumidores del endpoint legacy.
+func TestMaxClientsPerPool(t *testing.T) {
+	hub := NewHub(payloadFn)
+	srv := httptest.NewServer(hub)
+	defer srv.Close()
+
+	var conns []*http.Response
+	defer func() {
+		for _, c := range conns {
+			c.Body.Close()
+		}
+	}()
+
+	// Pool legacy llena.
+	for i := 0; i < MaxClients; i++ {
+		resp, err := http.Get(srv.URL)
+		if err != nil {
+			t.Fatalf("legacy get %d: %v", i, err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("legacy get %d: status = %d", i, resp.StatusCode)
+		}
+		conns = append(conns, resp)
+	}
+
+	// Otra conexión legacy se rechaza.
+	resp, err := http.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("legacy extra: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("legacy extra: status = %d (esperado 429)", resp.StatusCode)
+	}
+
+	// La pool Datastar sigue aceptando: la legacy no puede hambrunarla.
+	ch := hub.SubscribeDatastar()
+	if ch == nil {
+		t.Fatal("Datastar devolvió nil con la pool legacy llena (presupuesto compartido)")
+	}
+	hub.UnsubscribeDatastar(ch)
+
+	// Pool Datastar llena: la legacy sigue aceptando conexiones.
+	var dsChans []chan []byte
+	for i := 0; i < MaxClients; i++ {
+		c := hub.SubscribeDatastar()
+		if c == nil {
+			t.Fatalf("datastar subscribe %d devolvió nil", i)
+		}
+		dsChans = append(dsChans, c)
+	}
+	if hub.SubscribeDatastar() != nil {
+		t.Fatal("datastar extra debería devolver nil")
+	}
+	for _, c := range dsChans {
+		hub.UnsubscribeDatastar(c)
+	}
+
+	// Libero la pool legacy para comprobar que vuelve a aceptar. El servidor
+	// da de baja al cliente cuando su handler sale (ctx.Done), no al cerrar
+	// el body desde el cliente: espero acotadamente a que la pool se vacíe.
+	for _, c := range conns {
+		c.Body.Close()
+	}
+	conns = nil
+	deadline := time.Now().Add(2 * time.Second)
+	for hub.legacyCount() > 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if hub.legacyCount() > 0 {
+		t.Fatal("la pool legacy no se vació al cerrar las conexiones")
+	}
+
+	respOK, err := http.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("legacy tras datastar llena: %v", err)
+	}
+	respOK.Body.Close()
+	if respOK.StatusCode != http.StatusOK {
+		t.Fatalf("legacy tras datastar llena: status = %d (esperado 200)", respOK.StatusCode)
+	}
+}
+
 // TestBroadcastReachesDatastar: la UI templ solo suscribe en el pool Datastar,
 // sin clientes legacy. Broadcast salía antes de recorrer esa pool (early
 // return si h.clients estaba vacío), así que el stream se quedaba congelado en
