@@ -5,6 +5,36 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.6] - 2026-10-31
+
+### Added
+
+- **La tarjeta del cargador avisa de la programación.** Al programar una carga,
+  la tarjeta muestra "Programado HH:MM · X h" con un botón "Detener
+  programación", y el formulario desaparece hasta que cancelas el plan. Cuando
+  la carga programada está en marcha, la tarjeta enseña la hora de fin
+  ("Cargando hasta las HH:MM").
+- **Avisos de inicio y fin de carga programada.** Dos notificaciones push nuevas
+  (activadas por defecto) avisan cuando arranca la carga programada y cuando
+  termina. Las cargas manuales no avisan.
+
+### Fixed
+
+- **El estado del cargador se actualiza solo.** La tarjeta pasaba de "En reposo"
+  a "Cargando" solo al recargar la página: ahora el cambio llega al momento por
+  el canal de eventos.
+- **Apagar el cargador cancela la programación activa.** Antes, al apagar
+  durante una carga programada, el aparato se volvía a conectar solo a la hora
+  prevista. Ahora apagar corta la carga y elimina el plan. El botón "Detener
+  programación" cancela solo el plan y deja la carga en marcha.
+- **No se puede programar una segunda carga con otra ya activa.** La tarjeta lo
+  impedía por su cuenta, pero el servidor aceptaba el segundo plan: ahora
+  responde con un aviso claro.
+- **Las entidades nuevas de Home Assistant funcionan sin reiniciar.** Al cambiar
+  una entidad en la configuración (por ejemplo el temporizador de la
+  programación), el servidor la empieza a leer al guardar. Antes hacía falta
+  reiniciar el servicio.
+
 ## [1.2.5] - 2026-10-30
 
 ### Added
