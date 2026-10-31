@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 
@@ -112,11 +113,18 @@ func main() {
 
 		client.OnConnected = func() {
 			log.Printf("[ha] conectado a %s", ha.LogSafeURL(cfg.HAOSURL))
-			ids := append(store.LiveEntities(), extensions.ChargerEntities(extStore.Get())...)
-			ids = append(ids, extensions.BydEntities(extStore.Get())...)
-			if err := client.SubscribeEntities(ids); err != nil {
+			if err := client.SubscribeEntities(haSubscribeIDs(store, extStore.Get())); err != nil {
 				log.Printf("[ha] subscribe: %v", err)
 			}
+		}
+		// Al guardar la config de extensions, las entidades nuevas entran en la
+		// suscripción sin reiniciar el servicio (#201).
+		extStore.OnChange = func() {
+			go func() {
+				if err := client.SubscribeEntities(haSubscribeIDs(store, extStore.Get())); err != nil {
+					log.Printf("[ha] resubscribe: %v", err)
+				}
+			}()
 		}
 		client.OnDisconnect = func() { log.Printf("[ha] desconectado") }
 		client.OnFatal = func(msg string) { log.Printf("[ha] fatal: %s", msg) }
@@ -195,6 +203,15 @@ func newHTTPServer(addr string, handler http.Handler) *http.Server {
 		MaxHeaderBytes:    64 << 10,
 		// WriteTimeout stays disabled: SSE streams are long-lived.
 	}
+}
+
+// haSubscribeIDs une las entidades del panel, de los cargadores y de BYD para
+// la suscripción a HA (cada lista ya viene deduplicada; se deduplica la unión).
+func haSubscribeIDs(store *install.Store, extCfg extensions.Config) []string {
+	ids := append(store.LiveEntities(), extensions.ChargerEntities(extCfg)...)
+	ids = append(ids, extensions.BydEntities(extCfg)...)
+	slices.Sort(ids)
+	return slices.Compact(ids)
 }
 
 // startBackgroundLoops arranca los ticks del motor de alertas, la acumulación
