@@ -206,7 +206,7 @@ templ inverterCardsRow(d dashboardView) {
 templ inverterCard(d dashboardView, inv invCardModel, index int) {
 	<a href={ templ.URL("/inversores?inv=" + inv.Key) } class="helios-card group w-full p-5 text-left shadow-card transition-transform hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] dark:shadow-card-dark">
 		<div class="flex items-center gap-3">
-			<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={ "background-color: " + inv.Color + "1F; color: " + inv.Color }>
+			<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={ "background-color: " + colorSoft(inv.Color) + "; color: " + inv.Color }>
 				@iconZap("h-[18px] w-[18px]")
 			</span>
 			<div class="min-w-0 flex-1">

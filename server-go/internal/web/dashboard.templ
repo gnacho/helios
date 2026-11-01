@@ -120,10 +120,10 @@ templ livePowerStrip(d dashboardView) {
 templ stripGrid(d dashboardView) {
 	<div class="flex items-center gap-3 border-l border-t border-app px-4 py-3 sm:px-5 lg:border-t-0">
 		<span
-			data-style-background-color={ "$live.gridColor + '1F'" }
+			data-style-background-color="$live.gridColorSoft"
 			data-style-color={ "$live.gridColor" }
 			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-			style={ "background-color: " + d.GridColor + "1F; color: " + d.GridColor }
+			style={ "background-color: " + colorSoft(d.GridColor) + "; color: " + d.GridColor }
 		>
 			<span data-show="$live.gridExporting" class={ templ.KV("hidden", !d.GridExporting) }>@iconArrowUpFromLine("h-[18px] w-[18px]")</span>
 			<span data-show="!$live.gridExporting" class={ templ.KV("hidden", d.GridExporting) }>@iconArrowDownToLine("h-[18px] w-[18px]")</span>
@@ -151,7 +151,7 @@ templ stripValue(
 	<div class={ "flex items-center gap-3 px-4 py-3 sm:px-5", extraClass }>
 		<span
 			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-			style={ "background-color: " + color + "1F; color: " + pickColor(iconColor, color) }
+			style={ "background-color: " + colorSoft(color) + "; color: " + pickColor(iconColor, color) }
 		>
 			@icon
 		</span>
@@ -232,7 +232,7 @@ templ kpiCard(d dashboardView, label string, accent string, href string, liveDot
 
 templ kpiInner(d dashboardView, label string, accent string, live bool, icon templ.Component, animID string, animTarget string, animInitial float64, animDec int, unit string) {
 	<div class="flex items-center justify-between">
-		<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + accent + "1F; color: " + accent }>
+		<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + colorSoft(accent) + "; color: " + accent }>
 			@icon
 		</span>
 		if live {

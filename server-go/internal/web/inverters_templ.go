@@ -582,9 +582,9 @@ func invHeroCard(v inversoresView, h invHeroModel) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var29 string
-		templ_7745c5c3_Var29, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + h.Color + "1F; color: " + h.Color)
+		templ_7745c5c3_Var29, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + colorSoft(h.Color) + "; color: " + h.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 123, Col: 145}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 123, Col: 154}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -887,9 +887,9 @@ func invKpiCard(v inversoresView, k invKpiView, idx int) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var46 string
-		templ_7745c5c3_Var46, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + k.Accent + "1F; color: " + k.Accent)
+		templ_7745c5c3_Var46, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + colorSoft(k.Accent) + "; color: " + k.Accent)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 191, Col: 135}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/inverters.templ`, Line: 191, Col: 144}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 		if templ_7745c5c3_Err != nil {

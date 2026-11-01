@@ -9,7 +9,7 @@ import (
 )
 
 func TestSocGaugeGeometry(t *testing.T) {
-	pal := newPalette(false)
+	pal := newPalette()
 	g := buildSocGauge("es", 84.6, pal)
 	// Track: arco completo 240 grados desde 150.
 	if !strings.HasPrefix(g.TrackPath, "M ") || !strings.Contains(g.TrackPath, "A 100.00 100.00 0 1 1") {
@@ -62,7 +62,7 @@ func socTestPoints() []solar.DayPoint {
 }
 
 func TestBuildSocDayChart(t *testing.T) {
-	pal := newPalette(false)
+	pal := newPalette()
 	m := buildSocDayChart("es", socTestPoints(), 12, pal)
 	// Dominio fijo 0..100: 6 ticks Y.
 	if len(m.TicksY) != 6 || m.TicksY[1].Label != "20" {
@@ -91,7 +91,7 @@ func TestBuildSocDayChart(t *testing.T) {
 }
 
 func TestBuildBatPowerChart(t *testing.T) {
-	pal := newPalette(false)
+	pal := newPalette()
 	// 15 min = 3 buckets de 5 min. Carga +1.5 constante el primer tramo,
 	// descarga -1 el segundo, 0 el tercero.
 	points := []solar.DayPoint{
@@ -135,7 +135,7 @@ func TestBuildBatPowerChart(t *testing.T) {
 }
 
 func TestBuildWeekBalance(t *testing.T) {
-	pal := newPalette(false)
+	pal := newPalette()
 	rows := testDailyRows() // 3 filas de octubre 2026 (jue, vie, sáb)
 	m := buildWeekBalance("es", rows, pal)
 	if len(m.Days) != 3 {

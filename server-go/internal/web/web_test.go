@@ -337,6 +337,30 @@ func TestSystemThemeScriptListensForChanges(t *testing.T) {
 	}
 }
 
+func TestPaletteFollowsThemeInAuto(t *testing.T) {
+	_, r, _ := testUI(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+
+	// Tema "auto": la paleta no puede pintar hexes lado servidor (el server
+	// no ve el esquema del SO). Debe emitir var(--c-*) y dejar el lado
+	// claro/oscuro en la hoja de estilos.
+	if !strings.Contains(body, "var(--c-solar)") {
+		t.Fatal("el dashboard no emite var(--c-solar) en tema auto")
+	}
+	if strings.Contains(body, "#F59E0B1F") {
+		t.Fatal("el dashboard lleva un hex literal con alpha (paleta clara fija)")
+	}
+}
+
 func TestLogout(t *testing.T) {
 	_, r, _ := testUI(t)
 	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))

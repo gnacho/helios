@@ -1331,9 +1331,9 @@ func inverterCard(d dashboardView, inv invCardModel, index int) templ.Component 
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var76 string
-		templ_7745c5c3_Var76, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + inv.Color + "1F; color: " + inv.Color)
+		templ_7745c5c3_Var76, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + colorSoft(inv.Color) + "; color: " + inv.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 209, Col: 146}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/flow.templ`, Line: 209, Col: 155}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 		if templ_7745c5c3_Err != nil {

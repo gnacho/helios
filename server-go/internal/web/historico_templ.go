@@ -750,9 +750,9 @@ func histKpiCard(v historicoView, k histKpiView, idx int) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var38 string
-		templ_7745c5c3_Var38, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + k.Color + "1F; color: " + k.Color)
+		templ_7745c5c3_Var38, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + colorSoft(k.Color) + "; color: " + k.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 145, Col: 133}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 145, Col: 142}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -3488,9 +3488,9 @@ func recordCardView(v historicoView, rc recordCard) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var202 string
-		templ_7745c5c3_Var202, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + rc.Color + "1F; color: " + rc.Color)
+		templ_7745c5c3_Var202, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + colorSoft(rc.Color) + "; color: " + rc.Color)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 528, Col: 146}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/historico.templ`, Line: 528, Col: 155}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var202))
 		if templ_7745c5c3_Err != nil {

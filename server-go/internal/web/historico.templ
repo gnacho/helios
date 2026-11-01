@@ -142,7 +142,7 @@ func iconForHistKpi(key string, class string) templ.Component {
 templ histKpiCard(v historicoView, k histKpiView, idx int) {
 	<div class="helios-card h-full p-4 shadow-card dark:shadow-card-dark">
 		<div class="flex items-center justify-between">
-			<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + k.Color + "1F; color: " + k.Color }>
+			<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + colorSoft(k.Color) + "; color: " + k.Color }>
 				@iconForHistKpi(k.IconKey, "h-[17px] w-[17px]")
 			</span>
 			if k.HasDelta {
@@ -525,7 +525,7 @@ func heatStrokeW(isToday bool) string {
 // recordCardView ports one "récords y curiosidades" card.
 templ recordCardView(v historicoView, rc recordCard) {
 	<div class="helios-card group flex items-start gap-3.5 p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lg dark:shadow-card-dark">
-		<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={ "background-color: " + rc.Color + "1F; color: " + rc.Color }>
+		<span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={ "background-color: " + colorSoft(rc.Color) + "; color: " + rc.Color }>
 			@iconForRecord(rc.IconKey, "h-[21px] w-[21px]")
 		</span>
 		<div class="min-w-0">

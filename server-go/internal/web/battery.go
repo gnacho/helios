@@ -449,7 +449,7 @@ func (u *UI) handleBateria(w http.ResponseWriter, r *http.Request) {
 	p := u.baseProps(r, userID, "/bateria", "")
 	p.Title = T(lang, "nav.bateria")
 
-	pal := newPalette(p.Theme == "dark")
+	pal := newPalette()
 	m := u.buildDashboard(pal)
 	if k, ok := u.exactDayKpis(m); ok {
 		m.Kpis = k
