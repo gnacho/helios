@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 
 	"helios-server/internal/install"
 )
@@ -32,15 +33,22 @@ func (s *Server) handleGetInstall(w http.ResponseWriter, r *http.Request) {
 	for _, id := range t.Consumption.PowerIDs {
 		rows = append(rows, map[string]any{"role": "consumption", "entidad": id})
 	}
-	if t.Battery.Enabled {
-		if t.Battery.PowerID != "" {
-			rows = append(rows, map[string]any{"role": "battery_power", "entidad": t.Battery.PowerID})
+	for i, b := range t.BatteryList() {
+		if !b.Enabled {
+			continue
 		}
-		if t.Battery.SocID != "" {
-			rows = append(rows, map[string]any{"role": "battery_soc", "entidad": t.Battery.SocID})
+		suf := ""
+		if i > 0 {
+			suf = "_" + strconv.Itoa(i)
 		}
-		if t.Battery.StateID != "" {
-			rows = append(rows, map[string]any{"role": "battery_state", "entidad": t.Battery.StateID})
+		if b.PowerID != "" {
+			rows = append(rows, map[string]any{"role": "battery_power" + suf, "entidad": b.PowerID})
+		}
+		if b.SocID != "" {
+			rows = append(rows, map[string]any{"role": "battery_soc" + suf, "entidad": b.SocID})
+		}
+		if b.StateID != "" {
+			rows = append(rows, map[string]any{"role": "battery_state" + suf, "entidad": b.StateID})
 		}
 	}
 	if t.Grid.Mode == "attrs" && t.Grid.AttrsID != nil {
@@ -76,6 +84,12 @@ func (s *Server) handleGetInstall(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	bats := t.BatteryList()
+	batViews := make([]map[string]any, 0, len(bats))
+	for _, b := range bats {
+		batViews = append(batViews, map[string]any{"enabled": b.Enabled, "capacityKwh": b.CapacityKwh})
+	}
+
 	entitiesView := s.Install.Entities()
 	energyView := s.Install.EnergyEntities()
 
@@ -84,6 +98,7 @@ func (s *Server) handleGetInstall(w http.ResponseWriter, r *http.Request) {
 		"topology":       t,
 		"inverters":      invViews,
 		"battery":        map[string]any{"enabled": t.Battery.Enabled, "capacityKwh": t.Battery.CapacityKwh},
+		"batteries":      batViews,
 		"grid":           map[string]any{"mode": t.Grid.Mode},
 		"entities":       rows,
 		"energyEntities": energyView,

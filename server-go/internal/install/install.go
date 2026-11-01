@@ -77,8 +77,11 @@ type EnergyConfig struct {
 }
 
 type Topology struct {
-	Inverters     []Inverter        `json:"inverters"`
-	Battery       BatteryConfig     `json:"battery"`
+	Inverters []Inverter    `json:"inverters"`
+	Battery   BatteryConfig `json:"battery"`
+	// Batteries es la lista completa desde #197; Battery se conserva como la
+	// primera (retrocompat JSON y para instalaciones con una sola batería).
+	Batteries     []BatteryConfig   `json:"batteries,omitempty"`
 	Grid          GridConfig        `json:"grid"`
 	Consumption   ConsumptionConfig `json:"consumption"`
 	Energy        EnergyConfig      `json:"energy"`
@@ -86,6 +89,30 @@ type Topology struct {
 	Weather       string            `json:"weather"`
 	WeatherTemp   string            `json:"weatherTemp"`
 	StatusAttrsID *string           `json:"statusAttrsId"`
+}
+
+// BatteryList devuelve la lista efectiva de baterías: Batteries si viene
+// poblada (config nueva), si no la batería única (blobs antiguos y perfiles).
+func (t Topology) BatteryList() []BatteryConfig {
+	if len(t.Batteries) > 0 {
+		return t.Batteries
+	}
+	return []BatteryConfig{t.Battery}
+}
+
+// BatteryEnabled dice si hay alguna batería habilitada.
+func (t Topology) BatteryEnabled() bool {
+	for _, b := range t.BatteryList() {
+		if b.Enabled {
+			return true
+		}
+	}
+	return false
+}
+
+// isEmpty marca una batería extra sin ningún dato: candidata a poda.
+func (b BatteryConfig) isEmpty() bool {
+	return !b.Enabled && b.PowerID == "" && b.StateID == "" && b.SocID == "" && b.CapacityKwh == 0
 }
 
 type EntitiesView struct {
@@ -271,8 +298,11 @@ func (s *Store) Get() Topology {
 
 // TopologyInput mirrors the admin-editable JSON (all fields optional).
 type TopologyInput struct {
-	Inverters     []InverterInput    `json:"inverters"`
-	Battery       *BatteryConfig     `json:"battery"`
+	Inverters []InverterInput `json:"inverters"`
+	Battery   *BatteryConfig  `json:"battery"`
+	// Batteries (desde #197) manda si viene poblada; Battery queda como vía
+	// legacy para configs guardadas con una sola batería.
+	Batteries     []BatteryConfig    `json:"batteries,omitempty"`
 	Grid          *GridConfig        `json:"grid"`
 	Consumption   *ConsumptionConfig `json:"consumption"`
 	Energy        *EnergyConfig      `json:"energy"`
@@ -423,8 +453,29 @@ func Normalize(cfg TopologyInput, base Topology) Topology {
 		out.Inverters = inverters
 	}
 
-	if cfg.Battery != nil {
+	switch {
+	case len(cfg.Batteries) > 0:
+		// Lista nueva: se conserva la primera siempre y las extras con datos
+		// (aunque estén deshabilitadas: apagar una batería no la borra del
+		// editor). Las extras totalmente vacías se podan.
+		batteries := make([]BatteryConfig, 0, len(cfg.Batteries))
+		for i, b := range cfg.Batteries {
+			if i > 0 && b.isEmpty() {
+				continue
+			}
+			batteries = append(batteries, b)
+		}
+		out.Batteries = batteries
+		out.Battery = batteries[0]
+	case cfg.Battery != nil:
+		// Batería única (form legacy y blobs antiguos): lista de una.
+		out.Batteries = []BatteryConfig{*cfg.Battery}
 		out.Battery = *cfg.Battery
+	}
+	// Invariante de salida: la lista siempre existe y su primera entrada es
+	// Battery (perfiles base y cfgs vacías incluidos).
+	if len(out.Batteries) == 0 {
+		out.Batteries = []BatteryConfig{out.Battery}
 	}
 	if cfg.Grid != nil {
 		out.Grid = *cfg.Grid
@@ -520,10 +571,15 @@ func (s *Store) LiveEntities() []string {
 	for _, id := range t.Consumption.EnergyIDs {
 		add(id)
 	}
-	if t.Battery.Enabled {
-		add(t.Battery.PowerID)
-		add(t.Battery.StateID)
-		add(t.Battery.SocID)
+	if t.BatteryEnabled() {
+		for _, b := range t.BatteryList() {
+			if !b.Enabled {
+				continue
+			}
+			add(b.PowerID)
+			add(b.StateID)
+			add(b.SocID)
+		}
 		add(t.Energy.BatChargeID)
 		add(t.Energy.BatDischargeID)
 	}
@@ -615,7 +671,7 @@ func (s *Store) DeepSources() DeepSources {
 	if t.Energy.GridExportID != "" {
 		srcs["gridExport"] = DeepSource{IDs: []string{t.Energy.GridExportID}, Acc: AccSum, Cap: 25}
 	}
-	if t.Battery.Enabled {
+	if t.BatteryEnabled() {
 		if t.Energy.BatChargeID != "" {
 			srcs["batCharge"] = DeepSource{IDs: []string{t.Energy.BatChargeID}, Acc: AccSum, Cap: 12}
 		}

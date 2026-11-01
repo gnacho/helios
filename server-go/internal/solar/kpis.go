@@ -120,12 +120,15 @@ func (s *Solar) getDaySeriesUncached(haReader HAReader, dateStr string) (DaySeri
 		}
 	}
 	ids = append(ids, t.Consumption.PowerIDs...)
-	if t.Battery.Enabled {
-		if t.Battery.PowerID != "" {
-			ids = append(ids, t.Battery.PowerID)
+	for _, b := range t.BatteryList() {
+		if !b.Enabled {
+			continue
 		}
-		if t.Battery.SocID != "" {
-			ids = append(ids, t.Battery.SocID)
+		if b.PowerID != "" {
+			ids = append(ids, b.PowerID)
+		}
+		if b.SocID != "" {
+			ids = append(ids, b.SocID)
 		}
 	}
 	// Contadores del balance: su suma acumulada da el consumo y la red de cada
