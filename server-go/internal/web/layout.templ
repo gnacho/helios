@@ -41,14 +41,21 @@ templ head(p pageProps) {
 		// Theme init (Tailwind's documented 3-way pattern): the server renders
 		// the class for pinned themes; this only resolves "auto" (no cookie).
 		(function () {
+			var mq = matchMedia("(prefers-color-scheme: dark)");
 			var m = document.cookie.match(/(?:^|; )helios_theme=(light|dark)/);
-			var dark = m ? m[1] === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+			var dark = m ? m[1] === "dark" : mq.matches;
 			var el = document.documentElement;
 			el.classList.toggle("dark", dark);
 			el.classList.toggle("light", !!m && !dark);
 			// Primer pintado sin fogonazo: el fondo y el color-scheme tambien
 			// en linea (con tema "auto" no lo puede poner el servidor).
-
+			// Tema "auto": seguir al SO en vivo sin recargar (#212). El fondo
+			// y el color-scheme ya reaccionan solos via la media query en linea.
+			if (!m) {
+				mq.addEventListener("change", function (e) {
+					el.classList.toggle("dark", e.matches);
+				});
+			}
 		})();
 	</script>
 	<script type="module" src={ templ.URL("/assets/js/datastar.js?v=" + p.AssetVer) }></script>

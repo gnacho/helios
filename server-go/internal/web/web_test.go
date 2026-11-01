@@ -318,6 +318,25 @@ func TestThemeToggle(t *testing.T) {
 	}
 }
 
+func TestSystemThemeScriptListensForChanges(t *testing.T) {
+	_, r, _ := testUI(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	req := httptest.NewRequest("GET", "/", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+
+	// Tema "auto" (sin cookie): el script inline debe suscribirse a los
+	// cambios de prefers-color-scheme para alternar .dark sin recargar.
+	if !strings.Contains(rec.Body.String(), `addEventListener("change"`) {
+		t.Fatal("el script de tema no escucha cambios del esquema del sistema")
+	}
+}
+
 func TestLogout(t *testing.T) {
 	_, r, _ := testUI(t)
 	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
