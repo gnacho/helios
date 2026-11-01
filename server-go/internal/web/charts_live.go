@@ -41,7 +41,7 @@ func patchCharts(w http.ResponseWriter, r *http.Request, patches []chartPatch) {
 func (u *UI) handleChgCurvePatch(w http.ResponseWriter, r *http.Request) {
 	userID, _ := auth.UserIDFrom(r.Context())
 	lang := u.userLang(userID)
-	pal := newPalette(themeFrom(r) == "dark")
+	pal := newPalette()
 	key := r.URL.Query().Get("key")
 	curve := chgDayCurveChart(lang, nil, pal.Consumo)
 	if u.ExtStore != nil && u.Ext != nil && u.ExtHA != nil {
@@ -57,7 +57,7 @@ func (u *UI) handleChgCurvePatch(w http.ResponseWriter, r *http.Request) {
 func (u *UI) handleDayChartPatch(w http.ResponseWriter, r *http.Request) {
 	userID, _ := auth.UserIDFrom(r.Context())
 	lang := u.userLang(userID)
-	pal := newPalette(themeFrom(r) == "dark")
+	pal := newPalette()
 	m := u.buildDashboard(pal)
 	ik, in := chartInvKeys(m)
 	chart := BuildDayChart(lang, m.Series.Points, untilMin(m), ik, in)
@@ -68,7 +68,7 @@ func (u *UI) handleDayChartPatch(w http.ResponseWriter, r *http.Request) {
 func (u *UI) handleBatChartsPatch(w http.ResponseWriter, r *http.Request) {
 	userID, _ := auth.UserIDFrom(r.Context())
 	lang := u.userLang(userID)
-	pal := newPalette(themeFrom(r) == "dark")
+	pal := newPalette()
 	m := u.buildDashboard(pal)
 	view := bateriaView{pageProps: pageProps{Lang: lang}, Palette: pal}
 	patchCharts(w, r, []chartPatch{
@@ -83,7 +83,7 @@ func (u *UI) handleBatChartsPatch(w http.ResponseWriter, r *http.Request) {
 func (u *UI) handleInvChartsPatch(w http.ResponseWriter, r *http.Request) {
 	userID, _ := auth.UserIDFrom(r.Context())
 	lang := u.userLang(userID)
-	pal := newPalette(themeFrom(r) == "dark")
+	pal := newPalette()
 	m := u.buildDashboard(pal)
 	metas := invMetasOf(m.Invs, u.dailyHistory(), time.Now())
 	key := r.URL.Query().Get("key")

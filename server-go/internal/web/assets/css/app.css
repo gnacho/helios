@@ -147,10 +147,18 @@
     --c-solar: #F59E0B;
     --c-consumo: #3B82F6;
     --c-bateria: #10B981;
+    --c-autoconsumo: #10B981;
     --c-red-compra: #F43F5E;
     --c-red-vertido: #06B6D4;
     --c-solis: #0EA5E9;
     --c-fox: #8B5CF6;
+    /* Paleta cíclica para inversores extra (beyond solis/fox) */
+    --c-inv0: #10B981;
+    --c-inv1: #F43F5E;
+    --c-inv2: #06B6D4;
+    --c-inv3: #F59E0B;
+    --c-inv4: #EC4899;
+    --c-inv5: #84CC16;
 
     /* shadcn/ui (HSL triplets) alineados con la paleta clara */
     --background: 220 33% 97%;
@@ -213,10 +221,18 @@
     --c-solar: #FBBF24;
     --c-consumo: #60A5FA;
     --c-bateria: #34D399;
+    --c-autoconsumo: #34D399;
     --c-red-compra: #FB7185;
     --c-red-vertido: #22D3EE;
     --c-solis: #38BDF8;
     --c-fox: #A78BFA;
+    /* Paleta cíclica para inversores extra (beyond solis/fox) */
+    --c-inv0: #34D399;
+    --c-inv1: #FB7185;
+    --c-inv2: #22D3EE;
+    --c-inv3: #FBBF24;
+    --c-inv4: #F472B6;
+    --c-inv5: #A3E635;
 
     /* shadcn/ui alineados con la paleta oscura */
     --background: 222 55% 7%;

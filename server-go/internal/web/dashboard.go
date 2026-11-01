@@ -86,7 +86,7 @@ func absPtr(v *float64) *float64 {
 func dashboardSignals(lang string, m dashboardModel) map[string]any {
 	signals := map[string]any{}
 
-	defaults := newPalette(false)
+	defaults := newPalette()
 	live := map[string]any{
 		"productionText":  "—",
 		"productionHot":   false,
@@ -99,6 +99,7 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 		"gridStatus":      "—",
 		"gridExporting":   false,
 		"gridColor":       defaults.RedCompra,
+		"gridColorSoft":   colorSoft(defaults.RedCompra),
 		"batteryText":     T(lang, "common.idle"),
 		"gridText":        "—",
 		"atText":          "--:--",
@@ -140,6 +141,7 @@ func dashboardSignals(lang string, m dashboardModel) map[string]any {
 			"gridStatus":      gridStatus,
 			"gridExporting":   exporting,
 			"gridColor":       gridColor,
+			"gridColorSoft":   colorSoft(gridColor),
 			"batteryText":     batteryFlowText(lang, m.Live),
 			"gridText":        gridFlowText(lang, m.Live),
 			"atText":          fmtTime(l.At),
@@ -289,7 +291,7 @@ func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
 	gen := datastar.NewSSE(w, r)
 
 	// Estado inicial: señales completas antes del primer tick del hub.
-	if err := gen.MarshalAndPatchSignals(u.streamSignals(lang, u.buildDashboard(newPalette(themeFrom(r) == "dark")))); err != nil {
+	if err := gen.MarshalAndPatchSignals(u.streamSignals(lang, u.buildDashboard(newPalette()))); err != nil {
 		return
 	}
 
@@ -307,7 +309,7 @@ func (u *UI) handleStream(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				continue
 			}
-			m := u.buildDashboard(newPalette(themeFrom(r) == "dark"))
+			m := u.buildDashboard(newPalette())
 			m.Live = live
 			m.Online = u.HA.IsConnected()
 			m.Kpis = IntegrateSeries(m.Series.Points, untilMin(m), liveSoc(live))

@@ -5,7 +5,7 @@ import "testing"
 // Same inputs and expected outputs as the TS sources (thresholds.ts,
 // SocHeroGauge.tsx arcColor, lib/battery.ts batteryIcon).
 func TestSocGaugeColor(t *testing.T) {
-	pal := newPalette(false)
+	pal := newPalette()
 	cases := []struct {
 		soc  float64
 		want string

@@ -120,7 +120,7 @@ templ invSingle(v inversoresView, s *invSingleView) {
 templ invHeroCard(v inversoresView, h invHeroModel) {
 	<section class="helios-card h-full border-t-[3px] p-5 shadow-card hover:-translate-y-0.5 hover:shadow-lg dark:shadow-card-dark" style={ "border-top-color: " + h.Color } aria-label={ h.Aria }>
 		<div class="flex items-start gap-3">
-			<span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={ "background-color: " + h.Color + "1F; color: " + h.Color }>
+			<span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl" style={ "background-color: " + colorSoft(h.Color) + "; color: " + h.Color }>
 				@iconZap("h-6 w-6")
 			</span>
 			<div class="min-w-0 flex-1">
@@ -188,7 +188,7 @@ func iconForKpiIdx(i int, class string) templ.Component {
 templ invKpiCard(v inversoresView, k invKpiView, idx int) {
 	<div class="helios-card flex h-full flex-col gap-2 p-3 shadow-card dark:shadow-card-dark sm:p-4">
 		<div class="flex items-center justify-between">
-			<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + k.Accent + "1F; color: " + k.Accent }>
+			<span class="flex h-8 w-8 items-center justify-center rounded-xl" style={ "background-color: " + colorSoft(k.Accent) + "; color: " + k.Accent }>
 				@iconForKpiIdx(idx, "h-[17px] w-[17px]")
 			</span>
 		</div>

@@ -32,7 +32,7 @@ func TestHistoryBarsGeometry(t *testing.T) {
 			GridExportKwh:  f64Ptr(2.5), // autoconsumo 75 %
 		})
 	}
-	pal := newPalette(false)
+	pal := newPalette()
 	m := buildHistoryBars("es", PeriodSemana, today, days, pal)
 	if len(m.Rows) != 7 {
 		t.Fatalf("filas = %d (esperado 7)", len(m.Rows))
@@ -78,7 +78,7 @@ func TestHistoryBarsMonthLabelInterval(t *testing.T) {
 			ConsumptionKwh: f64Ptr(4),
 		})
 	}
-	m := buildHistoryBars("es", PeriodMes, today, days, newPalette(false))
+	m := buildHistoryBars("es", PeriodMes, today, days, newPalette())
 	shown := 0
 	for _, r := range m.Rows {
 		if r.ShowLabel {
@@ -98,7 +98,7 @@ func TestHistoryBarsYearByMonth(t *testing.T) {
 		{Date: "2026-01-11", ProductionKwh: f64Ptr(30), ConsumptionKwh: f64Ptr(25)},
 		{Date: "2026-06-15", ProductionKwh: f64Ptr(40), ConsumptionKwh: f64Ptr(30)},
 	}
-	m := buildHistoryBars("es", PeriodAno, today, days, newPalette(false))
+	m := buildHistoryBars("es", PeriodAno, today, days, newPalette())
 	// Un grupo por mes con datos, ordenado (el handler pasa la ventana ya
 	// filtrada; aquí solo hay días de 2026).
 	if len(m.Rows) != 2 {
@@ -125,7 +125,7 @@ func TestYearHeatmapGeometry(t *testing.T) {
 	rows[10].ProductionKwh = f64Ptr(0)
 	rows[20].ProductionKwh = f64Ptr(20)
 
-	h := buildYearHeatmap("es", rows, today, newPalette(false), heatProd)
+	h := buildYearHeatmap("es", rows, today, newPalette(), heatProd)
 	if len(h.Cells) != 40 {
 		t.Fatalf("celdas = %d (esperado 40)", len(h.Cells))
 	}
@@ -183,18 +183,18 @@ func TestHeatMetricValues(t *testing.T) {
 	if got := heatAuto.value(neg); got != 0 {
 		t.Fatalf("auto negativo = %v (esperado 0)", got)
 	}
-	if heatProd.color(newPalette(false)) != newPalette(false).Solar {
+	if heatProd.color(newPalette()) != newPalette().Solar {
 		t.Fatal("producción debe usar el color solar")
 	}
-	if heatCons.color(newPalette(false)) != newPalette(false).Consumo {
+	if heatCons.color(newPalette()) != newPalette().Consumo {
 		t.Fatal("consumo debe usar el color de consumo")
 	}
-	if heatAuto.color(newPalette(false)) != newPalette(false).Autoconsumo {
+	if heatAuto.color(newPalette()) != newPalette().Autoconsumo {
 		t.Fatal("autoconsumo debe usar su color propio")
 	}
 	// Con una sola fila y el valor de cada métrica, el nivel es el máximo.
 	for _, m := range []heatMetric{heatProd, heatCons, heatAuto} {
-		h := buildYearHeatmap("es", rows, today, newPalette(false), m)
+		h := buildYearHeatmap("es", rows, today, newPalette(), m)
 		if h.Metric != m {
 			t.Fatalf("metric = %q", h.Metric)
 		}
@@ -208,7 +208,7 @@ func TestHeatMetricValues(t *testing.T) {
 }
 
 func TestYearHeatmapEmpty(t *testing.T) {
-	h := buildYearHeatmap("es", nil, time.Date(2026, 10, 23, 0, 0, 0, 0, time.Local), newPalette(false), heatProd)
+	h := buildYearHeatmap("es", nil, time.Date(2026, 10, 23, 0, 0, 0, 0, time.Local), newPalette(), heatProd)
 	if len(h.Cells) != 0 {
 		t.Fatal("sin filas no hay celdas")
 	}

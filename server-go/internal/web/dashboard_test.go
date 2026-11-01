@@ -88,7 +88,7 @@ func TestFormatNumber(t *testing.T) {
 }
 
 func TestDashboardSignals(t *testing.T) {
-	pal := newPalette(true)
+	pal := newPalette()
 	cons := 0.45
 	grid := f(-2.5)
 	m := dashboardModel{
@@ -125,7 +125,7 @@ func TestDashboardSignals(t *testing.T) {
 	}
 
 	// Sin HA: todo a guiones y sin pánico.
-	s2 := dashboardSignals("en", dashboardModel{Palette: newPalette(false)})
+	s2 := dashboardSignals("en", dashboardModel{Palette: newPalette()})
 	live2 := s2["live"].(map[string]any)
 	if live2["productionText"] != "—" || live2["gridKwText"] != "—" {
 		t.Fatalf("señales sin HA = %v", live2)

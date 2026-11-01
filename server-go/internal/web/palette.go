@@ -1,62 +1,31 @@
 package web
 
-// Energy palette ported from app/src/lib/colors.ts. Colors are INVARIABLE per
-// energy type; only the theme (light/dark) changes the shade.
+// Energy colors are INVARIABLE per energy type; only the theme changes the
+// shade. The server emits CSS variables (var(--c-*)) instead of hex values:
+// it cannot see the OS preference in the "auto" theme, so the light/dark
+// choice is left to app.css, which defines every variable in both blocks.
 
-type shade struct{ Light, Dark string }
-
-var energyColors = map[string]shade{
-	"solar":       {"#F59E0B", "#FBBF24"},
-	"consumo":     {"#3B82F6", "#60A5FA"},
-	"bateria":     {"#10B981", "#34D399"},
-	"autoconsumo": {"#10B981", "#34D399"},
-	"redCompra":   {"#F43F5E", "#FB7185"},
-	"redVertido":  {"#06B6D4", "#22D3EE"},
-	"solis":       {"#0EA5E9", "#38BDF8"},
-	"fox":         {"#8B5CF6", "#A78BFA"},
-}
-
-// extraInverterColors is the cyclic palette for inverters beyond solis/fox.
-var extraInverterColors = []shade{
-	{"#10B981", "#34D399"},
-	{"#F43F5E", "#FB7185"},
-	{"#06B6D4", "#22D3EE"},
-	{"#F59E0B", "#FBBF24"},
-	{"#EC4899", "#F472B6"},
-	{"#84CC16", "#A3E635"},
-}
-
-// Palette resolves the semantic colors for a theme.
+// Palette resolves the semantic colors for templates and Datastar signals.
 type Palette struct {
-	Dark                              bool
-	Solar, Consumo, Bateria           string
-	RedCompra, RedVertido, Solis, Fox string
-	Autoconsumo                       string
+	Solar, Consumo, Bateria, Autoconsumo string
+	RedCompra, RedVertido, Solis, Fox    string
 }
 
-func newPalette(dark bool) Palette {
-	pick := func(k string) string {
-		s := energyColors[k]
-		if dark {
-			return s.Dark
-		}
-		return s.Light
-	}
+func newPalette() Palette {
 	return Palette{
-		Dark:        dark,
-		Solar:       pick("solar"),
-		Consumo:     pick("consumo"),
-		Bateria:     pick("bateria"),
-		RedCompra:   pick("redCompra"),
-		RedVertido:  pick("redVertido"),
-		Solis:       pick("solis"),
-		Fox:         pick("fox"),
-		Autoconsumo: pick("autoconsumo"),
+		Solar:       "var(--c-solar)",
+		Consumo:     "var(--c-consumo)",
+		Bateria:     "var(--c-bateria)",
+		Autoconsumo: "var(--c-autoconsumo)",
+		RedCompra:   "var(--c-red-compra)",
+		RedVertido:  "var(--c-red-vertido)",
+		Solis:       "var(--c-solis)",
+		Fox:         "var(--c-fox)",
 	}
 }
 
 // InverterColor mirrors inverterColor(): solis/fox keep their semantic color,
-// extra inverters cycle through the extra palette by index.
+// extra inverters cycle through the --c-invN variables by index.
 func InverterColor(key string, p Palette, index int) string {
 	switch key {
 	case "solis":
@@ -64,9 +33,11 @@ func InverterColor(key string, p Palette, index int) string {
 	case "fox":
 		return p.Fox
 	}
-	s := extraInverterColors[index%len(extraInverterColors)]
-	if p.Dark {
-		return s.Dark
-	}
-	return s.Light
+	return "var(--c-inv" + string(rune('0'+index%6)) + ")"
+}
+
+// colorSoft is the translucent fill used by chips and strips: same hue at
+// 12% over transparent (replaces the old 1F-hex alpha suffix).
+func colorSoft(c string) string {
+	return "color-mix(in srgb, " + c + " 12%, transparent)"
 }

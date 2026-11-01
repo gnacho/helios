@@ -441,7 +441,7 @@ func (u *UI) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	p := u.baseProps(r, userID, "/", "")
 	p.Title = T(lang, "nav.dashboard")
 
-	pal := newPalette(p.Theme == "dark")
+	pal := newPalette()
 	m := u.buildDashboard(pal)
 	if k, ok := u.exactDayKpis(m); ok {
 		m.Kpis = k

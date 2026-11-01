@@ -207,7 +207,7 @@ func (u *UI) handleInversores(w http.ResponseWriter, r *http.Request) {
 	p := u.baseProps(r, userID, "/inversores", "")
 	p.Title = T(lang, "nav.inversores")
 
-	pal := newPalette(p.Theme == "dark")
+	pal := newPalette()
 	m := u.buildDashboard(pal)
 	hist := u.dailyHistory()
 

@@ -1347,7 +1347,7 @@ func (u *UI) handleCargador(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-	pal := newPalette(p.Theme == "dark")
+	pal := newPalette()
 	today := startOfDay(time.Now())
 
 	// Tab activa: ?tab=key (el primero por defecto).

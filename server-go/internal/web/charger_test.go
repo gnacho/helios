@@ -32,7 +32,7 @@ func TestChargerHistoryGeometry(t *testing.T) {
 		d := today.AddDate(0, 0, -i)
 		hist = append(hist, chgHistRowOf(d.Format("2006-01-02"), 10, 4))
 	}
-	pal := newPalette(false)
+	pal := newPalette()
 	m, ok := chgHistoryChart("es", PeriodSemana, anchor, today, hist, nil, nil, pal)
 	if !ok {
 		t.Fatal("ok = false")
@@ -73,7 +73,7 @@ func TestChargerHistoryYearAggregates(t *testing.T) {
 		chgHistRowOf("2026-03-10", 2, 1),
 		chgHistRowOf("2026-03-11", 2, 1),
 	}
-	pal := newPalette(false)
+	pal := newPalette()
 	m, _ := chgHistoryChart("es", PeriodAno, anchor, today, hist, nil, nil, pal)
 	if len(m.Rows) != 12 {
 		t.Fatalf("filas = %d (esperado 12 meses)", len(m.Rows))

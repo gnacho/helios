@@ -849,7 +849,7 @@ func (u *UI) buildHistoricoView(r *http.Request) historicoView {
 	p := u.baseProps(r, userID, "/historico", "")
 	p.Title = T(lang, "nav.historico")
 
-	pal := newPalette(p.Theme == "dark")
+	pal := newPalette()
 	today := startOfDay(time.Now())
 	period := PeriodSemana
 	if ps, ok := periodOf(r.URL.Query().Get("period")); ok {
@@ -1200,7 +1200,7 @@ func (u *UI) handleHeatDay(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := auth.UserIDFrom(r.Context())
 	lang := u.userLang(userID)
-	pop := u.buildHeatPop(lang, newPalette(themeFrom(r) == "dark"), startOfDay(dt))
+	pop := u.buildHeatPop(lang, newPalette(), startOfDay(dt))
 	gen := datastar.NewSSE(w, r)
 	_ = gen.PatchElementTempl(heatPopContent(pop), datastar.WithSelectorID("heat-pop"), datastar.WithModeInner())
 }
