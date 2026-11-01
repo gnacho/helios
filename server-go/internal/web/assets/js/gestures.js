@@ -7,6 +7,10 @@
   var MIN_DX = 12;          // if smaller, it is a tap, not a drag
   var SNAP_FRACTION = 0.22; // of the pager width, like the React hook
   var EDGE_DAMPING = 0.35;  // elastic resistance when there is no neighbour
+  // The snap eases in slowly and decelerates smoothly; during the drag the
+  // track is moved in px, so the snap must also target px: a transform going
+  // from px to % does not interpolate and the panel would jump.
+  var SNAP_TRANSITION = "transform 360ms cubic-bezier(.32,.72,0,1)";
   var desktop = window.matchMedia("(min-width: 1024px)");
   var drag = null;
 
@@ -27,11 +31,12 @@
   function moveTo(pager, index, animate) {
     var track = trackOf(pager);
     if (!track) return;
-    track.style.transition = animate
-      ? "transform 220ms cubic-bezier(.22,1,.36,1)"
-      : "none";
-    track.style.transform = "translate3d(" + (-index * 100) + "%, 0, 0)";
+    track.style.transition = animate ? SNAP_TRANSITION : "none";
+    track.style.transform = "translate3d(" + (-index * pager.clientWidth) + "px, 0, 0)";
     if (animate) {
+      // paintTabs mutates the tab strip below, which fires the MutationObserver;
+      // mark the pager so sync() lets the snap run instead of killing it.
+      pager.snapUntil = Date.now() + 400;
       pager.setAttribute("data-active", String(index));
       paintTabs(index);
       pushURL(index);
@@ -55,7 +60,7 @@
     }
     var panel = panelsOf(pager)[activeIndex(pager)];
     if (!panel) return;
-    pager.style.transition = animate ? "height 220ms cubic-bezier(.22,1,.36,1)" : "none";
+    pager.style.transition = animate ? "height 360ms cubic-bezier(.32,.72,0,1)" : "none";
     pager.style.height = panel.offsetHeight + "px";
   }
 
@@ -100,6 +105,7 @@
   function sync() {
     if (drag) return; // never fight the finger
     Array.prototype.forEach.call(document.querySelectorAll("[data-pager]"), function (pager) {
+      if (pager.snapUntil && Date.now() < pager.snapUntil) return; // snap in progress
       moveTo(pager, activeIndex(pager), false);
     });
   }
