@@ -156,7 +156,7 @@ func TestAjustesPageAdminSeesAdminSections(t *testing.T) {
 		"/api/update/status",                // check de updates
 		"/api/update/progress",              // polling de progreso
 		"inv.0.name",                        // campo del inverter 0
-		"battery.powerId",                   // batería
+		"bat.0.powerId",                     // baterías (cards bat.N.* desde #197)
 		T("es", "admin.users.create"),       // crear usuario
 		T("es", "update.dialog.downNotice"), // checkbox del diálogo de update
 	} {
@@ -400,5 +400,51 @@ func TestAdminCannotChangeOwnRoleOrDeleteSelf(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	if after, _ := d.GetUserByID(me.ID); after == nil {
 		t.Fatal("se borró a sí mismo")
+	}
+}
+
+// El editor envía bat.N.* con bat.count: dos baterías se guardan como lista y
+// la primera sigue siendo Topology.Battery (#197).
+func TestAjustesTopologyMultipleBatteries(t *testing.T) {
+	u, r := ajustesTestUI(t)
+	cookie := doLoginAs(t, r, "nacho", "password1")
+
+	form := url.Values{
+		"inv.count":         {"1"},
+		"inv.0.key":         {"solis"},
+		"inv.0.powerId":     {"sensor.solis_potencia_actual"},
+		"inv.0.powerUnit":   {"kW"},
+		"inv.0.energyId":    {"sensor.solis_energia_hoy"},
+		"inv.0.energyAcc":   {"sum"},
+		"bat.count":         {"2"},
+		"bat.0.enabled":     {"1"},
+		"bat.0.powerId":     {"sensor.solis_bateria_potencia"},
+		"bat.0.socId":       {"sensor.solis_bateria_soc"},
+		"bat.0.capacityKwh": {"5.12"},
+		"bat.1.enabled":     {"1"},
+		"bat.1.powerId":     {"sensor.bat_extra_potencia"},
+		"bat.1.socId":       {"sensor.bat_extra_soc"},
+		"bat.1.capacityKwh": {"10"},
+		"grid.mode":         {"attrs"},
+		"grid.attrsId":      {"sensor.solis_scraper"},
+		"env.sun":           {"sun.sun"},
+	}
+	rec := ajustesPostForm(t, r, cookie, "/ajustes/topology", form)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d (esperado 303 PRG)", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); !strings.Contains(loc, "saved=topology") {
+		t.Fatalf("Location = %q (esperado saved=topology)", loc)
+	}
+
+	topo := u.Install.Get()
+	if len(topo.Batteries) != 2 {
+		t.Fatalf("batteries = %d (esperado 2)", len(topo.Batteries))
+	}
+	if !topo.Batteries[1].Enabled || topo.Batteries[1].PowerID != "sensor.bat_extra_potencia" || topo.Batteries[1].CapacityKwh != 10 {
+		t.Fatalf("segunda batería = %+v", topo.Batteries[1])
+	}
+	if topo.Battery.PowerID != topo.Batteries[0].PowerID || topo.Battery.CapacityKwh != 5.12 {
+		t.Fatalf("battery = %+v (debe ser la primera)", topo.Battery)
 	}
 }

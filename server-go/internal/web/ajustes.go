@@ -329,15 +329,23 @@ func entityRows(t install.Topology) []entityRowView {
 	for _, id := range t.Consumption.PowerIDs {
 		add("consumption", id, "")
 	}
-	if t.Battery.Enabled {
-		if t.Battery.PowerID != "" {
-			add("battery_power", t.Battery.PowerID, "")
+	// Primera batería con roles sin sufijo (compat), extras con _N.
+	for i, b := range t.BatteryList() {
+		if !b.Enabled {
+			continue
 		}
-		if t.Battery.SocID != "" {
-			add("battery_soc", t.Battery.SocID, "")
+		suf := ""
+		if i > 0 {
+			suf = "_" + strconv.Itoa(i)
 		}
-		if t.Battery.StateID != "" {
-			add("battery_state", t.Battery.StateID, "")
+		if b.PowerID != "" {
+			add("battery_power"+suf, b.PowerID, "")
+		}
+		if b.SocID != "" {
+			add("battery_soc"+suf, b.SocID, "")
+		}
+		if b.StateID != "" {
+			add("battery_state"+suf, b.StateID, "")
 		}
 	}
 	if t.Grid.Mode == "attrs" {
@@ -747,14 +755,31 @@ func (u *UI) handleAjustesTopology(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	input.Battery = &install.BatteryConfig{
-		Enabled:           f.Get("battery.enabled") == "1",
-		PowerID:           f.Get("battery.powerId"),
-		StateID:           f.Get("battery.stateId"),
-		SocID:             f.Get("battery.socId"),
-		CapacityKwh:       atof(f.Get("battery.capacityKwh")),
-		ChargingStates:    parseCsvForm(f.Get("battery.chargingStates")),
-		DischargingStates: parseCsvForm(f.Get("battery.dischargingStates")),
+	// Desde #197 el editor envía baterías como lista (bat.count + bat.N.*);
+	// si no viene lista, se mantiene la vía legacy battery.* (batería única).
+	if batCount, _ := strconv.Atoi(f.Get("bat.count")); batCount > 0 && batCount <= 10 {
+		for i := 0; i < batCount; i++ {
+			p := "bat." + strconv.Itoa(i) + "."
+			input.Batteries = append(input.Batteries, install.BatteryConfig{
+				Enabled:           f.Get(p+"enabled") == "1",
+				PowerID:           f.Get(p + "powerId"),
+				StateID:           f.Get(p + "stateId"),
+				SocID:             f.Get(p + "socId"),
+				CapacityKwh:       atof(f.Get(p + "capacityKwh")),
+				ChargingStates:    parseCsvForm(f.Get(p + "chargingStates")),
+				DischargingStates: parseCsvForm(f.Get(p + "dischargingStates")),
+			})
+		}
+	} else {
+		input.Battery = &install.BatteryConfig{
+			Enabled:           f.Get("battery.enabled") == "1",
+			PowerID:           f.Get("battery.powerId"),
+			StateID:           f.Get("battery.stateId"),
+			SocID:             f.Get("battery.socId"),
+			CapacityKwh:       atof(f.Get("battery.capacityKwh")),
+			ChargingStates:    parseCsvForm(f.Get("battery.chargingStates")),
+			DischargingStates: parseCsvForm(f.Get("battery.dischargingStates")),
+		}
 	}
 	spOrNil := func(s string) *string {
 		if s == "" {

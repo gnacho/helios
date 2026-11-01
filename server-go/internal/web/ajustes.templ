@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"helios-server/internal/install"
 )
 
 // /ajustes page (port of Ajustes.tsx + TopologyEditor.tsx). Forms are plain
@@ -505,19 +507,26 @@ templ topologyEditor(v ajustesView) {
 			</fieldset>
 			<fieldset class="flex flex-col gap-3">
 				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.battery") }</legend>
-				<div class="rounded-xl border border-app bg-surface p-3">
-					<div class="grid gap-3 sm:grid-cols-3">
-						<div class="flex items-center gap-2 sm:col-span-3">
-							@ajCheckbox("battery.enabled", v.Topo.Battery.Enabled, T(v.Lang, "ajustes.topology.enabled"))
+				{{ bats := append(v.Topo.BatteryList(), install.BatteryConfig{}) }}
+				for i, bat := range bats {
+					<div class="rounded-xl border border-app bg-surface p-3">
+						<div class="mb-2 flex items-center justify-between">
+							<p class="text-xs font-semibold text-muted">{ T(v.Lang, "ajustes.topology.battery") + " " + strconv.Itoa(i+1) }</p>
 						</div>
-						@ajField(T(v.Lang, "ajustes.topology.powerId"), "battery.powerId", v.Topo.Battery.PowerID, "sensor.battery_power")
-						@ajField(T(v.Lang, "ajustes.topology.capacityKwh"), "battery.capacityKwh", f2s(v.Topo.Battery.CapacityKwh), "")
-						@ajField(T(v.Lang, "ajustes.topology.stateId"), "battery.stateId", v.Topo.Battery.StateID, "sensor.battery_state")
-						@ajField(T(v.Lang, "ajustes.topology.socId"), "battery.socId", v.Topo.Battery.SocID, "sensor.battery_soc")
-						@ajField(T(v.Lang, "ajustes.topology.chargingStates"), "battery.chargingStates", csvJoin(v.Topo.Battery.ChargingStates), "Cargando, charging")
-						@ajField(T(v.Lang, "ajustes.topology.dischargingStates"), "battery.dischargingStates", csvJoin(v.Topo.Battery.DischargingStates), "Descargando, discharging")
+						<div class="grid gap-3 sm:grid-cols-3">
+							<div class="flex items-center gap-2 sm:col-span-3">
+								@ajCheckbox("bat."+strconv.Itoa(i)+".enabled", bat.Enabled, T(v.Lang, "ajustes.topology.enabled"))
+							</div>
+							@ajField(T(v.Lang, "ajustes.topology.powerId"), "bat."+strconv.Itoa(i)+".powerId", bat.PowerID, "sensor.battery_power")
+							@ajField(T(v.Lang, "ajustes.topology.capacityKwh"), "bat."+strconv.Itoa(i)+".capacityKwh", f2s(bat.CapacityKwh), "")
+							@ajField(T(v.Lang, "ajustes.topology.stateId"), "bat."+strconv.Itoa(i)+".stateId", bat.StateID, "sensor.battery_state")
+							@ajField(T(v.Lang, "ajustes.topology.socId"), "bat."+strconv.Itoa(i)+".socId", bat.SocID, "sensor.battery_soc")
+							@ajField(T(v.Lang, "ajustes.topology.chargingStates"), "bat."+strconv.Itoa(i)+".chargingStates", csvJoin(bat.ChargingStates), "Cargando, charging")
+							@ajField(T(v.Lang, "ajustes.topology.dischargingStates"), "bat."+strconv.Itoa(i)+".dischargingStates", csvJoin(bat.DischargingStates), "Descargando, discharging")
+						</div>
 					</div>
-				</div>
+				}
+				<input type="hidden" name="bat.count" value={ strconv.Itoa(len(bats)) }/>
 			</fieldset>
 			<fieldset class="flex flex-col gap-3">
 				<legend class="text-[13px] font-semibold text-app">{ T(v.Lang, "ajustes.topology.grid") }</legend>

@@ -834,9 +834,13 @@ func (u *UI) baseProps(r *http.Request, userID, path, lang string) pageProps {
 		for _, inv := range inst.Inverters {
 			p.InvCount = append(p.InvCount, inv.Key)
 		}
-		if inst.Battery.Enabled {
-			p.BatKwh = inst.Battery.CapacityKwh
+		batKwh := 0.0
+		for _, b := range inst.BatteryList() {
+			if b.Enabled {
+				batKwh += b.CapacityKwh
+			}
 		}
+		p.BatKwh = batKwh
 	}
 	if u.ExtStore != nil {
 		cfg := u.ExtStore.Get()

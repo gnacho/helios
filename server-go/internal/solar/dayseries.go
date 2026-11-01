@@ -56,12 +56,16 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 		}
 	}
 	ids = append(ids, t.Consumption.PowerIDs...)
-	if t.Battery.Enabled {
-		if t.Battery.PowerID != "" {
-			ids = append(ids, t.Battery.PowerID)
+	bats := t.BatteryList()
+	for _, b := range bats {
+		if !b.Enabled {
+			continue
 		}
-		if t.Battery.SocID != "" {
-			ids = append(ids, t.Battery.SocID)
+		if b.PowerID != "" {
+			ids = append(ids, b.PowerID)
+		}
+		if b.SocID != "" {
+			ids = append(ids, b.SocID)
 		}
 	}
 
@@ -141,7 +145,7 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 
 	points := make([]DayPoint, 0, len(minutes))
 	measuredGrid := make([]bool, 0, len(minutes))
-	var prevSoc *float64
+	prevSocs := make([]*float64, len(bats))
 	backupIdx := map[string][]int{}
 	consGapIdx := make([]int, 0)
 
@@ -227,35 +231,7 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 			consGapIdx = append(consGapIdx, pointIdx)
 		}
 
-		batteryPower := 0.0
-		if t.Battery.Enabled {
-			var batMag, socPrev float64
-			if v, ok := b[t.Battery.PowerID]; ok {
-				batMag = v
-			}
-			if v, ok := b[t.Battery.SocID]; ok {
-				socPrev = v
-			}
-			if prevSoc != nil && batMag > 0.01 {
-				socDelta := socPrev - *prevSoc
-				if socDelta > 0.02 {
-					batteryPower = batMag
-				} else if socDelta < -0.02 {
-					batteryPower = -batMag
-				}
-			}
-			if socPrev > 0 {
-				v := socPrev
-				prevSoc = &v
-			}
-		}
-
-		soc := 0.0
-		if t.Battery.Enabled {
-			if v, ok := b[t.Battery.SocID]; ok {
-				soc = v
-			}
-		}
+		batteryPower, soc := batteryBucket(bats, b, prevSocs)
 
 		var gridPtr *float64
 		measured := gridFromCounters
@@ -277,9 +253,12 @@ func (s *Solar) BuildDaySeries(stats ha.Stats, dateStr string, liveTargets map[s
 				}
 			}
 			batMissing := false
-			if t.Battery.Enabled && t.Battery.PowerID != "" {
-				if _, ok := b[t.Battery.PowerID]; !ok {
-					batMissing = true
+			for _, bat := range bats {
+				if bat.Enabled && bat.PowerID != "" {
+					if _, ok := b[bat.PowerID]; !ok {
+						batMissing = true
+						break
+					}
 				}
 			}
 			if !consMissing && !batMissing {
@@ -540,4 +519,51 @@ func bucketMinute(t time.Time) (int, bool) {
 	}
 	local := t.Local()
 	return local.Hour()*60 + local.Minute(), true
+}
+
+// batteryBucket calcula la potencia agregada del bucket (positiva = carga) y el
+// SOC agregado de todas las baterías habilitadas. Cada batería deriva su signo
+// de su propio delta de SOC frente a prevSocs[i], que se actualiza in place.
+// El SOC agregado sale ponderado por capacidad; si ninguna declara capacidad,
+// media aritmética.
+func batteryBucket(bats []install.BatteryConfig, b map[string]float64, prevSocs []*float64) (batteryPower, soc float64) {
+	socNum, socWeight, socSum, socCount := 0.0, 0.0, 0.0, 0
+	for i, bat := range bats {
+		if !bat.Enabled {
+			continue
+		}
+		var batMag, socPrev float64
+		if v, ok := b[bat.PowerID]; ok {
+			batMag = v
+		}
+		if v, ok := b[bat.SocID]; ok {
+			socPrev = v
+		}
+		if i < len(prevSocs) && prevSocs[i] != nil && batMag > 0.01 {
+			socDelta := socPrev - *prevSocs[i]
+			if socDelta > 0.02 {
+				batteryPower += batMag
+			} else if socDelta < -0.02 {
+				batteryPower -= batMag
+			}
+		}
+		if i < len(prevSocs) && socPrev > 0 {
+			v := socPrev
+			prevSocs[i] = &v
+		}
+		if socPrev > 0 {
+			socSum += socPrev
+			socCount++
+			socNum += socPrev * bat.CapacityKwh
+			socWeight += bat.CapacityKwh
+		}
+	}
+	if socCount > 0 {
+		if socWeight > 0 {
+			soc = socNum / socWeight
+		} else {
+			soc = socSum / float64(socCount)
+		}
+	}
+	return batteryPower, soc
 }
