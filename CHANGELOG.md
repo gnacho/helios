@@ -5,6 +5,15 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.10] - 2026-11-14
+
+### Fixed
+
+- **Comprobar actualizaciones ya no miente.** Cuando la consulta a GitHub fallaba
+  o no se podía leer la versión instalada, la pantalla decía "estás al día" sin
+  ningún error. Ahora explica el motivo en rojo y solo afirma que estás al día
+  cuando de verdad ha comparado las versiones.
+
 ## [1.2.9] - 2026-11-14
 
 ### Fixed
