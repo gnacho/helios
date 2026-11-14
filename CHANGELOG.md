@@ -5,6 +5,17 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.8] - 2026-11-14
+
+### Added
+
+- **El servidor publica los asset links de la app de Android.** La ruta
+  `/.well-known/assetlinks.json` sirve el nombre de paquete y la huella del
+  certificado de firma, que es lo que Chrome exige para abrir la app a pantalla
+  completa en lugar de como una pestaña con barra de direcciones. Va en el
+  binario y no en el proxy porque tiene que responder en cada origen al que se
+  apunte la app.
+
 ## [1.2.7] - 2026-11-14
 
 ### Added
