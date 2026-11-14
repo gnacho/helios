@@ -5,6 +5,25 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.7] - 2026-11-14
+
+### Added
+
+- **Tokens de API para clientes que no son el navegador.** En Ajustes hay una
+  sección nueva para crear tokens con nombre, permisos y caducidad opcional.
+  Sirven para una app o un script que no puede usar la sesión del navegador: se
+  envían en la cabecera `Authorization: Bearer` y el widget de Android que viene
+  detrás los usará. Un token de solo lectura consulta datos, y con escritura
+  puede encender el cargador y actuar sobre el coche. Las rutas de usuarios y de
+  actualización siguen exigiendo sesión de navegador. El token se muestra una
+  sola vez, en la base solo queda su hash y se puede revocar al momento.
+
+### Fixed
+
+- **La landing habla del binario de Go.** El texto de "cómo funciona" y la
+  respuesta sobre consumo seguían describiendo un servicio Node.js. Ahora dicen
+  lo que hay: un único binario en Go con SQLite embebida.
+
 ## [1.2.6] - 2026-10-31
 
 ### Added
