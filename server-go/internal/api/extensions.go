@@ -303,3 +303,21 @@ func (s *Server) handleDeleteChargerImage(w http.ResponseWriter, r *http.Request
 	s.DB.Audit(username, userID, "charger.image.clear", map[string]any{"charger": key})
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
+
+// handleChargerState exposes the live charger state over a plain GET (#230).
+// The widget on a phone cannot keep an SSE stream open, and /api/extensions only
+// carries configuration. The shape is stable on purpose: with the extension off
+// the array is empty and 200, so a client does not have to tell "no charger" from
+// "request failed".
+func (s *Server) handleChargerState(w http.ResponseWriter, r *http.Request) {
+	if s.ExtStore == nil || s.ExtHA == nil {
+		writeJSON(w, 200, map[string]any{"active": false, "chargers": []extensions.LiveCharger{}})
+		return
+	}
+	cfg := s.ExtStore.Get()
+	chargers := extensions.ComputeChargerLive(s.ExtHA, cfg)
+	writeJSON(w, 200, map[string]any{
+		"active":   extensions.ChargerActive(cfg),
+		"chargers": chargers,
+	})
+}
