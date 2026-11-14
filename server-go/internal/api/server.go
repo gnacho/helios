@@ -111,6 +111,7 @@ func (s *Server) Routes() chi.Router {
 
 		r.Get("/api/extensions", s.handleGetExtensions)
 		r.Put("/api/extensions", s.handlePutExtensions)
+		r.Get("/api/charger/state", s.handleChargerState)
 		r.Get("/api/charger/day", s.handleChargerDay)
 		r.Get("/api/charger/history", s.handleChargerHistory)
 		r.Post("/api/charger/action", s.handleChargerAction)
