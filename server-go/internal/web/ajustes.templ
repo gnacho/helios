@@ -53,6 +53,7 @@ func ajustesSignals(v ajustesView) string {
 		"confirm":    false,
 		"ack":        false,
 		"checked":    false,
+		"error":      "",
 		"available":  false,
 		"canApply":   false,
 		"latest":     "",
@@ -1062,7 +1063,8 @@ templ ajustesAdmin(v ajustesView) {
 					@iconRefreshCw("h-3.5 w-3.5")
 					<span class="hidden sm:inline">{ T(v.Lang, "ajustes.about.checkUpdates") }</span>
 				</button>
-				<span data-show="$checked && !$available && !$running" class="text-[10px] font-medium text-emerald-500">{ T(v.Lang, "ajustes.about.upToDate", map[string]string{"version": v.RepoVersion}) }</span>
+				<span data-show="$checked && !$available && !$running && !$error" class="text-[10px] font-medium text-emerald-500">{ T(v.Lang, "ajustes.about.upToDate", map[string]string{"version": v.RepoVersion}) }</span>
+				<span data-show="$checked && $error" data-text="$error" class="text-[10px] font-medium text-rose-500">{ T(v.Lang, "ajustes.about.checkError") }</span>
 				<button type="button" data-show="$available && !$running" data-on:click="$confirm = true" class="inline-flex h-7 w-fit items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20">
 					{ T(v.Lang, "ajustes.about.updateNow") }
 				</button>

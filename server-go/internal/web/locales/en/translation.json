@@ -430,6 +430,7 @@
       "privacy": "100% private · 0% cloud",
       "checkUpdates": "Check for updates",
       "checking": "Checking…",
+      "checkError": "Could not check for updates",
       "upToDate": "You're up to date - v{{version}} is the latest version",
       "updateAvailable": "New version available: v{{version}}",
       "viewRelease": "What's new",
