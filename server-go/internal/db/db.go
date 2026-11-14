@@ -112,6 +112,20 @@ CREATE TABLE IF NOT EXISTS sessions (
   ua TEXT
 );
 
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  prefix TEXT UNIQUE NOT NULL,
+  hash TEXT NOT NULL,
+  scopes TEXT NOT NULL DEFAULT 'read',
+  created_at INTEGER NOT NULL,
+  last_used_at INTEGER DEFAULT 0,
+  expires_at INTEGER DEFAULT 0,
+  revoked_at INTEGER DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id);
+
 CREATE TABLE IF NOT EXISTS kv (
   key TEXT PRIMARY KEY,
   value TEXT

@@ -418,6 +418,8 @@ func (u *UI) mount(r chi.Router) {
 		r.Post("/ajustes/extensions", u.handleAjustesExtensions)
 		r.Post("/ajustes/push-pref", u.handleAjustesPushPref)
 		r.Post("/ajustes/profile", u.handleAjustesProfile)
+		r.Post("/ajustes/tokens", u.handleAjustesTokenCreate)
+		r.Post("/ajustes/tokens/{id}/delete", u.handleAjustesTokenRevoke)
 		r.Post("/ajustes/password", u.handleAjustesPassword)
 		r.Post("/ajustes/users", u.handleAjustesUserCreate)
 		r.Post("/ajustes/users/{id}", u.handleAjustesUserSave)

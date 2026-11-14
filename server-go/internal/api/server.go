@@ -75,6 +75,9 @@ func (s *Server) Routes() chi.Router {
 			r.Put("/users/{id}/role", s.handleAdminSetRole)
 			r.Delete("/users/{id}", s.handleAdminDeleteUser)
 			r.Get("/audit", s.handleAudit)
+			r.Get("/tokens", s.handleListTokens)
+			r.Post("/tokens", s.handleCreateToken)
+			r.Delete("/tokens/{id}", s.handleRevokeToken)
 		})
 	})
 
