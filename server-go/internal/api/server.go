@@ -84,6 +84,9 @@ func (s *Server) Routes() chi.Router {
 	r.Get("/health", s.handleHealth)
 	r.Get("/api/version", s.handleVersion)
 
+	// Digital Asset Links del APK de Android (público, sin sesión).
+	r.Get("/.well-known/assetlinks.json", s.handleAssetLinks)
+
 	// Público en el original (registrado antes de guarded).
 	r.Get("/api/system/info", s.handleSystemInfo)
 
