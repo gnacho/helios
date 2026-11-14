@@ -5,6 +5,16 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.9] - 2026-11-14
+
+### Fixed
+
+- **Los interruptores de Ajustes se mueven.** Al alternar un interruptor, la
+  pista cambiaba de color pero la bolita se quedaba a la izquierda. El selector
+  que debía moverla solo alcanza a un hermano del checkbox, y la bolita está
+  dentro de la pista. Ahora se mueve de verdad, con recuento de 16 px, y solo
+  con su propio interruptor.
+
 ## [1.2.8] - 2026-11-14
 
 ### Added
