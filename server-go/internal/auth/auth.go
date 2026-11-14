@@ -354,6 +354,11 @@ func clearSessionCookie(w http.ResponseWriter) {
 // RequireAuth middleware: valida sesión, renueva si aplica, inyecta userID en contexto.
 func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if raw := bearerToken(r); raw != "" {
+			a.authenticateWithToken(w, r, raw, next)
+			return
+		}
+
 		s := a.SessionIDFromCookie(r)
 		if s == nil {
 			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "no autorizado"})
@@ -375,7 +380,8 @@ func (a *Auth) RequireAuth(next http.Handler) http.Handler {
 
 // RequireAuthRedirect is the HTML variant of RequireAuth: instead of a 401
 // JSON response it redirects to /login?next=… (page navigation), keeping the
-// same session validation and sliding renewal.
+// same session validation and sliding renewal. API tokens are not accepted
+// here: a page is always loaded by a browser with its session cookie.
 func (a *Auth) RequireAuthRedirect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s := a.SessionIDFromCookie(r)

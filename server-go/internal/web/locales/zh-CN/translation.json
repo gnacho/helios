@@ -352,6 +352,27 @@
     }
   },
   "ajustes": {
+    "tokens": {
+      "title": "API 令牌",
+      "descripcion": "供浏览器之外的客户端使用的凭据，例如 Android 应用或脚本。通过 Authorization: Bearer 请求头发送。只读令牌可以查询数据，写入令牌还可以开关充电器并控制车辆。",
+      "onlyOnce": "请现在复制令牌，之后将不再显示。",
+      "namePlaceholder": "名称（例如 Android 小组件）",
+      "never": "永不过期",
+      "days30": "30 天后过期",
+      "days90": "90 天后过期",
+      "days365": "1 年后过期",
+      "scopeRead": "只读",
+      "scopeWrite": "允许操作（写入）",
+      "create": "创建令牌",
+      "empty": "还没有令牌。",
+      "createdOn": "创建于",
+      "lastUse": "最后使用",
+      "revokedBadge": "已撤销",
+      "revoke": "撤销",
+      "created": "令牌已创建，请现在复制。",
+      "revoked": "令牌已撤销",
+      "error": "无法创建或撤销令牌"
+    },
     "title": "设置",
     "subtitle": "配置应用、本地连接和电价。",
     "savedToast": "偏好设置已保存",

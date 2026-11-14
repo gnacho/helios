@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"net/http"
 	"regexp"
@@ -146,6 +147,19 @@ type auditRowView struct {
 	Action string
 }
 
+// tokenRowView is one API token as shown in Settings (issue #221). The secret
+// is never part of it: only the prefix is displayed after creation.
+type tokenRowView struct {
+	ID      string
+	Name    string
+	Prefix  string
+	Scopes  string
+	Created string
+	LastUse string
+	Owner   string
+	Revoked bool
+}
+
 type updateStepView struct {
 	Key   string
 	Label string
@@ -186,6 +200,12 @@ type ajustesView struct {
 	Email       string
 	ProfileLang string
 	Languages   []langOption
+
+	// Tokens de API (issue #221). NewToken solo se rellena en el render
+	// inmediatamente posterior a la creación: se muestra una vez y no se guarda.
+	Tokens   []tokenRowView
+	NewToken string
+	TokenErr string
 
 	// Admin.
 	Users []userRowView
@@ -541,6 +561,29 @@ func (u *UI) buildAjustes(r *http.Request, userID string) ajustesView {
 	v.Saved = q.Get("saved")
 	v.Err = q.Get("err")
 
+	// Tokens de API: el actor ve los suyos, el admin los de todos.
+	if u.Auth != nil && userID != "" {
+		if rows, err := u.Auth.ListTokens(userID, isAdmin); err == nil {
+			for _, t := range rows {
+				row := tokenRowView{
+					ID:      t.ID,
+					Name:    t.Name,
+					Prefix:  t.Prefix,
+					Scopes:  t.Scopes,
+					Created: auditWhenText(lang, t.CreatedAt),
+					Revoked: t.RevokedAt != 0,
+				}
+				if t.LastUsedAt != 0 {
+					row.LastUse = auditWhenText(lang, t.LastUsedAt)
+				}
+				if t.Username != nil {
+					row.Owner = *t.Username
+				}
+				v.Tokens = append(v.Tokens, row)
+			}
+		}
+	}
+
 	// Instalación.
 	if u.Install != nil {
 		topo := u.Install.Get()
@@ -687,7 +730,76 @@ func (u *UI) buildAjustes(r *http.Request, userID string) ajustesView {
 func (u *UI) handleAjustes(w http.ResponseWriter, r *http.Request) {
 	userID, _ := auth.UserIDFrom(r.Context())
 	v := u.buildAjustes(r, userID)
+	// El token recién creado viaja en una cookie de un solo uso: así el POST
+	// puede redirigir (recargar no duplica el token) y el secreto se pinta una
+	// sola vez. Se borra aquí, antes de renderizar.
+	if c, err := r.Cookie(tokenFlashCookie); err == nil && c.Value != "" {
+		v.NewToken = c.Value
+		http.SetCookie(w, &http.Cookie{
+			Name: tokenFlashCookie, Value: "", Path: "/ajustes", MaxAge: -1,
+			HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: r.TLS != nil,
+		})
+	}
+	v.TokenErr = r.URL.Query().Get("tokerr")
 	_ = AjustesPage(v).Render(r.Context(), w)
+}
+
+// tokenFlashCookie carries the plain token from the create POST to the render.
+const tokenFlashCookie = "helios_new_token"
+
+// handleAjustesTokenCreate is the Settings wrapper of POST /api/auth/tokens.
+// Same validation service, so the two paths cannot drift.
+func (u *UI) handleAjustesTokenCreate(w http.ResponseWriter, r *http.Request) {
+	username, userID, _ := u.currentUserActor(r)
+	if err := r.ParseForm(); err != nil {
+		ajustesRedirectFlag(w, r, "tokerr", "form")
+		return
+	}
+	scopes := []string{}
+	if r.PostForm.Get("scope_read") != "" || r.PostForm.Get("scope_write") != "" {
+		scopes = append(scopes, auth.ScopeRead)
+	}
+	if r.PostForm.Get("scope_write") != "" {
+		scopes = append(scopes, auth.ScopeWrite)
+	}
+	days, _ := strconv.Atoi(strings.TrimSpace(r.PostForm.Get("expires_days")))
+
+	plain, row, err := u.Auth.CreateToken(userID, r.PostForm.Get("name"), scopes, days)
+	if err != nil {
+		flag := "invalid"
+		switch {
+		case errors.Is(err, auth.ErrTokenName):
+			flag = "name"
+		case errors.Is(err, auth.ErrTokenScopes):
+			flag = "scopes"
+		case errors.Is(err, auth.ErrTokenLimit):
+			flag = "limit"
+		}
+		ajustesRedirectFlag(w, r, "tokerr", flag)
+		return
+	}
+	_ = u.DB.Audit(username, userID, "token.create", map[string]any{
+		"id": row.ID, "name": row.Name, "prefix": row.Prefix, "scopes": row.Scopes,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name: tokenFlashCookie, Value: plain, Path: "/ajustes", MaxAge: 60,
+		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: r.TLS != nil,
+	})
+	http.Redirect(w, r, "/ajustes?saved=token#tokens", http.StatusSeeOther)
+}
+
+func (u *UI) handleAjustesTokenRevoke(w http.ResponseWriter, r *http.Request) {
+	username, userID, isAdmin := u.currentUserActor(r)
+	row, err := u.Auth.RevokeToken(userID, isAdmin, chi.URLParam(r, "id"))
+	if err != nil {
+		ajustesRedirectFlag(w, r, "tokerr", "missing")
+		return
+	}
+	_ = u.DB.Audit(username, userID, "token.revoke", map[string]any{
+		"id": row.ID, "name": row.Name, "prefix": row.Prefix,
+	})
+	ajustesRedirectFlag(w, r, "saved", "tokenRevoked")
 }
 
 // ajustesRedirectFlag is the PRG helper: back to /ajustes with saved/err
