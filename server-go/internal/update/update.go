@@ -59,6 +59,9 @@ type StatusResult struct {
 	CanApply   bool   `json:"canApply"`
 	Updating   any    `json:"updating"`
 	Repo       string `json:"repo"`
+	// Error explains why the comparison could not be made. Non-empty means the
+	// UI must not claim "up to date": there is nothing to compare against.
+	Error string `json:"error,omitempty"`
 }
 
 var listeners = struct {
@@ -217,8 +220,9 @@ func GetStatus(database *db.DB, dataDir string) (*StatusResult, error) {
 		latest = rel.ID
 		latestBody = rel.Body
 	}
+	statusErr := statusError(current, latest, err)
 
-	available := latest != "" && current != "" && compareSemver(latest, current) > 0
+	available := statusErr == "" && compareSemver(latest, current) > 0
 
 	var updating any = false
 	if p := ReadProgress(dataDir); p != nil {
@@ -233,7 +237,24 @@ func GetStatus(database *db.DB, dataDir string) (*StatusResult, error) {
 		CanApply:   available && updating == nil,
 		Updating:   updating,
 		Repo:       Repo,
+		Error:      statusErr,
 	}, nil
+}
+
+// statusError returns the reason the update check cannot be trusted, or "" when
+// current and latest were both resolved and can be compared. Without this the
+// handler had no way to tell "no update" apart from "the lookup failed", and the
+// UI claimed up to date in both cases (#228).
+func statusError(current, latest string, err error) string {
+	switch {
+	case err != nil:
+		return "no se pudo consultar GitHub"
+	case latest == "":
+		return "GitHub no devolvió ninguna versión publicada"
+	case current == "":
+		return "no se pudo leer la versión instalada"
+	}
+	return ""
 }
 
 // RequestUpdate escribe el flag que helios-update.sh observa.

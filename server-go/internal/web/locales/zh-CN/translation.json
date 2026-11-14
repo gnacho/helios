@@ -428,6 +428,7 @@
       "privacy": "100% 私密 · 0% 云",
       "checkUpdates": "检查更新",
       "checking": "检查中…",
+      "checkError": "无法检查更新",
       "upToDate": "已是最新版本 - v{{version}} 是最新版",
       "updateAvailable": "有新版本可用：v{{version}}",
       "viewRelease": "查看更新",
