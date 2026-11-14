@@ -5,6 +5,16 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.11] - 2026-11-14
+
+### Added
+
+- **Estado del cargador por HTTP.** Nueva ruta `GET /api/charger/state`, pensada
+  para clientes que no pueden mantener una conexión de eventos abierta, como el
+  widget de Android. Devuelve si hay cargador configurado y, por cargador, si
+  está cargando, conectado, la potencia, la energía de la sesión y el estado del
+  interruptor. Con la extensión apagada responde lista vacía, no error.
+
 ## [1.2.10] - 2026-11-14
 
 ### Fixed
