@@ -628,11 +628,17 @@ func rawOptions(vals ...string) []ajOption {
 }
 
 // ajCheckbox is the Switch of the React editor (native checkbox styled).
+// The knob is a child of the track, and `peer-checked:` only reaches siblings,
+// so the knob is driven by a named group on the label with a has() condition
+// (#226). It moves with `left`, not with a translate utility: the translate
+// utilities depend on --tw-translate-x/y custom properties that resolved to 0
+// in this build, so the knob never moved. Named group keeps it independent from
+// other .group ancestors (the extensions form is one).
 templ ajCheckbox(name string, checked bool, label string) {
-	<label class="flex items-center gap-2 text-xs font-medium text-muted">
+	<label class="group/switch flex items-center gap-2 text-xs font-medium text-muted">
 		<input type="checkbox" name={ name } value="1" checked?={ checked } class="peer sr-only"/>
 		<span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-app bg-surface-2 transition-colors peer-checked:bg-brand peer-checked:border-brand">
-			<span class="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></span>
+			<span class="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-all group-has-[:checked]/switch:left-[1.125rem]"></span>
 		</span>
 		{ label }
 	</label>

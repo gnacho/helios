@@ -1766,6 +1766,9 @@
   .group-has-\[\#topo-edit\:checked\]\:text-brand:is(:where(.group):has(:is(#topo-edit:checked)) *) {
     color: var(--color-brand);
   }
+  .group-has-\[\:checked\]\/switch\:left-\[1\.125rem\]:is(:where(.group\/switch):has(:is(:checked)) *) {
+    left: 1.125rem;
+  }
   .peer-checked\:translate-x-4:is(:where(.peer):checked ~ *) {
     --tw-translate-x: calc(var(--spacing) * 4);
     translate: var(--tw-translate-x) var(--tw-translate-y);
