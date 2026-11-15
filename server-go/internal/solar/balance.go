@@ -40,9 +40,12 @@ func ReadLivePower(t install.Topology, h HAReader) LivePower {
 		p.Inverters = append(p.Inverters, LiveInverter{Key: inv.Key, Name: inv.Name, Kw: Round3(kw)})
 	}
 
-	if t.Battery.Enabled {
-		mag := entityNum(h, t.Battery.PowerID, 1)
-		p.BatteryPower = batteryPowerKw(t.Battery, h, mag)
+	for _, b := range t.BatteryList() {
+		if !b.Enabled {
+			continue
+		}
+		mag := entityNum(h, b.PowerID, 1)
+		p.BatteryPower += batteryPowerKw(b, h, mag)
 	}
 
 	p.Grid, p.GridDown = readGrid(t.Grid, h)

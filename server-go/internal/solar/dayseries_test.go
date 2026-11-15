@@ -361,3 +361,77 @@ func mustJSON(t *testing.T, v any) string {
 	}
 	return string(b)
 }
+
+// Dos baterías en el mismo bucket: la potencia se suma (cada una con su signo
+// según su propio delta de SOC) y el SOC sale ponderado por capacidad (#197).
+func TestBatteryBucketTwoBatteries(t *testing.T) {
+	bats := []install.BatteryConfig{
+		{Enabled: true, PowerID: "sensor.bat1_potencia", SocID: "sensor.bat1_soc", CapacityKwh: 5},
+		{Enabled: true, PowerID: "sensor.bat2_potencia", SocID: "sensor.bat2_soc", CapacityKwh: 15},
+	}
+	b := map[string]float64{
+		"sensor.bat1_potencia": 1,
+		"sensor.bat2_potencia": 2,
+		"sensor.bat1_soc":      80,
+		"sensor.bat2_soc":      40,
+	}
+	soc1, soc2 := 78.0, 38.0 // ambas suben 2 puntos -> cargando
+	prevSocs := []*float64{&soc1, &soc2}
+
+	power, soc := batteryBucket(bats, b, prevSocs)
+
+	if power != 3 {
+		t.Fatalf("power = %v (esperado 1+2=3 cargando)", power)
+	}
+	// (80*5 + 40*15) / 20 = 50
+	if soc != 50 {
+		t.Fatalf("soc = %v (esperado 50 ponderado por capacidad)", soc)
+	}
+	// prevSocs actualizados para el siguiente bucket
+	if prevSocs[0] == nil || *prevSocs[0] != 80 || prevSocs[1] == nil || *prevSocs[1] != 40 {
+		t.Fatalf("prevSocs = %v/%v", *prevSocs[0], *prevSocs[1])
+	}
+}
+
+// Con una sola batería el bucket debe dar exactamente lo mismo que hoy.
+func TestBatteryBucketSingleBatteryUnchanged(t *testing.T) {
+	bats := []install.BatteryConfig{
+		{Enabled: true, PowerID: "sensor.solis_bateria_potencia", SocID: "sensor.solis_bateria_soc", CapacityKwh: 5.12},
+	}
+	b := map[string]float64{
+		"sensor.solis_bateria_potencia": 0.5,
+		"sensor.solis_bateria_soc":      75,
+	}
+	prev := 72.0 // soc sube de 72 a 75 -> cargando
+	prevSocs := []*float64{&prev}
+	power, soc := batteryBucket(bats, b, prevSocs)
+
+	if power != 0.5 || soc != 75 {
+		t.Fatalf("power/soc = %v/%v (esperado 0.5/75)", power, soc)
+	}
+	if prevSocs[0] == nil || *prevSocs[0] != 75 {
+		t.Fatalf("prevSocs[0] = %v (esperado 75 actualizado)", *prevSocs[0])
+	}
+}
+
+// Una batería deshabilitada no aporta potencia ni SOC ni bloquea la derivación
+// de red por sus IDs vacíos.
+func TestBatteryBucketSkipsDisabled(t *testing.T) {
+	bats := []install.BatteryConfig{
+		{Enabled: false, PowerID: "sensor.off_potencia", SocID: "sensor.off_soc", CapacityKwh: 5},
+		{Enabled: true, PowerID: "sensor.bat_potencia", SocID: "sensor.bat_soc", CapacityKwh: 10},
+	}
+	b := map[string]float64{
+		"sensor.bat_potencia": 1,
+		"sensor.bat_soc":      60,
+	}
+	prev := 65.0
+	power, soc := batteryBucket(bats, b, []*float64{nil, &prev})
+
+	if power != -1 {
+		t.Fatalf("power = %v (esperado -1 descargando)", power)
+	}
+	if soc != 60 {
+		t.Fatalf("soc = %v (esperado 60 de la única enabled)", soc)
+	}
+}

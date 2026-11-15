@@ -456,3 +456,68 @@ func TestRoundHelpers(t *testing.T) {
 }
 
 func floatPtr(f float64) *float64 { return &f }
+
+// Dos baterías en vivo: potencia sumada y SOC ponderado por capacidad; el
+// estado visible es el de la primera batería con estado (#197).
+func TestComputeLiveTwoBatteries(t *testing.T) {
+	f := newFake()
+	f.set("sensor.inverter_power", "0")
+	f.set("sensor.house_power", "0")
+	f.set("sensor.bat1_potencia", "1")
+	f.set("sensor.bat1_estado", "Cargando")
+	f.set("sensor.bat1_soc", "80")
+	f.set("sensor.bat2_potencia", "2")
+	f.set("sensor.bat2_estado", "Cargando")
+	f.set("sensor.bat2_soc", "40")
+	f.set("sun.sun", "above_horizon")
+	f.setAttrs("sun.sun", map[string]any{"elevation": float64(30)})
+
+	store := install.NewStore()
+	topo := install.GenericTopology
+	topo.Batteries = []install.BatteryConfig{
+		{Enabled: true, PowerID: "sensor.bat1_potencia", StateID: "sensor.bat1_estado", SocID: "sensor.bat1_soc", CapacityKwh: 5, ChargingStates: []string{"Cargando"}},
+		{Enabled: true, PowerID: "sensor.bat2_potencia", StateID: "sensor.bat2_estado", SocID: "sensor.bat2_soc", CapacityKwh: 15, ChargingStates: []string{"Cargando"}},
+	}
+	topo.Battery = topo.Batteries[0]
+	store.Set(topo)
+
+	s := New(store, nil)
+	live := s.ComputeLive(f)
+
+	if live.BatteryPower != 3 {
+		t.Fatalf("batteryPower = %v (esperado 1+2=3)", live.BatteryPower)
+	}
+	// (80*5 + 40*15) / 20 = 50
+	if live.Soc != 50 {
+		t.Fatalf("soc = %v (esperado 50 ponderado)", live.Soc)
+	}
+	if live.BatteryStatus != "Cargando" {
+		t.Fatalf("batteryStatus = %q (esperado el de la primera)", live.BatteryStatus)
+	}
+}
+
+// Con una sola batería (lista de uno) los números de hoy no cambian.
+func TestComputeLiveSingleBatteryFromList(t *testing.T) {
+	f := newFake()
+	f.set("sensor.solis_potencia_actual", "0")
+	f.set("sensor.almacen_pinza_power_b", "0")
+	f.set("sensor.solis_bateria_potencia", "0.8")
+	f.set("sensor.solis_bateria_estado", "Descargando")
+	f.set("sensor.solis_bateria_soc", "15")
+	f.setAttrs("sensor.solis_scraper", map[string]any{"currentGridPower": 0.0, "gridDirection": "none"})
+	f.set("sun.sun", "below_horizon")
+	f.setAttrs("sun.sun", map[string]any{"elevation": float64(-10)})
+
+	s := newSolar()
+	live := s.ComputeLive(f)
+
+	if live.BatteryPower != -0.8 {
+		t.Fatalf("batteryPower = %v (esperado -0.8)", live.BatteryPower)
+	}
+	if live.Soc != 15 {
+		t.Fatalf("soc = %v (esperado 15)", live.Soc)
+	}
+	if live.BatteryStatus != "Descargando" {
+		t.Fatalf("batteryStatus = %q", live.BatteryStatus)
+	}
+}

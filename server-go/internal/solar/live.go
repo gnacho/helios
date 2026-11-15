@@ -247,15 +247,33 @@ func (s *Solar) ComputeLive(haReader HAReader) LiveData {
 		}
 	}
 
-	b := t.Battery
-	soc := 0.0
-	if b.Enabled {
-		soc = entityNum(haReader, b.SocID, 1)
-	}
+	// SOC agregado: promedio ponderado por capacidad (con una sola batería es
+	// su valor exacto; sin capacidades, media aritmética). El estado visible es
+	// el de la primera batería habilitada que reporte estado.
+	socNum, socWeight, socSum, socCount := 0.0, 0.0, 0.0, 0
 	batState := ""
-	if b.Enabled {
-		if st, ok := haReader.GetState(b.StateID); ok {
-			batState = st.State
+	for _, b := range t.BatteryList() {
+		if !b.Enabled {
+			continue
+		}
+		if v := entityNum(haReader, b.SocID, 1); v > 0 {
+			socSum += v
+			socCount++
+			socNum += v * b.CapacityKwh
+			socWeight += b.CapacityKwh
+		}
+		if batState == "" {
+			if st, ok := haReader.GetState(b.StateID); ok {
+				batState = st.State
+			}
+		}
+	}
+	soc := 0.0
+	if socCount > 0 {
+		if socWeight > 0 {
+			soc = socNum / socWeight
+		} else {
+			soc = socSum / float64(socCount)
 		}
 	}
 
