@@ -5,6 +5,65 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.11] - 2026-11-14
+
+### Added
+
+- **Estado del cargador por HTTP.** Nueva ruta `GET /api/charger/state`, pensada
+  para clientes que no pueden mantener una conexión de eventos abierta, como el
+  widget de Android. Devuelve si hay cargador configurado y, por cargador, si
+  está cargando, conectado, la potencia, la energía de la sesión y el estado del
+  interruptor. Con la extensión apagada responde lista vacía, no error.
+
+## [1.2.10] - 2026-11-14
+
+### Fixed
+
+- **Comprobar actualizaciones ya no miente.** Cuando la consulta a GitHub fallaba
+  o no se podía leer la versión instalada, la pantalla decía "estás al día" sin
+  ningún error. Ahora explica el motivo en rojo y solo afirma que estás al día
+  cuando de verdad ha comparado las versiones.
+
+## [1.2.9] - 2026-11-14
+
+### Fixed
+
+- **Los interruptores de Ajustes se mueven.** Al alternar un interruptor, la
+  pista cambiaba de color pero la bolita se quedaba a la izquierda. El selector
+  que debía moverla solo alcanza a un hermano del checkbox, y la bolita está
+  dentro de la pista. Ahora se mueve de verdad, con recuento de 16 px, y solo
+  con su propio interruptor.
+
+## [1.2.8] - 2026-11-14
+
+### Added
+
+- **El servidor publica los asset links de la app de Android.** La ruta
+  `/.well-known/assetlinks.json` sirve el nombre de paquete y la huella del
+  certificado de firma, que es lo que Chrome exige para abrir la app a pantalla
+  completa en lugar de como una pestaña con barra de direcciones. Va en el
+  binario y no en el proxy porque tiene que responder en cada origen al que se
+  apunte la app.
+
+## [1.2.7] - 2026-11-14
+
+### Added
+
+- **Tokens de API para clientes que no son el navegador.** En Ajustes hay una
+  sección nueva para crear tokens con nombre, permisos y caducidad opcional.
+  Sirven para una app o un script que no puede usar la sesión del navegador: se
+  envían en la cabecera `Authorization: Bearer` y el widget de Android que viene
+  detrás los usará. Un token de solo lectura consulta datos, y con escritura
+  puede encender el cargador y actuar sobre el coche. Las rutas de usuarios y de
+  actualización siguen exigiendo sesión de navegador. El token se muestra una
+  sola vez, en la base solo queda su hash y se puede revocar al momento.
+
+### Fixed
+
+- **La landing habla del binario de Go.** El texto de "cómo funciona" y la
+  respuesta sobre consumo seguían describiendo un servicio Node.js. Ahora dicen
+  lo que hay: un único binario en Go con SQLite embebida.
+
 ## [1.2.6] - 2026-10-31
 
 ### Added

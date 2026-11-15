@@ -30,6 +30,7 @@ templ AjustesPage(v ajustesView) {
 						@ajustesExtensions(v)
 					}
 					@ajustesProfile(v)
+					@ajustesTokens(v)
 					if v.IsAdmin {
 						@ajustesAdmin(v)
 					}
@@ -54,6 +55,7 @@ func ajustesSignals(v ajustesView) string {
 		"confirm":    false,
 		"ack":        false,
 		"checked":    false,
+		"error":      "",
 		"available":  false,
 		"canApply":   false,
 		"latest":     "",
@@ -105,6 +107,10 @@ func ajustesSavedText(lang, flag string) string {
 		return T(lang, "ajustes.profile.saved")
 	case "prices", "install":
 		return T(lang, "ajustes.profile.saved")
+	case "token":
+		return T(lang, "ajustes.tokens.created")
+	case "tokenRevoked":
+		return T(lang, "ajustes.tokens.revoked")
 	}
 	return flag
 }
@@ -121,6 +127,8 @@ func ajustesErrText(lang, flag string) string {
 		return T(lang, "ajustes.profile.profileError")
 	case "users", "prices":
 		return T(lang, "common.error")
+	case "form", "invalid", "name", "scopes", "limit", "missing":
+		return T(lang, "ajustes.tokens.error")
 	}
 	return T(lang, "common.error")
 }
@@ -630,11 +638,17 @@ func rawOptions(vals ...string) []ajOption {
 }
 
 // ajCheckbox is the Switch of the React editor (native checkbox styled).
+// The knob is a child of the track, and `peer-checked:` only reaches siblings,
+// so the knob is driven by a named group on the label with a has() condition
+// (#226). It moves with `left`, not with a translate utility: the translate
+// utilities depend on --tw-translate-x/y custom properties that resolved to 0
+// in this build, so the knob never moved. Named group keeps it independent from
+// other .group ancestors (the extensions form is one).
 templ ajCheckbox(name string, checked bool, label string) {
-	<label class="flex items-center gap-2 text-xs font-medium text-muted">
+	<label class="group/switch flex items-center gap-2 text-xs font-medium text-muted">
 		<input type="checkbox" name={ name } value="1" checked?={ checked } class="peer sr-only"/>
 		<span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-app bg-surface-2 transition-colors peer-checked:bg-brand peer-checked:border-brand">
-			<span class="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4"></span>
+			<span class="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition-all group-has-[:checked]/switch:left-[1.125rem]"></span>
 		</span>
 		{ label }
 	</label>
@@ -950,6 +964,93 @@ templ ajustesProfile(v ajustesView) {
 	</section>
 }
 
+// ── 5b. Tokens de API (issue #221) ─────────────────────────────────────────
+// Los tokens autentican clientes que no son un navegador (widget de Android,
+// scripts) con una cabecera Authorization: Bearer. Aquí solo se crean y se
+// revocan. El secreto se muestra UNA vez, en el render posterior a la creación.
+templ ajustesTokens(v ajustesView) {
+	<section id="tokens" class="helios-card scroll-mt-20 p-5 shadow-card dark:shadow-card-dark">
+		<div class="mb-4 flex items-center gap-2.5">
+			@iconKeyRound("h-[18px] w-[18px] text-brand")
+			<h2 class="font-display text-[15px] font-semibold text-app">{ T(v.Lang, "ajustes.tokens.title") }</h2>
+		</div>
+		<p class="mb-4 text-[13px] text-muted">{ T(v.Lang, "ajustes.tokens.descripcion") }</p>
+		if v.NewToken != "" {
+			<div class="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">
+				<p class="mb-1 text-[13px] font-medium text-emerald-700 dark:text-emerald-400">{ T(v.Lang, "ajustes.tokens.onlyOnce") }</p>
+				<code class="block select-all break-all rounded-lg bg-surface-2 px-3 py-2 font-mono text-[13px] text-app">{ v.NewToken }</code>
+			</div>
+		}
+		<form method="post" action="/ajustes/tokens" class="mb-4 flex flex-col gap-2 rounded-xl bg-surface-2 p-3">
+			<div class="grid gap-2 sm:grid-cols-2">
+				<input
+					type="text"
+					name="name"
+					maxLength="60"
+					required
+					autoComplete="off"
+					placeholder={ T(v.Lang, "ajustes.tokens.namePlaceholder") }
+					class="h-9 rounded-xl border border-app bg-surface px-3 text-sm text-app outline-none focus:border-brand"
+				/>
+				<select name="expires_days" class="h-9 rounded-xl border border-app bg-surface px-3 text-sm text-app outline-none focus:border-brand">
+					<option value="0">{ T(v.Lang, "ajustes.tokens.never") }</option>
+					<option value="30">{ T(v.Lang, "ajustes.tokens.days30") }</option>
+					<option value="90">{ T(v.Lang, "ajustes.tokens.days90") }</option>
+					<option value="365">{ T(v.Lang, "ajustes.tokens.days365") }</option>
+				</select>
+			</div>
+			<div class="flex flex-wrap items-center gap-4 text-[13px] text-muted">
+				<label class="flex items-center gap-1.5">
+					<input type="checkbox" name="scope_read" value="1" checked class="h-4 w-4 accent-[var(--accent)]"/>
+					{ T(v.Lang, "ajustes.tokens.scopeRead") }
+				</label>
+				<label class="flex items-center gap-1.5">
+					<input type="checkbox" name="scope_write" value="1" class="h-4 w-4 accent-[var(--accent)]"/>
+					{ T(v.Lang, "ajustes.tokens.scopeWrite") }
+				</label>
+			</div>
+			<button type="submit" class="bg-brand-gradient inline-flex h-9 items-center self-start rounded-lg px-4 text-sm font-semibold text-white hover:opacity-90">
+				{ T(v.Lang, "ajustes.tokens.create") }
+			</button>
+		</form>
+		if len(v.Tokens) == 0 {
+			<p class="rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">{ T(v.Lang, "ajustes.tokens.empty") }</p>
+		} else {
+			<div class="flex flex-col gap-1.5">
+				for _, t := range v.Tokens {
+					<div class={ "flex flex-wrap items-center gap-2 rounded-lg bg-surface-2 px-3 py-2", templ.KV("opacity-60", t.Revoked) }>
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium text-app">
+								{ t.Name }
+								if t.Owner != "" {
+									<span class="ml-1 text-[11px] font-normal text-faint">{ t.Owner }</span>
+								}
+							</p>
+							<p class="text-[11px] text-faint">
+								<code class="font-mono">hx_{ t.Prefix }_…</code>
+								· { t.Scopes }
+								· { T(v.Lang, "ajustes.tokens.createdOn") } { t.Created }
+								if t.LastUse != "" {
+									· { T(v.Lang, "ajustes.tokens.lastUse") } { t.LastUse }
+								}
+							</p>
+						</div>
+						if t.Revoked {
+							<span class="rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-600 dark:text-rose-400">{ T(v.Lang, "ajustes.tokens.revokedBadge") }</span>
+						} else {
+							<form method="post" action={ templ.SafeURL("/ajustes/tokens/" + t.ID + "/delete") }>
+								<button type="submit" class="inline-flex h-8 items-center rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 text-[12px] font-medium text-rose-600 transition-colors hover:bg-rose-500/15 dark:text-rose-400">
+									{ T(v.Lang, "ajustes.tokens.revoke") }
+								</button>
+							</form>
+						}
+					</div>
+				}
+			</div>
+		}
+	</section>
+}
+
 // ── 6. Admin: update + usuarios + auditoría ────────────────────────────────
 templ ajustesAdmin(v ajustesView) {
 	<section id="admin" class="helios-card scroll-mt-20 border-l-4 border-l-brand bg-brand/[0.03] p-5 shadow-card dark:shadow-card-dark">
@@ -971,7 +1072,8 @@ templ ajustesAdmin(v ajustesView) {
 					@iconRefreshCw("h-3.5 w-3.5")
 					<span class="hidden sm:inline">{ T(v.Lang, "ajustes.about.checkUpdates") }</span>
 				</button>
-				<span data-show="$checked && !$available && !$running" class="text-[10px] font-medium text-emerald-500">{ T(v.Lang, "ajustes.about.upToDate", map[string]string{"version": v.RepoVersion}) }</span>
+				<span data-show="$checked && !$available && !$running && !$error" class="text-[10px] font-medium text-emerald-500">{ T(v.Lang, "ajustes.about.upToDate", map[string]string{"version": v.RepoVersion}) }</span>
+				<span data-show="$checked && $error" data-text="$error" class="text-[10px] font-medium text-rose-500">{ T(v.Lang, "ajustes.about.checkError") }</span>
 				<button type="button" data-show="$available && !$running" data-on:click="$confirm = true" class="inline-flex h-7 w-fit items-center gap-1.5 rounded-lg border border-brand bg-brand/10 px-2.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20">
 					{ T(v.Lang, "ajustes.about.updateNow") }
 				</button>

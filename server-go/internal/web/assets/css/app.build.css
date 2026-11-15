@@ -12,6 +12,7 @@
     --color-emerald-400: oklch(76.5% 0.177 163.223);
     --color-emerald-500: oklch(69.6% 0.17 162.48);
     --color-emerald-600: oklch(59.6% 0.145 163.225);
+    --color-emerald-700: oklch(50.8% 0.118 165.612);
     --color-sky-500: oklch(68.5% 0.169 237.323);
     --color-rose-400: oklch(71.2% 0.194 13.428);
     --color-rose-500: oklch(64.5% 0.246 16.439);
@@ -1466,6 +1467,9 @@
     --tw-tracking: var(--tracking-wider);
     letter-spacing: var(--tracking-wider);
   }
+  .break-all {
+    word-break: break-all;
+  }
   .whitespace-nowrap {
     white-space: nowrap;
   }
@@ -1495,6 +1499,9 @@
   }
   .text-emerald-600 {
     color: var(--color-emerald-600);
+  }
+  .text-emerald-700 {
+    color: var(--color-emerald-700);
   }
   .text-muted {
     color: var(--color-muted);
@@ -1527,6 +1534,9 @@
   .antialiased {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  .accent-\[var\(--accent\)\] {
+    accent-color: var(--accent);
   }
   .accent-\[var\(--brand\)\] {
     accent-color: var(--brand);
@@ -1628,6 +1638,10 @@
   .outline-none {
     --tw-outline-style: none;
     outline-style: none;
+  }
+  .select-all {
+    -webkit-user-select: all;
+    user-select: all;
   }
   .select-none {
     -webkit-user-select: none;
@@ -1751,6 +1765,9 @@
   }
   .group-has-\[\#topo-edit\:checked\]\:text-brand:is(:where(.group):has(:is(#topo-edit:checked)) *) {
     color: var(--color-brand);
+  }
+  .group-has-\[\:checked\]\/switch\:left-\[1\.125rem\]:is(:where(.group\/switch):has(:is(:checked)) *) {
+    left: 1.125rem;
   }
   .peer-checked\:translate-x-4:is(:where(.peer):checked ~ *) {
     --tw-translate-x: calc(var(--spacing) * 4);
