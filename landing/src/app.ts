@@ -660,7 +660,22 @@
   }
 
   /* ── Init ── */
+  // Clic en la demo: evento de GoatCounter (path demo-click) para verlo en las
+  // estadísticas y poder filtrar solo eventos en goatdash. Delegado y en fase
+  // de captura para que cubra todos los CTA y salga antes de la navegación.
+  function initDemoEvent() {
+    document.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement | null
+      if (!t || typeof t.closest !== 'function') return
+      if (!t.closest('a[href*="demo.helios.cloudless.club"]')) return
+      const gc = (window as any).goatcounter
+      if (!gc || typeof gc.count !== 'function') return
+      gc.count({ path: 'demo-click', title: 'Demo click', event: true })
+    }, true)
+  }
+
   function init() {
+    initDemoEvent()
     const i18n = (window as any).heliosI18n
     i18n.applyLang(i18n.detectLang())
     $('#langBtn').addEventListener('click', () => {
