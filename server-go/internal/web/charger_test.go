@@ -4,6 +4,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -962,5 +963,53 @@ func TestChargerShowsDisconnected(t *testing.T) {
 	}
 	if strings.Contains(body, "chgc2Pow") {
 		t.Fatalf("sin aparato no debe pintar señal de potencia")
+	}
+}
+
+// TestChargerWeekArrowMovesBackAWeek: la flecha del histórico del cargador
+// cambia de periodo en sitio con @get('/ui/chg?period=..&anchor=..&tab=..').
+// En la semana el ancla de la query se ignoraba (siempre HOY), así que pulsar
+// la flecha volvía a pedir la misma semana y no pasaba nada.
+func TestChargerWeekArrowMovesBackAWeek(t *testing.T) {
+	_, r := chargerTestUI2(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	today := startOfDay(time.Now())
+	prevAnchor := shiftAnchor(PeriodSemana, today, -1)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/cargador?tab=main&period=semana&anchor="+prevAnchor.Format("2006-01-02"), nil)
+	req.AddCookie(cookie)
+	r.ServeHTTP(rec, req)
+	body := rec.Body.String()
+
+	label := periodNavLabel(PeriodSemana, prevAnchor, "es")
+	if !strings.Contains(body, ">"+label+"<") {
+		t.Fatalf("el histórico debe pintar la semana anterior (%q); el ancla se ignora", label)
+	}
+	cur := periodNavLabel(PeriodSemana, today, "es")
+	if label != cur && strings.Contains(body, ">"+cur+"<") {
+		t.Fatalf("sigue pintando la semana actual (%q) pese al anchor", cur)
+	}
+}
+
+// TestChargerWeekHidesTodayChip: en la semana en curso el chip "Hoy" no debe
+// salir (el cargador ancla la semana en HOY, y compararlo con el ancla del
+// Histórico, que es AYER, lo dejaba visible siempre).
+func TestChargerWeekHidesTodayChip(t *testing.T) {
+	_, r := chargerTestUI2(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/cargador?tab=main", nil)
+	req.AddCookie(cookie)
+	r.ServeHTTP(rec, req)
+
+	secs := regexp.MustCompile(`(?s)<section id="historial-carga".*?</section>`).FindAllString(rec.Body.String(), -1)
+	if len(secs) == 0 {
+		t.Fatal("sin tarjeta de histórico")
+	}
+	if strings.Contains(secs[0], ">Hoy<") {
+		t.Fatal("el chip Hoy sobra en la semana en curso")
 	}
 }

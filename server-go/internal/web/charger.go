@@ -1244,10 +1244,16 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	if ps, ok := periodOf(r.URL.Query().Get("period")); ok && ps != PeriodDia {
 		period = ps
 	}
-	anchor := today // la semana del cargador ancla a HOY (incluye el día en curso)
+	// La semana del cargador ancla a HOY por defecto (incluye el día en curso),
+	// pero el ancla de la query manda: la flecha del histórico pide las semanas
+	// anteriores con period=semana&anchor=<fecha>, y al ignorarlo la flecha
+	// volvía a pedir la misma semana y no hacía nada.
+	anchor := today
 	if period != PeriodSemana {
 		anchor = initialAnchor(period, today)
-		if a, err := time.ParseInLocation("2006-01-02", r.URL.Query().Get("anchor"), time.Local); err == nil {
+	}
+	if raw := r.URL.Query().Get("anchor"); raw != "" {
+		if a, err := time.ParseInLocation("2006-01-02", raw, time.Local); err == nil {
 			anchor = startOfDay(a)
 		}
 	}
@@ -1298,7 +1304,10 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	sv.Sel.NextURL = histURLChg(period, shiftAnchor(period, anchor, 1), tabKey)
 	sv.Sel.TodayURL = histURLChg(period, chgTabAnchor(period), tabKey)
 	sv.Sel.CanNext = canGoNext(period, anchor, today)
-	sv.Sel.IsCurrent = isCurrentPeriod(period, anchor, today)
+	// El cargador ancla la semana en HOY, no en AYER como el Histórico, así
+	// que "periodo actual" se compara con su propio ancla: si no, el chip Hoy
+	// salía siempre visible (también estando ya en la semana en curso).
+	sv.Sel.IsCurrent = sameDay(anchor, chgTabAnchor(period))
 	sv.NavLabel = periodNavLabel(period, anchor, lang)
 	sv.HistSub = periodSubtitle(period, anchor, lang)
 
