@@ -1244,10 +1244,16 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	if ps, ok := periodOf(r.URL.Query().Get("period")); ok && ps != PeriodDia {
 		period = ps
 	}
-	anchor := today // la semana del cargador ancla a HOY (incluye el día en curso)
+	// La semana del cargador ancla a HOY por defecto (incluye el día en curso),
+	// pero el ancla de la query manda: la flecha del histórico pide las semanas
+	// anteriores con period=semana&anchor=<fecha>, y al ignorarlo la flecha
+	// volvía a pedir la misma semana y no hacía nada.
+	anchor := today
 	if period != PeriodSemana {
 		anchor = initialAnchor(period, today)
-		if a, err := time.ParseInLocation("2006-01-02", r.URL.Query().Get("anchor"), time.Local); err == nil {
+	}
+	if raw := r.URL.Query().Get("anchor"); raw != "" {
+		if a, err := time.ParseInLocation("2006-01-02", raw, time.Local); err == nil {
 			anchor = startOfDay(a)
 		}
 	}
