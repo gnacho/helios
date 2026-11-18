@@ -1304,7 +1304,10 @@ func (u *UI) buildChgSingle(r *http.Request, lang string, pal Palette, today tim
 	sv.Sel.NextURL = histURLChg(period, shiftAnchor(period, anchor, 1), tabKey)
 	sv.Sel.TodayURL = histURLChg(period, chgTabAnchor(period), tabKey)
 	sv.Sel.CanNext = canGoNext(period, anchor, today)
-	sv.Sel.IsCurrent = isCurrentPeriod(period, anchor, today)
+	// El cargador ancla la semana en HOY, no en AYER como el Histórico, así
+	// que "periodo actual" se compara con su propio ancla: si no, el chip Hoy
+	// salía siempre visible (también estando ya en la semana en curso).
+	sv.Sel.IsCurrent = sameDay(anchor, chgTabAnchor(period))
 	sv.NavLabel = periodNavLabel(period, anchor, lang)
 	sv.HistSub = periodSubtitle(period, anchor, lang)
 

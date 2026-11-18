@@ -4,6 +4,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -989,5 +990,26 @@ func TestChargerWeekArrowMovesBackAWeek(t *testing.T) {
 	cur := periodNavLabel(PeriodSemana, today, "es")
 	if label != cur && strings.Contains(body, ">"+cur+"<") {
 		t.Fatalf("sigue pintando la semana actual (%q) pese al anchor", cur)
+	}
+}
+
+// TestChargerWeekHidesTodayChip: en la semana en curso el chip "Hoy" no debe
+// salir (el cargador ancla la semana en HOY, y compararlo con el ancla del
+// Histórico, que es AYER, lo dejaba visible siempre).
+func TestChargerWeekHidesTodayChip(t *testing.T) {
+	_, r := chargerTestUI2(t)
+	cookie := sessionCookie(t, doLogin(t, r, "nacho", "password1"))
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/cargador?tab=main", nil)
+	req.AddCookie(cookie)
+	r.ServeHTTP(rec, req)
+
+	secs := regexp.MustCompile(`(?s)<section id="historial-carga".*?</section>`).FindAllString(rec.Body.String(), -1)
+	if len(secs) == 0 {
+		t.Fatal("sin tarjeta de histórico")
+	}
+	if strings.Contains(secs[0], ">Hoy<") {
+		t.Fatal("el chip Hoy sobra en la semana en curso")
 	}
 }
