@@ -5,6 +5,30 @@ Todos los cambios notables de Helios se documentan en este fichero.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es/1.1.0/),
 y este proyecto se adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.12] - 2026-11-18
+
+### Added
+
+- **Varias baterías por instalación.** La topología admite más de una batería y
+  se suman en el directo, en el balance, en las series de cinco minutos y en los
+  KPI, así que deja de ser un caso especial tener dos acumuladores.
+
+- **Energía del cargador sin contador.** Los cargadores cuyo firmware no publica
+  un contador de energía fiable (el portátil Feyree, sin ir más lejos) acumulan
+  la energía integrando la potencia: cada minuto en el directo y, para los días
+  pasados, a partir del historial del recorder. El reparto solar sigue saliendo
+  del balance y solo se descarta la muestra vieja o el hueco de datos, nunca se
+  inventa energía.
+
+### Fixed
+
+- **La flecha del histórico del cargador navega.** En la vista de semana se
+  ignoraba el ancla de la URL, así que pulsar la flecha volvía a pintar la misma
+  semana y parecía no hacer nada.
+
+- **El chip "Hoy" solo sale cuando toca.** En la tarjeta de histórico del
+  cargador aparecía siempre, también estando ya en la semana en curso.
+
 ## [1.2.11] - 2026-11-14
 
 ### Added
