@@ -356,6 +356,7 @@ func (e *Ext) BackfillChargerHistory(h HA) int {
 		return 0
 	}
 	n := 0
+	now := time.Now()
 	for _, ch := range c.CarCharger.Chargers {
 		func() {
 			defer func() {
@@ -363,6 +364,10 @@ func (e *Ext) BackfillChargerHistory(h HA) int {
 					log.Printf("[extensions] cargador %s: backfill fallo: %v", ch.Key, r)
 				}
 			}()
+			if ch.EnergyTotalID == "" {
+				n += e.BackfillChargerPower(h, ch, now)
+				return
+			}
 			n += e.BackfillOneCharger(h, ch)
 		}()
 	}

@@ -81,6 +81,9 @@ func (e *Ext) AccumulateChargerDaily(h HA) {
 
 func (e *Ext) accumulateOne(h HA, c Charger) {
 	if c.EnergyTotalID == "" {
+		// Firmware sin contador fiable: la energía sale de integrar la
+		// potencia, que sí es una medida real mientras carga.
+		e.accumulateFromPower(h, c, time.Now())
 		return
 	}
 	totalPtr := divOpt(entityNumOrUndefined(h, c.EnergyTotalID), c.EnergyDivisor)
